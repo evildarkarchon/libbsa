@@ -44,6 +44,7 @@ Deflate and LZ4 compression/decompression support are required.
 - Prefer the C++ standard library until a real format, compression, filesystem, testing, or packaging requirement justifies more.
 - Use `libdeflate` for deflate compression and decompression.
 - Use the official `lz4` library for LZ4 compression and decompression.
+- Use `DirectXTex` for texture analysis.
 - Use `vcpkg` for dependency management.
 - If a dependency becomes useful, document the need, the alternatives considered, and the expected project impact before adding it.
 

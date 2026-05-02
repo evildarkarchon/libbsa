@@ -4,6 +4,8 @@
   "version-string": "0.1.0",
   "dependencies": [
     "libdeflate",
-    "lz4"
+    "lz4",
+    "directxtex",
+    "catch2"
   ]
 }

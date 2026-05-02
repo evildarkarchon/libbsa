@@ -9,15 +9,41 @@
     {
       "name": "vcpkg",
       "displayName": "vcpkg",
-      "description": "Configure libbsa with vcpkg manifest mode.",
+      "description": "Configure libbsa as a static library with vcpkg manifest mode.",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": false
+      }
+    },
+    {
+      "name": "vcpkg-static",
+      "displayName": "vcpkg static",
+      "description": "Configure libbsa as a static library with vcpkg manifest mode.",
+      "inherits": "vcpkg"
+    },
+    {
+      "name": "vcpkg-shared",
+      "displayName": "vcpkg shared",
+      "description": "Configure libbsa as a dynamic library with vcpkg manifest mode.",
+      "inherits": "vcpkg",
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": true
+      }
     }
   ],
   "buildPresets": [
     {
       "name": "vcpkg",
       "configurePreset": "vcpkg"
+    },
+    {
+      "name": "vcpkg-static",
+      "configurePreset": "vcpkg-static"
+    },
+    {
+      "name": "vcpkg-shared",
+      "configurePreset": "vcpkg-shared"
     }
   ]
 }
