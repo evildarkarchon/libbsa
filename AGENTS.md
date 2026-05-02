@@ -52,7 +52,7 @@ Deflate and LZ4 compression/decompression support are required.
 - Never delete an accurate comment as cleanup. Remove or rewrite a comment only when the code it describes is deleted or has changed enough to make the comment wrong.
 - If a comment is removed or rewritten, mention it in the final reply.
 - Add comments for non-obvious why: format compatibility constraints, ownership/lifetime decisions, error-handling edge cases, threading behavior, cancellation behavior, and deliberate deviations from the reference implementation.
-- Add C++ doc comments (`///` or `/** ... */`) for public APIs and for methods that are added or substantially rewritten.
+- Add Doxygen-compliant C++ doc comments (/// or /** ... */) for public APIs and for methods that are added or substantially rewritten.
 - Trivial private helpers may omit doc comments when their purpose is obvious.
 
 ## Validation Expectations

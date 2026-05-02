@@ -1,0 +1,9 @@
+# CMake build outputs
+build/
+out/
+CMakeUserPresets.json
+
+# vcpkg manifest installs
+vcpkg_installed/
+# CocoIndex Code (ccc)
+/.cocoindex_code/
