@@ -92,7 +92,10 @@ public:
             reinterpret_cast<const char*>(bytes_.data() + position_),
             reinterpret_cast<const char*>(bytes_.data() + position_ + length));
         position_ += length;
-        if (terminated && !value.empty()) {
+        if (terminated && (value.empty() || value.back() != '\0')) {
+            return malformed("length-prefixed string is not NUL terminated");
+        }
+        if (terminated) {
             value.pop_back();
         }
         return value;

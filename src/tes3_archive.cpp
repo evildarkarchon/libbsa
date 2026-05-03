@@ -28,6 +28,7 @@ constexpr std::size_t kMaxInMemoryExtractionSize = 512U * 1024U * 1024U;
 struct FileRecord {
     std::uint32_t size = 0;
     std::uint32_t offset = 0;
+    std::uint32_t name_offset = 0;
     std::string name;
     std::uint64_t hash = 0;
 };
@@ -220,8 +221,12 @@ Result<ParsedArchive> parse_tes3_archive(const std::filesystem::path& path)
     if (!name_offsets_span) {
         return name_offsets_span.error();
     }
-    if (!reader.skip(name_offset_bytes.value())) {
-        return malformed("TES3 name offset table extends past archive bounds");
+    for (auto& record : records) {
+        auto name_offset = reader.read_u32();
+        if (!name_offset) {
+            return malformed("TES3 name offset table is truncated");
+        }
+        record.name_offset = name_offset.value();
     }
 
     const auto names_start = reader.position();
@@ -238,8 +243,18 @@ Result<ParsedArchive> parse_tes3_archive(const std::filesystem::path& path)
     if (hash_record_bytes.value() > bytes.size() - hash_table_offset.value()) {
         return malformed("TES3 hash table extends past archive bounds");
     }
+    const auto name_block_size = hash_table_offset.value() - names_start;
 
     for (auto& record : records) {
+        if (record.name_offset >= name_block_size) {
+            return malformed("TES3 filename offset points outside filename records");
+        }
+
+        // TES3 name offsets are relative to the filename block and are authoritative;
+        // the strings do not have to be packed in file-record order.
+        if (!reader.seek(names_start + static_cast<std::size_t>(record.name_offset))) {
+            return malformed("TES3 filename offset extends past archive bounds");
+        }
         auto name = read_string_term_until(reader, hash_table_offset.value());
         if (!name) {
             return name.error();

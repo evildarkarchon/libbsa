@@ -1,5 +1,7 @@
 #include "fixture_builder.hpp"
 
+#include "tes3_hash.hpp"
+
 #include <libbsa/archive.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -48,6 +50,19 @@ void push_u32(std::vector<std::uint8_t>& output, std::uint32_t value)
     for (int shift = 0; shift < 32; shift += 8) {
         output.push_back(static_cast<std::uint8_t>((value >> shift) & 0xFFu));
     }
+}
+
+void push_string_term(std::vector<std::uint8_t>& output, const std::string& value)
+{
+    output.insert(output.end(), value.begin(), value.end());
+    output.push_back(0);
+}
+
+void push_tes3_hash(std::vector<std::uint8_t>& output, const std::string& value)
+{
+    const auto hash = libbsa::detail::hash_tes3(value);
+    push_u32(output, static_cast<std::uint32_t>(hash >> 32U));
+    push_u32(output, static_cast<std::uint32_t>(hash & 0xFFFFFFFFull));
 }
 
 void overwrite_u32(std::vector<std::uint8_t>& output, std::size_t offset, std::uint32_t value)
@@ -328,6 +343,54 @@ TEST_CASE("TES3 archive metadata and raw extraction are available through the pu
     CHECK(stream.str() == "tes3 sound payload");
 }
 
+TEST_CASE("TES3 archive parsing follows filename offsets")
+{
+    const std::string mesh_path = "meshes\\x.nif";
+    const std::string texture_path = "textures\\stone.dds";
+    const auto mesh_payload = bytes("offset mesh payload");
+    const auto texture_payload = bytes("offset texture payload");
+
+    std::vector<std::uint8_t> archive_bytes;
+    push_u32(archive_bytes, 0x00000100);
+    const auto hash_offset_position = archive_bytes.size();
+    push_u32(archive_bytes, 0U);
+    push_u32(archive_bytes, 2U);
+
+    push_u32(archive_bytes, static_cast<std::uint32_t>(mesh_payload.size()));
+    push_u32(archive_bytes, 0U);
+    push_u32(archive_bytes, static_cast<std::uint32_t>(texture_payload.size()));
+    push_u32(archive_bytes, static_cast<std::uint32_t>(mesh_payload.size()));
+
+    push_u32(archive_bytes, static_cast<std::uint32_t>(texture_path.size() + 1U));
+    push_u32(archive_bytes, 0U);
+    push_string_term(archive_bytes, texture_path);
+    push_string_term(archive_bytes, mesh_path);
+
+    overwrite_u32(archive_bytes, hash_offset_position, static_cast<std::uint32_t>(archive_bytes.size() - 12U));
+    push_tes3_hash(archive_bytes, mesh_path);
+    push_tes3_hash(archive_bytes, texture_path);
+    archive_bytes.insert(archive_bytes.end(), mesh_payload.begin(), mesh_payload.end());
+    archive_bytes.insert(archive_bytes.end(), texture_payload.begin(), texture_payload.end());
+
+    const auto path = libbsa::tests::write_bytes(case_directory(), "tes3-reordered-filenames.bsa", archive_bytes);
+
+    auto open_result = libbsa::ArchiveReader::open(path);
+    REQUIRE(open_result.has_value());
+    auto reader = std::move(open_result).value();
+
+    REQUIRE(reader.entries().size() == 2);
+    CHECK(reader.entries()[0].path == mesh_path);
+    CHECK(reader.entries()[1].path == texture_path);
+
+    auto mesh = reader.extract("meshes/x.nif");
+    REQUIRE(mesh.has_value());
+    CHECK(mesh.value() == mesh_payload);
+
+    auto texture = reader.extract("textures/stone.dds");
+    REQUIRE(texture.has_value());
+    CHECK(texture.value() == texture_payload);
+}
+
 TEST_CASE("malformed TES3 archives return typed errors")
 {
     const auto directory = case_directory();
@@ -413,6 +476,37 @@ TEST_CASE("TES4 archive parsing follows folder table offsets")
     auto mesh = reader.extract("meshes\\actors\\skeleton.nif");
     REQUIRE(mesh.has_value());
     CHECK(as_string(mesh.value()) == "offset mesh payload");
+}
+
+TEST_CASE("TES4 folder names require a terminating NUL byte")
+{
+    const std::string folder_name = "textures";
+    const auto fixture = libbsa::tests::write_fixture_archive(
+        case_directory(),
+        libbsa::tests::FixtureFormat::tes4,
+        "tes4-bad-folder-name-terminator",
+        kArchivePathNames | kArchiveFileNames,
+        kFileDds,
+        {stone_entry(bytes("payload"))});
+
+    auto baseline_open = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(baseline_open.has_value());
+    auto baseline_reader = std::move(baseline_open).value();
+    REQUIRE(baseline_reader.entries().size() == 1);
+
+    auto archive_bytes = libbsa::tests::read_all_bytes(fixture.path);
+    const auto folder_offset = static_cast<std::size_t>(baseline_reader.entries().front().folder_offset);
+    const auto terminator_offset = folder_offset + 1U + folder_name.size();
+    REQUIRE(terminator_offset < archive_bytes.size());
+    archive_bytes[terminator_offset] = 'x';
+
+    const auto path = libbsa::tests::write_bytes(
+        case_directory(),
+        "tes4-bad-folder-name-terminator-copy.bsa",
+        archive_bytes);
+    auto open_result = libbsa::ArchiveReader::open(path);
+    REQUIRE_FALSE(open_result.has_value());
+    CHECK(open_result.error().code == libbsa::ErrorCode::malformed_archive);
 }
 
 TEST_CASE("missing path lookup and extraction return typed missing-file errors")
