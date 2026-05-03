@@ -24,6 +24,9 @@ namespace {
 #if !defined(LIBBSA_SHARED)
 thread_local bool fail_large_allocations = false;
 thread_local std::size_t allocation_failure_threshold = std::numeric_limits<std::size_t>::max();
+thread_local bool count_allocations = false;
+thread_local std::size_t allocation_attempt_count = 0;
+thread_local std::size_t allocation_failure_attempt = 0;
 #endif
 
 constexpr std::uint32_t kArchivePathNames = 0x0001;
@@ -217,6 +220,67 @@ private:
     bool previous_fail_large_allocations_ = false;
     std::size_t previous_allocation_failure_threshold_ = std::numeric_limits<std::size_t>::max();
 };
+
+class AllocationCountingScope {
+public:
+    AllocationCountingScope()
+        : previous_count_allocations_(count_allocations)
+        , previous_allocation_attempt_count_(allocation_attempt_count)
+        , previous_allocation_failure_attempt_(allocation_failure_attempt)
+    {
+        count_allocations = true;
+        allocation_attempt_count = 0;
+        allocation_failure_attempt = 0;
+    }
+
+    ~AllocationCountingScope()
+    {
+        count_allocations = previous_count_allocations_;
+        allocation_attempt_count = previous_allocation_attempt_count_;
+        allocation_failure_attempt = previous_allocation_failure_attempt_;
+    }
+
+    AllocationCountingScope(const AllocationCountingScope&) = delete;
+    AllocationCountingScope& operator=(const AllocationCountingScope&) = delete;
+
+    [[nodiscard]] std::size_t allocation_count() const noexcept
+    {
+        return allocation_attempt_count;
+    }
+
+private:
+    bool previous_count_allocations_ = false;
+    std::size_t previous_allocation_attempt_count_ = 0;
+    std::size_t previous_allocation_failure_attempt_ = 0;
+};
+
+class AllocationAttemptFailureScope {
+public:
+    explicit AllocationAttemptFailureScope(std::size_t attempt)
+        : previous_count_allocations_(count_allocations)
+        , previous_allocation_attempt_count_(allocation_attempt_count)
+        , previous_allocation_failure_attempt_(allocation_failure_attempt)
+    {
+        count_allocations = true;
+        allocation_attempt_count = 0;
+        allocation_failure_attempt = attempt;
+    }
+
+    ~AllocationAttemptFailureScope()
+    {
+        count_allocations = previous_count_allocations_;
+        allocation_attempt_count = previous_allocation_attempt_count_;
+        allocation_failure_attempt = previous_allocation_failure_attempt_;
+    }
+
+    AllocationAttemptFailureScope(const AllocationAttemptFailureScope&) = delete;
+    AllocationAttemptFailureScope& operator=(const AllocationAttemptFailureScope&) = delete;
+
+private:
+    bool previous_count_allocations_ = false;
+    std::size_t previous_allocation_attempt_count_ = 0;
+    std::size_t previous_allocation_failure_attempt_ = 0;
+};
 #endif
 
 } // namespace
@@ -226,6 +290,12 @@ private:
 // It only reaches libbsa allocations when the library is statically linked into the test executable.
 void* operator new(std::size_t size)
 {
+    if (count_allocations) {
+        ++allocation_attempt_count;
+        if (allocation_failure_attempt != 0U && allocation_attempt_count == allocation_failure_attempt) {
+            throw std::bad_alloc{};
+        }
+    }
     if (fail_large_allocations && size >= allocation_failure_threshold) {
         throw std::bad_alloc{};
     }
@@ -368,6 +438,30 @@ TEST_CASE("TES4 index allocation failures return typed errors")
         CHECK(open_result.error().message.find("TES4") != std::string::npos);
         CHECK(open_result.error().message.find("archive index") != std::string::npos);
     }
+}
+
+TEST_CASE("reader state allocation failures return typed errors")
+{
+    const auto fixture = libbsa::tests::write_tes3_fixture_archive(
+        case_directory(),
+        "reader-state-allocation-failure",
+        {});
+
+    std::size_t allocation_to_fail = 0;
+    {
+        AllocationCountingScope allocation_counter;
+        auto open_result = libbsa::ArchiveReader::open(fixture.path);
+        REQUIRE(open_result.has_value());
+        allocation_to_fail = allocation_counter.allocation_count();
+    }
+    REQUIRE(allocation_to_fail > 0U);
+
+    AllocationAttemptFailureScope allocation_failure(allocation_to_fail);
+    auto open_result = libbsa::ArchiveReader::open(fixture.path);
+
+    REQUIRE_FALSE(open_result.has_value());
+    CHECK(open_result.error().code == libbsa::ErrorCode::io_error);
+    CHECK(open_result.error().message.find("reader state") != std::string::npos);
 }
 #endif
 

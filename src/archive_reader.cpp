@@ -6,6 +6,7 @@
 #include <array>
 #include <fstream>
 #include <memory>
+#include <new>
 #include <ostream>
 #include <string>
 
@@ -92,9 +93,14 @@ Result<ArchiveReader> ArchiveReader::open(const std::filesystem::path& path)
         return parsed.error();
     }
 
-    auto impl = std::make_unique<Impl>();
-    impl->archive = std::move(parsed).value();
-    return ArchiveReader(std::move(impl));
+    try {
+        // Keep post-parse reader construction inside open()'s Result error contract.
+        auto impl = std::make_unique<Impl>();
+        impl->archive = std::move(parsed).value();
+        return ArchiveReader(std::move(impl));
+    } catch (const std::bad_alloc&) {
+        return io_error("failed to allocate archive reader state");
+    }
 }
 
 const ArchiveMetadata& ArchiveReader::metadata() const noexcept
