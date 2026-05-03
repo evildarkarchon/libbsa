@@ -38,6 +38,7 @@ enum class ErrorCode {
     malformed_archive,
     missing_file,
     decompression_failed,
+    invalid_state, ///< The operation requires live archive state, such as after moving from a reader.
 };
 
 /// Carries a typed failure plus a short diagnostic suitable for logs or UI.
@@ -159,7 +160,10 @@ public:
     ArchiveReader() = delete;
     LIBBSA_API ~ArchiveReader();
 
+    /// Moves archive state into this reader. The moved-from reader remains valid and presents as empty.
     LIBBSA_API ArchiveReader(ArchiveReader&&) noexcept;
+
+    /// Replaces this reader's archive state. The moved-from reader remains valid and presents as empty.
     LIBBSA_API ArchiveReader& operator=(ArchiveReader&&) noexcept;
 
     ArchiveReader(const ArchiveReader&) = delete;
@@ -169,21 +173,25 @@ public:
     [[nodiscard]] LIBBSA_API static Result<ArchiveReader> open(const std::filesystem::path& path);
 
     /// Returns archive-level metadata. The reference remains valid for this reader's lifetime.
+    /// Moved-from readers return default metadata with an unknown format.
     [[nodiscard]] LIBBSA_API const ArchiveMetadata& metadata() const noexcept;
 
-    /// Returns the parsed file entries in archive order.
+    /// Returns the parsed file entries in archive order. Moved-from readers return an empty entry list.
     [[nodiscard]] LIBBSA_API const std::vector<ArchiveEntry>& entries() const noexcept;
 
     /// Returns true if a normalized, hash-based lookup finds the archive-relative path.
+    /// Moved-from readers return false.
     [[nodiscard]] LIBBSA_API bool contains(std::string_view archive_path) const;
 
-    /// Looks up metadata for an archive-relative file path.
+    /// Looks up metadata for an archive-relative file path. Moved-from readers return invalid_state.
     [[nodiscard]] LIBBSA_API Result<ArchiveEntry> entry(std::string_view archive_path) const;
 
     /// Extracts a file to memory, transparently handling format-specific payload details.
+    /// Moved-from readers return invalid_state.
     [[nodiscard]] LIBBSA_API Result<std::vector<std::uint8_t>> extract(std::string_view archive_path) const;
 
     /// Extracts a file and writes the resulting bytes to the caller-provided stream.
+    /// Moved-from readers return invalid_state.
     [[nodiscard]] LIBBSA_API Result<void> extract_to(std::string_view archive_path, std::ostream& output) const;
 
 private:

@@ -71,6 +71,24 @@ std::string lookup_key_for(const detail::ParsedArchive& archive, std::string_vie
     return detail::lookup_key_for_archive_path(archive_path);
 }
 
+const ArchiveMetadata& empty_metadata() noexcept
+{
+    // Reference-returning APIs cannot use Result, so moved-from readers expose stable empty views.
+    static const ArchiveMetadata metadata{};
+    return metadata;
+}
+
+const std::vector<ArchiveEntry>& empty_entries() noexcept
+{
+    static const std::vector<ArchiveEntry> entries;
+    return entries;
+}
+
+Error moved_from_reader_error()
+{
+    return {ErrorCode::invalid_state, "archive reader no longer has archive state after move"};
+}
+
 } // namespace
 
 struct ArchiveReader::Impl {
@@ -105,22 +123,38 @@ Result<ArchiveReader> ArchiveReader::open(const std::filesystem::path& path)
 
 const ArchiveMetadata& ArchiveReader::metadata() const noexcept
 {
+    if (!impl_) {
+        return empty_metadata();
+    }
+
     return impl_->archive.metadata;
 }
 
 const std::vector<ArchiveEntry>& ArchiveReader::entries() const noexcept
 {
+    if (!impl_) {
+        return empty_entries();
+    }
+
     return impl_->archive.entries;
 }
 
 bool ArchiveReader::contains(std::string_view archive_path) const
 {
+    if (!impl_) {
+        return false;
+    }
+
     const auto key = lookup_key_for(impl_->archive, archive_path);
     return impl_->archive.lookup.find(key) != impl_->archive.lookup.end();
 }
 
 Result<ArchiveEntry> ArchiveReader::entry(std::string_view archive_path) const
 {
+    if (!impl_) {
+        return moved_from_reader_error();
+    }
+
     const auto normalized = detail::normalize_archive_path(archive_path);
     const auto found = impl_->archive.lookup.find(lookup_key_for(impl_->archive, normalized));
     if (found == impl_->archive.lookup.end()) {
@@ -132,6 +166,10 @@ Result<ArchiveEntry> ArchiveReader::entry(std::string_view archive_path) const
 
 Result<std::vector<std::uint8_t>> ArchiveReader::extract(std::string_view archive_path) const
 {
+    if (!impl_) {
+        return moved_from_reader_error();
+    }
+
     const auto normalized = detail::normalize_archive_path(archive_path);
     const auto found = impl_->archive.lookup.find(lookup_key_for(impl_->archive, normalized));
     if (found == impl_->archive.lookup.end()) {

@@ -510,6 +510,54 @@ TEST_CASE("TES4 archive metadata and raw extraction are available through the pu
     CHECK(stream.str() == "raw mesh payload");
 }
 
+TEST_CASE("moved-from archive readers behave as empty readers")
+{
+    const auto fixture = libbsa::tests::write_fixture_archive(
+        case_directory(),
+        libbsa::tests::FixtureFormat::tes4,
+        "tes4-moved-from-reader",
+        kArchivePathNames | kArchiveFileNames,
+        kFileDds,
+        {stone_entry(bytes("payload"))});
+
+    auto open_result = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(open_result.has_value());
+    auto source = std::move(open_result).value();
+    auto destination = std::move(source);
+
+    CHECK(destination.contains("textures\\stone.dds"));
+    CHECK(source.metadata().format == libbsa::ArchiveFormat::unknown);
+    CHECK(source.entries().empty());
+    CHECK_FALSE(source.contains("textures\\stone.dds"));
+
+    const auto entry_result = source.entry("textures\\stone.dds");
+    REQUIRE_FALSE(entry_result.has_value());
+    CHECK(entry_result.error().code == libbsa::ErrorCode::invalid_state);
+
+    const auto extract_result = source.extract("textures\\stone.dds");
+    REQUIRE_FALSE(extract_result.has_value());
+    CHECK(extract_result.error().code == libbsa::ErrorCode::invalid_state);
+
+    auto assignment_source_open = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(assignment_source_open.has_value());
+    auto assignment_source = std::move(assignment_source_open).value();
+
+    auto assignment_destination_open = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(assignment_destination_open.has_value());
+    auto assignment_destination = std::move(assignment_destination_open).value();
+    assignment_destination = std::move(assignment_source);
+
+    CHECK(assignment_destination.contains("textures\\stone.dds"));
+    CHECK(assignment_source.metadata().format == libbsa::ArchiveFormat::unknown);
+    CHECK(assignment_source.entries().empty());
+    CHECK_FALSE(assignment_source.contains("textures\\stone.dds"));
+
+    std::ostringstream stream;
+    const auto stream_result = assignment_source.extract_to("textures\\stone.dds", stream);
+    REQUIRE_FALSE(stream_result.has_value());
+    CHECK(stream_result.error().code == libbsa::ErrorCode::invalid_state);
+}
+
 TEST_CASE("TES3 archive metadata and raw extraction are available through the public API")
 {
     const auto texture_payload = bytes("tes3 texture payload");
