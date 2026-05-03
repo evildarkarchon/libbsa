@@ -309,7 +309,10 @@ Result<ParsedArchive> parse_tes3_archive(const std::filesystem::path& path)
         entry.compression = CompressionMethod::none;
         entry.compressed = false;
 
-        archive.lookup.try_emplace(lookup_key_for_tes3_hash(entry.file_hash), archive.entries.size());
+        auto key = lookup_key_for_tes3_hash(entry.file_hash);
+        if (!archive.lookup.try_emplace(std::move(key), archive.entries.size()).second) {
+            return malformed("duplicate TES3 file hash in archive index");
+        }
         archive.entries.push_back(std::move(entry));
     }
 

@@ -450,6 +450,62 @@ TEST_CASE("malformed TES3 archives return typed errors")
         REQUIRE_FALSE(result.has_value());
         CHECK(result.error().code == libbsa::ErrorCode::malformed_archive);
     }
+
+    SECTION("duplicate hash lookup key")
+    {
+        const std::string first_path = "meshes\\x.nif";
+        const std::string second_path = "textures\\stone.dds";
+        const auto first_payload = bytes("first payload");
+        const auto second_payload = bytes("second payload");
+
+        std::vector<std::uint8_t> archive_bytes;
+        push_u32(archive_bytes, 0x00000100);
+        const auto hash_offset_position = archive_bytes.size();
+        push_u32(archive_bytes, 0U);
+        push_u32(archive_bytes, 2U);
+
+        push_u32(archive_bytes, static_cast<std::uint32_t>(first_payload.size()));
+        push_u32(archive_bytes, 0U);
+        push_u32(archive_bytes, static_cast<std::uint32_t>(second_payload.size()));
+        push_u32(archive_bytes, static_cast<std::uint32_t>(first_payload.size()));
+
+        push_u32(archive_bytes, 0U);
+        push_u32(archive_bytes, static_cast<std::uint32_t>(first_path.size() + 1U));
+        push_string_term(archive_bytes, first_path);
+        push_string_term(archive_bytes, second_path);
+
+        overwrite_u32(archive_bytes, hash_offset_position, static_cast<std::uint32_t>(archive_bytes.size() - 12U));
+        push_tes3_hash(archive_bytes, first_path);
+        push_tes3_hash(archive_bytes, first_path);
+        archive_bytes.insert(archive_bytes.end(), first_payload.begin(), first_payload.end());
+        archive_bytes.insert(archive_bytes.end(), second_payload.begin(), second_payload.end());
+
+        const auto path = libbsa::tests::write_bytes(directory, "tes3-duplicate-hash-key.bsa", archive_bytes);
+        const auto result = libbsa::ArchiveReader::open(path);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().code == libbsa::ErrorCode::malformed_archive);
+    }
+}
+
+TEST_CASE("duplicate TES4 hash lookup keys return a malformed-archive error")
+{
+    auto duplicate = stone_entry(bytes("duplicate texture payload"));
+    duplicate.name = "stone-copy.dds";
+
+    const auto fixture = libbsa::tests::write_fixture_archive(
+        case_directory(),
+        libbsa::tests::FixtureFormat::tes4,
+        "tes4-duplicate-hash-key",
+        kArchivePathNames | kArchiveFileNames,
+        kFileDds,
+        {
+            stone_entry(bytes("first texture payload")),
+            std::move(duplicate),
+        });
+
+    const auto result = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE_FALSE(result.has_value());
+    CHECK(result.error().code == libbsa::ErrorCode::malformed_archive);
 }
 
 TEST_CASE("TES4 archive parsing follows folder table offsets")

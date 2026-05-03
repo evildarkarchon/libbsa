@@ -673,7 +673,10 @@ Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
             populate_payload_metadata(archive, entry);
 
             // TES4 lookup is intentionally hash-based for BSArchPro compatibility; the stored path remains for diagnostics.
-            archive.lookup.try_emplace(lookup_key(entry.folder_hash, entry.file_hash), archive.entries.size());
+            auto key = lookup_key(entry.folder_hash, entry.file_hash);
+            if (!archive.lookup.try_emplace(std::move(key), archive.entries.size()).second) {
+                return malformed("duplicate TES4 folder/file hash in archive index");
+            }
             archive.entries.push_back(std::move(entry));
         }
     }
