@@ -37,6 +37,15 @@ FixtureArchive write_fixture_archive(
     std::uint32_t file_flags,
     std::vector<FixtureEntry> entries);
 
+/// Writes a fixture whose folder table blocks are deliberately not in folder-record order.
+FixtureArchive write_fixture_archive_with_reversed_folder_tables(
+    const std::filesystem::path& directory,
+    FixtureFormat format,
+    std::string stem,
+    std::uint32_t archive_flags,
+    std::uint32_t file_flags,
+    std::vector<FixtureEntry> entries);
+
 std::filesystem::path write_bytes(
     const std::filesystem::path& directory,
     std::string file_name,

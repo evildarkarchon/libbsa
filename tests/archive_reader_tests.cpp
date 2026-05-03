@@ -4,14 +4,19 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <new>
 #include <sstream>
 #include <string>
 #include <vector>
 
 namespace {
+
+thread_local bool fail_large_allocations = false;
+thread_local std::size_t allocation_failure_threshold = std::numeric_limits<std::size_t>::max();
 
 constexpr std::uint32_t kArchivePathNames = 0x0001;
 constexpr std::uint32_t kArchiveFileNames = 0x0002;
@@ -77,7 +82,69 @@ libbsa::tests::FixtureEntry skeleton_entry(std::vector<std::uint8_t> payload, bo
     };
 }
 
+class AllocationFailureScope {
+public:
+    explicit AllocationFailureScope(std::size_t threshold)
+        : previous_fail_large_allocations_(fail_large_allocations)
+        , previous_allocation_failure_threshold_(allocation_failure_threshold)
+    {
+        allocation_failure_threshold = threshold;
+        fail_large_allocations = true;
+    }
+
+    ~AllocationFailureScope()
+    {
+        fail_large_allocations = previous_fail_large_allocations_;
+        allocation_failure_threshold = previous_allocation_failure_threshold_;
+    }
+
+    AllocationFailureScope(const AllocationFailureScope&) = delete;
+    AllocationFailureScope& operator=(const AllocationFailureScope&) = delete;
+
+private:
+    bool previous_fail_large_allocations_ = false;
+    std::size_t previous_allocation_failure_threshold_ = std::numeric_limits<std::size_t>::max();
+};
+
 } // namespace
+
+// The allocation hook lets this test binary exercise open()'s low-memory Result contract without huge files.
+void* operator new(std::size_t size)
+{
+    if (fail_large_allocations && size >= allocation_failure_threshold) {
+        throw std::bad_alloc{};
+    }
+    if (auto* pointer = std::malloc(size)) {
+        return pointer;
+    }
+
+    throw std::bad_alloc{};
+}
+
+void* operator new[](std::size_t size)
+{
+    return ::operator new(size);
+}
+
+void operator delete(void* pointer) noexcept
+{
+    std::free(pointer);
+}
+
+void operator delete[](void* pointer) noexcept
+{
+    std::free(pointer);
+}
+
+void operator delete(void* pointer, std::size_t) noexcept
+{
+    std::free(pointer);
+}
+
+void operator delete[](void* pointer, std::size_t) noexcept
+{
+    std::free(pointer);
+}
 
 TEST_CASE("opening unsupported archives returns typed errors")
 {
@@ -94,6 +161,23 @@ TEST_CASE("opening unsupported archives returns typed errors")
     auto version_result = libbsa::ArchiveReader::open(unsupported_version);
     REQUIRE_FALSE(version_result.has_value());
     CHECK(version_result.error().code == libbsa::ErrorCode::unsupported_format);
+}
+
+TEST_CASE("archive read allocation failures return typed errors")
+{
+    std::vector<std::uint8_t> archive_bytes(32U * 1024U, 0U);
+    archive_bytes[0] = 'B';
+    archive_bytes[1] = 'S';
+    archive_bytes[2] = 'A';
+    archive_bytes[3] = '\0';
+    const auto path = libbsa::tests::write_bytes(case_directory(), "read-allocation-failure.bsa", archive_bytes);
+
+    AllocationFailureScope allocation_failure(16U * 1024U);
+    auto open_result = libbsa::ArchiveReader::open(path);
+
+    REQUIRE_FALSE(open_result.has_value());
+    CHECK(open_result.error().code == libbsa::ErrorCode::io_error);
+    CHECK(open_result.error().message.find("archive read buffer") != std::string::npos);
 }
 
 TEST_CASE("TES4 archive metadata and raw extraction are available through the public API")
@@ -139,6 +223,32 @@ TEST_CASE("TES4 archive metadata and raw extraction are available through the pu
     auto stream_result = reader.extract_to("meshes/actors/skeleton.nif", stream);
     REQUIRE(stream_result.has_value());
     CHECK(stream.str() == "raw mesh payload");
+}
+
+TEST_CASE("TES4 archive parsing follows folder table offsets")
+{
+    const auto fixture = libbsa::tests::write_fixture_archive_with_reversed_folder_tables(
+        case_directory(),
+        libbsa::tests::FixtureFormat::tes4,
+        "tes4-reversed-folder-tables",
+        kArchivePathNames | kArchiveFileNames,
+        kFileDds | kFileNif,
+        {
+            stone_entry(bytes("offset texture payload")),
+            skeleton_entry(bytes("offset mesh payload")),
+        });
+
+    auto open_result = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(open_result.has_value());
+    auto reader = std::move(open_result).value();
+
+    auto texture = reader.extract("textures\\stone.dds");
+    REQUIRE(texture.has_value());
+    CHECK(as_string(texture.value()) == "offset texture payload");
+
+    auto mesh = reader.extract("meshes\\actors\\skeleton.nif");
+    REQUIRE(mesh.has_value());
+    CHECK(as_string(mesh.value()) == "offset mesh payload");
 }
 
 TEST_CASE("missing path lookup and extraction return typed missing-file errors")

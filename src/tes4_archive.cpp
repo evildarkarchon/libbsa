@@ -113,6 +113,16 @@ Result<void> checked_add_size(std::size_t& total, std::size_t value, std::string
     return {};
 }
 
+/// Converts an archive-controlled absolute offset to a host-sized seek position.
+Result<std::size_t> checked_archive_offset(std::uint64_t offset, std::string description)
+{
+    if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+        return malformed(description + " exceeds host size limits");
+    }
+
+    return static_cast<std::size_t>(offset);
+}
+
 /// Validates archive-controlled index counts before they are used to allocate parser structures.
 Result<void> validate_index_bounds(
     const std::vector<std::uint8_t>& bytes,
@@ -217,21 +227,30 @@ CompressionMethod compression_for(ArchiveFormat format, bool compressed)
 
 std::vector<std::uint8_t> read_file_bytes(const std::filesystem::path& path, Error& error)
 {
-    std::ifstream input(path, std::ios::binary);
-    if (!input) {
-        error = io_error("failed to open archive: " + path.string());
+    const auto path_string = path.string();
+    try {
+        std::ifstream input(path, std::ios::binary);
+        if (!input) {
+            error = io_error("failed to open archive: " + path_string);
+            return {};
+        }
+
+        std::vector<std::uint8_t> bytes{
+            std::istreambuf_iterator<char>(input),
+            std::istreambuf_iterator<char>()};
+        if (!input.eof() && input.fail()) {
+            error = io_error("failed to read archive: " + path_string);
+            return {};
+        }
+
+        return bytes;
+    } catch (const std::bad_alloc&) {
+        error = io_error("failed to allocate archive read buffer: " + path_string);
+        return {};
+    } catch (const std::length_error&) {
+        error = io_error("archive read buffer exceeds host size limits: " + path_string);
         return {};
     }
-
-    std::vector<std::uint8_t> bytes{
-        std::istreambuf_iterator<char>(input),
-        std::istreambuf_iterator<char>()};
-    if (!input.eof() && input.fail()) {
-        error = io_error("failed to read archive: " + path.string());
-        return {};
-    }
-
-    return bytes;
 }
 
 Result<std::uint32_t> read_u32_at(const std::vector<std::uint8_t>& bytes, std::size_t offset)
@@ -587,7 +606,17 @@ Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
         folder.files.resize(folder.record.file_count);
     }
 
+    // Folder table blocks can be physically ordered differently from folder records; the per-folder offset is authoritative.
+    std::size_t file_names_offset = reader.position();
     for (auto& folder : folders) {
+        auto folder_table_offset = checked_archive_offset(folder.record.offset, "folder table offset");
+        if (!folder_table_offset) {
+            return folder_table_offset.error();
+        }
+        if (!reader.seek(folder_table_offset.value())) {
+            return malformed("folder table offset extends past archive bounds");
+        }
+
         if (include_folder_names) {
             auto name = reader.read_string_len();
             if (!name) {
@@ -607,9 +636,15 @@ Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
             file.size = size.value();
             file.offset = offset.value();
         }
+
+        file_names_offset = std::max(file_names_offset, reader.position());
     }
 
     if (include_file_names) {
+        if (!reader.seek(file_names_offset)) {
+            return malformed("file name block offset extends past archive bounds");
+        }
+
         for (auto& folder : folders) {
             for (auto& file : folder.files) {
                 auto name = reader.read_string_term();

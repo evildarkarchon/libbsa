@@ -6,8 +6,8 @@
 #include <algorithm>
 #include <fstream>
 #include <iterator>
+#include <numeric>
 #include <stdexcept>
-#include <unordered_map>
 
 namespace libbsa::tests {
 namespace {
@@ -26,6 +26,14 @@ struct FolderGroup {
     std::uint64_t hash = 0;
     std::uint64_t table_offset = 0;
     std::vector<FixtureEntry> entries;
+};
+
+struct SerializedEntry {
+    std::uint64_t folder_hash = 0;
+    std::uint64_t file_hash = 0;
+    std::uint64_t offset = 0;
+    std::uint32_t size = 0;
+    std::vector<std::uint8_t> payload;
 };
 
 void push_u8(std::vector<std::uint8_t>& bytes, std::uint8_t value)
@@ -184,15 +192,28 @@ std::vector<std::uint8_t> payload_for(
     return data;
 }
 
-} // namespace
+const SerializedEntry& serialized_entry_for(
+    const std::vector<SerializedEntry>& serialized_entries,
+    const FixtureEntry& entry)
+{
+    const auto match = std::find_if(serialized_entries.begin(), serialized_entries.end(), [&](const SerializedEntry& serialized) {
+        return serialized.folder_hash == entry.folder_hash && serialized.file_hash == entry.file_hash;
+    });
+    if (match == serialized_entries.end()) {
+        throw std::runtime_error("fixture entry payload was not serialized");
+    }
 
-FixtureArchive write_fixture_archive(
+    return *match;
+}
+
+FixtureArchive write_fixture_archive_impl(
     const std::filesystem::path& directory,
     FixtureFormat format,
     std::string stem,
     std::uint32_t archive_flags,
     std::uint32_t file_flags,
-    std::vector<FixtureEntry> entries)
+    std::vector<FixtureEntry> entries,
+    bool reverse_folder_tables)
 {
     std::filesystem::create_directories(directory);
 
@@ -216,9 +237,17 @@ FixtureArchive write_fixture_archive(
         }
     }
 
+    std::vector<std::size_t> table_order(folders.size());
+    std::iota(table_order.begin(), table_order.end(), std::size_t{0});
+    if (reverse_folder_tables) {
+        std::reverse(table_order.begin(), table_order.end());
+    }
+
     const auto folder_tables_offset = folder_records_offset + static_cast<std::uint32_t>(folders.size() * folder_record_size);
     std::uint64_t file_names_offset = folder_tables_offset;
-    for (const auto& folder : folders) {
+    for (const auto folder_index : table_order) {
+        auto& folder = folders[folder_index];
+        folder.table_offset = file_names_offset;
         if (include_folder_names) {
             file_names_offset += 1U + folder.name.size() + 1U;
         }
@@ -226,33 +255,26 @@ FixtureArchive write_fixture_archive(
     }
 
     std::uint64_t data_offset = file_names_offset + file_names_length;
-    std::vector<std::vector<std::uint8_t>> entry_payloads;
-    std::vector<std::uint64_t> entry_offsets;
-    std::vector<std::uint32_t> entry_sizes;
+    std::vector<SerializedEntry> serialized_entries;
 
     const bool archive_default_compressed = (archive_flags & kArchiveCompress) != 0U;
     for (const auto& folder : folders) {
         for (const auto& entry : folder.entries) {
             auto stored = payload_for(format, archive_flags, entry);
-            entry_offsets.push_back(data_offset);
-            data_offset += stored.size();
-
             std::uint32_t size = static_cast<std::uint32_t>(stored.size());
             if (archive_default_compressed != entry.compressed) {
                 size |= kFileSizeCompress;
             }
-            entry_sizes.push_back(size);
-            entry_payloads.push_back(std::move(stored));
-        }
-    }
 
-    auto offset_cursor = file_names_offset + file_names_length;
-    for (auto& folder : folders) {
-        folder.table_offset = offset_cursor;
-        if (include_folder_names) {
-            offset_cursor += 1U + folder.name.size() + 1U;
+            serialized_entries.push_back({
+                entry.folder_hash,
+                entry.file_hash,
+                data_offset,
+                size,
+                std::move(stored),
+            });
+            data_offset += serialized_entries.back().payload.size();
         }
-        offset_cursor += 16U * folder.entries.size();
     }
 
     std::vector<std::uint8_t> bytes;
@@ -262,7 +284,7 @@ FixtureArchive write_fixture_archive(
     push_u32(bytes, folder_records_offset);
     push_u32(bytes, archive_flags);
     push_u32(bytes, static_cast<std::uint32_t>(folders.size()));
-    push_u32(bytes, static_cast<std::uint32_t>(entry_payloads.size()));
+    push_u32(bytes, static_cast<std::uint32_t>(serialized_entries.size()));
     push_u32(bytes, folder_names_length);
     push_u32(bytes, file_names_length);
     push_u32(bytes, file_flags);
@@ -278,16 +300,16 @@ FixtureArchive write_fixture_archive(
         }
     }
 
-    for (const auto& folder : folders) {
+    for (const auto folder_index : table_order) {
+        const auto& folder = folders[folder_index];
         if (include_folder_names) {
             push_string_len(bytes, folder.name, true);
         }
         for (const auto& entry : folder.entries) {
+            const auto& serialized = serialized_entry_for(serialized_entries, entry);
             push_u64(bytes, entry.file_hash);
-            push_u32(bytes, entry_sizes.front());
-            entry_sizes.erase(entry_sizes.begin());
-            push_u32(bytes, static_cast<std::uint32_t>(entry_offsets.front()));
-            entry_offsets.erase(entry_offsets.begin());
+            push_u32(bytes, serialized.size);
+            push_u32(bytes, static_cast<std::uint32_t>(serialized.offset));
         }
     }
 
@@ -299,8 +321,8 @@ FixtureArchive write_fixture_archive(
         }
     }
 
-    for (const auto& payload : entry_payloads) {
-        push_bytes(bytes, payload);
+    for (const auto& serialized : serialized_entries) {
+        push_bytes(bytes, serialized.payload);
     }
 
     FixtureArchive archive{};
@@ -321,6 +343,44 @@ FixtureArchive write_fixture_archive(
     }
 
     return archive;
+}
+
+} // namespace
+
+FixtureArchive write_fixture_archive(
+    const std::filesystem::path& directory,
+    FixtureFormat format,
+    std::string stem,
+    std::uint32_t archive_flags,
+    std::uint32_t file_flags,
+    std::vector<FixtureEntry> entries)
+{
+    return write_fixture_archive_impl(
+        directory,
+        format,
+        std::move(stem),
+        archive_flags,
+        file_flags,
+        std::move(entries),
+        false);
+}
+
+FixtureArchive write_fixture_archive_with_reversed_folder_tables(
+    const std::filesystem::path& directory,
+    FixtureFormat format,
+    std::string stem,
+    std::uint32_t archive_flags,
+    std::uint32_t file_flags,
+    std::vector<FixtureEntry> entries)
+{
+    return write_fixture_archive_impl(
+        directory,
+        format,
+        std::move(stem),
+        archive_flags,
+        file_flags,
+        std::move(entries),
+        true);
 }
 
 std::filesystem::path write_bytes(
