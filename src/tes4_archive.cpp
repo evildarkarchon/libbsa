@@ -10,7 +10,9 @@
 #include <fstream>
 #include <iterator>
 #include <limits>
+#include <new>
 #include <sstream>
+#include <stdexcept>
 #include <utility>
 
 namespace libbsa::detail {
@@ -23,6 +25,8 @@ constexpr std::uint32_t kVersionSse = 0x69;
 constexpr std::uint32_t kArchiveCompress = 0x0004;
 constexpr std::uint32_t kArchiveEmbedName = 0x0100;
 constexpr std::uint32_t kFileSizeCompress = 0x40000000;
+// Milestone 1 extraction materializes each entry in memory; streaming decompression can lift this ceiling later.
+constexpr std::size_t kMaxInMemoryExtractionSize = 512U * 1024U * 1024U;
 constexpr std::size_t kTes4FolderRecordSize = 16U;
 constexpr std::size_t kSseFolderRecordSize = 24U;
 constexpr std::size_t kFileRecordSize = 16U;
@@ -217,6 +221,16 @@ Result<std::uint32_t> read_u32_at(const std::vector<std::uint8_t>& bytes, std::s
     return value;
 }
 
+/// Rejects archive-controlled output sizes that the current in-memory extraction API will not allocate.
+Result<void> validate_in_memory_extraction_size(std::uint32_t uncompressed_size)
+{
+    if (static_cast<std::size_t>(uncompressed_size) > kMaxInMemoryExtractionSize) {
+        return malformed("compressed entry uncompressed size exceeds the in-memory extraction limit");
+    }
+
+    return {};
+}
+
 Result<PayloadSpan> resolve_payload_span(const ParsedArchive& archive, const ArchiveEntry& entry)
 {
     if (entry.data_offset > archive.bytes.size()) {
@@ -251,6 +265,10 @@ Result<PayloadSpan> resolve_payload_span(const ParsedArchive& archive, const Arc
         if (!size_result) {
             return size_result.error();
         }
+        auto size_validation = validate_in_memory_extraction_size(size_result.value());
+        if (!size_validation) {
+            return size_validation.error();
+        }
         span.uncompressed_size = size_result.value();
         offset += 4U;
         remaining -= 4U;
@@ -279,12 +297,28 @@ void populate_payload_metadata(const ParsedArchive& archive, ArchiveEntry& entry
     entry.uncompressed_size = span.value().uncompressed_size;
 }
 
+/// Allocates a decompression target buffer while keeping allocator failures inside the Result error flow.
+Result<std::vector<std::uint8_t>> make_decompression_buffer(std::size_t output_size)
+{
+    try {
+        return std::vector<std::uint8_t>(output_size);
+    } catch (const std::bad_alloc&) {
+        return decompression_failed("failed to allocate decompression output buffer");
+    } catch (const std::length_error&) {
+        return decompression_failed("decompression output buffer exceeds host size limits");
+    }
+}
+
 Result<std::vector<std::uint8_t>> decompress_zlib(
     const std::uint8_t* source,
     std::size_t source_size,
     std::size_t output_size)
 {
-    std::vector<std::uint8_t> output(output_size);
+    auto output_result = make_decompression_buffer(output_size);
+    if (!output_result) {
+        return output_result.error();
+    }
+    auto output = std::move(output_result).value();
     libdeflate_decompressor* decompressor = libdeflate_alloc_decompressor();
     if (decompressor == nullptr) {
         return decompression_failed("failed to allocate libdeflate decompressor");
@@ -312,7 +346,11 @@ Result<std::vector<std::uint8_t>> decompress_lz4_frame(
     std::size_t source_size,
     std::size_t output_size)
 {
-    std::vector<std::uint8_t> output(output_size);
+    auto output_result = make_decompression_buffer(output_size);
+    if (!output_result) {
+        return output_result.error();
+    }
+    auto output = std::move(output_result).value();
     LZ4F_dctx* context = nullptr;
     auto create_result = LZ4F_createDecompressionContext(&context, LZ4F_VERSION);
     if (LZ4F_isError(create_result) != 0U) {

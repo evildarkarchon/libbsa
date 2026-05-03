@@ -39,6 +39,15 @@ void push_u32(std::vector<std::uint8_t>& output, std::uint32_t value)
     }
 }
 
+void overwrite_u32(std::vector<std::uint8_t>& output, std::size_t offset, std::uint32_t value)
+{
+    REQUIRE(offset <= output.size());
+    REQUIRE(output.size() - offset >= 4U);
+    for (int shift = 0; shift < 32; shift += 8) {
+        output[offset++] = static_cast<std::uint8_t>((value >> shift) & 0xFFu);
+    }
+}
+
 std::string as_string(const std::vector<std::uint8_t>& data)
 {
     return {data.begin(), data.end()};
@@ -301,4 +310,66 @@ TEST_CASE("corrupt compressed data returns a typed decompression error")
     auto extract_result = open_result.value().extract("textures\\stone.dds");
     REQUIRE_FALSE(extract_result.has_value());
     CHECK(extract_result.error().code == libbsa::ErrorCode::decompression_failed);
+}
+
+TEST_CASE("oversized zlib output size prefix returns a typed malformed-archive error")
+{
+    constexpr std::uint32_t oversized_uncompressed_size = 512U * 1024U * 1024U + 1U;
+    const auto fixture = libbsa::tests::write_fixture_archive(
+        case_directory(),
+        libbsa::tests::FixtureFormat::fo3,
+        "fo3-oversized-zlib-output",
+        kArchivePathNames | kArchiveFileNames | kArchiveCompress,
+        kFileDds,
+        {stone_entry(bytes("payload"), true)});
+
+    auto baseline_open = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(baseline_open.has_value());
+    auto baseline_reader = std::move(baseline_open).value();
+    REQUIRE(baseline_reader.entries().size() == 1);
+
+    auto archive_bytes = libbsa::tests::read_all_bytes(fixture.path);
+    overwrite_u32(
+        archive_bytes,
+        static_cast<std::size_t>(baseline_reader.entries().front().data_offset),
+        oversized_uncompressed_size);
+    const auto malformed_path =
+        libbsa::tests::write_bytes(case_directory(), "fo3-oversized-zlib-output-copy.bsa", archive_bytes);
+
+    auto open_result = libbsa::ArchiveReader::open(malformed_path);
+    REQUIRE(open_result.has_value());
+    auto extract_result = open_result.value().extract("textures\\stone.dds");
+    REQUIRE_FALSE(extract_result.has_value());
+    CHECK(extract_result.error().code == libbsa::ErrorCode::malformed_archive);
+}
+
+TEST_CASE("oversized LZ4 frame output size prefix returns a typed malformed-archive error")
+{
+    constexpr std::uint32_t oversized_uncompressed_size = 512U * 1024U * 1024U + 1U;
+    const auto fixture = libbsa::tests::write_fixture_archive(
+        case_directory(),
+        libbsa::tests::FixtureFormat::sse,
+        "sse-oversized-lz4-output",
+        kArchivePathNames | kArchiveFileNames | kArchiveCompress,
+        kFileDds,
+        {stone_entry(bytes("payload"), true)});
+
+    auto baseline_open = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(baseline_open.has_value());
+    auto baseline_reader = std::move(baseline_open).value();
+    REQUIRE(baseline_reader.entries().size() == 1);
+
+    auto archive_bytes = libbsa::tests::read_all_bytes(fixture.path);
+    overwrite_u32(
+        archive_bytes,
+        static_cast<std::size_t>(baseline_reader.entries().front().data_offset),
+        oversized_uncompressed_size);
+    const auto malformed_path =
+        libbsa::tests::write_bytes(case_directory(), "sse-oversized-lz4-output-copy.bsa", archive_bytes);
+
+    auto open_result = libbsa::ArchiveReader::open(malformed_path);
+    REQUIRE(open_result.has_value());
+    auto extract_result = open_result.value().extract("textures\\stone.dds");
+    REQUIRE_FALSE(extract_result.has_value());
+    CHECK(extract_result.error().code == libbsa::ErrorCode::malformed_archive);
 }
