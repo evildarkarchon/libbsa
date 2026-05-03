@@ -5,6 +5,7 @@
 
 #include <array>
 #include <fstream>
+#include <ios>
 #include <memory>
 #include <new>
 #include <ostream>
@@ -191,7 +192,11 @@ Result<void> ArchiveReader::extract_to(std::string_view archive_path, std::ostre
     }
 
     const auto& bytes = extracted.value();
-    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    try {
+        output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    } catch (const std::ios_base::failure&) {
+        return Error{ErrorCode::io_error, "failed to write extracted bytes to output stream"};
+    }
     if (!output) {
         return Error{ErrorCode::io_error, "failed to write extracted bytes to output stream"};
     }

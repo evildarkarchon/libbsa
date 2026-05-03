@@ -10,6 +10,7 @@
 #include <fstream>
 #include <limits>
 #include <sstream>
+#include <streambuf>
 #include <string>
 #include <utility>
 #include <vector>
@@ -166,6 +167,19 @@ std::string as_string(const std::vector<std::uint8_t>& data)
 {
     return {data.begin(), data.end()};
 }
+
+class FailingWriteBuffer : public std::streambuf {
+protected:
+    std::streamsize xsputn(const char*, std::streamsize) override
+    {
+        return 0;
+    }
+
+    int overflow(int) override
+    {
+        return traits_type::eof();
+    }
+};
 
 libbsa::tests::FixtureEntry stone_entry(std::vector<std::uint8_t> payload, bool compressed = false)
 {
@@ -508,6 +522,30 @@ TEST_CASE("TES4 archive metadata and raw extraction are available through the pu
     auto stream_result = reader.extract_to("meshes/actors/skeleton.nif", stream);
     REQUIRE(stream_result.has_value());
     CHECK(stream.str() == "raw mesh payload");
+}
+
+TEST_CASE("extract_to reports throwing stream writes as io errors")
+{
+    const auto fixture = libbsa::tests::write_fixture_archive(
+        case_directory(),
+        libbsa::tests::FixtureFormat::tes4,
+        "tes4-stream-write-exception",
+        kArchivePathNames | kArchiveFileNames,
+        kFileDds,
+        {stone_entry(bytes("payload"))});
+
+    auto open_result = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(open_result.has_value());
+    auto reader = std::move(open_result).value();
+
+    FailingWriteBuffer buffer;
+    std::ostream stream(&buffer);
+    stream.exceptions(std::ios::badbit | std::ios::failbit);
+
+    const auto stream_result = reader.extract_to("textures/stone.dds", stream);
+
+    REQUIRE_FALSE(stream_result.has_value());
+    CHECK(stream_result.error().code == libbsa::ErrorCode::io_error);
 }
 
 TEST_CASE("moved-from archive readers behave as empty readers")
