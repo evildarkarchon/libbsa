@@ -22,6 +22,8 @@ constexpr std::uint32_t kMagicBsa = 0x00415342;
 constexpr std::uint32_t kVersionTes4 = 0x67;
 constexpr std::uint32_t kVersionFo3 = 0x68;
 constexpr std::uint32_t kVersionSse = 0x69;
+constexpr std::uint32_t kArchivePathNames = 0x0001;
+constexpr std::uint32_t kArchiveFileNames = 0x0002;
 constexpr std::uint32_t kArchiveCompress = 0x0004;
 constexpr std::uint32_t kArchiveEmbedName = 0x0100;
 constexpr std::uint32_t kFileSizeCompress = 0x40000000;
@@ -82,6 +84,11 @@ std::size_t folder_record_size_for(ArchiveFormat format) noexcept
     return format == ArchiveFormat::sse ? kSseFolderRecordSize : kTes4FolderRecordSize;
 }
 
+bool has_archive_flag(std::uint32_t archive_flags, std::uint32_t flag) noexcept
+{
+    return (archive_flags & flag) != 0U;
+}
+
 /// Returns the byte size needed for a fixed-width archive table, rejecting host-size overflow.
 Result<std::size_t> checked_table_size(
     std::uint32_t count,
@@ -111,6 +118,7 @@ Result<void> validate_index_bounds(
     const std::vector<std::uint8_t>& bytes,
     ArchiveFormat format,
     std::uint32_t folders_offset,
+    std::uint32_t archive_flags,
     std::uint32_t folder_count,
     std::uint32_t file_count,
     std::uint32_t folder_names_length,
@@ -131,17 +139,23 @@ Result<void> validate_index_bounds(
     }
 
     std::size_t minimum_index_size = folder_record_bytes.value();
-    auto add_result = checked_add_size(minimum_index_size, static_cast<std::size_t>(folder_names_length), "archive index");
-    if (!add_result) {
-        return add_result.error();
+    Result<void> add_result{};
+    // TES4-family name blocks are optional; absent flag bits mean the corresponding string bytes are not present.
+    if (has_archive_flag(archive_flags, kArchivePathNames)) {
+        add_result = checked_add_size(minimum_index_size, static_cast<std::size_t>(folder_names_length), "archive index");
+        if (!add_result) {
+            return add_result.error();
+        }
     }
     add_result = checked_add_size(minimum_index_size, file_record_bytes.value(), "archive index");
     if (!add_result) {
         return add_result.error();
     }
-    add_result = checked_add_size(minimum_index_size, static_cast<std::size_t>(file_names_length), "archive index");
-    if (!add_result) {
-        return add_result.error();
+    if (has_archive_flag(archive_flags, kArchiveFileNames)) {
+        add_result = checked_add_size(minimum_index_size, static_cast<std::size_t>(file_names_length), "archive index");
+        if (!add_result) {
+            return add_result.error();
+        }
     }
 
     // Header counts are archive-controlled; prove the index tables fit before using them to size vectors.
@@ -161,7 +175,19 @@ std::string lookup_key(std::uint64_t folder_hash, std::uint64_t file_hash)
 bool is_embedded_name_archive(const ParsedArchive& archive) noexcept
 {
     return (archive.metadata.format == ArchiveFormat::fo3 || archive.metadata.format == ArchiveFormat::sse)
-        && (archive.metadata.archive_flags & kArchiveEmbedName) != 0U;
+        && has_archive_flag(archive.metadata.archive_flags, kArchiveEmbedName);
+}
+
+std::string entry_path_from_names(const std::string& folder_name, const std::string& file_name)
+{
+    if (folder_name.empty()) {
+        return file_name;
+    }
+    if (file_name.empty()) {
+        return folder_name;
+    }
+
+    return folder_name + "\\" + file_name;
 }
 
 ArchiveFormat format_from_version(std::uint32_t version)
@@ -222,10 +248,10 @@ Result<std::uint32_t> read_u32_at(const std::vector<std::uint8_t>& bytes, std::s
 }
 
 /// Rejects archive-controlled output sizes that the current in-memory extraction API will not allocate.
-Result<void> validate_in_memory_extraction_size(std::uint32_t uncompressed_size)
+Result<void> validate_in_memory_extraction_size(std::uint64_t output_size, std::string_view description)
 {
-    if (static_cast<std::size_t>(uncompressed_size) > kMaxInMemoryExtractionSize) {
-        return malformed("compressed entry uncompressed size exceeds the in-memory extraction limit");
+    if (output_size > static_cast<std::uint64_t>(kMaxInMemoryExtractionSize)) {
+        return malformed(std::string(description) + " exceeds the in-memory extraction limit");
     }
 
     return {};
@@ -235,6 +261,12 @@ Result<PayloadSpan> resolve_payload_span(const ParsedArchive& archive, const Arc
 {
     if (entry.data_offset > archive.bytes.size()) {
         return malformed("file data offset extends past archive bounds");
+    }
+    if (!entry.compressed) {
+        auto size_validation = validate_in_memory_extraction_size(entry.stored_size, "uncompressed entry size");
+        if (!size_validation) {
+            return size_validation.error();
+        }
     }
     if (entry.stored_size > archive.bytes.size() - static_cast<std::size_t>(entry.data_offset)) {
         return malformed("file data size extends past archive bounds");
@@ -265,7 +297,8 @@ Result<PayloadSpan> resolve_payload_span(const ParsedArchive& archive, const Arc
         if (!size_result) {
             return size_result.error();
         }
-        auto size_validation = validate_in_memory_extraction_size(size_result.value());
+        auto size_validation =
+            validate_in_memory_extraction_size(size_result.value(), "compressed entry uncompressed size");
         if (!size_validation) {
             return size_validation.error();
         }
@@ -282,6 +315,24 @@ Result<PayloadSpan> resolve_payload_span(const ParsedArchive& archive, const Arc
     span.offset = offset;
     span.size = remaining;
     return span;
+}
+
+Result<std::vector<std::uint8_t>> copy_uncompressed_payload(const std::uint8_t* source, std::size_t source_size)
+{
+    auto size_validation = validate_in_memory_extraction_size(source_size, "uncompressed entry size");
+    if (!size_validation) {
+        return size_validation.error();
+    }
+
+    try {
+        std::vector<std::uint8_t> output(source_size);
+        std::copy(source, source + source_size, output.begin());
+        return output;
+    } catch (const std::bad_alloc&) {
+        return malformed("failed to allocate uncompressed entry output buffer");
+    } catch (const std::length_error&) {
+        return malformed("uncompressed entry output buffer exceeds host size limits");
+    }
 }
 
 void populate_payload_metadata(const ParsedArchive& archive, ArchiveEntry& entry)
@@ -471,6 +522,7 @@ Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
         bytes,
         format,
         folders_offset.value(),
+        archive_flags.value(),
         folder_count.value(),
         file_count.value(),
         folder_names_length.value(),
@@ -487,6 +539,8 @@ Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
     archive.metadata.file_flags = file_flags.value();
     archive.metadata.folder_count = folder_count.value();
     archive.metadata.file_count = file_count.value();
+    const bool include_folder_names = has_archive_flag(archive.metadata.archive_flags, kArchivePathNames);
+    const bool include_file_names = has_archive_flag(archive.metadata.archive_flags, kArchiveFileNames);
 
     if (!reader.seek(folders_offset.value())) {
         return malformed("folder record offset extends past archive bounds");
@@ -534,11 +588,13 @@ Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
     }
 
     for (auto& folder : folders) {
-        auto name = reader.read_string_len();
-        if (!name) {
-            return name.error();
+        if (include_folder_names) {
+            auto name = reader.read_string_len();
+            if (!name) {
+                return name.error();
+            }
+            folder.record.name = normalize_archive_path(name.value());
         }
-        folder.record.name = normalize_archive_path(name.value());
 
         for (auto& file : folder.files) {
             auto hash = reader.read_u64();
@@ -553,34 +609,30 @@ Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
         }
     }
 
-    std::uint32_t parsed_file_count = 0;
-    for (auto& folder : folders) {
-        for (auto& file : folder.files) {
-            auto name = reader.read_string_term();
-            if (!name) {
-                return name.error();
+    if (include_file_names) {
+        for (auto& folder : folders) {
+            for (auto& file : folder.files) {
+                auto name = reader.read_string_term();
+                if (!name) {
+                    return name.error();
+                }
+                file.name = normalize_archive_path(name.value());
             }
-            file.name = normalize_archive_path(name.value());
-            ++parsed_file_count;
         }
     }
 
-    if (parsed_file_count != file_count.value()) {
-        return malformed("file count does not match parsed file records");
-    }
-
     archive.bytes = std::move(bytes);
-    archive.entries.reserve(parsed_file_count);
+    archive.entries.reserve(file_count.value());
     for (const auto& folder : folders) {
         for (const auto& file : folder.files) {
             ArchiveEntry entry{};
-            entry.path = folder.record.name.empty() ? file.name : folder.record.name + "\\" + file.name;
+            entry.path = entry_path_from_names(folder.record.name, file.name);
             entry.folder_hash = folder.record.hash;
             entry.file_hash = file.hash;
             entry.folder_offset = folder.record.offset;
             entry.data_offset = file.offset;
             entry.stored_size = file.size & ~kFileSizeCompress;
-            entry.compressed = ((archive.metadata.archive_flags & kArchiveCompress) != 0U)
+            entry.compressed = has_archive_flag(archive.metadata.archive_flags, kArchiveCompress)
                 != ((file.size & kFileSizeCompress) != 0U);
             entry.compression = compression_for(format, entry.compressed);
             populate_payload_metadata(archive, entry);
@@ -603,7 +655,7 @@ Result<std::vector<std::uint8_t>> extract_tes4_entry(const ParsedArchive& archiv
 
     const auto* source = archive.bytes.data() + span.value().offset;
     if (!entry.compressed) {
-        return std::vector<std::uint8_t>(source, source + span.value().size);
+        return copy_uncompressed_payload(source, span.value().size);
     }
 
     if (entry.compression == CompressionMethod::lz4_frame) {

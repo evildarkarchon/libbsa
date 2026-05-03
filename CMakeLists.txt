@@ -4,7 +4,6 @@ project(libbsa VERSION 0.1.0 LANGUAGES CXX)
 
 find_package(libdeflate CONFIG REQUIRED)
 find_package(lz4 CONFIG REQUIRED)
-find_package(Catch2 3 CONFIG REQUIRED)
 
 option(BUILD_SHARED_LIBS "Build libbsa as a shared library." OFF)
 
@@ -44,6 +43,8 @@ target_link_libraries(libbsa
 include(CTest)
 
 if(BUILD_TESTING)
+    find_package(Catch2 3 CONFIG REQUIRED)
+
     add_executable(libbsa_tests
         tests/archive_reader_tests.cpp
         tests/fixture_builder.cpp

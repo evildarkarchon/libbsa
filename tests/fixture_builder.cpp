@@ -15,6 +15,8 @@ namespace {
 constexpr std::uint32_t kHeaderVersionTes4 = 0x67;
 constexpr std::uint32_t kHeaderVersionFo3 = 0x68;
 constexpr std::uint32_t kHeaderVersionSse = 0x69;
+constexpr std::uint32_t kArchivePathNames = 0x0001;
+constexpr std::uint32_t kArchiveFileNames = 0x0002;
 constexpr std::uint32_t kArchiveCompress = 0x0004;
 constexpr std::uint32_t kArchiveEmbedName = 0x0100;
 constexpr std::uint32_t kFileSizeCompress = 0x40000000;
@@ -196,22 +198,30 @@ FixtureArchive write_fixture_archive(
 
     auto folders = group_entries(entries);
     const bool sse = format == FixtureFormat::sse;
+    const bool include_folder_names = (archive_flags & kArchivePathNames) != 0U;
+    const bool include_file_names = (archive_flags & kArchiveFileNames) != 0U;
     const auto folder_record_size = sse ? 24U : 16U;
     const auto folder_records_offset = 4U + 4U + 28U;
 
     std::uint32_t folder_names_length = 0;
     std::uint32_t file_names_length = 0;
     for (const auto& folder : folders) {
-        folder_names_length += static_cast<std::uint32_t>(folder.name.size() + 2U);
+        if (include_folder_names) {
+            folder_names_length += static_cast<std::uint32_t>(folder.name.size() + 2U);
+        }
         for (const auto& entry : folder.entries) {
-            file_names_length += static_cast<std::uint32_t>(entry.name.size() + 1U);
+            if (include_file_names) {
+                file_names_length += static_cast<std::uint32_t>(entry.name.size() + 1U);
+            }
         }
     }
 
     const auto folder_tables_offset = folder_records_offset + static_cast<std::uint32_t>(folders.size() * folder_record_size);
     std::uint64_t file_names_offset = folder_tables_offset;
     for (const auto& folder : folders) {
-        file_names_offset += 1U + folder.name.size() + 1U;
+        if (include_folder_names) {
+            file_names_offset += 1U + folder.name.size() + 1U;
+        }
         file_names_offset += 16U * folder.entries.size();
     }
 
@@ -239,7 +249,10 @@ FixtureArchive write_fixture_archive(
     auto offset_cursor = file_names_offset + file_names_length;
     for (auto& folder : folders) {
         folder.table_offset = offset_cursor;
-        offset_cursor += 1U + folder.name.size() + 1U + 16U * folder.entries.size();
+        if (include_folder_names) {
+            offset_cursor += 1U + folder.name.size() + 1U;
+        }
+        offset_cursor += 16U * folder.entries.size();
     }
 
     std::vector<std::uint8_t> bytes;
@@ -266,7 +279,9 @@ FixtureArchive write_fixture_archive(
     }
 
     for (const auto& folder : folders) {
-        push_string_len(bytes, folder.name, true);
+        if (include_folder_names) {
+            push_string_len(bytes, folder.name, true);
+        }
         for (const auto& entry : folder.entries) {
             push_u64(bytes, entry.file_hash);
             push_u32(bytes, entry_sizes.front());
@@ -276,9 +291,11 @@ FixtureArchive write_fixture_archive(
         }
     }
 
-    for (const auto& folder : folders) {
-        for (const auto& entry : folder.entries) {
-            push_string_term(bytes, entry.name);
+    if (include_file_names) {
+        for (const auto& folder : folders) {
+            for (const auto& entry : folder.entries) {
+                push_string_term(bytes, entry.name);
+            }
         }
     }
 

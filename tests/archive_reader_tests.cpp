@@ -168,6 +168,78 @@ TEST_CASE("missing path lookup and extraction return typed missing-file errors")
     CHECK(extract_result.error().code == libbsa::ErrorCode::missing_file);
 }
 
+TEST_CASE("TES4 archives without index name blocks still open and extract by hash")
+{
+    const auto fixture = libbsa::tests::write_fixture_archive(
+        case_directory(),
+        libbsa::tests::FixtureFormat::tes4,
+        "tes4-no-index-names",
+        0,
+        kFileDds,
+        {stone_entry(bytes("payload without names"))});
+
+    auto open_result = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(open_result.has_value());
+    auto reader = std::move(open_result).value();
+
+    REQUIRE(reader.entries().size() == 1);
+    CHECK(reader.entries().front().path.empty());
+    CHECK(reader.contains("textures\\stone.dds"));
+
+    auto entry_result = reader.entry("textures\\stone.dds");
+    REQUIRE(entry_result.has_value());
+    CHECK(entry_result.value().folder_hash == 0xD507789E74086573ull);
+    CHECK(entry_result.value().file_hash == 0x8E4FC6C07305EEE5ull);
+
+    auto extract_result = reader.extract("textures\\stone.dds");
+    REQUIRE(extract_result.has_value());
+    CHECK(as_string(extract_result.value()) == "payload without names");
+}
+
+TEST_CASE("TES4 archives without folder names keep file-record parsing aligned")
+{
+    const auto fixture = libbsa::tests::write_fixture_archive(
+        case_directory(),
+        libbsa::tests::FixtureFormat::tes4,
+        "tes4-file-names-only",
+        kArchiveFileNames,
+        kFileDds,
+        {stone_entry(bytes("file-name-only payload"))});
+
+    auto open_result = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(open_result.has_value());
+    auto reader = std::move(open_result).value();
+
+    REQUIRE(reader.entries().size() == 1);
+    CHECK(reader.entries().front().path == "stone.dds");
+
+    auto extract_result = reader.extract("textures\\stone.dds");
+    REQUIRE(extract_result.has_value());
+    CHECK(as_string(extract_result.value()) == "file-name-only payload");
+}
+
+TEST_CASE("TES4 archives without file names keep payload parsing aligned")
+{
+    const auto fixture = libbsa::tests::write_fixture_archive(
+        case_directory(),
+        libbsa::tests::FixtureFormat::tes4,
+        "tes4-folder-names-only",
+        kArchivePathNames,
+        kFileDds,
+        {stone_entry(bytes("folder-name-only payload"))});
+
+    auto open_result = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(open_result.has_value());
+    auto reader = std::move(open_result).value();
+
+    REQUIRE(reader.entries().size() == 1);
+    CHECK(reader.entries().front().path == "textures");
+
+    auto extract_result = reader.extract("textures\\stone.dds");
+    REQUIRE(extract_result.has_value());
+    CHECK(as_string(extract_result.value()) == "folder-name-only payload");
+}
+
 TEST_CASE("malformed archive record counts return typed errors before allocating parse structures")
 {
     constexpr std::uint32_t folder_records_offset = 4U + 4U + 28U;
@@ -207,6 +279,39 @@ TEST_CASE("malformed archive record counts return typed errors before allocating
     auto oversized_file_result = libbsa::ArchiveReader::open(oversized_file_path);
     REQUIRE_FALSE(oversized_file_result.has_value());
     CHECK(oversized_file_result.error().code == libbsa::ErrorCode::malformed_archive);
+}
+
+TEST_CASE("oversized uncompressed entry size returns a typed malformed-archive error")
+{
+    constexpr std::uint32_t oversized_uncompressed_size = 512U * 1024U * 1024U + 1U;
+    const auto fixture = libbsa::tests::write_fixture_archive(
+        case_directory(),
+        libbsa::tests::FixtureFormat::tes4,
+        "tes4-oversized-uncompressed",
+        kArchivePathNames | kArchiveFileNames,
+        kFileDds,
+        {stone_entry(bytes("payload"))});
+
+    auto baseline_open = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(baseline_open.has_value());
+    auto baseline_reader = std::move(baseline_open).value();
+    REQUIRE(baseline_reader.entries().size() == 1);
+
+    auto archive_bytes = libbsa::tests::read_all_bytes(fixture.path);
+    constexpr std::size_t folder_record_offset = 4U + 4U + 28U;
+    constexpr std::size_t folder_record_size = 16U;
+    constexpr std::size_t folder_name_block_size = 1U + 8U + 1U;
+    constexpr std::size_t file_record_offset = folder_record_offset + folder_record_size + folder_name_block_size;
+    overwrite_u32(archive_bytes, file_record_offset + 8U, oversized_uncompressed_size);
+    const auto malformed_path =
+        libbsa::tests::write_bytes(case_directory(), "tes4-oversized-uncompressed-copy.bsa", archive_bytes);
+
+    auto open_result = libbsa::ArchiveReader::open(malformed_path);
+    REQUIRE(open_result.has_value());
+    auto extract_result = open_result.value().extract("textures\\stone.dds");
+    REQUIRE_FALSE(extract_result.has_value());
+    CHECK(extract_result.error().code == libbsa::ErrorCode::malformed_archive);
+    CHECK(extract_result.error().message == "uncompressed entry size exceeds the in-memory extraction limit");
 }
 
 TEST_CASE("FO3 extraction follows compression inversion and embedded-name skipping")
