@@ -276,6 +276,24 @@ Result<void> validate_in_memory_extraction_size(std::uint64_t output_size, std::
     return {};
 }
 
+/// Reads a NUL-terminated string without allowing the terminator scan to leave a declared index block.
+Result<std::string> read_string_term_until(BinaryReader& reader, std::size_t end)
+{
+    std::string value;
+    while (reader.position() < end) {
+        auto byte = reader.read_u8();
+        if (!byte) {
+            return byte.error();
+        }
+        if (byte.value() == 0U) {
+            return value;
+        }
+        value.push_back(static_cast<char>(byte.value()));
+    }
+
+    return malformed("file name is not terminated before the end of the file-name block");
+}
+
 Result<PayloadSpan> resolve_payload_span(const ParsedArchive& archive, const ArchiveEntry& entry)
 {
     if (entry.data_offset > archive.bytes.size()) {
@@ -645,10 +663,14 @@ try
         if (!reader.seek(file_names_offset)) {
             return malformed("file name block offset extends past archive bounds");
         }
+        if (file_names_length.value() > reader.size() - file_names_offset) {
+            return malformed("file name block extends past archive bounds");
+        }
+        const auto file_names_end = file_names_offset + static_cast<std::size_t>(file_names_length.value());
 
         for (auto& folder : folders) {
             for (auto& file : folder.files) {
-                auto name = reader.read_string_term();
+                auto name = read_string_term_until(reader, file_names_end);
                 if (!name) {
                     return name.error();
                 }

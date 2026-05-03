@@ -795,6 +795,37 @@ TEST_CASE("TES4 folder names require a terminating NUL byte")
     CHECK(open_result.error().code == libbsa::ErrorCode::malformed_archive);
 }
 
+TEST_CASE("TES4 file names must terminate inside the declared file-name block")
+{
+    const auto fixture = libbsa::tests::write_fixture_archive(
+        case_directory(),
+        libbsa::tests::FixtureFormat::tes4,
+        "tes4-bad-file-name-terminator",
+        kArchivePathNames | kArchiveFileNames,
+        kFileDds,
+        {stone_entry({'p', 'a', 'y', 0, 'x'})});
+
+    auto baseline_open = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(baseline_open.has_value());
+    auto baseline_reader = std::move(baseline_open).value();
+    REQUIRE(baseline_reader.entries().size() == 1);
+
+    auto archive_bytes = libbsa::tests::read_all_bytes(fixture.path);
+    const auto data_offset = static_cast<std::size_t>(baseline_reader.entries().front().data_offset);
+    REQUIRE(data_offset > 0U);
+    REQUIRE(data_offset <= archive_bytes.size());
+    // The payload contains a later NUL byte, so an unbounded parser would accept a corrupted entry path.
+    archive_bytes[data_offset - 1U] = 'x';
+
+    const auto path = libbsa::tests::write_bytes(
+        case_directory(),
+        "tes4-bad-file-name-terminator-copy.bsa",
+        archive_bytes);
+    auto open_result = libbsa::ArchiveReader::open(path);
+    REQUIRE_FALSE(open_result.has_value());
+    CHECK(open_result.error().code == libbsa::ErrorCode::malformed_archive);
+}
+
 TEST_CASE("missing path lookup and extraction return typed missing-file errors")
 {
     const auto fixture = libbsa::tests::write_fixture_archive(
