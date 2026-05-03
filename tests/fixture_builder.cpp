@@ -1,5 +1,7 @@
 #include "fixture_builder.hpp"
 
+#include "tes3_hash.hpp"
+
 #include <libdeflate.h>
 #include <lz4frame.h>
 
@@ -15,6 +17,7 @@ namespace {
 constexpr std::uint32_t kHeaderVersionTes4 = 0x67;
 constexpr std::uint32_t kHeaderVersionFo3 = 0x68;
 constexpr std::uint32_t kHeaderVersionSse = 0x69;
+constexpr std::uint32_t kMagicTes3 = 0x00000100;
 constexpr std::uint32_t kArchivePathNames = 0x0001;
 constexpr std::uint32_t kArchiveFileNames = 0x0002;
 constexpr std::uint32_t kArchiveCompress = 0x0004;
@@ -36,6 +39,14 @@ struct SerializedEntry {
     std::vector<std::uint8_t> payload;
 };
 
+struct SerializedTes3Entry {
+    std::string path;
+    std::uint64_t hash = 0;
+    std::uint32_t name_offset = 0;
+    std::uint32_t data_offset = 0;
+    std::vector<std::uint8_t> payload;
+};
+
 void push_u8(std::vector<std::uint8_t>& bytes, std::uint8_t value)
 {
     bytes.push_back(value);
@@ -52,6 +63,17 @@ void push_u64(std::vector<std::uint8_t>& bytes, std::uint64_t value)
 {
     for (int shift = 0; shift < 64; shift += 8) {
         bytes.push_back(static_cast<std::uint8_t>((value >> shift) & 0xFFull));
+    }
+}
+
+void overwrite_u32(std::vector<std::uint8_t>& bytes, std::size_t offset, std::uint32_t value)
+{
+    if (offset > bytes.size() || bytes.size() - offset < 4U) {
+        throw std::runtime_error("fixture uint32 overwrite is out of bounds");
+    }
+
+    for (int shift = 0; shift < 32; shift += 8) {
+        bytes[offset++] = static_cast<std::uint8_t>((value >> shift) & 0xFFu);
     }
 }
 
@@ -78,6 +100,26 @@ void push_string_term(std::vector<std::uint8_t>& bytes, const std::string& value
 {
     bytes.insert(bytes.end(), value.begin(), value.end());
     push_u8(bytes, 0);
+}
+
+std::string normalize_tes3_path(std::string path)
+{
+    for (auto& value : path) {
+        auto byte = static_cast<unsigned char>(value);
+        if (byte == '/') {
+            byte = '\\';
+        }
+        if (byte >= static_cast<unsigned char>('A') && byte <= static_cast<unsigned char>('Z')) {
+            byte = static_cast<unsigned char>(byte + ('a' - 'A'));
+        }
+        value = static_cast<char>(byte);
+    }
+
+    while (!path.empty() && (path.front() == '\\' || path.front() == '/')) {
+        path.erase(path.begin());
+    }
+
+    return path;
 }
 
 std::vector<std::uint8_t> compress_zlib(const std::vector<std::uint8_t>& payload)
@@ -363,6 +405,79 @@ FixtureArchive write_fixture_archive(
         file_flags,
         std::move(entries),
         false);
+}
+
+FixtureArchive write_tes3_fixture_archive(
+    const std::filesystem::path& directory,
+    std::string stem,
+    std::vector<Tes3FixtureEntry> entries)
+{
+    std::filesystem::create_directories(directory);
+
+    std::vector<SerializedTes3Entry> serialized_entries;
+    serialized_entries.reserve(entries.size());
+
+    std::uint32_t name_bytes = 0;
+    std::uint32_t data_bytes = 0;
+    for (auto& entry : entries) {
+        SerializedTes3Entry serialized{};
+        serialized.path = normalize_tes3_path(std::move(entry.path));
+        serialized.hash = libbsa::detail::hash_tes3(serialized.path);
+        serialized.name_offset = name_bytes;
+        serialized.data_offset = data_bytes;
+        serialized.payload = std::move(entry.payload);
+
+        name_bytes += static_cast<std::uint32_t>(serialized.path.size() + 1U);
+        data_bytes += static_cast<std::uint32_t>(serialized.payload.size());
+        serialized_entries.push_back(std::move(serialized));
+    }
+
+    std::vector<std::uint8_t> bytes;
+    push_u32(bytes, kMagicTes3);
+    const auto hash_offset_position = bytes.size();
+    push_u32(bytes, 0);
+    push_u32(bytes, static_cast<std::uint32_t>(serialized_entries.size()));
+
+    for (const auto& entry : serialized_entries) {
+        push_u32(bytes, static_cast<std::uint32_t>(entry.payload.size()));
+        push_u32(bytes, entry.data_offset);
+    }
+    for (const auto& entry : serialized_entries) {
+        push_u32(bytes, entry.name_offset);
+    }
+    for (const auto& entry : serialized_entries) {
+        push_string_term(bytes, entry.path);
+    }
+
+    overwrite_u32(bytes, hash_offset_position, static_cast<std::uint32_t>(bytes.size() - 12U));
+    for (const auto& entry : serialized_entries) {
+        push_u32(bytes, static_cast<std::uint32_t>(entry.hash >> 32U));
+        push_u32(bytes, static_cast<std::uint32_t>(entry.hash & 0xFFFFFFFFull));
+    }
+    for (const auto& entry : serialized_entries) {
+        push_bytes(bytes, entry.payload);
+    }
+
+    FixtureArchive archive{};
+    archive.path = directory / (std::move(stem) + ".bsa");
+    for (auto& entry : serialized_entries) {
+        archive.entries.push_back({
+            "",
+            std::move(entry.path),
+            0,
+            entry.hash,
+            std::move(entry.payload),
+            false,
+        });
+    }
+
+    std::ofstream output(archive.path, std::ios::binary);
+    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    if (!output) {
+        throw std::runtime_error("failed to write TES3 fixture archive");
+    }
+
+    return archive;
 }
 
 FixtureArchive write_fixture_archive_with_reversed_folder_tables(

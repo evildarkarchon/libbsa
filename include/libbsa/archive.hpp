@@ -15,9 +15,10 @@
 
 namespace libbsa {
 
-/// Identifies the archive family detected by the milestone 1 reader.
+/// Identifies the archive family detected by the reader.
 enum class ArchiveFormat {
     unknown,
+    tes3,
     tes4,
     fo3,
     sse,
@@ -137,7 +138,7 @@ struct ArchiveMetadata {
     std::uint32_t file_count = 0;
 };
 
-/// Describes one file record in a TES4-family BSA index.
+/// Describes one file record in a supported BSA index.
 struct ArchiveEntry {
     std::string path;
     std::uint64_t folder_hash = 0;
@@ -164,7 +165,7 @@ public:
     ArchiveReader(const ArchiveReader&) = delete;
     ArchiveReader& operator=(const ArchiveReader&) = delete;
 
-    /// Opens a TES4-family BSA from disk and returns typed errors for ordinary failures.
+    /// Opens a supported BSA from disk and returns typed errors for ordinary failures.
     [[nodiscard]] LIBBSA_API static Result<ArchiveReader> open(const std::filesystem::path& path);
 
     /// Returns archive-level metadata. The reference remains valid for this reader's lifetime.
@@ -179,7 +180,7 @@ public:
     /// Looks up metadata for an archive-relative file path.
     [[nodiscard]] LIBBSA_API Result<ArchiveEntry> entry(std::string_view archive_path) const;
 
-    /// Extracts a file to memory, transparently handling embedded names and compression.
+    /// Extracts a file to memory, transparently handling format-specific payload details.
     [[nodiscard]] LIBBSA_API Result<std::vector<std::uint8_t>> extract(std::string_view archive_path) const;
 
     /// Extracts a file and writes the resulting bytes to the caller-provided stream.

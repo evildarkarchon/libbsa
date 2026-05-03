@@ -4,19 +4,25 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <limits>
-#include <new>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
+
+#if !defined(LIBBSA_SHARED)
+#include <cstdlib>
+#include <new>
+#endif
 
 namespace {
 
+#if !defined(LIBBSA_SHARED)
 thread_local bool fail_large_allocations = false;
 thread_local std::size_t allocation_failure_threshold = std::numeric_limits<std::size_t>::max();
+#endif
 
 constexpr std::uint32_t kArchivePathNames = 0x0001;
 constexpr std::uint32_t kArchiveFileNames = 0x0002;
@@ -82,6 +88,12 @@ libbsa::tests::FixtureEntry skeleton_entry(std::vector<std::uint8_t> payload, bo
     };
 }
 
+libbsa::tests::Tes3FixtureEntry tes3_entry(std::string path, std::vector<std::uint8_t> payload)
+{
+    return {std::move(path), std::move(payload)};
+}
+
+#if !defined(LIBBSA_SHARED)
 class AllocationFailureScope {
 public:
     explicit AllocationFailureScope(std::size_t threshold)
@@ -105,10 +117,13 @@ private:
     bool previous_fail_large_allocations_ = false;
     std::size_t previous_allocation_failure_threshold_ = std::numeric_limits<std::size_t>::max();
 };
+#endif
 
 } // namespace
 
+#if !defined(LIBBSA_SHARED)
 // The allocation hook lets this test binary exercise open()'s low-memory Result contract without huge files.
+// It only reaches libbsa allocations when the library is statically linked into the test executable.
 void* operator new(std::size_t size)
 {
     if (fail_large_allocations && size >= allocation_failure_threshold) {
@@ -145,6 +160,7 @@ void operator delete[](void* pointer, std::size_t) noexcept
 {
     std::free(pointer);
 }
+#endif
 
 TEST_CASE("opening unsupported archives returns typed errors")
 {
@@ -163,6 +179,29 @@ TEST_CASE("opening unsupported archives returns typed errors")
     CHECK(version_result.error().code == libbsa::ErrorCode::unsupported_format);
 }
 
+TEST_CASE("TES3 magic dispatch is distinct from TES4-family magic")
+{
+    const auto directory = case_directory();
+    const auto tes3_fixture = libbsa::tests::write_tes3_fixture_archive(directory, "tes3-empty", {});
+
+    auto tes3_result = libbsa::ArchiveReader::open(tes3_fixture.path);
+    REQUIRE(tes3_result.has_value());
+    CHECK(tes3_result.value().metadata().format == libbsa::ArchiveFormat::tes3);
+
+    const auto tes4_fixture = libbsa::tests::write_fixture_archive(
+        directory,
+        libbsa::tests::FixtureFormat::tes4,
+        "tes4-detection",
+        kArchivePathNames | kArchiveFileNames,
+        kFileDds,
+        {stone_entry(bytes("payload"))});
+
+    auto tes4_result = libbsa::ArchiveReader::open(tes4_fixture.path);
+    REQUIRE(tes4_result.has_value());
+    CHECK(tes4_result.value().metadata().format == libbsa::ArchiveFormat::tes4);
+}
+
+#if !defined(LIBBSA_SHARED)
 TEST_CASE("archive read allocation failures return typed errors")
 {
     std::vector<std::uint8_t> archive_bytes(32U * 1024U, 0U);
@@ -179,6 +218,7 @@ TEST_CASE("archive read allocation failures return typed errors")
     CHECK(open_result.error().code == libbsa::ErrorCode::io_error);
     CHECK(open_result.error().message.find("archive read buffer") != std::string::npos);
 }
+#endif
 
 TEST_CASE("TES4 archive metadata and raw extraction are available through the public API")
 {
@@ -223,6 +263,130 @@ TEST_CASE("TES4 archive metadata and raw extraction are available through the pu
     auto stream_result = reader.extract_to("meshes/actors/skeleton.nif", stream);
     REQUIRE(stream_result.has_value());
     CHECK(stream.str() == "raw mesh payload");
+}
+
+TEST_CASE("TES3 archive metadata and raw extraction are available through the public API")
+{
+    const auto texture_payload = bytes("tes3 texture payload");
+    const auto mesh_payload = bytes("tes3 mesh payload");
+    const auto sound_payload = bytes("tes3 sound payload");
+    const auto fixture = libbsa::tests::write_tes3_fixture_archive(
+        case_directory(),
+        "tes3-raw",
+        {
+            tes3_entry("meshes\\x.nif", mesh_payload),
+            tes3_entry("textures\\stone.dds", texture_payload),
+            tes3_entry("sound\\fx\\hit.wav", sound_payload),
+        });
+
+    auto open_result = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(open_result.has_value());
+    auto reader = std::move(open_result).value();
+
+    const auto metadata = reader.metadata();
+    CHECK(metadata.format == libbsa::ArchiveFormat::tes3);
+    CHECK(metadata.version == 0);
+    CHECK(metadata.archive_flags == 0);
+    CHECK(metadata.file_flags == 0);
+    CHECK(metadata.folder_count == 0);
+    CHECK(metadata.file_count == 3);
+
+    REQUIRE(reader.entries().size() == 3);
+    CHECK(reader.entries()[0].path == "meshes\\x.nif");
+    CHECK(reader.entries()[0].file_hash == 0x68731608D4B7713Eull);
+    CHECK(reader.entries()[0].stored_size == mesh_payload.size());
+    CHECK(reader.entries()[0].uncompressed_size == mesh_payload.size());
+    CHECK(reader.entries()[0].data_offset > 0);
+    CHECK_FALSE(reader.entries()[0].compressed);
+    CHECK(reader.entries()[0].compression == libbsa::CompressionMethod::none);
+
+    const auto texture = reader.entry("TEXTURES/STONE.DDS");
+    REQUIRE(texture.has_value());
+    CHECK(texture.value().path == "textures\\stone.dds");
+    CHECK(texture.value().folder_hash == 0);
+    CHECK(texture.value().file_hash == 0x071D175DE4DA09E2ull);
+
+    CHECK(reader.contains("textures\\stone.dds"));
+    CHECK(reader.contains("TEXTURES/STONE.DDS"));
+    CHECK_FALSE(reader.contains("textures\\missing.dds"));
+
+    const auto missing = reader.entry("textures\\missing.dds");
+    REQUIRE_FALSE(missing.has_value());
+    CHECK(missing.error().code == libbsa::ErrorCode::missing_file);
+
+    const auto extracted_texture = reader.extract("textures/stone.dds");
+    REQUIRE(extracted_texture.has_value());
+    CHECK(extracted_texture.value() == texture_payload);
+
+    const auto extracted_mesh = reader.extract("meshes\\x.nif");
+    REQUIRE(extracted_mesh.has_value());
+    CHECK(extracted_mesh.value() == mesh_payload);
+
+    std::ostringstream stream;
+    const auto stream_result = reader.extract_to("sound/fx/hit.wav", stream);
+    REQUIRE(stream_result.has_value());
+    CHECK(stream.str() == "tes3 sound payload");
+}
+
+TEST_CASE("malformed TES3 archives return typed errors")
+{
+    const auto directory = case_directory();
+
+    SECTION("truncated header")
+    {
+        const auto path = libbsa::tests::write_bytes(directory, "tes3-truncated.bsa", {0x00, 0x01, 0x00, 0x00});
+        const auto result = libbsa::ArchiveReader::open(path);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().code == libbsa::ErrorCode::malformed_archive);
+    }
+
+    SECTION("hash offset before name records")
+    {
+        const auto fixture = libbsa::tests::write_tes3_fixture_archive(
+            directory,
+            "tes3-invalid-hash-offset",
+            {tes3_entry("textures\\stone.dds", bytes("payload"))});
+        auto archive_bytes = libbsa::tests::read_all_bytes(fixture.path);
+        overwrite_u32(archive_bytes, 4U, 0U);
+        const auto path = libbsa::tests::write_bytes(directory, "tes3-invalid-hash-offset-copy.bsa", archive_bytes);
+        const auto result = libbsa::ArchiveReader::open(path);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().code == libbsa::ErrorCode::malformed_archive);
+    }
+
+    SECTION("unterminated filename before hash table")
+    {
+        std::vector<std::uint8_t> archive_bytes;
+        push_u32(archive_bytes, 0x00000100);
+        push_u32(archive_bytes, 16U);
+        push_u32(archive_bytes, 1U);
+        push_u32(archive_bytes, 1U);
+        push_u32(archive_bytes, 0U);
+        push_u32(archive_bytes, 0U);
+        archive_bytes.insert(archive_bytes.end(), {'n', 'a', 'm', 'e'});
+        push_u32(archive_bytes, 0U);
+        push_u32(archive_bytes, 0U);
+        archive_bytes.push_back('x');
+
+        const auto path = libbsa::tests::write_bytes(directory, "tes3-unterminated-name.bsa", archive_bytes);
+        const auto result = libbsa::ArchiveReader::open(path);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().code == libbsa::ErrorCode::malformed_archive);
+    }
+
+    SECTION("payload span past EOF")
+    {
+        const auto fixture = libbsa::tests::write_tes3_fixture_archive(
+            directory,
+            "tes3-payload-span",
+            {tes3_entry("textures\\stone.dds", bytes("payload"))});
+        auto archive_bytes = libbsa::tests::read_all_bytes(fixture.path);
+        overwrite_u32(archive_bytes, 12U, 1024U);
+        const auto path = libbsa::tests::write_bytes(directory, "tes3-payload-span-copy.bsa", archive_bytes);
+        const auto result = libbsa::ArchiveReader::open(path);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().code == libbsa::ErrorCode::malformed_archive);
+    }
 }
 
 TEST_CASE("TES4 archive parsing follows folder table offsets")
