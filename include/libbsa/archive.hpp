@@ -154,7 +154,8 @@ struct ArchiveEntry {
 /// Owns a parsed archive index and provides random-access extraction by path.
 class ArchiveReader {
 public:
-    LIBBSA_API ArchiveReader();
+    /// ArchiveReader instances must be created by open() so they always carry parsed archive state.
+    ArchiveReader() = delete;
     LIBBSA_API ~ArchiveReader();
 
     LIBBSA_API ArchiveReader(ArchiveReader&&) noexcept;

@@ -10,7 +10,6 @@ struct ArchiveReader::Impl {
     detail::ParsedArchive archive;
 };
 
-ArchiveReader::ArchiveReader() = default;
 ArchiveReader::~ArchiveReader() = default;
 ArchiveReader::ArchiveReader(ArchiveReader&&) noexcept = default;
 ArchiveReader& ArchiveReader::operator=(ArchiveReader&&) noexcept = default;

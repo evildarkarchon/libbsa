@@ -23,6 +23,9 @@ constexpr std::uint32_t kVersionSse = 0x69;
 constexpr std::uint32_t kArchiveCompress = 0x0004;
 constexpr std::uint32_t kArchiveEmbedName = 0x0100;
 constexpr std::uint32_t kFileSizeCompress = 0x40000000;
+constexpr std::size_t kTes4FolderRecordSize = 16U;
+constexpr std::size_t kSseFolderRecordSize = 24U;
+constexpr std::size_t kFileRecordSize = 16U;
 
 struct FolderRecord {
     std::uint64_t hash = 0;
@@ -68,6 +71,82 @@ Error malformed(std::string message)
 Error decompression_failed(std::string message)
 {
     return {ErrorCode::decompression_failed, std::move(message)};
+}
+
+std::size_t folder_record_size_for(ArchiveFormat format) noexcept
+{
+    return format == ArchiveFormat::sse ? kSseFolderRecordSize : kTes4FolderRecordSize;
+}
+
+/// Returns the byte size needed for a fixed-width archive table, rejecting host-size overflow.
+Result<std::size_t> checked_table_size(
+    std::uint32_t count,
+    std::size_t record_size,
+    std::string table_name)
+{
+    if (record_size != 0U && count > std::numeric_limits<std::size_t>::max() / record_size) {
+        return malformed(table_name + " size exceeds host size limits");
+    }
+
+    return static_cast<std::size_t>(count) * record_size;
+}
+
+/// Adds a byte count to an aggregate archive span, rejecting host-size overflow.
+Result<void> checked_add_size(std::size_t& total, std::size_t value, std::string description)
+{
+    if (value > std::numeric_limits<std::size_t>::max() - total) {
+        return malformed(description + " exceeds host size limits");
+    }
+
+    total += value;
+    return {};
+}
+
+/// Validates archive-controlled index counts before they are used to allocate parser structures.
+Result<void> validate_index_bounds(
+    const std::vector<std::uint8_t>& bytes,
+    ArchiveFormat format,
+    std::uint32_t folders_offset,
+    std::uint32_t folder_count,
+    std::uint32_t file_count,
+    std::uint32_t folder_names_length,
+    std::uint32_t file_names_length)
+{
+    if (folders_offset > bytes.size()) {
+        return malformed("folder record offset extends past archive bounds");
+    }
+
+    auto folder_record_bytes = checked_table_size(folder_count, folder_record_size_for(format), "folder record table");
+    if (!folder_record_bytes) {
+        return folder_record_bytes.error();
+    }
+
+    auto file_record_bytes = checked_table_size(file_count, kFileRecordSize, "file record table");
+    if (!file_record_bytes) {
+        return file_record_bytes.error();
+    }
+
+    std::size_t minimum_index_size = folder_record_bytes.value();
+    auto add_result = checked_add_size(minimum_index_size, static_cast<std::size_t>(folder_names_length), "archive index");
+    if (!add_result) {
+        return add_result.error();
+    }
+    add_result = checked_add_size(minimum_index_size, file_record_bytes.value(), "archive index");
+    if (!add_result) {
+        return add_result.error();
+    }
+    add_result = checked_add_size(minimum_index_size, static_cast<std::size_t>(file_names_length), "archive index");
+    if (!add_result) {
+        return add_result.error();
+    }
+
+    // Header counts are archive-controlled; prove the index tables fit before using them to size vectors.
+    const auto offset = static_cast<std::size_t>(folders_offset);
+    if (minimum_index_size > bytes.size() - offset) {
+        return malformed("archive index extends past archive bounds");
+    }
+
+    return {};
 }
 
 std::string lookup_key(std::uint64_t folder_hash, std::uint64_t file_hash)
@@ -350,6 +429,18 @@ Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
         return malformed("TES4-family BSA header is truncated");
     }
 
+    auto bounds_result = validate_index_bounds(
+        bytes,
+        format,
+        folders_offset.value(),
+        folder_count.value(),
+        file_count.value(),
+        folder_names_length.value(),
+        file_names_length.value());
+    if (!bounds_result) {
+        return bounds_result.error();
+    }
+
     ParsedArchive archive{};
     archive.path = path;
     archive.metadata.format = format;
@@ -364,6 +455,7 @@ Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
     }
 
     std::vector<Folder> folders(folder_count.value());
+    std::uint64_t total_folder_file_count = 0;
     for (auto& folder : folders) {
         auto hash = reader.read_u64();
         auto count = reader.read_u32();
@@ -389,6 +481,17 @@ Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
             folder.record.offset = offset.value();
         }
 
+        total_folder_file_count += folder.record.file_count;
+        if (total_folder_file_count > file_count.value()) {
+            return malformed("folder file counts exceed archive file count");
+        }
+    }
+
+    if (total_folder_file_count != file_count.value()) {
+        return malformed("folder file counts do not match archive file count");
+    }
+
+    for (auto& folder : folders) {
         folder.files.resize(folder.record.file_count);
     }
 

@@ -6,6 +6,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -29,6 +30,13 @@ std::filesystem::path case_directory()
 std::vector<std::uint8_t> bytes(std::string_view text)
 {
     return {text.begin(), text.end()};
+}
+
+void push_u32(std::vector<std::uint8_t>& output, std::uint32_t value)
+{
+    for (int shift = 0; shift < 32; shift += 8) {
+        output.push_back(static_cast<std::uint8_t>((value >> shift) & 0xFFu));
+    }
 }
 
 std::string as_string(const std::vector<std::uint8_t>& data)
@@ -149,6 +157,47 @@ TEST_CASE("missing path lookup and extraction return typed missing-file errors")
     auto extract_result = reader.extract("textures\\missing.dds");
     REQUIRE_FALSE(extract_result.has_value());
     CHECK(extract_result.error().code == libbsa::ErrorCode::missing_file);
+}
+
+TEST_CASE("malformed archive record counts return typed errors before allocating parse structures")
+{
+    constexpr std::uint32_t folder_records_offset = 4U + 4U + 28U;
+
+    std::vector<std::uint8_t> oversized_folder_count{'B', 'S', 'A', '\0'};
+    push_u32(oversized_folder_count, 0x67);
+    push_u32(oversized_folder_count, folder_records_offset);
+    push_u32(oversized_folder_count, kArchivePathNames | kArchiveFileNames);
+    push_u32(oversized_folder_count, std::numeric_limits<std::uint32_t>::max());
+    push_u32(oversized_folder_count, 0);
+    push_u32(oversized_folder_count, 0);
+    push_u32(oversized_folder_count, 0);
+    push_u32(oversized_folder_count, kFileDds);
+
+    const auto oversized_folder_path =
+        libbsa::tests::write_bytes(case_directory(), "tes4-oversized-folder-count.bsa", oversized_folder_count);
+    auto oversized_folder_result = libbsa::ArchiveReader::open(oversized_folder_path);
+    REQUIRE_FALSE(oversized_folder_result.has_value());
+    CHECK(oversized_folder_result.error().code == libbsa::ErrorCode::malformed_archive);
+
+    std::vector<std::uint8_t> oversized_file_count{'B', 'S', 'A', '\0'};
+    push_u32(oversized_file_count, 0x67);
+    push_u32(oversized_file_count, folder_records_offset);
+    push_u32(oversized_file_count, kArchivePathNames | kArchiveFileNames);
+    push_u32(oversized_file_count, 1);
+    push_u32(oversized_file_count, std::numeric_limits<std::uint32_t>::max());
+    push_u32(oversized_file_count, 0);
+    push_u32(oversized_file_count, 0);
+    push_u32(oversized_file_count, kFileDds);
+    oversized_file_count.resize(folder_records_offset);
+    oversized_file_count.insert(oversized_file_count.end(), {0, 0, 0, 0, 0, 0, 0, 0});
+    push_u32(oversized_file_count, std::numeric_limits<std::uint32_t>::max());
+    push_u32(oversized_file_count, folder_records_offset + 16U);
+
+    const auto oversized_file_path =
+        libbsa::tests::write_bytes(case_directory(), "tes4-oversized-file-count.bsa", oversized_file_count);
+    auto oversized_file_result = libbsa::ArchiveReader::open(oversized_file_path);
+    REQUIRE_FALSE(oversized_file_result.has_value());
+    CHECK(oversized_file_result.error().code == libbsa::ErrorCode::malformed_archive);
 }
 
 TEST_CASE("FO3 extraction follows compression inversion and embedded-name skipping")
