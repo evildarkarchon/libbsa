@@ -170,6 +170,7 @@ std::string lookup_key_for_tes3_archive_path(std::string_view path)
 }
 
 Result<ParsedArchive> parse_tes3_archive(const std::filesystem::path& path)
+try
 {
     Error file_error{};
     auto bytes = read_file_bytes(path, file_error);
@@ -317,6 +318,12 @@ Result<ParsedArchive> parse_tes3_archive(const std::filesystem::path& path)
     }
 
     return archive;
+}
+catch (const std::bad_alloc&) {
+    return malformed("failed to allocate TES3 archive index");
+}
+catch (const std::length_error&) {
+    return malformed("TES3 archive index exceeds host size limits");
 }
 
 Result<std::vector<std::uint8_t>> extract_tes3_entry(const ParsedArchive& archive, const ArchiveEntry& entry)

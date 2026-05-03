@@ -52,6 +52,13 @@ void push_u32(std::vector<std::uint8_t>& output, std::uint32_t value)
     }
 }
 
+void push_u64(std::vector<std::uint8_t>& output, std::uint64_t value)
+{
+    for (int shift = 0; shift < 64; shift += 8) {
+        output.push_back(static_cast<std::uint8_t>((value >> shift) & 0xFFull));
+    }
+}
+
 void push_string_term(std::vector<std::uint8_t>& output, const std::string& value)
 {
     output.insert(output.end(), value.begin(), value.end());
@@ -72,6 +79,84 @@ void overwrite_u32(std::vector<std::uint8_t>& output, std::size_t offset, std::u
     for (int shift = 0; shift < 32; shift += 8) {
         output[offset++] = static_cast<std::uint8_t>((value >> shift) & 0xFFu);
     }
+}
+
+std::vector<std::uint8_t> tes3_archive_with_shared_name(std::uint32_t file_count)
+{
+    std::vector<std::uint8_t> archive_bytes;
+    push_u32(archive_bytes, 0x00000100);
+    const auto hash_offset_position = archive_bytes.size();
+    push_u32(archive_bytes, 0U);
+    push_u32(archive_bytes, file_count);
+
+    for (std::uint32_t index = 0; index < file_count; ++index) {
+        push_u32(archive_bytes, 0U);
+        push_u32(archive_bytes, 0U);
+    }
+    for (std::uint32_t index = 0; index < file_count; ++index) {
+        push_u32(archive_bytes, 0U);
+    }
+    push_string_term(archive_bytes, "x");
+
+    overwrite_u32(archive_bytes, hash_offset_position, static_cast<std::uint32_t>(archive_bytes.size() - 12U));
+    for (std::uint32_t index = 0; index < file_count; ++index) {
+        push_u32(archive_bytes, 0U);
+        push_u32(archive_bytes, index);
+    }
+
+    return archive_bytes;
+}
+
+std::vector<std::uint8_t> tes4_archive_with_empty_folders(std::uint32_t folder_count)
+{
+    constexpr std::uint32_t folder_records_offset = 4U + 4U + 28U;
+
+    std::vector<std::uint8_t> archive_bytes{'B', 'S', 'A', '\0'};
+    push_u32(archive_bytes, 0x67);
+    push_u32(archive_bytes, folder_records_offset);
+    push_u32(archive_bytes, 0U);
+    push_u32(archive_bytes, folder_count);
+    push_u32(archive_bytes, 0U);
+    push_u32(archive_bytes, 0U);
+    push_u32(archive_bytes, 0U);
+    push_u32(archive_bytes, kFileDds);
+
+    for (std::uint32_t index = 0; index < folder_count; ++index) {
+        push_u64(archive_bytes, index);
+        push_u32(archive_bytes, 0U);
+        push_u32(archive_bytes, folder_records_offset);
+    }
+
+    return archive_bytes;
+}
+
+std::vector<std::uint8_t> tes4_archive_with_single_folder_files(std::uint32_t file_count)
+{
+    constexpr std::uint32_t folder_records_offset = 4U + 4U + 28U;
+    constexpr std::uint32_t file_records_offset = folder_records_offset + 16U;
+    const auto data_offset = file_records_offset + (file_count * 16U);
+
+    std::vector<std::uint8_t> archive_bytes{'B', 'S', 'A', '\0'};
+    push_u32(archive_bytes, 0x67);
+    push_u32(archive_bytes, folder_records_offset);
+    push_u32(archive_bytes, 0U);
+    push_u32(archive_bytes, 1U);
+    push_u32(archive_bytes, file_count);
+    push_u32(archive_bytes, 0U);
+    push_u32(archive_bytes, 0U);
+    push_u32(archive_bytes, kFileDds);
+
+    push_u64(archive_bytes, 1U);
+    push_u32(archive_bytes, file_count);
+    push_u32(archive_bytes, file_records_offset);
+
+    for (std::uint32_t index = 0; index < file_count; ++index) {
+        push_u64(archive_bytes, index);
+        push_u32(archive_bytes, 0U);
+        push_u32(archive_bytes, data_offset);
+    }
+
+    return archive_bytes;
 }
 
 std::string as_string(const std::vector<std::uint8_t>& data)
@@ -232,6 +317,57 @@ TEST_CASE("archive read allocation failures return typed errors")
     REQUIRE_FALSE(open_result.has_value());
     CHECK(open_result.error().code == libbsa::ErrorCode::io_error);
     CHECK(open_result.error().message.find("archive read buffer") != std::string::npos);
+}
+
+TEST_CASE("TES3 index allocation failures return typed errors")
+{
+    const auto path = libbsa::tests::write_bytes(
+        case_directory(),
+        "tes3-index-allocation-failure.bsa",
+        tes3_archive_with_shared_name(384U));
+
+    AllocationFailureScope allocation_failure(10U * 1024U);
+    auto open_result = libbsa::ArchiveReader::open(path);
+
+    REQUIRE_FALSE(open_result.has_value());
+    CHECK(open_result.error().code == libbsa::ErrorCode::malformed_archive);
+    CHECK(open_result.error().message.find("TES3") != std::string::npos);
+    CHECK(open_result.error().message.find("archive index") != std::string::npos);
+}
+
+TEST_CASE("TES4 index allocation failures return typed errors")
+{
+    SECTION("folder records")
+    {
+        const auto path = libbsa::tests::write_bytes(
+            case_directory(),
+            "tes4-folder-index-allocation-failure.bsa",
+            tes4_archive_with_empty_folders(160U));
+
+        AllocationFailureScope allocation_failure(8U * 1024U);
+        auto open_result = libbsa::ArchiveReader::open(path);
+
+        REQUIRE_FALSE(open_result.has_value());
+        CHECK(open_result.error().code == libbsa::ErrorCode::malformed_archive);
+        CHECK(open_result.error().message.find("TES4") != std::string::npos);
+        CHECK(open_result.error().message.find("archive index") != std::string::npos);
+    }
+
+    SECTION("file records")
+    {
+        const auto path = libbsa::tests::write_bytes(
+            case_directory(),
+            "tes4-file-index-allocation-failure.bsa",
+            tes4_archive_with_single_folder_files(384U));
+
+        AllocationFailureScope allocation_failure(10U * 1024U);
+        auto open_result = libbsa::ArchiveReader::open(path);
+
+        REQUIRE_FALSE(open_result.has_value());
+        CHECK(open_result.error().code == libbsa::ErrorCode::malformed_archive);
+        CHECK(open_result.error().message.find("TES4") != std::string::npos);
+        CHECK(open_result.error().message.find("archive index") != std::string::npos);
+    }
 }
 #endif
 

@@ -501,6 +501,7 @@ std::string lookup_key_for_archive_path(std::string_view path)
 }
 
 Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
+try
 {
     Error file_error{};
     auto bytes = read_file_bytes(path, file_error);
@@ -682,6 +683,12 @@ Result<ParsedArchive> parse_tes4_archive(const std::filesystem::path& path)
     }
 
     return archive;
+}
+catch (const std::bad_alloc&) {
+    return malformed("failed to allocate TES4-family archive index");
+}
+catch (const std::length_error&) {
+    return malformed("TES4-family archive index exceeds host size limits");
 }
 
 Result<std::vector<std::uint8_t>> extract_tes4_entry(const ParsedArchive& archive, const ArchiveEntry& entry)
