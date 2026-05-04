@@ -4,7 +4,7 @@
 TBD - created by archiving change m1-foundation-tes4-read-support. Update Purpose after archive.
 ## Requirements
 ### Requirement: TES4-family BSA detection
-libbsa SHALL detect TES4-family BSA archives by `BSA\0` magic bytes and supported versions `0x67`, `0x68`, and `0x69`. The detection logic SHALL first check for TES3 magic (`0x00000100`) and route to the TES3 parser before falling through to TES4-family version checks.
+libbsa SHALL detect TES4-family BSA archives by `BSA\0` magic bytes and supported versions `0x67`, `0x68`, and `0x69`. The detection logic SHALL first check for TES3 magic (`0x00000100`), then check for BTDX magic (`BTDX`) and route to the BA2 parser, before falling through to TES4-family version checks.
 
 #### Scenario: Supported BSA version is opened
 - **WHEN** a caller opens a `BSA\0` archive with version `0x67`, `0x68`, or `0x69`
@@ -17,6 +17,10 @@ libbsa SHALL detect TES4-family BSA archives by `BSA\0` magic bytes and supporte
 #### Scenario: TES3 magic is not misidentified as TES4
 - **WHEN** a caller opens a file whose first 4 bytes are `0x00000100` (TES3 magic)
 - **THEN** libbsa does NOT enter the TES4 detection path and instead routes to TES3 parsing.
+
+#### Scenario: BTDX magic is not misidentified as TES4
+- **WHEN** a caller opens a file whose first 4 bytes are `BTDX` (BA2 magic)
+- **THEN** libbsa does NOT enter the TES4 detection path and instead routes to the BA2 parser.
 
 ### Requirement: TES4-family index parsing
 libbsa SHALL parse TES4-family archive headers, archive flags, file flags, folder records, folder names, file records, file names, and version-specific folder offsets into queryable metadata.
