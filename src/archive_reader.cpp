@@ -16,6 +16,7 @@ namespace libbsa {
 namespace {
 
 constexpr std::uint32_t kMagicTes3 = 0x00000100;
+constexpr std::uint32_t kMagicBsa = 0x00415342;
 constexpr std::uint32_t kMagicBtdx = 0x58445442;
 
 Error io_error(std::string message)
@@ -64,8 +65,11 @@ Result<detail::ParsedArchive> parse_archive(const std::filesystem::path& path)
     if (magic.value() == kMagicBtdx) {
         return detail::parse_ba2_gnrl_archive(path);
     }
+    if (magic.value() == kMagicBsa) {
+        return detail::parse_tes4_archive(path);
+    }
 
-    return detail::parse_tes4_archive(path);
+    return unsupported("archive magic is not a supported BSA or BA2 value");
 }
 
 std::string lookup_key_for(const detail::ParsedArchive& archive, std::string_view archive_path)

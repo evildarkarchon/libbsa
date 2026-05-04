@@ -386,6 +386,28 @@ TEST_CASE("opening unsupported archives returns typed errors")
     CHECK(version_result.error().code == libbsa::ErrorCode::unsupported_format);
 }
 
+#if !defined(LIBBSA_SHARED)
+TEST_CASE("unsupported archive magic is rejected before allocating a TES4 read buffer")
+{
+    const auto directory = case_directory();
+    auto archive_bytes = std::vector<std::uint8_t>(1024U * 1024U, 0xCCU);
+    archive_bytes[0] = 'N';
+    archive_bytes[1] = 'O';
+    archive_bytes[2] = 'P';
+    archive_bytes[3] = 'E';
+    const auto unsupported_magic = libbsa::tests::write_bytes(
+        directory,
+        "large-unsupported.bin",
+        std::move(archive_bytes));
+
+    AllocationFailureScope fail_full_archive_read(256U * 1024U);
+    auto result = libbsa::ArchiveReader::open(unsupported_magic);
+
+    REQUIRE_FALSE(result.has_value());
+    CHECK(result.error().code == libbsa::ErrorCode::unsupported_format);
+}
+#endif
+
 TEST_CASE("TES3 magic dispatch is distinct from TES4-family magic")
 {
     const auto directory = case_directory();
