@@ -27,11 +27,30 @@ struct Tes3FixtureEntry {
     std::vector<std::uint8_t> payload;
 };
 
+enum class Ba2FixtureCompression {
+    none,
+    zlib,
+    lz4_block,
+};
+
+struct Ba2FixtureEntry {
+    std::string path;
+    std::vector<std::uint8_t> payload;
+    Ba2FixtureCompression compression = Ba2FixtureCompression::none;
+};
+
 struct FixtureArchive {
     std::filesystem::path path;
     std::uint32_t archive_flags = 0;
     std::uint32_t file_flags = 0;
     std::vector<FixtureEntry> entries;
+};
+
+struct Ba2FixtureArchive {
+    std::filesystem::path path;
+    std::uint32_t version = 0;
+    std::uint32_t compression_method = 0;
+    std::vector<Ba2FixtureEntry> entries;
 };
 
 FixtureArchive write_fixture_archive(
@@ -46,6 +65,14 @@ FixtureArchive write_tes3_fixture_archive(
     const std::filesystem::path& directory,
     std::string stem,
     std::vector<Tes3FixtureEntry> entries);
+
+/// Writes a small synthetic BTDX+GNRL BA2 fixture for parser and extraction tests.
+Ba2FixtureArchive write_ba2_gnrl_fixture_archive(
+    const std::filesystem::path& directory,
+    std::string stem,
+    std::uint32_t version,
+    std::uint32_t compression_method,
+    std::vector<Ba2FixtureEntry> entries);
 
 /// Writes a fixture whose folder table blocks are deliberately not in folder-record order.
 FixtureArchive write_fixture_archive_with_reversed_folder_tables(

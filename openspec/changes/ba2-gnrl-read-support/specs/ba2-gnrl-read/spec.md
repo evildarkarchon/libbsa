@@ -1,18 +1,18 @@
 ## ADDED Requirements
 
 ### Requirement: BA2 GNRL format detection
-libbsa SHALL detect BA2 GNRL archives by `BTDX` magic followed by a supported version (`0x01`, `0x02`, `0x07`, or `0x08`) and `GNRL` sub-header magic. The detection logic SHALL route BTDX-magic files to the BA2 parser without entering the TES4-family path.
+libbsa SHALL detect BA2 GNRL archives by `BTDX` magic followed by a supported version (`0x01`, `0x02`, `0x03`, `0x07`, or `0x08`) and `GNRL` sub-header magic. The detection logic SHALL route BTDX-magic files to the BA2 parser without entering the TES4-family path.
 
 #### Scenario: Supported FO4 BA2 GNRL archive is opened
 - **WHEN** a caller opens a `BTDX` archive with version `0x01`, `0x07`, or `0x08` and sub-header magic `GNRL`
 - **THEN** libbsa reports the archive as `ArchiveFormat::fo4` and makes the read API available.
 
 #### Scenario: Supported Starfield BA2 GNRL archive is opened
-- **WHEN** a caller opens a `BTDX` archive with version `0x02` and sub-header magic `GNRL`
+- **WHEN** a caller opens a `BTDX` archive with version `0x02` or `0x03` and sub-header magic `GNRL`
 - **THEN** libbsa reports the archive as `ArchiveFormat::starfield` and makes the read API available.
 
 #### Scenario: Unsupported BA2 version is opened
-- **WHEN** a caller opens a `BTDX` archive with a version not in `{0x01, 0x02, 0x07, 0x08}`
+- **WHEN** a caller opens a `BTDX` archive with a version not in `{0x01, 0x02, 0x03, 0x07, 0x08}`
 - **THEN** libbsa returns an `unsupported_format` error.
 
 #### Scenario: DX10 sub-header is detected
@@ -29,6 +29,10 @@ libbsa SHALL parse the BTDX outer header (magic, version), the FO4 sub-header (t
 #### Scenario: Starfield v2 extra header fields are parsed
 - **WHEN** a Starfield v2 BA2 GNRL archive is opened
 - **THEN** libbsa reads the additional `Unknown1` and `Unknown2` header fields without error and sets the decompression method to deflate (default for v2).
+
+#### Scenario: Starfield v3 compression method is parsed
+- **WHEN** a Starfield v3 BA2 GNRL archive is opened
+- **THEN** libbsa reads `Unknown1`, `Unknown2`, and `CompressionMethod`, using LZ4 block only when `CompressionMethod` is `3` and deflate otherwise.
 
 #### Scenario: BAADF00D sentinel is consumed
 - **WHEN** the parser reads each GNRL file record
@@ -87,7 +91,7 @@ libbsa SHALL extract BA2 GNRL file entries, using deflate or LZ4 block decompres
 - **THEN** libbsa reads `PackedSize` bytes from `Offset`, decompresses with libdeflate targeting `Size` bytes, and returns the decompressed content.
 
 #### Scenario: LZ4-block-compressed Starfield entry is extracted
-- **WHEN** a caller extracts a compressed entry from a Starfield v2 BA2 GNRL archive with `CompressionMethod = 3`
+- **WHEN** a caller extracts a compressed entry from a Starfield v3 BA2 GNRL archive with `CompressionMethod = 3`
 - **THEN** libbsa reads `PackedSize` bytes from `Offset`, decompresses with `LZ4_decompress_safe()` targeting `Size` bytes, and returns the decompressed content.
 
 #### Scenario: Decompression produces wrong size

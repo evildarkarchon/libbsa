@@ -1,5 +1,6 @@
 #include <libbsa/archive.hpp>
 
+#include "ba2_gnrl_archive.hpp"
 #include "tes3_archive.hpp"
 #include "tes4_archive.hpp"
 
@@ -15,6 +16,7 @@ namespace libbsa {
 namespace {
 
 constexpr std::uint32_t kMagicTes3 = 0x00000100;
+constexpr std::uint32_t kMagicBtdx = 0x58445442;
 
 Error io_error(std::string message)
 {
@@ -59,6 +61,9 @@ Result<detail::ParsedArchive> parse_archive(const std::filesystem::path& path)
     if (magic.value() == kMagicTes3) {
         return detail::parse_tes3_archive(path);
     }
+    if (magic.value() == kMagicBtdx) {
+        return detail::parse_ba2_gnrl_archive(path);
+    }
 
     return detail::parse_tes4_archive(path);
 }
@@ -67,6 +72,9 @@ std::string lookup_key_for(const detail::ParsedArchive& archive, std::string_vie
 {
     if (archive.metadata.format == ArchiveFormat::tes3) {
         return detail::lookup_key_for_tes3_archive_path(archive_path);
+    }
+    if (archive.metadata.format == ArchiveFormat::fo4 || archive.metadata.format == ArchiveFormat::starfield) {
+        return detail::lookup_key_for_ba2_archive_path(archive_path);
     }
 
     return detail::lookup_key_for_archive_path(archive_path);
@@ -179,6 +187,9 @@ Result<std::vector<std::uint8_t>> ArchiveReader::extract(std::string_view archiv
 
     if (impl_->archive.metadata.format == ArchiveFormat::tes3) {
         return detail::extract_tes3_entry(impl_->archive, impl_->archive.entries[found->second]);
+    }
+    if (impl_->archive.metadata.format == ArchiveFormat::fo4 || impl_->archive.metadata.format == ArchiveFormat::starfield) {
+        return detail::extract_ba2_gnrl_entry(impl_->archive, impl_->archive.entries[found->second]);
     }
 
     return detail::extract_tes4_entry(impl_->archive, impl_->archive.entries[found->second]);

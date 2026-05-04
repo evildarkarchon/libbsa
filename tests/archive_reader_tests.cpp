@@ -1,5 +1,6 @@
 #include "fixture_builder.hpp"
 
+#include "ba2_hash.hpp"
 #include "tes3_hash.hpp"
 
 #include <libbsa/archive.hpp>
@@ -36,6 +37,9 @@ constexpr std::uint32_t kArchiveCompress = 0x0004;
 constexpr std::uint32_t kArchiveEmbedName = 0x0100;
 constexpr std::uint32_t kFileDds = 0x0002;
 constexpr std::uint32_t kFileNif = 0x0001;
+constexpr std::uint32_t kMagicBtdx = 0x58445442;
+constexpr std::uint32_t kMagicGnrl = 0x4C524E47;
+constexpr std::uint32_t kMagicDx10 = 0x30315844;
 
 std::filesystem::path case_directory()
 {
@@ -163,6 +167,17 @@ std::vector<std::uint8_t> tes4_archive_with_single_folder_files(std::uint32_t fi
     return archive_bytes;
 }
 
+std::vector<std::uint8_t> ba2_header(std::uint32_t version, std::uint32_t type_magic)
+{
+    std::vector<std::uint8_t> archive_bytes;
+    push_u32(archive_bytes, kMagicBtdx);
+    push_u32(archive_bytes, version);
+    push_u32(archive_bytes, type_magic);
+    push_u32(archive_bytes, 0U);
+    push_u64(archive_bytes, 24U);
+    return archive_bytes;
+}
+
 std::string as_string(const std::vector<std::uint8_t>& data)
 {
     return {data.begin(), data.end()};
@@ -208,6 +223,14 @@ libbsa::tests::FixtureEntry skeleton_entry(std::vector<std::uint8_t> payload, bo
 libbsa::tests::Tes3FixtureEntry tes3_entry(std::string path, std::vector<std::uint8_t> payload)
 {
     return {std::move(path), std::move(payload)};
+}
+
+libbsa::tests::Ba2FixtureEntry ba2_entry(
+    std::string path,
+    std::vector<std::uint8_t> payload,
+    libbsa::tests::Ba2FixtureCompression compression = libbsa::tests::Ba2FixtureCompression::none)
+{
+    return {std::move(path), std::move(payload), compression};
 }
 
 #if !defined(LIBBSA_SHARED)
@@ -349,7 +372,7 @@ void operator delete[](void* pointer, std::size_t) noexcept
 TEST_CASE("opening unsupported archives returns typed errors")
 {
     const auto directory = case_directory();
-    const auto unsupported_magic = libbsa::tests::write_bytes(directory, "unsupported.ba2", bytes("BTDX\1\0\0\0"));
+    const auto unsupported_magic = libbsa::tests::write_bytes(directory, "unsupported.bin", bytes("NOPE"));
     auto magic_result = libbsa::ArchiveReader::open(unsupported_magic);
     REQUIRE_FALSE(magic_result.has_value());
     CHECK(magic_result.error().code == libbsa::ErrorCode::unsupported_format);
@@ -383,6 +406,151 @@ TEST_CASE("TES3 magic dispatch is distinct from TES4-family magic")
     auto tes4_result = libbsa::ArchiveReader::open(tes4_fixture.path);
     REQUIRE(tes4_result.has_value());
     CHECK(tes4_result.value().metadata().format == libbsa::ArchiveFormat::tes4);
+}
+
+TEST_CASE("FO4 BA2 GNRL metadata, lookup, and extraction are available through the public API")
+{
+    const auto texture_payload = bytes("raw texture payload");
+    const auto mesh_payload = bytes("deflate mesh payload");
+    const auto fixture = libbsa::tests::write_ba2_gnrl_fixture_archive(
+        case_directory(),
+        "fo4-gnrl",
+        1U,
+        0U,
+        {
+            ba2_entry("textures/stone.dds", texture_payload),
+            ba2_entry("meshes/actors/skeleton.nif", mesh_payload, libbsa::tests::Ba2FixtureCompression::zlib),
+        });
+
+    auto open_result = libbsa::ArchiveReader::open(fixture.path);
+    REQUIRE(open_result.has_value());
+    auto reader = std::move(open_result).value();
+
+    const auto metadata = reader.metadata();
+    CHECK(metadata.format == libbsa::ArchiveFormat::fo4);
+    CHECK(metadata.version == 1U);
+    CHECK(metadata.folder_count == 0U);
+    CHECK(metadata.file_count == 2U);
+
+    REQUIRE(reader.entries().size() == 2U);
+    CHECK(reader.entries()[0].path == "textures\\stone.dds");
+    CHECK(reader.entries()[0].folder_hash == libbsa::detail::create_hash_fo4("textures"));
+    CHECK(reader.entries()[0].file_hash == libbsa::detail::create_hash_fo4("stone"));
+    CHECK(reader.entries()[0].extension_magic == 0x00736464u);
+    CHECK_FALSE(reader.entries()[0].compressed);
+    CHECK(reader.entries()[0].compression == libbsa::CompressionMethod::none);
+    CHECK(reader.entries()[0].packed_size == 0U);
+    CHECK(reader.entries()[0].uncompressed_size == texture_payload.size());
+
+    CHECK(reader.entries()[1].path == "meshes\\actors\\skeleton.nif");
+    CHECK(reader.entries()[1].compressed);
+    CHECK(reader.entries()[1].compression == libbsa::CompressionMethod::zlib);
+    CHECK(reader.entries()[1].packed_size > 0U);
+    CHECK(reader.entries()[1].uncompressed_size == mesh_payload.size());
+
+    CHECK(reader.contains("TEXTURES\\STONE.DDS"));
+    CHECK(reader.contains("textures/stone.dds"));
+    CHECK_FALSE(reader.contains("textures/missing.dds"));
+
+    auto texture = reader.extract("TEXTURES/STONE.DDS");
+    REQUIRE(texture.has_value());
+    CHECK(texture.value() == texture_payload);
+
+    auto mesh = reader.extract("meshes\\actors\\skeleton.nif");
+    REQUIRE(mesh.has_value());
+    CHECK(mesh.value() == mesh_payload);
+
+    auto missing = reader.entry("textures\\missing.dds");
+    REQUIRE_FALSE(missing.has_value());
+    CHECK(missing.error().code == libbsa::ErrorCode::missing_file);
+}
+
+TEST_CASE("Starfield BA2 GNRL variants select the expected decompression method")
+{
+    const auto zlib_payload = bytes("starfield v2 deflate payload");
+    const auto sf2_fixture = libbsa::tests::write_ba2_gnrl_fixture_archive(
+        case_directory(),
+        "sf-v2-gnrl",
+        2U,
+        0U,
+        {ba2_entry("interface/menu.swf", zlib_payload, libbsa::tests::Ba2FixtureCompression::zlib)});
+
+    auto sf2_open = libbsa::ArchiveReader::open(sf2_fixture.path);
+    REQUIRE(sf2_open.has_value());
+    auto sf2_reader = std::move(sf2_open).value();
+    CHECK(sf2_reader.metadata().format == libbsa::ArchiveFormat::starfield);
+    CHECK(sf2_reader.metadata().version == 2U);
+    REQUIRE(sf2_reader.entries().size() == 1U);
+    CHECK(sf2_reader.entries().front().compression == libbsa::CompressionMethod::zlib);
+    auto sf2_extracted = sf2_reader.extract("interface/menu.swf");
+    REQUIRE(sf2_extracted.has_value());
+    CHECK(sf2_extracted.value() == zlib_payload);
+
+    const auto lz4_payload = bytes("starfield v3 lz4 block payload");
+    const auto sf3_fixture = libbsa::tests::write_ba2_gnrl_fixture_archive(
+        case_directory(),
+        "sf-v3-gnrl",
+        3U,
+        3U,
+        {ba2_entry("materials/ship.mat", lz4_payload, libbsa::tests::Ba2FixtureCompression::lz4_block)});
+
+    auto sf3_open = libbsa::ArchiveReader::open(sf3_fixture.path);
+    REQUIRE(sf3_open.has_value());
+    auto sf3_reader = std::move(sf3_open).value();
+    CHECK(sf3_reader.metadata().format == libbsa::ArchiveFormat::starfield);
+    CHECK(sf3_reader.metadata().version == 3U);
+    REQUIRE(sf3_reader.entries().size() == 1U);
+    CHECK(sf3_reader.entries().front().compression == libbsa::CompressionMethod::lz4_block);
+    auto sf3_extracted = sf3_reader.extract("materials\\ship.mat");
+    REQUIRE(sf3_extracted.has_value());
+    CHECK(sf3_extracted.value() == lz4_payload);
+}
+
+TEST_CASE("unsupported and malformed BA2 GNRL archives return typed errors")
+{
+    const auto directory = case_directory();
+
+    SECTION("DX10 type")
+    {
+        const auto path = libbsa::tests::write_bytes(directory, "ba2-dx10.ba2", ba2_header(1U, kMagicDx10));
+        const auto result = libbsa::ArchiveReader::open(path);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().code == libbsa::ErrorCode::unsupported_format);
+    }
+
+    SECTION("unsupported version")
+    {
+        const auto path = libbsa::tests::write_bytes(directory, "ba2-version.ba2", ba2_header(4U, kMagicGnrl));
+        const auto result = libbsa::ArchiveReader::open(path);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().code == libbsa::ErrorCode::unsupported_format);
+    }
+
+    SECTION("file table beyond EOF")
+    {
+        auto archive_bytes = ba2_header(1U, kMagicGnrl);
+        overwrite_u32(archive_bytes, 16U, 1024U);
+        const auto path = libbsa::tests::write_bytes(directory, "ba2-file-table-past-eof.ba2", archive_bytes);
+        const auto result = libbsa::ArchiveReader::open(path);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().code == libbsa::ErrorCode::malformed_archive);
+    }
+
+    SECTION("truncated name table")
+    {
+        const auto fixture = libbsa::tests::write_ba2_gnrl_fixture_archive(
+            directory,
+            "ba2-truncated-name-table",
+            1U,
+            0U,
+            {ba2_entry("textures/stone.dds", bytes("payload"))});
+        auto archive_bytes = libbsa::tests::read_all_bytes(fixture.path);
+        archive_bytes.pop_back();
+        const auto path = libbsa::tests::write_bytes(directory, "ba2-truncated-name-table-copy.ba2", archive_bytes);
+        const auto result = libbsa::ArchiveReader::open(path);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().code == libbsa::ErrorCode::malformed_archive);
+    }
 }
 
 #if !defined(LIBBSA_SHARED)

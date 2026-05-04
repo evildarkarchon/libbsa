@@ -1,15 +1,19 @@
 #include "fixture_builder.hpp"
 
+#include "ba2_hash.hpp"
 #include "tes3_hash.hpp"
 
 #include <libdeflate.h>
+#include <lz4.h>
 #include <lz4frame.h>
 
 #include <algorithm>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <numeric>
 #include <stdexcept>
+#include <string_view>
 
 namespace libbsa::tests {
 namespace {
@@ -23,6 +27,10 @@ constexpr std::uint32_t kArchiveFileNames = 0x0002;
 constexpr std::uint32_t kArchiveCompress = 0x0004;
 constexpr std::uint32_t kArchiveEmbedName = 0x0100;
 constexpr std::uint32_t kFileSizeCompress = 0x40000000;
+constexpr std::uint32_t kMagicBtdx = 0x58445442;
+constexpr std::uint32_t kMagicGnrl = 0x4C524E47;
+constexpr std::uint32_t kBa2GnrlUnknown = 0x00100100;
+constexpr std::uint32_t kBa2RecordSentinel = 0xBAADF00D;
 
 struct FolderGroup {
     std::string name;
@@ -46,6 +54,24 @@ struct SerializedTes3Entry {
     std::uint32_t data_offset = 0;
     std::vector<std::uint8_t> payload;
 };
+
+struct SerializedBa2Entry {
+    std::string path;
+    std::uint32_t directory_hash = 0;
+    std::uint32_t name_hash = 0;
+    std::uint32_t extension_magic = 0;
+    std::uint64_t offset = 0;
+    std::uint32_t packed_size = 0;
+    std::uint32_t size = 0;
+    std::vector<std::uint8_t> stored_payload;
+};
+
+void push_u16(std::vector<std::uint8_t>& bytes, std::uint16_t value)
+{
+    for (int shift = 0; shift < 16; shift += 8) {
+        bytes.push_back(static_cast<std::uint8_t>((value >> shift) & 0xFFu));
+    }
+}
 
 void push_u8(std::vector<std::uint8_t>& bytes, std::uint8_t value)
 {
@@ -161,6 +187,100 @@ std::vector<std::uint8_t> compress_lz4_frame(const std::vector<std::uint8_t>& pa
 
     compressed.resize(size);
     return compressed;
+}
+
+std::vector<std::uint8_t> compress_lz4_block(const std::vector<std::uint8_t>& payload)
+{
+    if (payload.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        throw std::runtime_error("fixture payload is too large for LZ4 block compression");
+    }
+
+    std::vector<std::uint8_t> compressed(static_cast<std::size_t>(LZ4_compressBound(static_cast<int>(payload.size()))));
+    const auto size = LZ4_compress_default(
+        reinterpret_cast<const char*>(payload.data()),
+        reinterpret_cast<char*>(compressed.data()),
+        static_cast<int>(payload.size()),
+        static_cast<int>(compressed.size()));
+    if (size <= 0) {
+        throw std::runtime_error("failed to create LZ4 block fixture payload");
+    }
+
+    compressed.resize(static_cast<std::size_t>(size));
+    return compressed;
+}
+
+std::string normalize_ba2_fixture_path(std::string path)
+{
+    for (auto& value : path) {
+        auto byte = static_cast<unsigned char>(value);
+        if (byte == '/') {
+            byte = '\\';
+        }
+        if (byte >= static_cast<unsigned char>('A') && byte <= static_cast<unsigned char>('Z')) {
+            byte = static_cast<unsigned char>(byte + ('a' - 'A'));
+        }
+        value = static_cast<char>(byte);
+    }
+
+    while (!path.empty() && (path.front() == '\\' || path.front() == '/')) {
+        path.erase(path.begin());
+    }
+
+    return path;
+}
+
+std::uint32_t ba2_extension_magic(std::string_view extension)
+{
+    if (!extension.empty() && extension.front() == '.') {
+        extension.remove_prefix(1U);
+    }
+
+    std::uint32_t magic = 0;
+    for (std::size_t index = 0; index < 4U && index < extension.size(); ++index) {
+        auto byte = static_cast<unsigned char>(extension[index]);
+        if (byte >= static_cast<unsigned char>('A') && byte <= static_cast<unsigned char>('Z')) {
+            byte = static_cast<unsigned char>(byte + ('a' - 'A'));
+        }
+        magic |= static_cast<std::uint32_t>(byte) << (index * 8U);
+    }
+
+    return magic;
+}
+
+SerializedBa2Entry serialize_ba2_entry(const Ba2FixtureEntry& entry, std::uint64_t offset)
+{
+    const auto path = normalize_ba2_fixture_path(entry.path);
+    const auto slash = path.find_last_of('\\');
+    const auto directory = slash == std::string::npos ? std::string_view{} : std::string_view(path).substr(0, slash);
+    const auto filename = slash == std::string::npos ? std::string_view(path) : std::string_view(path).substr(slash + 1U);
+    const auto dot = filename.find_last_of('.');
+    const auto name = dot == std::string_view::npos ? filename : filename.substr(0, dot);
+    const auto extension = dot == std::string_view::npos ? std::string_view{} : filename.substr(dot + 1U);
+
+    SerializedBa2Entry serialized{};
+    serialized.path = path;
+    serialized.directory_hash = libbsa::detail::create_hash_fo4(directory);
+    serialized.name_hash = libbsa::detail::create_hash_fo4(name);
+    serialized.extension_magic = ba2_extension_magic(extension);
+    serialized.offset = offset;
+    serialized.size = static_cast<std::uint32_t>(entry.payload.size());
+
+    switch (entry.compression) {
+    case Ba2FixtureCompression::none:
+        serialized.stored_payload = entry.payload;
+        serialized.packed_size = 0;
+        break;
+    case Ba2FixtureCompression::zlib:
+        serialized.stored_payload = compress_zlib(entry.payload);
+        serialized.packed_size = static_cast<std::uint32_t>(serialized.stored_payload.size());
+        break;
+    case Ba2FixtureCompression::lz4_block:
+        serialized.stored_payload = compress_lz4_block(entry.payload);
+        serialized.packed_size = static_cast<std::uint32_t>(serialized.stored_payload.size());
+        break;
+    }
+
+    return serialized;
 }
 
 std::uint32_t version_for(FixtureFormat format)
@@ -475,6 +595,77 @@ FixtureArchive write_tes3_fixture_archive(
     output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
     if (!output) {
         throw std::runtime_error("failed to write TES3 fixture archive");
+    }
+
+    return archive;
+}
+
+Ba2FixtureArchive write_ba2_gnrl_fixture_archive(
+    const std::filesystem::path& directory,
+    std::string stem,
+    std::uint32_t version,
+    std::uint32_t compression_method,
+    std::vector<Ba2FixtureEntry> entries)
+{
+    std::filesystem::create_directories(directory);
+
+    const auto header_size = 24U + (version == 2U ? 8U : 0U) + (version == 3U ? 12U : 0U);
+    std::uint64_t data_offset = header_size + (static_cast<std::uint64_t>(entries.size()) * 36U);
+    std::vector<SerializedBa2Entry> serialized_entries;
+    serialized_entries.reserve(entries.size());
+    for (const auto& entry : entries) {
+        auto serialized = serialize_ba2_entry(entry, data_offset);
+        data_offset += serialized.stored_payload.size();
+        serialized_entries.push_back(std::move(serialized));
+    }
+
+    const auto file_table_offset = data_offset;
+    std::vector<std::uint8_t> bytes;
+    push_u32(bytes, kMagicBtdx);
+    push_u32(bytes, version);
+    push_u32(bytes, kMagicGnrl);
+    push_u32(bytes, static_cast<std::uint32_t>(serialized_entries.size()));
+    push_u64(bytes, file_table_offset);
+    if (version == 2U || version == 3U) {
+        push_u32(bytes, 1U);
+        push_u32(bytes, 0U);
+    }
+    if (version == 3U) {
+        push_u32(bytes, compression_method);
+    }
+
+    for (const auto& entry : serialized_entries) {
+        push_u32(bytes, entry.name_hash);
+        push_u32(bytes, entry.extension_magic);
+        push_u32(bytes, entry.directory_hash);
+        push_u32(bytes, kBa2GnrlUnknown);
+        push_u64(bytes, entry.offset);
+        push_u32(bytes, entry.packed_size);
+        push_u32(bytes, entry.size);
+        push_u32(bytes, kBa2RecordSentinel);
+    }
+
+    for (const auto& entry : serialized_entries) {
+        push_bytes(bytes, entry.stored_payload);
+    }
+    for (const auto& entry : serialized_entries) {
+        if (entry.path.size() > std::numeric_limits<std::uint16_t>::max()) {
+            throw std::runtime_error("BA2 fixture path is too long for length prefix");
+        }
+        push_u16(bytes, static_cast<std::uint16_t>(entry.path.size()));
+        bytes.insert(bytes.end(), entry.path.begin(), entry.path.end());
+    }
+
+    Ba2FixtureArchive archive{};
+    archive.path = directory / (std::move(stem) + ".ba2");
+    archive.version = version;
+    archive.compression_method = compression_method;
+    archive.entries = std::move(entries);
+
+    std::ofstream output(archive.path, std::ios::binary);
+    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    if (!output) {
+        throw std::runtime_error("failed to write BA2 fixture archive");
     }
 
     return archive;

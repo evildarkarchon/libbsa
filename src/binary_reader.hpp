@@ -50,6 +50,19 @@ public:
         return bytes_[position_++];
     }
 
+    [[nodiscard]] Result<std::uint16_t> read_u16()
+    {
+        if (remaining() < 2U) {
+            return malformed("unexpected end of archive while reading uint16");
+        }
+
+        std::uint16_t value = 0;
+        for (int shift = 0; shift < 16; shift += 8) {
+            value |= static_cast<std::uint16_t>(bytes_[position_++]) << shift;
+        }
+        return value;
+    }
+
     [[nodiscard]] Result<std::uint32_t> read_u32()
     {
         if (remaining() < 4U) {

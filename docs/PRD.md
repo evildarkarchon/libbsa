@@ -37,8 +37,10 @@ The behavioral reference is the BSArchPro codebase within TES5Edit. This library
 | SSE | Skyrim SE/AE | `.bsa` | `BSA\0` v105 | LZ4 Frame |
 | FO4 GNRL | Fallout 4 | `.ba2` | `BTDX`+`GNRL` v1/7/8 | Deflate |
 | FO4 DDS | Fallout 4 | `.ba2` | `BTDX`+`DX10` v1/7/8 | Deflate |
-| SF GNRL | Starfield | `.ba2` | `BTDX`+`GNRL` v2 | Deflate or LZ4 Block |
+| SF GNRL | Starfield | `.ba2` | `BTDX`+`GNRL` v2/v3 | v2: Deflate; v3: Deflate or LZ4 Block via `CompressionMethod` |
 | SF DDS | Starfield | `.ba2` | `BTDX`+`DX10` v3 | LZ4 Block |
+
+Starfield BA2 v2 general archives add `Unknown1` and `Unknown2` header fields and continue to use deflate compression. Starfield BA2 v3 adds a `CompressionMethod` field; `CompressionMethod == 3` selects raw LZ4 block compression, while other observed values retain deflate behavior. Shipped Starfield general archives are primarily v2 and shipped texture archives are v3, but v3 `GNRL` is structurally valid in the reference reader and supported for compatibility.
 
 ---
 
@@ -123,11 +125,11 @@ No other external dependencies without documented justification.
 **Goal:** Parse and extract files from Fallout 4 and Starfield GNRL BA2 archives.
 
 **Deliverables:**
-- BTDX+GNRL header and record structures (versions 1, 2, 7, 8).
+- BTDX+GNRL header and record structures (versions 1, 2, 3, 7, 8).
 - FO4 CRC32-based hash algorithm (`CreateHashFO4`).
 - Per-file compression detection (`PackedSize != 0`).
-- Deflate decompression for FO4/SF v2.
-- LZ4 block decompression for SF v2 with `CompressionMethod = 3`.
+- Deflate decompression for FO4, SF v2, and SF v3 when `CompressionMethod != 3`.
+- LZ4 block decompression for SF v3 with `CompressionMethod = 3`.
 - File name table parsing (length-prefixed, located at `FileTableOffset`).
 - Tests against FO4 and Starfield GNRL archive fixtures.
 
@@ -179,7 +181,7 @@ No other external dependencies without documented justification.
 - File table generation at end of archive.
 - Per-file compression (deflate or LZ4 block depending on target version).
 - Data deduplication.
-- Version-specific header differences (v1, v2, v7, v8).
+- Version-specific header differences (v1, v2, v3, v7, v8), including SF v3 `CompressionMethod` selection.
 - Round-trip tests against FO4 and Starfield GNRL archives.
 
 **Exit criteria:** Produces GNRL BA2 archives compatible with Fallout 4 and Starfield.
@@ -277,7 +279,7 @@ Test framework: to be selected in Milestone 1 (likely Catch2 or GoogleTest via v
 | BA2 version drift (future game updates) | Library becomes outdated | Extensible format registry; version field drives behavior branches |
 | DirectXTex Windows-only concern | Blocks future cross-platform | Isolate DDS logic behind an interface; DDS write is only required for BA2 DDS archives |
 | Large archive performance | Unusable for 50+ GB Starfield archives | Streaming I/O from milestone 1; defer full parallelism to milestone 9 |
-| LZ4 frame vs. block confusion | Silent data corruption | Dedicated code paths per format with explicit version checks; extensive test coverage |
+| LZ4 frame vs. block confusion | Silent data corruption | Dedicated code paths per format with explicit version and `CompressionMethod` checks; extensive test coverage |
 
 ---
 

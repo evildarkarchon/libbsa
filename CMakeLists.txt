@@ -9,6 +9,8 @@ option(BUILD_SHARED_LIBS "Build libbsa as a shared library." OFF)
 
 add_library(libbsa
     src/archive_reader.cpp
+    src/ba2_gnrl_archive.cpp
+    src/ba2_hash.cpp
     src/tes3_archive.cpp
     src/tes3_hash.cpp
     src/tes4_archive.cpp
@@ -50,6 +52,7 @@ if(BUILD_TESTING)
     add_executable(libbsa_tests
         tests/archive_reader_tests.cpp
         tests/fixture_builder.cpp
+        src/ba2_hash.cpp
         src/tes3_hash.cpp
     )
     target_compile_features(libbsa_tests PRIVATE cxx_std_20)
@@ -67,6 +70,7 @@ if(BUILD_TESTING)
 
     add_executable(libbsa_hash_tests
         tests/hash_tests.cpp
+        src/ba2_hash.cpp
         src/tes3_hash.cpp
         src/tes4_hash.cpp
     )

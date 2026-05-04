@@ -6,7 +6,7 @@ Milestones 1 and 2 delivered BSA read support for TES3 through SSE. Fallout 4 an
 
 - Add `ArchiveFormat::fo4` and `ArchiveFormat::starfield` variants to the public enum.
 - Add `CompressionMethod::lz4_block` to support Starfield's per-file LZ4 block compression.
-- Implement the `BTDX`+`GNRL` header/record parser covering format versions 1, 2, 7, and 8.
+- Implement the `BTDX`+`GNRL` header/record parser covering format versions 1, 2, 3, 7, and 8.
 - Implement `CreateHashFO4` (CRC32-based name/dir/extension hash).
 - Parse the trailing length-prefixed file-name table located at `FileTableOffset`.
 - Detect per-file compression from `PackedSize != 0` and decompress with deflate or LZ4 block as appropriate.
@@ -16,7 +16,7 @@ Milestones 1 and 2 delivered BSA read support for TES3 through SSE. Fallout 4 an
 ## Capabilities
 
 ### New Capabilities
-- `ba2-gnrl-read`: Reading and extracting files from Fallout 4 and Starfield GNRL BA2 archives (BTDX+GNRL, versions 1/2/7/8), including format detection, index parsing, hash-based path lookup, file-name table parsing, and transparent decompression (deflate and LZ4 block).
+- `ba2-gnrl-read`: Reading and extracting files from Fallout 4 and Starfield GNRL BA2 archives (BTDX+GNRL, versions 1/2/3/7/8), including format detection, index parsing, hash-based path lookup, file-name table parsing, and transparent decompression (deflate and LZ4 block).
 
 ### Modified Capabilities
 - `tes4-family-bsa-read`: The archive detection logic must extend to recognize BTDX magic and route to the BA2 parser instead of falling through to the TES4 path.

@@ -13,7 +13,7 @@ The existing `ArchiveReader` routes on magic bytes. Adding BA2 GNRL support requ
 ## Goals / Non-Goals
 
 **Goals:**
-- Parse and extract all files from BTDX+GNRL BA2 archives at versions 1, 2, 7, and 8.
+- Parse and extract all files from BTDX+GNRL BA2 archives at versions 1, 2, 3, 7, and 8.
 - Maintain a single `ArchiveReader::open()` entry point that auto-detects BA2.
 - Support deflate and LZ4 block decompression depending on archive version/flags.
 - Hash-based file lookup using the CRC32 triplet (dir hash + name hash + extension).
@@ -56,12 +56,12 @@ The existing `ArchiveReader` routes on magic bytes. Adding BA2 GNRL support requ
 
 ### 5. Version routing within the BA2 GNRL parser
 
-The parser handles all GNRL versions (1, 2, 7, 8) in one function with version-conditional header reads:
+The parser handles all GNRL versions (1, 2, 3, 7, 8) in one function with version-conditional header reads:
 - v1/v7/v8: Standard FO4 header (`TwbBSHeaderFO4`).
 - v2: SF header with `Unknown1`+`Unknown2` extra fields.
-- v3: SF header with `Unknown1`+`Unknown2`+`CompressionMethod` (but v3 implies DX10, so the GNRL parser only encounters v2 for Starfield).
+- v3: SF header with `Unknown1`+`Unknown2`+`CompressionMethod`; `CompressionMethod == 3` selects LZ4 block, otherwise deflate remains the default.
 
-The `CompressionMethod == 3` check sets the decompression strategy to LZ4 block for Starfield.
+The `CompressionMethod == 3` check sets the decompression strategy to LZ4 block for Starfield v3.
 
 **Alternatives considered:**
 - Separate parser functions per version → Rejected: the file record layout is identical across all GNRL versions; only the header size varies.

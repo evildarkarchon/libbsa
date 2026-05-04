@@ -22,6 +22,8 @@ enum class ArchiveFormat {
     tes4,
     fo3,
     sse,
+    fo4,
+    starfield,
 };
 
 /// Describes the compression method used by an extracted entry.
@@ -29,6 +31,7 @@ enum class CompressionMethod {
     none,
     zlib,
     lz4_frame,
+    lz4_block,
 };
 
 /// Classifies ordinary archive-opening and extraction failures.
@@ -144,6 +147,7 @@ struct ArchiveEntry {
     std::string path;
     std::uint64_t folder_hash = 0;
     std::uint64_t file_hash = 0;
+    std::uint32_t extension_magic = 0;
     std::uint64_t folder_offset = 0;
     std::uint64_t data_offset = 0;
     std::uint64_t stored_size = 0;

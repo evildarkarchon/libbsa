@@ -1,3 +1,4 @@
+#include "ba2_hash.hpp"
 #include "tes4_hash.hpp"
 #include "tes3_hash.hpp"
 
@@ -72,4 +73,44 @@ TEST_CASE("TES3 hash lowercases ASCII bytes only")
 
     CHECK(libbsa::detail::hash_tes3(non_ascii) == 0x000000C080007A30ull);
     CHECK(libbsa::detail::hash_tes3(non_ascii) == libbsa::detail::hash_tes3(lower_non_ascii));
+}
+
+TEST_CASE("BA2 FO4 hash matches known archive vectors")
+{
+    struct Vector {
+        const char* value;
+        std::uint32_t expected;
+    };
+
+    const Vector vectors[] = {
+        {"Background", 0x5FE2DC26u},
+        {"background_tilemap", 0x35B94567u},
+        {"Characters", 0xD9A32978u},
+        {"character_0003", 0x53D5F897u},
+        {"Construct 3", 0x60648919u},
+        {"Readme", 0x36F72750u},
+        {"Share", 0x29246A47u},
+        {"License", 0xCA042B67u},
+        {"Tilemap", 0x0B0A447Eu},
+        {"tiles", 0xDA3773A6u},
+    };
+
+    for (const auto& vector : vectors) {
+        INFO(vector.value);
+        CHECK(libbsa::detail::create_hash_fo4(vector.value) == vector.expected);
+    }
+}
+
+TEST_CASE("BA2 FO4 hash normalizes slashes and ASCII case")
+{
+    CHECK(libbsa::detail::create_hash_fo4("Textures/Actors") == libbsa::detail::create_hash_fo4("textures\\actors"));
+}
+
+TEST_CASE("BA2 FO4 hash skips non-ASCII bytes")
+{
+    std::string with_non_ascii = "read";
+    with_non_ascii.push_back(static_cast<char>(0xC0));
+    with_non_ascii += "me";
+
+    CHECK(libbsa::detail::create_hash_fo4(with_non_ascii) == libbsa::detail::create_hash_fo4("readme"));
 }
