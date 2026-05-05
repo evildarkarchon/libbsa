@@ -9,11 +9,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Foundation
 
-- [ ] **FND-01**: Consumer can build libbsa as a reusable C++20 library with CMake and vcpkg-managed dependencies.
+- [x] **FND-01**: Consumer can build libbsa as a reusable C++20 library with CMake and vcpkg-managed dependencies.
 - [ ] **FND-02**: Consumer can run a focused test suite through CTest for parser, codec, fixture, and round-trip behavior.
 - [ ] **FND-03**: Consumer can receive structured errors for invalid magic, unsupported versions, truncated records, impossible offsets, decompression failures, and malformed archives.
 - [ ] **FND-04**: Consumer can use archive operations without global mutable state or application-specific UI/tooling dependencies.
-- [ ] **FND-05**: Maintainer can trace non-obvious compatibility behavior to BSArchPro/TES5Edit reference code without modifying the `TES5Edit/` submodule.
+- [x] **FND-05**: Maintainer can trace non-obvious compatibility behavior to BSArchPro/TES5Edit reference code without modifying the `TES5Edit/` submodule.
 
 ### Binary I/O and API
 
@@ -125,11 +125,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1 | Pending |
+| FND-01 | Phase 1 | Complete |
 | FND-02 | Phase 1 | Pending |
 | FND-03 | Phase 1 | Pending |
 | FND-04 | Phase 1 | Pending |
-| FND-05 | Phase 1 | Pending |
+| FND-05 | Phase 1 | Complete |
 | BIO-01 | Phase 2 | Pending |
 | BIO-02 | Phase 2 | Pending |
 | BIO-03 | Phase 2 | Pending |

@@ -39,7 +39,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Maintainer can record BSArchPro/TES5Edit compatibility notes while keeping the `TES5Edit/` submodule unmodified and uncompiled.
 **Plans**: 3 plans
 Plans:
-- [ ] 01-01-PLAN.md — Create the CMake/vcpkg library scaffold and document the TES5Edit source boundary.
+- [x] 01-01-PLAN.md — Create the CMake/vcpkg library scaffold and document the TES5Edit source boundary.
 - [ ] 01-02-PLAN.md — Implement and unit-test the C++20 result/error API.
 - [ ] 01-03-PLAN.md — Add public-header smoke coverage and finalize CTest label/boundary gates.
 
