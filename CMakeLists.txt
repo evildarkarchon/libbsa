@@ -47,12 +47,14 @@ target_compile_features(libbsa PUBLIC cxx_std_20)
 target_sources(libbsa
   PRIVATE
     src/libbsa.cpp
+    src/io.cpp
   PUBLIC
     FILE_SET public_headers
     TYPE HEADERS
     BASE_DIRS include
     FILES
-      include/libbsa/result.hpp)
+      include/libbsa/result.hpp
+      include/libbsa/io.hpp)
 
 target_include_directories(libbsa
   PUBLIC
@@ -96,7 +98,7 @@ if(BUILD_TESTING)
       libbsa::libbsa
       Catch2::Catch2WithMain)
 
-  catch_discover_tests(libbsa_io_tests PROPERTIES LABELS "unit")
+  catch_discover_tests(libbsa_io_tests TEST_PREFIX "libbsa_io_tests." PROPERTIES LABELS "unit")
 
   add_executable(libbsa_public_header_smoke tests/public_header_smoke.cpp)
   target_link_libraries(libbsa_public_header_smoke
