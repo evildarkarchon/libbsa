@@ -10,9 +10,9 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Foundation
 
 - [x] **FND-01**: Consumer can build libbsa as a reusable C++20 library with CMake and vcpkg-managed dependencies.
-- [ ] **FND-02**: Consumer can run a focused test suite through CTest for parser, codec, fixture, and round-trip behavior.
+- [x] **FND-02**: Consumer can run a focused test suite through CTest for parser, codec, fixture, and round-trip behavior.
 - [x] **FND-03**: Consumer can receive structured errors for invalid magic, unsupported versions, truncated records, impossible offsets, decompression failures, and malformed archives.
-- [ ] **FND-04**: Consumer can use archive operations without global mutable state or application-specific UI/tooling dependencies.
+- [x] **FND-04**: Consumer can use archive operations without global mutable state or application-specific UI/tooling dependencies.
 - [x] **FND-05**: Maintainer can trace non-obvious compatibility behavior to BSArchPro/TES5Edit reference code without modifying the `TES5Edit/` submodule.
 
 ### Binary I/O and API
@@ -68,7 +68,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Compatibility and Validation
 
-- [ ] **VAL-01**: Maintainer can run unit tests for hash algorithms, compression round trips, header parsing, and record serialization.
+- [x] **VAL-01**: Maintainer can run unit tests for hash algorithms, compression round trips, header parsing, and record serialization.
 - [ ] **VAL-02**: Maintainer can run fixture-based integration tests using committed or generated small archives for each supported family.
 - [ ] **VAL-03**: Maintainer can compare extraction output against BSArchPro output for the same archive corpus.
 - [ ] **VAL-04**: Maintainer can verify malformed or truncated archive handling without crashes or unchecked allocations.
@@ -126,9 +126,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FND-01 | Phase 1 | Complete |
-| FND-02 | Phase 1 | Pending |
+| FND-02 | Phase 1 | Complete |
 | FND-03 | Phase 1 | Complete |
-| FND-04 | Phase 1 | Pending |
+| FND-04 | Phase 1 | Complete |
 | FND-05 | Phase 1 | Complete |
 | BIO-01 | Phase 2 | Pending |
 | BIO-02 | Phase 2 | Pending |
@@ -163,7 +163,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WRT-05 | Phase 8 | Pending |
 | WRT-06 | Phase 8 | Pending |
 | WRT-07 | Phase 8 | Pending |
-| VAL-01 | Phase 1 | Pending |
+| VAL-01 | Phase 1 | Complete |
 | VAL-02 | Phase 11 | Pending |
 | VAL-03 | Phase 11 | Pending |
 | VAL-04 | Phase 11 | Pending |

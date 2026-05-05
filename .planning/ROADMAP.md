@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md — Create the CMake/vcpkg library scaffold and document the TES5Edit source boundary.
 - [x] 01-02-PLAN.md — Implement and unit-test the C++20 result/error API.
-- [ ] 01-03-PLAN.md — Add public-header smoke coverage and finalize CTest label/boundary gates.
+- [x] 01-03-PLAN.md — Add public-header smoke coverage and finalize CTest label/boundary gates.
 
 ### Phase 2: Streaming API, Archive Model, Detection, and Hashes
 **Goal**: Consumers can identify supported archive families, inspect archive contents, and perform path/hash lookup without whole-archive buffering.
