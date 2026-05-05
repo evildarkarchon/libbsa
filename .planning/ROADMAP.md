@@ -56,19 +56,19 @@ Plans:
 **Plans**: 5 plans
 Plans:
 **Wave 1**
-- [ ] 02-01-PLAN.md — Define public streaming source/sink contracts and memory helpers.
+- [x] 02-01-PLAN.md — Define public streaming source/sink contracts and memory helpers.
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 02-02-PLAN.md — Add archive metadata types and strict bounded header detection.
+- [x] 02-02-PLAN.md — Add archive metadata types and strict bounded header detection.
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 02-03-PLAN.md — Implement archive-path normalization and hash golden-vector coverage.
+- [x] 02-03-PLAN.md — Implement archive-path normalization and hash golden-vector coverage.
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 02-04-PLAN.md — Build metadata-only archive view listing and lookup APIs.
+- [x] 02-04-PLAN.md — Build metadata-only archive view listing and lookup APIs.
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 02-05-PLAN.md — Finalize public-header smoke, documentation, and boundary gates.
+- [x] 02-05-PLAN.md — Finalize public-header smoke, documentation, and boundary gates.
 
 Cross-cutting constraints:
 - Public headers expose only libbsa-owned C++20 types and avoid dependency/platform/TES5Edit leakage.
@@ -196,8 +196,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Build, Error, and Test Foundation | 2/3 | In Progress | - |
-| 2. Streaming API, Archive Model, Detection, and Hashes | 0/TBD | Not started | - |
+| 1. Build, Error, and Test Foundation | 3/3 | Complete | 2026-05-05 |
+| 2. Streaming API, Archive Model, Detection, and Hashes | 5/5 | Complete | 2026-05-05 |
 | 3. Compression Services and Policy | 0/TBD | Not started | - |
 | 4. TES4-Family BSA Read and Extract | 0/TBD | Not started | - |
 | 5. TES3 BSA Read and Extract | 0/TBD | Not started | - |

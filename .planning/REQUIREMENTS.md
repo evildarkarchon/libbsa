@@ -17,19 +17,19 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Binary I/O and API
 
-- [ ] **BIO-01**: Consumer can read archive data through a random-access source abstraction without loading the whole archive into memory.
-- [ ] **BIO-02**: Consumer can extract archive payloads to a caller-provided streaming output sink.
-- [ ] **BIO-03**: Consumer can use in-memory convenience helpers layered over the streaming APIs for small payloads.
-- [ ] **BIO-04**: Consumer can inspect archive type, version, flags, file count, entry sizes, offsets, hashes, and compression state without extracting file data.
-- [ ] **BIO-05**: Public headers expose libbsa-owned types and avoid leaking libdeflate, LZ4, DirectXTex, platform, Delphi, or UI implementation details.
+- [x] **BIO-01**: Consumer can read archive data through a random-access source abstraction without loading the whole archive into memory.
+- [x] **BIO-02**: Consumer can extract archive payloads to a caller-provided streaming output sink.
+- [x] **BIO-03**: Consumer can use in-memory convenience helpers layered over the streaming APIs for small payloads.
+- [x] **BIO-04**: Consumer can inspect archive type, version, flags, file count, entry sizes, offsets, hashes, and compression state without extracting file data.
+- [x] **BIO-05**: Public headers expose libbsa-owned types and avoid leaking libdeflate, LZ4, DirectXTex, platform, Delphi, or UI implementation details.
 
 ### Detection, Paths, and Hashes
 
-- [ ] **DPH-01**: Consumer can auto-detect TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DDS archives from magic bytes, version, subtype, and compression method where applicable.
-- [ ] **DPH-02**: Consumer can list normalized archive paths for every entry in a supported archive.
-- [ ] **DPH-03**: Consumer can check whether a file exists by archive path and retrieve its metadata.
-- [ ] **DPH-04**: Consumer can perform random-access lookup using Bethesda-compatible path normalization and hash behavior.
-- [ ] **DPH-05**: Maintainer can validate TES3, TES4-family, and FO4/BA2 hash implementations against golden vectors traced from the reference behavior.
+- [x] **DPH-01**: Consumer can auto-detect TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DDS archives from magic bytes, version, subtype, and compression method where applicable.
+- [x] **DPH-02**: Consumer can list normalized archive paths for every entry in a supported archive.
+- [x] **DPH-03**: Consumer can check whether a file exists by archive path and retrieve its metadata.
+- [x] **DPH-04**: Consumer can perform random-access lookup using Bethesda-compatible path normalization and hash behavior.
+- [x] **DPH-05**: Maintainer can validate TES3, TES4-family, and FO4/BA2 hash implementations against golden vectors traced from the reference behavior.
 
 ### Compression
 
@@ -130,16 +130,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-03 | Phase 1 | Complete |
 | FND-04 | Phase 1 | Complete |
 | FND-05 | Phase 1 | Complete |
-| BIO-01 | Phase 2 | Pending |
-| BIO-02 | Phase 2 | Pending |
-| BIO-03 | Phase 2 | Pending |
-| BIO-04 | Phase 2 | Pending |
-| BIO-05 | Phase 2 | Pending |
-| DPH-01 | Phase 2 | Pending |
-| DPH-02 | Phase 2 | Pending |
-| DPH-03 | Phase 2 | Pending |
-| DPH-04 | Phase 2 | Pending |
-| DPH-05 | Phase 2 | Pending |
+| BIO-01 | Phase 2 | Complete |
+| BIO-02 | Phase 2 | Complete |
+| BIO-03 | Phase 2 | Complete |
+| BIO-04 | Phase 2 | Complete |
+| BIO-05 | Phase 2 | Complete |
+| DPH-01 | Phase 2 | Complete |
+| DPH-02 | Phase 2 | Complete |
+| DPH-03 | Phase 2 | Complete |
+| DPH-04 | Phase 2 | Complete |
+| DPH-05 | Phase 2 | Complete |
 | CMP-01 | Phase 3 | Pending |
 | CMP-02 | Phase 3 | Pending |
 | CMP-03 | Phase 3 | Pending |
