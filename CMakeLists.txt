@@ -122,6 +122,14 @@ if(BUILD_TESTING)
 
   catch_discover_tests(libbsa_path_hash_tests TEST_PREFIX "libbsa_path_hash_tests." ADD_TAGS_AS_LABELS PROPERTIES LABELS "unit;golden")
 
+  add_executable(libbsa_archive_view_tests tests/archive_view_tests.cpp)
+  target_link_libraries(libbsa_archive_view_tests
+    PRIVATE
+      libbsa::libbsa
+      Catch2::Catch2WithMain)
+
+  catch_discover_tests(libbsa_archive_view_tests TEST_PREFIX "libbsa_archive_view_tests." PROPERTIES LABELS "unit")
+
   add_executable(libbsa_public_header_smoke tests/public_header_smoke.cpp)
   target_link_libraries(libbsa_public_header_smoke
     PRIVATE
