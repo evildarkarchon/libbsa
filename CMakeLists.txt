@@ -9,7 +9,8 @@ include(GNUInstallDirs)
 find_package(libdeflate CONFIG REQUIRED)
 find_package(lz4 CONFIG REQUIRED)
 find_package(DirectXTex CONFIG REQUIRED)
-find_package(Catch2 CONFIG REQUIRED)
+
+include(CTest)
 
 function(libbsa_require_first_target output_variable)
   foreach(candidate IN LISTS ARGN)
@@ -71,3 +72,21 @@ install(TARGETS libbsa
 install(EXPORT libbsaTargets
   NAMESPACE libbsa::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libbsa)
+
+if(BUILD_TESTING)
+  find_package(Catch2 CONFIG REQUIRED)
+
+  if(Catch2_DIR)
+    list(APPEND CMAKE_MODULE_PATH "${Catch2_DIR}/../..")
+  endif()
+
+  include(Catch)
+
+  add_executable(libbsa_foundation_tests tests/foundation_tests.cpp)
+  target_link_libraries(libbsa_foundation_tests
+    PRIVATE
+      libbsa::libbsa
+      Catch2::Catch2WithMain)
+
+  catch_discover_tests(libbsa_foundation_tests PROPERTIES LABELS "unit")
+endif()
