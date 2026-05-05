@@ -53,7 +53,27 @@ Plans:
   3. Consumer can auto-detect TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DDS archives from magic, version, subtype, and compression markers.
   4. Consumer can list normalized archive paths, check file existence, retrieve metadata, and inspect archive summaries without extracting data.
   5. Maintainer can validate TES3, TES4-family, and FO4/BA2 path normalization and hash behavior against golden vectors traced from the reference.
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+**Wave 1**
+- [ ] 02-01-PLAN.md — Define public streaming source/sink contracts and memory helpers.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 02-02-PLAN.md — Add archive metadata types and strict bounded header detection.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 02-03-PLAN.md — Implement archive-path normalization and hash golden-vector coverage.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 02-04-PLAN.md — Build metadata-only archive view listing and lookup APIs.
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 02-05-PLAN.md — Finalize public-header smoke, documentation, and boundary gates.
+
+Cross-cutting constraints:
+- Public headers expose only libbsa-owned C++20 types and avoid dependency/platform/TES5Edit leakage.
+- Archive paths use normalized libbsa-owned UTF-8 values, not host filesystem path semantics.
+- TES5Edit remains read-only reference material throughout implementation and verification.
 
 ### Phase 3: Compression Services and Policy
 **Goal**: Consumers and writers get correct compression/decompression behavior for each target archive variant.
