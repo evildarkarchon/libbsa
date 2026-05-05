@@ -111,6 +111,14 @@ if(BUILD_TESTING)
 
   catch_discover_tests(libbsa_detection_tests TEST_PREFIX "libbsa_detection_tests." PROPERTIES LABELS "unit")
 
+  add_executable(libbsa_path_hash_tests tests/path_hash_tests.cpp)
+  target_link_libraries(libbsa_path_hash_tests
+    PRIVATE
+      libbsa::libbsa
+      Catch2::Catch2WithMain)
+
+  catch_discover_tests(libbsa_path_hash_tests TEST_PREFIX "libbsa_path_hash_tests." PROPERTIES LABELS "unit;golden")
+
   add_executable(libbsa_public_header_smoke tests/public_header_smoke.cpp)
   target_link_libraries(libbsa_public_header_smoke
     PRIVATE
