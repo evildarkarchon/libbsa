@@ -381,17 +381,17 @@ set_tests_properties(libbsa.public_header_smoke PROPERTIES LABELS smoke)
 
 **If this table is empty:** All claims in this research were verified or cited — no user confirmation needed.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should Phase 1 generate full CMake package config/version files?**
    - What we know: D-02 requires basic install support but does not require full generated package config/version files unless trivial and low-risk. [CITED: `.planning/phases/01-build-error-and-test-foundation/01-CONTEXT.md`]
    - What's unclear: Whether the executor should spend time on exported config files in Phase 1. [CITED: `.planning/phases/01-build-error-and-test-foundation/01-CONTEXT.md`]
-   - Recommendation: Plan basic `install(TARGETS ... FILE_SET ...)` first and make package config generation optional stretch only if it does not endanger core acceptance. [VERIFIED: Context7 `/kitware/cmake`]
+   - RESOLVED: Plan basic `install(TARGETS ... FILE_SET ...)` first; do not require generated CMake package config/version files in Phase 1 unless the executor can add them trivially without endangering core acceptance. [VERIFIED: Context7 `/kitware/cmake`]
 
 2. **Which Windows generator should the preset use on this machine?**
    - What we know: `cmake`, `ctest`, `vcpkg`, and `git` are on PATH; `ninja` and `cl` are not on PATH in the current shell. [VERIFIED: local environment audit]
    - What's unclear: Visual Studio may still be installed and usable through the Visual Studio CMake generator even though `cl` is not in this non-developer shell PATH. [VERIFIED: local environment audit]
-   - Recommendation: Use `Visual Studio 17 2022` in the committed Windows preset and add a documented fallback command; executor should verify configure locally. [CITED: Microsoft Learn vcpkg CMake integration]
+   - RESOLVED: Use `Visual Studio 17 2022` in the committed Windows preset and add a documented fallback command; executor should verify configure locally. [CITED: Microsoft Learn vcpkg CMake integration]
 
 ## Environment Availability
 
