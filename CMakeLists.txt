@@ -89,4 +89,12 @@ if(BUILD_TESTING)
       Catch2::Catch2WithMain)
 
   catch_discover_tests(libbsa_foundation_tests PROPERTIES LABELS "unit")
+
+  add_executable(libbsa_public_header_smoke tests/public_header_smoke.cpp)
+  target_link_libraries(libbsa_public_header_smoke
+    PRIVATE
+      libbsa::libbsa)
+
+  add_test(NAME libbsa.public_header_smoke COMMAND libbsa_public_header_smoke)
+  set_tests_properties(libbsa.public_header_smoke PROPERTIES LABELS smoke)
 endif()
