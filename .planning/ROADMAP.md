@@ -37,7 +37,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Consumer receives structured errors for invalid magic, unsupported versions, truncation, impossible offsets, decompression failures, and malformed archive inputs.
   4. Maintainer can run CTest for hash, compression, header parsing, record serialization, fixture, and round-trip test targets as they are added.
   5. Maintainer can record BSArchPro/TES5Edit compatibility notes while keeping the `TES5Edit/` submodule unmodified and uncompiled.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Create the CMake/vcpkg library scaffold and document the TES5Edit source boundary.
+- [ ] 01-02-PLAN.md — Implement and unit-test the C++20 result/error API.
+- [ ] 01-03-PLAN.md — Add public-header smoke coverage and finalize CTest label/boundary gates.
 
 ### Phase 2: Streaming API, Archive Model, Detection, and Hashes
 **Goal**: Consumers can identify supported archive families, inspect archive contents, and perform path/hash lookup without whole-archive buffering.
