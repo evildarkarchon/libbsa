@@ -125,12 +125,60 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| FND-01 | Phase 1 | Pending |
+| FND-02 | Phase 1 | Pending |
+| FND-03 | Phase 1 | Pending |
+| FND-04 | Phase 1 | Pending |
+| FND-05 | Phase 1 | Pending |
+| BIO-01 | Phase 2 | Pending |
+| BIO-02 | Phase 2 | Pending |
+| BIO-03 | Phase 2 | Pending |
+| BIO-04 | Phase 2 | Pending |
+| BIO-05 | Phase 2 | Pending |
+| DPH-01 | Phase 2 | Pending |
+| DPH-02 | Phase 2 | Pending |
+| DPH-03 | Phase 2 | Pending |
+| DPH-04 | Phase 2 | Pending |
+| DPH-05 | Phase 2 | Pending |
+| CMP-01 | Phase 3 | Pending |
+| CMP-02 | Phase 3 | Pending |
+| CMP-03 | Phase 3 | Pending |
+| CMP-04 | Phase 3 | Pending |
+| CMP-05 | Phase 3 | Pending |
+| BSA-01 | Phase 4 | Pending |
+| BSA-02 | Phase 4 | Pending |
+| BSA-03 | Phase 4 | Pending |
+| BSA-04 | Phase 5 | Pending |
+| BSA-05 | Phase 4 | Pending |
+| BA2-01 | Phase 6 | Pending |
+| BA2-02 | Phase 6 | Pending |
+| BA2-03 | Phase 6 | Pending |
+| BA2-04 | Phase 6 | Pending |
+| BA2-05 | Phase 7 | Pending |
+| BA2-06 | Phase 7 | Pending |
+| WRT-01 | Phase 9 | Pending |
+| WRT-02 | Phase 10 | Pending |
+| WRT-03 | Phase 10 | Pending |
+| WRT-04 | Phase 9 | Pending |
+| WRT-05 | Phase 8 | Pending |
+| WRT-06 | Phase 8 | Pending |
+| WRT-07 | Phase 8 | Pending |
+| VAL-01 | Phase 1 | Pending |
+| VAL-02 | Phase 11 | Pending |
+| VAL-03 | Phase 11 | Pending |
+| VAL-04 | Phase 11 | Pending |
+| VAL-05 | Phase 11 | Pending |
+| PERF-01 | Phase 12 | Pending |
+| PERF-02 | Phase 12 | Pending |
+| PERF-03 | Phase 12 | Pending |
+| DOC-01 | Phase 12 | Pending |
+| DOC-02 | Phase 12 | Pending |
 
 **Coverage:**
-- v1 requirements: 50 total
-- Mapped to phases: 0
-- Unmapped: 50
+- v1 requirements: 48 total
+- Mapped to phases: 48
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-05*
-*Last updated: 2026-05-05 after initial definition*
+*Last updated: 2026-05-05 after roadmap traceability mapping*
