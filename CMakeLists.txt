@@ -48,6 +48,8 @@ target_sources(libbsa
   PRIVATE
     src/libbsa.cpp
     src/detect.cpp
+    src/archive_path.cpp
+    src/hash.cpp
     src/io.cpp
   PUBLIC
     FILE_SET public_headers
@@ -56,6 +58,7 @@ target_sources(libbsa
     FILES
       include/libbsa/result.hpp
       include/libbsa/archive.hpp
+      include/libbsa/archive_path.hpp
       include/libbsa/detect.hpp
       include/libbsa/io.hpp)
 
@@ -117,7 +120,7 @@ if(BUILD_TESTING)
       libbsa::libbsa
       Catch2::Catch2WithMain)
 
-  catch_discover_tests(libbsa_path_hash_tests TEST_PREFIX "libbsa_path_hash_tests." PROPERTIES LABELS "unit;golden")
+  catch_discover_tests(libbsa_path_hash_tests TEST_PREFIX "libbsa_path_hash_tests." ADD_TAGS_AS_LABELS PROPERTIES LABELS "unit;golden")
 
   add_executable(libbsa_public_header_smoke tests/public_header_smoke.cpp)
   target_link_libraries(libbsa_public_header_smoke
