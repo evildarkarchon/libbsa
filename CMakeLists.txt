@@ -49,6 +49,7 @@ target_sources(libbsa
     src/libbsa.cpp
     src/detect.cpp
     src/archive_path.cpp
+    src/archive_view.cpp
     src/hash.cpp
     src/io.cpp
   PUBLIC
@@ -59,6 +60,7 @@ target_sources(libbsa
       include/libbsa/result.hpp
       include/libbsa/archive.hpp
       include/libbsa/archive_path.hpp
+      include/libbsa/archive_view.hpp
       include/libbsa/detect.hpp
       include/libbsa/io.hpp)
 
