@@ -52,7 +52,7 @@ std::vector<std::byte> tes3_sample(std::uint32_t hash_offset, std::uint32_t file
 std::vector<std::byte> bsa_sample(std::uint32_t version)
 {
     std::vector<std::byte> bytes;
-    append_magic(bytes, "BSA\0");
+    append_u32(bytes, 0x00415342U);
     append_u32(bytes, version);
     append_u32(bytes, 36);
     append_u32(bytes, 0x0004);

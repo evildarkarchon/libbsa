@@ -47,6 +47,7 @@ target_compile_features(libbsa PUBLIC cxx_std_20)
 target_sources(libbsa
   PRIVATE
     src/libbsa.cpp
+    src/detect.cpp
     src/io.cpp
   PUBLIC
     FILE_SET public_headers
@@ -54,6 +55,8 @@ target_sources(libbsa
     BASE_DIRS include
     FILES
       include/libbsa/result.hpp
+      include/libbsa/archive.hpp
+      include/libbsa/detect.hpp
       include/libbsa/io.hpp)
 
 target_include_directories(libbsa
