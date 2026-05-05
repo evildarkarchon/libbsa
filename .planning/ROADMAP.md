@@ -40,7 +40,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 Plans:
 - [x] 01-01-PLAN.md — Create the CMake/vcpkg library scaffold and document the TES5Edit source boundary.
-- [ ] 01-02-PLAN.md — Implement and unit-test the C++20 result/error API.
+- [x] 01-02-PLAN.md — Implement and unit-test the C++20 result/error API.
 - [ ] 01-03-PLAN.md — Add public-header smoke coverage and finalize CTest label/boundary gates.
 
 ### Phase 2: Streaming API, Archive Model, Detection, and Hashes
@@ -176,7 +176,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Build, Error, and Test Foundation | 0/TBD | Not started | - |
+| 1. Build, Error, and Test Foundation | 2/3 | In Progress | - |
 | 2. Streaming API, Archive Model, Detection, and Hashes | 0/TBD | Not started | - |
 | 3. Compression Services and Policy | 0/TBD | Not started | - |
 | 4. TES4-Family BSA Read and Extract | 0/TBD | Not started | - |
