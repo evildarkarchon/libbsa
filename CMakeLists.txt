@@ -90,6 +90,14 @@ if(BUILD_TESTING)
 
   catch_discover_tests(libbsa_foundation_tests PROPERTIES LABELS "unit")
 
+  add_executable(libbsa_io_tests tests/io_tests.cpp)
+  target_link_libraries(libbsa_io_tests
+    PRIVATE
+      libbsa::libbsa
+      Catch2::Catch2WithMain)
+
+  catch_discover_tests(libbsa_io_tests PROPERTIES LABELS "unit")
+
   add_executable(libbsa_public_header_smoke tests/public_header_smoke.cpp)
   target_link_libraries(libbsa_public_header_smoke
     PRIVATE
