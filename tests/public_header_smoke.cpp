@@ -10,6 +10,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 #include <vector>
 
@@ -62,14 +63,33 @@ int main()
     ba2_metadata.offset = 96;
     ba2_metadata.compression = libbsa::compression_state::raw;
 
+    const libbsa::dxgi_format format{71};
+    libbsa::texture_chunk_metadata chunk{};
+    chunk.mip_level = 0;
+    chunk.offset = 96;
+    chunk.packed_size = 4;
+    chunk.size = 4;
+    chunk.compression = libbsa::compression_state::raw;
+    libbsa::texture_metadata texture{};
+    texture.path = "textures/interface/lut.dds";
+    texture.format = format;
+    texture.width = 16;
+    texture.height = 16;
+    texture.mip_count = 1;
+    texture.array_size = 1;
+    texture.is_cubemap = false;
+    texture.chunks.push_back(chunk);
+
     auto path = libbsa::normalize_archive_path("textures/actors/hero.dds");
     const libbsa::archive_view view{summary, std::vector{metadata}};
     const libbsa::bsa_archive bsa{summary, std::vector{bsa_metadata}};
-    const libbsa::ba2_archive ba2{ba2_summary, std::vector{ba2_metadata}};
+    const libbsa::ba2_archive ba2{ba2_summary, std::vector{ba2_metadata}, std::vector{texture}};
     const auto bsa_paths = bsa.paths();
     const auto bsa_entry = bsa.entry("meshes/armor/iron.nif");
     const auto ba2_paths = ba2.paths();
     const auto ba2_entry = ba2.entry("textures/interface/lut.dds");
+    const auto ba2_texture = ba2.texture_metadata("textures/interface/lut.dds");
+    const auto missing_texture = ba2.texture_metadata("meshes/armor/iron.nif");
     const auto open_bsa_fn = &libbsa::open_bsa;
     const auto extract_bsa_entry_fn = &libbsa::extract_bsa_entry;
     const auto open_ba2_fn = &libbsa::open_ba2;
@@ -81,6 +101,11 @@ int main()
             path.value().string() == "textures/actors/hero.dds" && view.contains("textures\\actors\\hero.dds") &&
             bsa_paths.size() == 1 && bsa.contains("meshes\\armor\\iron.nif") && bsa_entry.has_value() &&
             ba2_paths.size() == 1 && ba2.contains("textures\\interface\\lut.dds") && ba2_entry.has_value() &&
+            format.value == 71 && libbsa::dxgi_format_name(format) == "BC1_UNORM" && ba2_texture.has_value() &&
+            ba2_texture.value().format.value == 71 && ba2_texture.value().width == 16 && ba2_texture.value().height == 16 &&
+            ba2_texture.value().mip_count == 1 && ba2_texture.value().array_size == 1 && !ba2_texture.value().is_cubemap &&
+            ba2_texture.value().chunks.size() == 1 && ba2_texture.value().chunks.front().offset == 96 &&
+            !missing_texture.has_value() && missing_texture.error().code == libbsa::error_code::malformed_archive &&
             open_bsa_fn != nullptr && extract_bsa_entry_fn != nullptr && open_ba2_fn != nullptr &&
             extract_ba2_entry_fn != nullptr
         ? 0
