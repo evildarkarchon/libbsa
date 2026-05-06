@@ -1,6 +1,7 @@
 #include <libbsa/archive.hpp>
 #include <libbsa/archive_path.hpp>
 #include <libbsa/archive_view.hpp>
+#include <libbsa/compression.hpp>
 #include <libbsa/detect.hpp>
 #include <libbsa/io.hpp>
 #include <libbsa/result.hpp>
@@ -22,6 +23,15 @@ int main()
     summary.format = libbsa::archive_format::sse_bsa;
     summary.version = 0x69;
 
+    libbsa::payload_codec_request codec_request{};
+    codec_request.format = libbsa::archive_format::starfield_ba2_gnrl;
+    codec_request.entry_state = libbsa::compression_state::archive_default;
+    codec_request.compression_method = 3;
+    const auto codec = libbsa::resolve_payload_codec(codec_request);
+    const auto write_compression = libbsa::resolve_write_compression(libbsa::archive_format::sse_bsa,
+                                                                      libbsa::compression_policy::force_compressed,
+                                                                      false);
+
     libbsa::entry_metadata metadata{};
     metadata.path = "textures/actors/hero.dds";
     metadata.size = 2;
@@ -32,7 +42,9 @@ int main()
     auto path = libbsa::normalize_archive_path("textures/actors/hero.dds");
     const libbsa::archive_view view{summary, std::vector{metadata}};
 
-    return ok.has_value() && source.size() == 2 && write.has_value() && sink.bytes().size() == 2 && path.has_value() &&
+    return ok.has_value() && source.size() == 2 && write.has_value() && sink.bytes().size() == 2 && codec.has_value() &&
+            codec.value() == libbsa::compression_algorithm::lz4_block && write_compression.has_value() &&
+            write_compression.value() == libbsa::compression_state::lz4_frame && path.has_value() &&
             path.value().string() == "textures/actors/hero.dds" && view.contains("textures\\actors\\hero.dds")
         ? 0
         : 1;
