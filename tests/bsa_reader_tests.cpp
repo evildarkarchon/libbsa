@@ -59,6 +59,13 @@ std::uint32_t read_u32(const std::vector<std::byte>& bytes, std::size_t offset)
            (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset + 3])) << 24U);
 }
 
+void write_u32(std::vector<std::byte>& bytes, std::size_t offset, std::uint32_t value)
+{
+    for (int shift = 0; shift < 32; shift += 8) {
+        bytes[offset + static_cast<std::size_t>(shift / 8)] = static_cast<std::byte>((value >> shift) & 0xffU);
+    }
+}
+
 void append_cstring(std::vector<std::byte>& bytes, std::string_view value)
 {
     for (char ch : value) {
@@ -453,6 +460,39 @@ TEST_CASE("open_bsa rejects truncated folder tables", "[unit]")
     CHECK(opened.error().message == "truncated BSA table");
 }
 
+TEST_CASE("open_bsa rejects truncated TES3 tables", "[unit]")
+{
+    auto bytes = tes3_archive_bytes({{}});
+    bytes.resize(15);
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+}
+
+TEST_CASE("open_bsa rejects invalid TES3 name offsets", "[unit]")
+{
+    auto bytes = tes3_archive_bytes({{}});
+    write_u32(bytes, 20, 0xfffffff0U);
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+}
+
+TEST_CASE("open_bsa rejects invalid TES3 hash offsets", "[unit]")
+{
+    auto bytes = tes3_archive_bytes({{}});
+    write_u32(bytes, 4, 1);
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+}
+
 TEST_CASE("extract_bsa_entry rejects impossible payload ranges", "[unit]")
 {
     packed_entry entry;
@@ -465,6 +505,22 @@ TEST_CASE("extract_bsa_entry rejects impossible payload ranges", "[unit]")
     libbsa::memory_sink sink;
 
     auto extracted = libbsa::extract_bsa_entry(archive.value(), source, "meshes/armor/iron.nif", sink);
+
+    REQUIRE_FALSE(extracted.has_value());
+    CHECK(extracted.error().code == libbsa::error_code::malformed_archive);
+    CHECK(extracted.error().message == "BSA payload range exceeds source size");
+}
+
+TEST_CASE("extract_bsa_entry rejects impossible TES3 payload ranges", "[unit]")
+{
+    auto bytes = tes3_archive_bytes({{}});
+    write_u32(bytes, 16, 0xfffffff0U);
+    const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+    auto archive = libbsa::open_bsa(source);
+    REQUIRE(archive.has_value());
+    libbsa::memory_sink sink;
+
+    auto extracted = libbsa::extract_bsa_entry(archive.value(), source, "meshes/marker.nif", sink);
 
     REQUIRE_FALSE(extracted.has_value());
     CHECK(extracted.error().code == libbsa::error_code::malformed_archive);
