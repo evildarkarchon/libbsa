@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed Phase 04 TES4-family BSA read/extract
+stopped_at: Completed Phase 05 TES3 BSA read and extract
 last_updated: "2026-05-06T01:07:55.931Z"
 last_activity: 2026-05-06
 progress:
@@ -21,11 +21,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 05 — tes3-bsa-read-and-extract
+**Current focus:** Phase 05: TES3 BSA Read and Extract
 
 ## Current Position
 
-Phase: 05 (tes3-bsa-read-and-extract) — EXECUTING
+Phase: 5 of 12 (TES3 BSA Read and Extract)
 Plan: 4 of 4
 Status: Phase complete — ready for verification
 Last activity: 2026-05-06
@@ -58,6 +58,7 @@ Progress: [██████████] 100%
 | Phase 02-streaming-api-archive-model-detection-and-hashes P01-P05 | 48min | 11 tasks | 22 files |
 | Phase 03-compression-services-and-policy P01-P04 | 18min | 9 tasks | 18 files |
 | Phase 04-tes4-family-bsa-read-and-extract P01-P05 | 17min | 11 tasks | 11 files |
+| Phase 05-tes3-bsa-read-and-extract P01-P04 | 21min | 8 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,7 @@ Recent decisions affecting current work:
 - [Phase 02]: Preserved the committed Visual Studio 17 2022 preset while documenting local Visual Studio 18 2026 fallback validation commands.
 - [Phase 03]: Compression routing is explicit by archive format, entry state, and Starfield CompressionMethod; codec libraries remain behind private implementation wrappers.
 - [Phase 04]: TES4-family BSA read/extract uses `bsa_archive` with `archive_view` lookup, bounded parsing, compression dispatcher extraction, and TES5Edit-provenance compatibility tests.
+- [Phase 05]: TES3 BSA read/extract reuses `bsa_archive` and `open_bsa` with validated table parsing, absolute `entry_metadata` payload offsets, raw extraction, and public-header-only API exposure.
 
 ### Pending Todos
 
@@ -100,5 +102,5 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-05-06T01:07:55.926Z
-Stopped at: Completed Phase 04 TES4-family BSA read/extract
+Stopped at: Completed Phase 05 TES3 BSA read and extract
 Resume file: None
