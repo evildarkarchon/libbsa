@@ -12,9 +12,9 @@ libbsa v1 is delivered as a correctness-first C++20 compatibility library: estab
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Build, Error, and Test Foundation** - Consumers and maintainers get a reusable C++20 library skeleton, structured failures, and executable tests.
-- [ ] **Phase 2: Streaming API, Archive Model, Detection, and Hashes** - Consumers can identify archives, inspect entries, and perform path/hash lookup through streaming-safe public APIs.
-- [ ] **Phase 3: Compression Services and Policy** - Archive payloads and writers use explicit deflate, LZ4 frame, and raw LZ4 block routing without codec confusion.
+- [x] **Phase 1: Build, Error, and Test Foundation** - Consumers and maintainers get a reusable C++20 library skeleton, structured failures, and executable tests.
+- [x] **Phase 2: Streaming API, Archive Model, Detection, and Hashes** - Consumers can identify archives, inspect entries, and perform path/hash lookup through streaming-safe public APIs.
+- [x] **Phase 3: Compression Services and Policy** - Archive payloads and writers use explicit deflate, LZ4 frame, and raw LZ4 block routing without codec confusion.
 - [x] **Phase 4: TES4-Family BSA Read and Extract** - Consumers can open, inspect, and extract Oblivion, FO3/FNV/Skyrim LE, and Skyrim SE/AE BSA archives.
 - [ ] **Phase 5: TES3 BSA Read and Extract** - Consumers can open, inspect, and extract Morrowind BSA archives with TES3-specific offset semantics.
 - [ ] **Phase 6: BA2 GNRL Read and Extract** - Consumers can open, inspect, and extract Fallout 4 and Starfield general BA2 archives.
@@ -169,7 +169,25 @@ Cross-cutting constraints:
   3. Consumer can open, list, inspect, and extract Starfield BA2 GNRL v3 archives with version-specific compression-method routing.
   4. Consumer can resolve BA2 entry names from length-prefixed file name tables located at `FileTableOffset`.
   5. Maintainer can validate BA2 general metadata, hash, file-table, deflate, and raw LZ4 behavior against fixtures.
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+**Wave 1**
+- [ ] 06-01-PLAN.md — Add the BA2 public API surface, metadata-only wrapper, CMake wiring, and public smoke coverage.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 06-02-PLAN.md — TDD the BA2 GNRL metadata parser and FileTableOffset name-table association for FO4 and Starfield v2.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 06-03-PLAN.md — TDD raw and deflate BA2 GNRL single-entry extraction through caller-owned sinks.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 06-04-PLAN.md — TDD Starfield v3 CompressionMethod routing, including raw LZ4-block extraction and codec-confusion failure.
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 06-05-PLAN.md — TDD malformed BA2 header, record, name-table, offset, path, and codec safety checks.
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 06-06-PLAN.md — Finalize README documentation, public smoke confirmation, and Phase 6 validation gates.
 
 ### Phase 7: BA2 DDS Read and DDS Reconstruction
 **Goal**: Consumers can extract Fallout 4 and Starfield BA2 texture entries as valid, loadable DDS files.
