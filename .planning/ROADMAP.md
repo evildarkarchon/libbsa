@@ -152,7 +152,7 @@ Plans:
 - [x] 05-03-PLAN.md — Harden TES3 malformed table, name/hash, and payload range handling.
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 05-04-PLAN.md — Finalize TES3 documentation, public smoke coverage, and validation gates.
+- [x] 05-04-PLAN.md — Finalize TES3 documentation, public smoke coverage, and validation gates.
 
 Cross-cutting constraints:
 - TES3 file records store offsets relative to the data section; libbsa exposes absolute payload offsets after validation.
