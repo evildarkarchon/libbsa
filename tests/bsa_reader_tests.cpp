@@ -274,3 +274,49 @@ TEST_CASE("open_bsa parses SSE v105 folder records", "[fixture]")
     REQUIRE(metadata.has_value());
     CHECK(metadata.value().compression == libbsa::compression_state::lz4_frame);
 }
+
+std::vector<std::byte> extract_bytes(const std::vector<std::byte>& bytes, std::string path)
+{
+    const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+    auto archive = libbsa::open_bsa(source);
+    REQUIRE(archive.has_value());
+    libbsa::memory_sink sink;
+    auto extracted = libbsa::extract_bsa_entry(archive.value(), source, std::move(path), sink);
+    REQUIRE(extracted.has_value());
+    return sink.bytes();
+}
+
+TEST_CASE("extract_bsa_entry writes raw TES4 bytes", "[fixture]")
+{
+    const auto bytes = bsa_archive_bytes(VERSION_TES4, 0, {});
+
+    CHECK(extract_bytes(bytes, "meshes/armor/iron.nif") ==
+          std::vector{std::byte{0x10}, std::byte{0x20}, std::byte{0x30}, std::byte{0x40}});
+}
+
+TEST_CASE("extract_bsa_entry inflates deflate v104 payloads", "[fixture]")
+{
+    packed_entry entry;
+    entry.algorithm = libbsa::compression_algorithm::deflate;
+    const auto bytes = bsa_archive_bytes(VERSION_FO3, ARCHIVE_COMPRESS, entry);
+
+    CHECK(extract_bytes(bytes, "meshes/armor/iron.nif") == entry.output);
+}
+
+TEST_CASE("extract_bsa_entry inflates LZ4-frame v105 payloads", "[fixture]")
+{
+    packed_entry entry;
+    entry.algorithm = libbsa::compression_algorithm::lz4_frame;
+    const auto bytes = bsa_archive_bytes(VERSION_SSE, ARCHIVE_COMPRESS, entry);
+
+    CHECK(extract_bytes(bytes, "meshes/armor/iron.nif") == entry.output);
+}
+
+TEST_CASE("extract_bsa_entry skips embedded name prefixes", "[fixture]")
+{
+    packed_entry entry;
+    entry.embedded_name = true;
+    const auto bytes = bsa_archive_bytes(VERSION_FO3, ARCHIVE_EMBEDNAME, entry);
+
+    CHECK(extract_bytes(bytes, "meshes/armor/iron.nif") == entry.output);
+}
