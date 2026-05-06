@@ -229,7 +229,7 @@ ba2_dds_fixture multi_mip_fixture(std::uint32_t version)
     texture.height = 16;
     texture.mip_count = 3;
     texture.chunks.clear();
-    texture.chunks.push_back(chunk(0, 1, deterministic_payload(32, std::byte{0x20})));
+    texture.chunks.push_back(chunk(0, 1, deterministic_payload(160, std::byte{0x20})));
     texture.chunks.push_back(chunk(2, 2, deterministic_payload(8, std::byte{0x40})));
     return make_ba2_dds_fixture(version, {std::move(texture)});
 }

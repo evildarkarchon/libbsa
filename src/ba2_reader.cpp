@@ -1,6 +1,9 @@
 #include <libbsa/ba2.hpp>
 #include <libbsa/compression.hpp>
 
+#include "texture/dds_reconstruction.hpp"
+#include "texture/dds_validation.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -636,8 +639,58 @@ result<ba2_archive> open_ba2(const byte_source& source)
     return failure<ba2_archive>({error_code::unsupported_format, "unsupported BA2 subtype"});
 }
 
+result<void> extract_ba2_texture_entry(const ba2_archive& archive, const byte_source& source, std::string path, byte_sink& sink)
+{
+    auto texture = archive.texture_metadata(std::move(path));
+    if (!texture.has_value()) {
+        return failure<void>(texture.error());
+    }
+
+    std::vector<std::byte> image_payload;
+    for (const auto& chunk : texture.value().chunks) {
+        auto payload = read_bytes(source, chunk.offset, chunk.packed_size);
+        if (!payload.has_value()) {
+            return failure<void>({error_code::malformed_archive, "BA2 DX10 chunk range exceeds source size"});
+        }
+
+        payload_codec_request request{};
+        request.format = archive.summary().format;
+        request.entry_state = chunk.compression;
+        request.compression_method = archive.summary().compression_method;
+        auto algorithm = resolve_payload_codec(request);
+        if (!algorithm.has_value()) {
+            return failure<void>(algorithm.error());
+        }
+
+        // Starfield BA2 v3 method 3 uses raw LZ4 blocks per chunk; this request
+        // keeps that route explicit instead of trying frame or deflate fallbacks.
+        auto decompressed = decompress_payload(algorithm.value(), std::span<const std::byte>{payload.value()}, chunk.size);
+        if (!decompressed.has_value()) {
+            return failure<void>(decompressed.error());
+        }
+        image_payload.insert(image_payload.end(), decompressed.value().begin(), decompressed.value().end());
+    }
+
+    auto dds = detail::reconstruct_dds(texture.value(), std::span<const std::byte>{image_payload});
+    if (!dds.has_value()) {
+        return failure<void>(dds.error());
+    }
+    auto validated = detail::validate_dds(std::span<const std::byte>{dds.value()});
+    if (!validated.has_value()) {
+        return failure<void>(validated.error());
+    }
+
+    // The sink is intentionally touched only after all chunk decoding,
+    // reconstruction, and validation succeeds, preserving no-partial-write behavior.
+    return sink.write(std::span<const std::byte>{dds.value()});
+}
+
 result<void> extract_ba2_entry(const ba2_archive& archive, const byte_source& source, std::string path, byte_sink& sink)
 {
+    if (archive.summary().format == archive_format::fo4_ba2_dds || archive.summary().format == archive_format::starfield_ba2_dds) {
+        return extract_ba2_texture_entry(archive, source, std::move(path), sink);
+    }
+
     auto metadata = archive.entry(std::move(path));
     if (!metadata.has_value()) {
         return failure<void>(metadata.error());
