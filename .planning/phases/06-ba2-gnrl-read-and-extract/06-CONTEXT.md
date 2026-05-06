@@ -1,6 +1,7 @@
 # Phase 06: ba2-gnrl-read-and-extract - Context
 
 **Gathered:** 2026-05-05
+**Updated for verification gaps:** 2026-05-05
 **Status:** Ready for planning
 
 <domain>
@@ -66,6 +67,11 @@ Downstream agents MUST read `06-SPEC.md` before planning or implementing. Requir
 - **D-15:** Keep fixture builders test-local first, likely in `tests/ba2_reader_tests.cpp` or a small test helper. Promote to shared helpers later only if writer phases reuse them.
 - **D-16:** Explicit malformed coverage in Phase 6 must include core parser failures: truncated headers/records, impossible payload offsets, truncated name tables, mismatched file count/name count, and codec route confusion. Comprehensive fuzz-style hardening remains Phase 11 scope.
 
+### Verification Gap Closure
+- **D-17:** Duplicate BA2 names that normalize to the same archive path are malformed. `open_ba2` must reject them with `malformed_archive` before constructing `ba2_archive`, rather than relying on `archive_view` where `insert_or_assign` can silently overwrite earlier records.
+- **D-18:** Empty BA2 GNRL archives are allowed, but `FileTableOffset` is still metadata that must be range-validated. For `file_count == 0`, `open_ba2` must reject archives where `file_table_offset > source.size()` while continuing to enforce record-table ordering invariants.
+- **D-19:** Gap fixtures must be generated in the existing BA2 reader test style and cover both duplicate normalized names and zero-entry archives with impossible `FileTableOffset`. These are targeted D-16/BA2-04 closure tests, not a Phase 11 fuzz-hardening expansion.
+
 ### the agent's Discretion
 No selected area was left to the agent's discretion. The planner may choose exact helper names, parser file names, and test organization details as long as the decisions above, `06-SPEC.md`, and existing project patterns are satisfied.
 
@@ -105,6 +111,13 @@ No selected area was left to the agent's discretion. The planner may choose exac
 - `tests/public_header_smoke.cpp` - Consumer-style public header smoke test to extend with BA2 API names.
 - `CMakeLists.txt` - Explicit source/header/test wiring; new BA2 source/header/test files must be listed explicitly and must not include `TES5Edit/`.
 
+### Verification Gap Inputs
+- `.planning/phases/06-ba2-gnrl-read-and-extract/06-VERIFICATION.md` - Authoritative gap report: D-16 is partial because duplicate normalized names collapse and zero-entry archives can accept impossible `FileTableOffset` metadata.
+- `.planning/phases/06-ba2-gnrl-read-and-extract/06-REVIEW.md` - Review warnings that motivated the verification gap and should be checked during remediation.
+- `src/ba2_reader.cpp` - Parser locations for `FileTableOffset` validation, name-table parsing, normalized-name construction, and payload range validation.
+- `src/archive_view.cpp` - Shows why duplicate rejection must happen before constructing `archive_view`; current lookup storage uses normalized path keys.
+- `tests/ba2_reader_tests.cpp` - Existing generated BA2 fixture helpers and malformed-input test style to extend with the two gap cases.
+
 ### Read-Only Reference Areas
 - `TES5Edit/BSArchPro.dpr` - Behavioral reference entry point for BSArchPro compatibility tracing; read-only.
 - `TES5Edit/BSArch/` - Reference area for archive behavior; read-only.
@@ -130,6 +143,11 @@ No selected area was left to the agent's discretion. The planner may choose exac
 - Tests use Catch2, generated in-test fixtures, labels such as `unit`, `fixture`, `codec`, and public-header smoke coverage.
 - `CMakeLists.txt` uses explicit source lists and must be updated for every new public header, source file, and test target.
 
+### Verification Gap Patterns
+- `read_name_table` returns parsed names plus an end offset; the gap fix should preserve index-based name/record association and reject malformed name metadata before entries are handed to `archive_view`.
+- `archive_view` is intentionally generic and currently normalizes entries into a keyed map. BA2-specific duplicate detection belongs in the BA2 parser because duplicate file-table names are archive-format validity, not a generic view policy.
+- Zero-entry parsing still consumes trusted header metadata. `FileTableOffset` range validation should not depend on whether a subsequent name-table read occurs.
+
 ### Integration Points
 - Add `include/libbsa/ba2.hpp` and a corresponding `src/ba2_reader.cpp` or similarly named implementation file.
 - Reuse or factor common bounded-read helpers carefully; keep the smallest correct change and avoid moving BSA code unless needed.
@@ -146,6 +164,7 @@ No selected area was left to the agent's discretion. The planner may choose exac
 - Metadata should be consumer-friendly and consistent with existing libbsa semantics, even when BA2 native record fields use different names.
 - Compression metadata should tell consumers what extraction will do, not merely echo raw archive defaults.
 - Generated fixtures should make BA2 correctness reviewable in source form and keep Phase 11 responsible for broader real-corpus compatibility comparison.
+- Verification gap closure should be narrow and parser-focused: reject malformed duplicates and impossible empty-archive offsets, then prove those exact cases with generated fixtures.
 
 </specifics>
 

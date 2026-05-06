@@ -5,7 +5,7 @@
 
 **Date:** 2026-05-05
 **Phase:** 06-ba2-gnrl-read-and-extract
-**Areas discussed:** BA2 API shape, Metadata exposure, Compression semantics, Fixture proof shape
+**Areas discussed:** BA2 API shape, Metadata exposure, Compression semantics, Fixture proof shape, Verification gap closure
 
 ---
 
@@ -100,6 +100,25 @@
 ## the agent's Discretion
 
 No areas were left to the agent's discretion.
+
+---
+
+## Verification Gap Closure
+
+| Question | Option | Description | Selected |
+|----------|--------|-------------|----------|
+| Gap areas to lock | Both gaps | Capture decisions for duplicate normalized BA2 names and zero-entry `FileTableOffset` validation so the verifier gaps can be closed together. | Yes |
+| Gap areas to lock | Duplicate names only | Focus on rejecting normalized name collisions before `archive_view` can collapse entries. | |
+| Gap areas to lock | Zero-entry offsets only | Focus on validating `FileTableOffset` even when `file_count` is zero. | |
+| Duplicate BA2 names | Reject archive | Fail `open_ba2` with `malformed_archive` before constructing `ba2_archive`; preserves file-count/name association and avoids silent overwrite. | Yes |
+| Duplicate BA2 names | Keep first entry | Open archive but ignore later duplicates; deterministic, but silently drops record data. | |
+| Duplicate BA2 names | Keep last entry | Open archive and preserve current `archive_view` overwrite behavior; leaves verifier gap unresolved. | |
+| Empty BA2 `FileTableOffset` | Must be in-bounds | Allow empty BA2 only if `FileTableOffset <= source.size()` and record table invariants pass; impossible offsets fail as malformed. | Yes |
+| Empty BA2 `FileTableOffset` | Must equal table end | Stricter: empty BA2 must use exactly the header/record-table end as `FileTableOffset`. | |
+| Empty BA2 `FileTableOffset` | Ignore offset | Keep current permissive behavior; leaves verifier gap unresolved. | |
+
+**User's choice:** Close both gaps by rejecting duplicate normalized names and requiring empty archives to keep `FileTableOffset` in-bounds.
+**Notes:** These are targeted D-16/BA2-04 closure decisions, not a broader Phase 11 malformed-input expansion.
 
 ## Deferred Ideas
 
