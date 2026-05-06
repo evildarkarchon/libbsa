@@ -71,6 +71,31 @@ rg -n "^[^#]*\b(GLOB|GLOB_RECURSE)\b" CMakeLists.txt
 git status --short TES5Edit
 ```
 
+## TES4-family BSA read and extract
+
+Phase 04 supports opening, listing, lookup, metadata inspection, and extraction for Oblivion v103, FO3/FNV/Skyrim LE v104, and Skyrim SE/AE v105 BSA archives. The API is exposed through `include/libbsa/bsa.hpp` and keeps I/O caller-owned by using `byte_source` for archive bytes and `byte_sink` for extracted output.
+
+The reader implements compatibility-sensitive TES4-family behavior while keeping `TES5Edit/` read-only reference material:
+
+- `ARCHIVE_COMPRESS` XOR `FILE_SIZE_COMPRESS` determines whether each entry is actually compressed.
+- v103/v104 compressed payloads route through deflate.
+- v105 compressed payloads route through LZ4 frame handling.
+- v104/v105 embedded filename prefixes are skipped before bytes are written to the caller's sink.
+- Public headers continue to avoid private codec, DirectXTex, and TES5Edit implementation details.
+
+Local Phase 04 validation uses the Visual Studio 2026 fallback build directory:
+
+```powershell
+cmake --build build/local-vs2026-vcpkg --config Debug
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -R libbsa_bsa_reader_tests
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -L fixture
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -R libbsa.public_header_smoke
+rg -n "libdeflate|lz4\.h|lz4frame\.h|LZ4|DirectXTex|TES5Edit" include/libbsa
+rg -n "^[^#]*\b(GLOB|GLOB_RECURSE)\b" CMakeLists.txt
+git status --short TES5Edit
+```
+
 ## TES5Edit/ reference boundary
 
 `TES5Edit/` is a read-only reference submodule. It documents prior BSArchPro-compatible behavior, but it is not vendored source for libbsa.

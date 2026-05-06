@@ -31,7 +31,7 @@ enum class compression_policy {
 
 /// Carries all archive metadata needed to route a packed payload to a codec.
 ///
-/// Starfield BA2 v3 stores raw LZ4 block selection in `compression_method`, so
+/// Starfield BA2 v3 stores raw block codec selection in `compression_method`, so
 /// callers must pass the detected header value instead of guessing from paths.
 struct payload_codec_request {
     archive_format format{};
