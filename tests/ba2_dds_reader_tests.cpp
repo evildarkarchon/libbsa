@@ -98,6 +98,25 @@ void assert_validated_dds(const std::vector<std::byte>& bytes,
     CHECK(validated.value().is_cubemap == cubemap);
 }
 
+void assert_open_fails(const libbsa::test::ba2_dds_fixture& fixture)
+{
+    const auto opened = open_fixture(fixture);
+    REQUIRE_FALSE(opened.has_value());
+}
+
+void assert_extract_fails_empty(const libbsa::test::ba2_dds_fixture& fixture, std::string path)
+{
+    const libbsa::memory_source source{std::span<const std::byte>{fixture.bytes}};
+    const auto opened = libbsa::open_ba2(source);
+    REQUIRE(opened.has_value());
+    libbsa::memory_sink sink;
+
+    const auto extracted = libbsa::extract_ba2_entry(opened.value(), source, std::move(path), sink);
+
+    REQUIRE_FALSE(extracted.has_value());
+    CHECK(sink.bytes().empty());
+}
+
 } // namespace
 
 TEST_CASE("generated BA2 DDS fixtures expose stable BTDX DX10 identity bytes", "[fixture]")
@@ -229,4 +248,58 @@ TEST_CASE("extract_ba2_entry leaves no partial bytes when DX10 validation fails"
 
     REQUIRE_FALSE(extracted.has_value());
     CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("open_ba2 rejects truncated DX10 records", "[unit]")
+{
+    assert_open_fails(libbsa::test::malformed_truncated_record_fixture());
+}
+
+TEST_CASE("open_ba2 rejects invalid chunk ranges", "[unit]")
+{
+    assert_open_fails(libbsa::test::malformed_invalid_chunk_range_fixture());
+}
+
+TEST_CASE("open_ba2 rejects DX10 name-table problems", "[unit]")
+{
+    auto fixture = libbsa::test::one_mip_fixture(libbsa::test::VERSION_FO4_DX10_V1);
+    fixture.bytes.resize(static_cast<std::size_t>(dx10_file_table_offset(libbsa::test::VERSION_FO4_DX10_V1, 1) + 1U));
+
+    assert_open_fails(fixture);
+}
+
+TEST_CASE("open_ba2 rejects duplicate normalized DX10 names", "[unit]")
+{
+    assert_open_fails(libbsa::test::malformed_duplicate_normalized_names_fixture());
+}
+
+TEST_CASE("extract_ba2_entry rejects unsupported codec routes without fallback or partial writes", "[unit][codec]")
+{
+    assert_extract_fails_empty(libbsa::test::malformed_unsupported_codec_route_fixture(), "textures/generated/unsupported_codec.dds");
+}
+
+TEST_CASE("open_ba2 rejects inconsistent mip chunk mapping", "[unit]")
+{
+    assert_open_fails(libbsa::test::malformed_inconsistent_mip_chunk_mapping_fixture());
+}
+
+TEST_CASE("extract_ba2_entry keeps unsupported formats inspectable but fails extraction without partial bytes", "[unit]")
+{
+    auto texture = libbsa::test::ba2_dds_texture_descriptor{};
+    texture.path = "textures/generated/unsupported_format.dds";
+    texture.dxgi_format = 255;
+    texture.chunks.push_back(libbsa::test::ba2_dds_chunk_descriptor{0, 0, std::vector<std::byte>(8, std::byte{0x5a})});
+    const auto fixture = libbsa::test::make_ba2_dds_fixture(libbsa::test::VERSION_FO4_DX10_V1, {texture});
+    const auto opened = open_fixture(fixture);
+    REQUIRE(opened.has_value());
+    const auto metadata = opened.value().texture_metadata(texture.path);
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().format.value == 255);
+
+    assert_extract_fails_empty(fixture, texture.path);
+}
+
+TEST_CASE("extract_ba2_entry reports reconstruction failure without partial bytes", "[unit]")
+{
+    assert_extract_fails_empty(libbsa::test::malformed_reconstruction_failure_fixture(), "textures/generated/reconstruction_failure.dds");
 }
