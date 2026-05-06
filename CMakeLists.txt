@@ -173,6 +173,14 @@ if(BUILD_TESTING)
 
   catch_discover_tests(libbsa_bsa_reader_tests TEST_PREFIX "libbsa_bsa_reader_tests." ADD_TAGS_AS_LABELS PROPERTIES LABELS "unit;fixture")
 
+  add_executable(libbsa_ba2_reader_tests tests/ba2_reader_tests.cpp)
+  target_link_libraries(libbsa_ba2_reader_tests
+    PRIVATE
+      libbsa::libbsa
+      Catch2::Catch2WithMain)
+
+  catch_discover_tests(libbsa_ba2_reader_tests TEST_PREFIX "libbsa_ba2_reader_tests." ADD_TAGS_AS_LABELS PROPERTIES LABELS "unit;fixture;codec")
+
   add_executable(libbsa_public_header_smoke tests/public_header_smoke.cpp)
   target_link_libraries(libbsa_public_header_smoke
     PRIVATE
