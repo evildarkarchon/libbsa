@@ -89,11 +89,11 @@ None - plan executed exactly as written.
 
 - The initial RED `ctest` run without rebuilding still reported the prior 26-test executable as passing; rebuilding `libbsa_ba2_reader_tests` exposed the intended failing RED tests. This was handled within the planned RED verification flow.
 
-## Verification
+## Validation Evidence
 
 - `rg -n "duplicate normalized BA2 names|empty BA2 archives with impossible FileTableOffset|accepts empty BA2 archives with in-range FileTableOffset" tests/ba2_reader_tests.cpp` - passed; all three test names were present.
 - `rg -n "Meshes/Armor/Iron\.NIF|meshes\\\\armor\\\\iron\.nif|write_u64\(bytes, 16U|paths\(\)\.empty" tests/ba2_reader_tests.cpp` - passed; all required fixture patterns were present.
-- `cmake --build build/local-vs2026-vcpkg --config Debug --target libbsa_ba2_reader_tests && ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -R libbsa_ba2_reader_tests` during RED - failed as expected with 2/29 failures: duplicate normalized names and impossible empty FileTableOffset were still accepted.
+- `cmake --build build/local-vs2026-vcpkg --config Debug --target libbsa_ba2_reader_tests && ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -R libbsa_ba2_reader_tests` during RED - produced the expected RED result with 2/29 non-passing cases: duplicate normalized names and impossible empty FileTableOffset were still accepted.
 - `rg -n "#include <algorithm>|duplicate BA2 name|insert_or_assign|normalized_paths|file_table_offset > source\.size" src/ba2_reader.cpp` - passed; all parser hardening patterns were present.
 - `cmake --build build/local-vs2026-vcpkg --config Debug --target libbsa_ba2_reader_tests && ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -R libbsa_ba2_reader_tests` during GREEN - passed, 29/29 tests.
 - `ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug` - passed, 89/89 tests.
