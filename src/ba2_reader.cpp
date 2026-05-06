@@ -128,7 +128,12 @@ struct ba2_record {
     std::uint32_t size{};
 };
 
-result<std::vector<std::string>> read_name_table(const byte_source& source, std::uint64_t file_table_offset, std::uint32_t file_count)
+struct ba2_name_table {
+    std::vector<std::string> names;
+    std::uint64_t end_offset{};
+};
+
+result<ba2_name_table> read_name_table(const byte_source& source, std::uint64_t file_table_offset, std::uint32_t file_count)
 {
     std::uint64_t cursor = file_table_offset;
     std::vector<std::string> names;
@@ -136,13 +141,13 @@ result<std::vector<std::string>> read_name_table(const byte_source& source, std:
     for (std::uint32_t i = 0; i < file_count; ++i) {
         auto length_bytes = read_bytes(source, cursor, 2);
         if (!length_bytes.has_value()) {
-            return failure<std::vector<std::string>>(length_bytes.error());
+            return failure<ba2_name_table>(length_bytes.error());
         }
         const auto length = le_u16(length_bytes.value(), 0);
         cursor += 2;
         auto name_bytes = read_bytes(source, cursor, length);
         if (!name_bytes.has_value()) {
-            return failure<std::vector<std::string>>(name_bytes.error());
+            return failure<ba2_name_table>(name_bytes.error());
         }
         cursor += length;
 
@@ -153,7 +158,12 @@ result<std::vector<std::string>> read_name_table(const byte_source& source, std:
         }
         names.push_back(std::move(name));
     }
-    return success(std::move(names));
+    return success(ba2_name_table{std::move(names), cursor});
+}
+
+std::uint64_t stored_size_for_record(const ba2_record& record) noexcept
+{
+    return record.packed_size == 0 ? record.size : record.packed_size;
 }
 
 result<ba2_archive> parse_ba2_gnrl(const byte_source& source)
@@ -212,12 +222,30 @@ result<ba2_archive> parse_ba2_gnrl(const byte_source& source)
         return failure<ba2_archive>(names.error());
     }
 
+    if (names.value().names.size() != file_count) {
+        return failure<ba2_archive>({error_code::malformed_archive, "truncated BA2 table"});
+    }
+
+    if (!records.empty()) {
+        auto first_payload_offset = records.front().offset;
+        for (const auto& record : records) {
+            if (record.offset < first_payload_offset) {
+                first_payload_offset = record.offset;
+            }
+        }
+        // BA2 GNRL associates names by record index; accepting extra bytes before the
+        // first payload can hide a name-count mismatch and mis-associate unsafe paths.
+        if (names.value().end_offset != first_payload_offset) {
+            return failure<ba2_archive>({error_code::malformed_archive, "truncated BA2 table"});
+        }
+    }
+
     std::vector<entry_metadata> entries;
     entries.reserve(file_count);
     for (std::uint32_t i = 0; i < file_count; ++i) {
         const auto& record = records[i];
         entry_metadata metadata{};
-        auto normalized = normalize_archive_path(names.value()[i]);
+        auto normalized = normalize_archive_path(names.value().names[i]);
         if (!normalized.has_value()) {
             return failure<ba2_archive>({error_code::malformed_archive, "invalid BA2 name"});
         }
@@ -226,7 +254,7 @@ result<ba2_archive> parse_ba2_gnrl(const byte_source& source)
         metadata.size = record.size;
         // BA2 records store archive-absolute payload offsets. PackedSize == 0 means
         // raw bytes, so public packed/stored size follows Size rather than zero.
-        metadata.packed_size = record.packed_size == 0 ? record.size : record.packed_size;
+        metadata.packed_size = stored_size_for_record(record);
         metadata.stored_size = metadata.packed_size;
         metadata.compression = compression_for_record(version, compression_method, record.packed_size);
         metadata.name_hash = record.name_hash;
