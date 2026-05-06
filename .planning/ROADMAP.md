@@ -109,7 +109,27 @@ Plans:
   3. Consumer can open, list, inspect, and extract Skyrim SE/AE v105 BSA archives.
   4. Consumer can extract entries with embedded filenames while preserving the payload bytes after the embedded-name prefix is handled.
   5. Maintainer can compare TES4-family extraction, compression flag, and embedded-name behavior against compatibility fixtures and BSArchPro output.
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+**Wave 1**
+- [ ] 04-01-PLAN.md — Define public/private TES4-family BSA contracts and fixture builders.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 04-02-PLAN.md — Implement bounded v103/v104/v105 BSA table parsing and metadata lookup.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 04-03-PLAN.md — Implement raw, deflate, LZ4-frame, and embedded-name extraction.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 04-04-PLAN.md — Harden malformed input and lock compatibility edge cases.
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 04-05-PLAN.md — Finalize public smoke coverage, documentation, and boundary gates.
+
+Cross-cutting constraints:
+- TES4-family BSA support covers Oblivion v103, FO3/FNV/Skyrim LE v104, and Skyrim SE/AE v105.
+- Embedded-name handling preserves payload bytes after the prefix is skipped for v104/v105 archives.
+- TES5Edit remains read-only reference material throughout implementation and verification.
 
 ### Phase 5: TES3 BSA Read and Extract
 **Goal**: Consumers can open, inspect, list, look up, and extract Morrowind BSA archives with TES3-specific layout behavior.
@@ -211,7 +231,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Build, Error, and Test Foundation | 3/3 | Complete | 2026-05-05 |
 | 2. Streaming API, Archive Model, Detection, and Hashes | 5/5 | Complete | 2026-05-05 |
 | 3. Compression Services and Policy | 4/4 | Complete | 2026-05-06 |
-| 4. TES4-Family BSA Read and Extract | 0/TBD | Not started | - |
+| 4. TES4-Family BSA Read and Extract | 0/5 | Planned | - |
 | 5. TES3 BSA Read and Extract | 0/TBD | Not started | - |
 | 6. BA2 GNRL Read and Extract | 0/TBD | Not started | - |
 | 7. BA2 DDS Read and DDS Reconstruction | 0/TBD | Not started | - |
