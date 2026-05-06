@@ -88,16 +88,16 @@ Cross-cutting constraints:
 **Plans**: 4 plans
 Plans:
 **Wave 1**
-- [ ] 03-01-PLAN.md — Define compression routing and writer policy contracts.
+- [x] 03-01-PLAN.md — Define compression routing and writer policy contracts.
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 03-02-PLAN.md — Implement exact-size libdeflate payload compression and decompression.
+- [x] 03-02-PLAN.md — Implement exact-size libdeflate payload compression and decompression.
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 03-03-PLAN.md — Implement separate LZ4 frame and raw LZ4 block payload codecs.
+- [x] 03-03-PLAN.md — Implement separate LZ4 frame and raw LZ4 block payload codecs.
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 03-04-PLAN.md — Finalize public smoke coverage, documentation, and boundary gates.
+- [x] 03-04-PLAN.md — Finalize public smoke coverage, documentation, and boundary gates.
 
 ### Phase 4: TES4-Family BSA Read and Extract
 **Goal**: Consumers can open, inspect, list, look up, and extract every TES4-family BSA variant in scope.
@@ -210,7 +210,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Build, Error, and Test Foundation | 3/3 | Complete | 2026-05-05 |
 | 2. Streaming API, Archive Model, Detection, and Hashes | 5/5 | Complete | 2026-05-05 |
-| 3. Compression Services and Policy | 0/TBD | Not started | - |
+| 3. Compression Services and Policy | 4/4 | Complete | 2026-05-06 |
 | 4. TES4-Family BSA Read and Extract | 0/TBD | Not started | - |
 | 5. TES3 BSA Read and Extract | 0/TBD | Not started | - |
 | 6. BA2 GNRL Read and Extract | 0/TBD | Not started | - |

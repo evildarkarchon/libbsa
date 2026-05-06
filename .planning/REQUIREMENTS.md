@@ -33,11 +33,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Compression
 
-- [ ] **CMP-01**: Consumer can transparently extract deflate-compressed TES4, FO3/FNV, Fallout 4 BA2, and Starfield deflate payloads.
-- [ ] **CMP-02**: Consumer can transparently extract Skyrim SE/AE BSA payloads that use LZ4 frame compression.
-- [ ] **CMP-03**: Consumer can transparently extract Starfield BA2 v3 payloads that use raw LZ4 block compression when `CompressionMethod == 3`.
-- [ ] **CMP-04**: Maintainer can test compression routing so deflate, LZ4 frame, and LZ4 block paths cannot be accidentally interchanged.
-- [ ] **CMP-05**: Writer APIs can select archive default compression, force compressed, or force raw behavior where the target format supports it.
+- [x] **CMP-01**: Consumer can transparently extract deflate-compressed TES4, FO3/FNV, Fallout 4 BA2, and Starfield deflate payloads.
+- [x] **CMP-02**: Consumer can transparently extract Skyrim SE/AE BSA payloads that use LZ4 frame compression.
+- [x] **CMP-03**: Consumer can transparently extract Starfield BA2 v3 payloads that use raw LZ4 block compression when `CompressionMethod == 3`.
+- [x] **CMP-04**: Maintainer can test compression routing so deflate, LZ4 frame, and LZ4 block paths cannot be accidentally interchanged.
+- [x] **CMP-05**: Writer APIs can select archive default compression, force compressed, or force raw behavior where the target format supports it.
 
 ### BSA Reading
 
@@ -140,11 +140,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DPH-03 | Phase 2 | Complete |
 | DPH-04 | Phase 2 | Complete |
 | DPH-05 | Phase 2 | Complete |
-| CMP-01 | Phase 3 | Pending |
-| CMP-02 | Phase 3 | Pending |
-| CMP-03 | Phase 3 | Pending |
-| CMP-04 | Phase 3 | Pending |
-| CMP-05 | Phase 3 | Pending |
+| CMP-01 | Phase 3 | Complete |
+| CMP-02 | Phase 3 | Complete |
+| CMP-03 | Phase 3 | Complete |
+| CMP-04 | Phase 3 | Complete |
+| CMP-05 | Phase 3 | Complete |
 | BSA-01 | Phase 4 | Pending |
 | BSA-02 | Phase 4 | Pending |
 | BSA-03 | Phase 4 | Pending |
