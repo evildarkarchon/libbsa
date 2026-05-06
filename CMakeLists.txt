@@ -132,6 +132,14 @@ if(BUILD_TESTING)
 
   catch_discover_tests(libbsa_archive_view_tests TEST_PREFIX "libbsa_archive_view_tests." PROPERTIES LABELS "unit")
 
+  add_executable(libbsa_compression_policy_tests tests/compression_policy_tests.cpp)
+  target_link_libraries(libbsa_compression_policy_tests
+    PRIVATE
+      libbsa::libbsa
+      Catch2::Catch2WithMain)
+
+  catch_discover_tests(libbsa_compression_policy_tests TEST_PREFIX "libbsa_compression_policy_tests." PROPERTIES LABELS "unit;codec")
+
   add_executable(libbsa_public_header_smoke tests/public_header_smoke.cpp)
   target_link_libraries(libbsa_public_header_smoke
     PRIVATE
