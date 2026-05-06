@@ -2,6 +2,7 @@
 
 #include <libbsa/archive.hpp>
 #include <libbsa/ba2.hpp>
+#include <libbsa/compression.hpp>
 #include <libbsa/io.hpp>
 
 #include <cstddef>
@@ -130,6 +131,50 @@ libbsa::result<libbsa::ba2_archive> open_bytes(const std::vector<std::byte>& byt
     return libbsa::open_ba2(source);
 }
 
+ba2_entry_fixture raw_entry(std::uint32_t version)
+{
+    ba2_entry_fixture entry;
+    entry.path = "meshes/fo4/v" + std::to_string(version) + "/raw.bin";
+    entry.name_hash = 0x10000000U + version;
+    entry.directory_hash = 0x20000000U + version;
+    entry.payload = {std::byte{0xba}, std::byte{0x20}, static_cast<std::byte>(version), std::byte{0x44}};
+    entry.size = static_cast<std::uint32_t>(entry.payload.size());
+    return entry;
+}
+
+ba2_entry_fixture deflate_entry(std::uint32_t version, std::string path)
+{
+    ba2_entry_fixture entry;
+    entry.path = std::move(path);
+    entry.name_hash = 0x30000000U + version;
+    entry.directory_hash = 0x40000000U + version;
+    entry.size = 8;
+    const std::vector<std::byte> output{std::byte{0xde}, std::byte{0xf1}, static_cast<std::byte>(version), std::byte{0x04},
+                                        std::byte{0x06}, std::byte{0x03}, std::byte{0xba}, std::byte{0x2a}};
+    auto compressed = libbsa::compress_payload(libbsa::compression_algorithm::deflate, std::span<const std::byte>{output});
+    REQUIRE(compressed.has_value());
+    entry.payload = std::move(compressed.value());
+    entry.packed_size = static_cast<std::uint32_t>(entry.payload.size());
+    return entry;
+}
+
+std::vector<std::byte> extract_ba2_bytes(const std::vector<std::byte>& bytes, std::string path)
+{
+    const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+    auto archive = libbsa::open_ba2(source);
+    REQUIRE(archive.has_value());
+    libbsa::memory_sink sink;
+    auto extracted = libbsa::extract_ba2_entry(archive.value(), source, std::move(path), sink);
+    REQUIRE(extracted.has_value());
+    return sink.bytes();
+}
+
+std::vector<std::byte> expected_deflate_output(std::uint32_t version)
+{
+    return {std::byte{0xde}, std::byte{0xf1}, static_cast<std::byte>(version), std::byte{0x04},
+            std::byte{0x06}, std::byte{0x03}, std::byte{0xba}, std::byte{0x2a}};
+}
+
 void assert_common_gnrl_metadata(std::uint32_t version, libbsa::archive_format expected_format)
 {
     ba2_entry_fixture raw;
@@ -233,4 +278,86 @@ TEST_CASE("open_ba2 associates length-prefixed names from FileTableOffset", "[fi
     REQUIRE(second_metadata.has_value());
     CHECK(second_metadata.value().name_hash == second.name_hash);
     CHECK(second_metadata.value().offset == second.offset);
+}
+
+TEST_CASE("extract_ba2_entry writes raw Fallout 4 v1 bytes", "[fixture]")
+{
+    const auto entry = raw_entry(VERSION_FO4_V1);
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V1, {entry});
+
+    CHECK(extract_ba2_bytes(bytes, entry.path) == entry.payload);
+}
+
+TEST_CASE("extract_ba2_entry writes raw Fallout 4 v7 bytes", "[fixture]")
+{
+    const auto entry = raw_entry(VERSION_FO4_V7);
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V7, {entry});
+
+    CHECK(extract_ba2_bytes(bytes, entry.path) == entry.payload);
+}
+
+TEST_CASE("extract_ba2_entry writes raw Fallout 4 v8 bytes", "[fixture]")
+{
+    const auto entry = raw_entry(VERSION_FO4_V8);
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V8, {entry});
+
+    CHECK(extract_ba2_bytes(bytes, entry.path) == entry.payload);
+}
+
+TEST_CASE("extract_ba2_entry writes deflate Fallout 4 v1 bytes without BSA prefix", "[fixture]")
+{
+    const auto entry = deflate_entry(VERSION_FO4_V1, "meshes/fo4/v1/packed.bin");
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V1, {entry});
+
+    CHECK(extract_ba2_bytes(bytes, entry.path) == expected_deflate_output(VERSION_FO4_V1));
+}
+
+TEST_CASE("extract_ba2_entry writes deflate Fallout 4 v7 bytes without BSA prefix", "[fixture]")
+{
+    const auto entry = deflate_entry(VERSION_FO4_V7, "meshes/fo4/v7/packed.bin");
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V7, {entry});
+
+    CHECK(extract_ba2_bytes(bytes, entry.path) == expected_deflate_output(VERSION_FO4_V7));
+}
+
+TEST_CASE("extract_ba2_entry writes deflate Fallout 4 v8 bytes without BSA prefix", "[fixture]")
+{
+    const auto entry = deflate_entry(VERSION_FO4_V8, "meshes/fo4/v8/packed.bin");
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V8, {entry});
+
+    CHECK(extract_ba2_bytes(bytes, entry.path) == expected_deflate_output(VERSION_FO4_V8));
+}
+
+TEST_CASE("extract_ba2_entry writes Starfield v2 deflate bytes", "[fixture]")
+{
+    const auto entry = deflate_entry(VERSION_STARFIELD_V2, "data/starfield/v2/packed.bin");
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_STARFIELD_V2, {entry});
+
+    CHECK(extract_ba2_bytes(bytes, entry.path) == expected_deflate_output(VERSION_STARFIELD_V2));
+}
+
+TEST_CASE("extract_ba2_entry treats dds names in GNRL as ordinary payloads", "[fixture]")
+{
+    ba2_entry_fixture entry;
+    entry.path = "textures/luts/color.dds";
+    entry.payload = {std::byte{0x44}, std::byte{0x44}, std::byte{0x53}, std::byte{0x20}};
+    entry.size = static_cast<std::uint32_t>(entry.payload.size());
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V1, {entry});
+
+    CHECK(extract_ba2_bytes(bytes, "Textures\\LUTS\\Color.DDS") == entry.payload);
+}
+
+TEST_CASE("extract_ba2_entry returns lookup failure without writing bytes", "[unit]")
+{
+    const auto entry = raw_entry(VERSION_FO4_V1);
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V1, {entry});
+    const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+    auto archive = libbsa::open_ba2(source);
+    REQUIRE(archive.has_value());
+    libbsa::memory_sink sink;
+
+    const auto extracted = libbsa::extract_ba2_entry(archive.value(), source, "missing/file.bin", sink);
+
+    REQUIRE_FALSE(extracted.has_value());
+    CHECK(sink.bytes().empty());
 }
