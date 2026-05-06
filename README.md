@@ -96,6 +96,14 @@ rg -n "^[^#]*\b(GLOB|GLOB_RECURSE)\b" CMakeLists.txt
 git status --short TES5Edit
 ```
 
+## TES3/Morrowind BSA read and extract
+
+Phase 05 extends the same `open_bsa` / `extract_bsa_entry` API to TES3/Morrowind BSA archives. Consumers can open generated or file-backed Morrowind BSA bytes, list normalized archive paths, inspect `entry_metadata`, look up entries with slash or backslash paths, and stream raw payload bytes to a caller-owned `byte_sink`.
+
+TES3 file records store offsets relative to the data section; libbsa exposes absolute payload offsets in entry_metadata after validating the table range. TES3 payloads are raw and do not use TES4-family compression flags or embedded-name prefixes, so extraction reads the validated stored byte range directly through the existing sink contract.
+
+`TES5Edit/` remains read-only reference material for compatibility behavior. It is not compiled, linked, vendored, formatted, staged, or modified by libbsa implementation work.
+
 ## TES5Edit/ reference boundary
 
 `TES5Edit/` is a read-only reference submodule. It documents prior BSArchPro-compatible behavior, but it is not vendored source for libbsa.
