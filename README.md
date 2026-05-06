@@ -46,6 +46,31 @@ ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -L smoke
 
 Phase 02 does not implement full table parsing, payload extraction, decompression through libdeflate or LZ4, DDS reconstruction, writers, CLI, GUI, or a public file source. Those behaviors are intentionally left to later format-specific and writer phases.
 
+## Compression services
+
+Phase 03 adds libbsa-owned compression routing and payload dispatcher APIs in `include/libbsa/compression.hpp`. The public API exposes archive-aware `compression_algorithm`, `compression_policy`, and resolver functions without exposing native codec headers to consumers.
+
+Routing is explicit and format-aware:
+
+- Deflate is used for compressed TES4/FO3/FNV-family BSA payloads, Fallout 4 BA2 payloads, and Starfield BA2 payloads that use the deflate/default method.
+- LZ4 frame is used for Skyrim SE/AE BSA payloads.
+- Raw LZ4 block is used for Starfield BA2 v3 payloads when `CompressionMethod == 3`.
+- Writer policy supports `archive_default`, `force_compressed`, and `force_raw` where the target archive format supports that state.
+
+The `libdeflate` and LZ4 implementation headers are private implementation details. Public headers under `include/libbsa/` must not include or mention implementation headers such as `libdeflate.h`, `lz4.h`, `lz4frame.h`, `LZ4` APIs, or `DirectXTex` types outside documentation that describes the boundary.
+
+Local Phase 03 validation used the Visual Studio 2026 fallback build directory:
+
+```powershell
+cmake --build build/local-vs2026-vcpkg --config Debug
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -L codec
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -R libbsa.public_header_smoke
+rg -n "libdeflate|lz4\.h|lz4frame\.h|LZ4|DirectXTex" include/libbsa
+rg -n "^[^#]*\b(GLOB|GLOB_RECURSE)\b" CMakeLists.txt
+git status --short TES5Edit
+```
+
 ## TES5Edit/ reference boundary
 
 `TES5Edit/` is a read-only reference submodule. It documents prior BSArchPro-compatible behavior, but it is not vendored source for libbsa.
