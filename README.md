@@ -127,6 +127,26 @@ ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -R libbsa
 git status --short TES5Edit
 ```
 
+## BA2 DDS read and extract
+
+Phase 07 supports BA2 DDS / `DX10` open, list, lookup, texture metadata inspection, and single-entry extraction for Fallout 4 DX10 versions 1, 7, and 8 plus Starfield DX10 version 3. The public surface remains `include/libbsa/ba2.hpp`: callers use `open_ba2`, `ba2_archive::entry`, `ba2_archive::texture_metadata`, and `extract_ba2_entry` with caller-owned `byte_source` and `byte_sink` objects.
+
+`texture_metadata` exposes libbsa-owned dimensions, raw DXGI format value, known-name lookup through `dxgi_format_name`, mip count, array/cubemap state, and logical chunk summaries. Public headers still do not expose DirectXTex, Windows SDK, codec headers, or `TES5Edit/` implementation types.
+
+DX10 extraction reads each texture chunk, routes raw/deflate/Starfield method-3 LZ4-block payloads through existing private codec dispatch, reconstructs a complete DDS byte stream, validates it through a private DirectXTex boundary, and writes to the caller sink only after all prior steps succeed. Unsupported-but-readable texture layouts can still be inspected through `texture_metadata`; extraction returns a structured error without partial sink writes when reconstruction or validation is unsafe.
+
+Generated fixture tests are the Phase 07 acceptance corpus. `tests/ba2_dds_fixture_helpers.*` builds deterministic source-reviewable BA2 DDS fixtures for positive and malformed cases, including one-mip, multi-mip, cubemap/array, raw, deflate, Starfield LZ4-block, truncated records, invalid chunks, duplicate normalized names, unsupported codecs, inconsistent mip mapping, and reconstruction failures. Real game archive corpus checks and BSArchPro byte-for-byte comparisons remain later validation work, not a Phase 07 claim.
+
+Local Phase 07 validation uses the Visual Studio 2026 fallback build directory:
+
+```powershell
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -R "libbsa_ba2_dds_reader_tests|libbsa_ba2_reader_tests|libbsa_dds_reconstruction_tests"
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -R libbsa.public_header_smoke
+rg -n "DirectXTex|DXGI_FORMAT|Windows\.h|libdeflate|lz4|TES5Edit" include/libbsa
+git status --short TES5Edit
+```
+
 ## TES5Edit/ reference boundary
 
 `TES5Edit/` is a read-only reference submodule. It documents prior BSArchPro-compatible behavior, but it is not vendored source for libbsa.
