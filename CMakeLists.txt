@@ -52,6 +52,8 @@ target_sources(libbsa
     src/archive_view.cpp
     src/compression.cpp
     src/compression/deflate_codec.cpp
+    src/compression/lz4_block_codec.cpp
+    src/compression/lz4_frame_codec.cpp
     src/hash.cpp
     src/io.cpp
   PUBLIC

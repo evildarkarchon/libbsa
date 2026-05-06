@@ -1,6 +1,8 @@
 #include <libbsa/compression.hpp>
 
 #include "compression/deflate_codec.hpp"
+#include "compression/lz4_block_codec.hpp"
+#include "compression/lz4_frame_codec.hpp"
 
 #include <limits>
 
@@ -118,8 +120,9 @@ result<std::vector<std::byte>> decompress_payload(compression_algorithm algorith
     case compression_algorithm::deflate:
         return detail::deflate_decompress(packed, expected_size);
     case compression_algorithm::lz4_frame:
+        return detail::lz4_frame_decompress(packed, expected_size);
     case compression_algorithm::lz4_block:
-        return unsupported_payload_codec();
+        return detail::lz4_block_decompress(packed, expected_size);
     }
 
     return unsupported_payload_codec();
@@ -133,8 +136,9 @@ result<std::vector<std::byte>> compress_payload(compression_algorithm algorithm,
     case compression_algorithm::deflate:
         return detail::deflate_compress(unpacked);
     case compression_algorithm::lz4_frame:
+        return detail::lz4_frame_compress(unpacked);
     case compression_algorithm::lz4_block:
-        return unsupported_payload_codec();
+        return detail::lz4_block_compress(unpacked);
     }
 
     return unsupported_payload_codec();
