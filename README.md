@@ -104,6 +104,29 @@ TES3 file records store offsets relative to the data section; libbsa exposes abs
 
 `TES5Edit/` remains read-only reference material for compatibility behavior. It is not compiled, linked, vendored, formatted, staged, or modified by libbsa implementation work.
 
+## BA2 GNRL read and extract
+
+Phase 06 supports BA2 GNRL open, list, lookup, metadata inspection, and single-entry extraction for Fallout 4 versions 1, 7, and 8 plus Starfield versions 2 and 3. The public API lives in `include/libbsa/ba2.hpp` and exposes `ba2_archive`, `open_ba2`, and `extract_ba2_entry` without exposing private codec, DirectXTex, platform, or `TES5Edit/` implementation details.
+
+`ba2_archive` objects are metadata-only views over copied archive summary and entry metadata. They do not retain a payload source, so callers pass a `byte_source` again to `extract_ba2_entry` when extracting bytes to their own `byte_sink`. BA2 GNRL `.dds` entries are treated as ordinary payloads; DX10 texture reconstruction is Phase 7. BA2 writer support, safe disk extraction policy, and bulk extraction orchestration are later/out-of-scope work rather than Phase 06 deliverables.
+
+BA2 GNRL compression routing is record- and archive-version-aware:
+
+- Entries with `PackedSize == 0` are raw payload bytes.
+- Compressed Fallout 4 entries and default compressed Starfield entries use deflate.
+- Compressed Starfield v3 entries use raw LZ4 block payloads when `CompressionMethod == 3`.
+
+Generated deterministic BA2 fixtures in `tests/ba2_reader_tests.cpp` are the Phase 06 acceptance corpus. They cover the required Fallout 4 and Starfield version matrix, file-table names, raw/deflate/LZ4-block routes, GNRL `.dds` payload transparency, and malformed cases including truncated tables, impossible offsets, mismatched counts, and codec route confusion without relying on external archives or BSArchPro execution.
+
+Local Phase 06 validation uses the Visual Studio 2026 fallback build directory:
+
+```powershell
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -R libbsa_ba2_reader_tests
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -L codec
+ctest --test-dir build/local-vs2026-vcpkg --output-on-failure -C Debug -R libbsa.public_header_smoke
+git status --short TES5Edit
+```
+
 ## TES5Edit/ reference boundary
 
 `TES5Edit/` is a read-only reference submodule. It documents prior BSArchPro-compatible behavior, but it is not vendored source for libbsa.
