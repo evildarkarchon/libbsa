@@ -311,17 +311,17 @@ Source: existing CMake pattern and Catch2 docs. [VERIFIED: CMakeLists.txt; CITED
 
 **If this table is empty:** All claims in this research were verified or cited — no user confirmation needed.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should Starfield v2 `Unknown1` and `Unknown2` be exposed publicly?**
+1. **RESOLVED: Should Starfield v2 `Unknown1` and `Unknown2` be exposed publicly?**
    - What we know: D-05 says not to add public fields for unknown/reserved header words unless research proves semantic need. [VERIFIED: 06-CONTEXT.md]
    - What's unclear: No semantic use was found in TES5Edit beyond reading/writing default values. [VERIFIED: TES5Edit/Core/wbBSArchive.pas lines 293-301 and 1672-1677]
-   - Recommendation: Do not extend `archive_summary`; only account for header length internally and preserve available public summary fields. [VERIFIED: 06-CONTEXT.md D-05]
+   - Resolution: Do not extend `archive_summary`; only account for header length internally and preserve available public summary fields. This follows locked D-05 because no semantic need was found in TES5Edit and Phase 6 must not expose unknown/reserved header words without research proof. [VERIFIED: 06-CONTEXT.md D-05]
 
-2. **Should parser validate the BA2 GNRL tail word equals `0xBAADF00D`?**
+2. **RESOLVED: Should parser validate the BA2 GNRL tail word equals `0xBAADF00D`?**
    - What we know: TES5Edit reads and skips the tail word with comment `BAADF00D`; external format notes also identify it as `0xBAADF00D`. [VERIFIED: TES5Edit/Core/wbBSArchive.pas line 1158; CITED: https://miere.ru/posts/ba2-archive-format/]
    - What's unclear: Phase context does not explicitly require rejecting non-`BAADF00D` tails. [VERIFIED: 06-CONTEXT.md]
-   - Recommendation: Preserve it as a parser validation candidate only if generated malformed tests lock the behavior; otherwise skip/store internally without public exposure. [VERIFIED: 06-CONTEXT.md D-05 and D-16]
+   - Resolution: Do not expose the tail word publicly. Parse/read the field as part of the 36-byte GNRL record and keep it internal; generated malformed tests may lock rejection of a non-`0xBAADF00D` value only if implementation chooses to treat that sentinel as core parser validation. This follows D-05 (no public unknown/reserved fields) and D-16 (core malformed coverage without broad fuzzing). [VERIFIED: 06-CONTEXT.md D-05 and D-16]
 
 ## Environment Availability
 
