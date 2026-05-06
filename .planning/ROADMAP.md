@@ -140,7 +140,24 @@ Cross-cutting constraints:
   2. Consumer can list and inspect TES3 entries with correct names, hashes, sizes, and data-section-relative offsets.
   3. Consumer can extract TES3 entries through the streaming sink API without corrupting payload bytes.
   4. Maintainer can verify TES3 offset and hash behavior against dedicated golden fixtures.
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+- [ ] 05-01-PLAN.md — Parse TES3 BSA metadata with generated fixtures and data-section-relative offset checks.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 05-02-PLAN.md — Prove TES3 raw extraction and normalized lookup through the streaming sink API.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 05-03-PLAN.md — Harden TES3 malformed table, name/hash, and payload range handling.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 05-04-PLAN.md — Finalize TES3 documentation, public smoke coverage, and validation gates.
+
+Cross-cutting constraints:
+- TES3 file records store offsets relative to the data section; libbsa exposes absolute payload offsets after validation.
+- TES3 payloads are raw and do not use TES4-family compression flags or embedded-name prefixes.
+- TES5Edit remains read-only reference material throughout implementation and verification.
 
 ### Phase 6: BA2 GNRL Read and Extract
 **Goal**: Consumers can open, inspect, list, look up, and extract Fallout 4 and Starfield general BA2 archives.
@@ -232,7 +249,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. Streaming API, Archive Model, Detection, and Hashes | 5/5 | Complete | 2026-05-05 |
 | 3. Compression Services and Policy | 4/4 | Complete | 2026-05-06 |
 | 4. TES4-Family BSA Read and Extract | 0/5 | Planned | - |
-| 5. TES3 BSA Read and Extract | 0/TBD | Not started | - |
+| 5. TES3 BSA Read and Extract | 0/4 | Planned | - |
 | 6. BA2 GNRL Read and Extract | 0/TBD | Not started | - |
 | 7. BA2 DDS Read and DDS Reconstruction | 0/TBD | Not started | - |
 | 8. Writer Planning, Streaming Emit, and Dedup Core | 0/TBD | Not started | - |
