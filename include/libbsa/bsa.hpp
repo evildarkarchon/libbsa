@@ -11,7 +11,7 @@
 
 namespace libbsa {
 
-/// Owns parsed metadata for a TES4-family BSA archive.
+/// Owns parsed metadata for a BSA-family archive.
 ///
 /// The archive object is a metadata view only: payload bytes remain owned by the
 /// caller-provided `byte_source` passed to `open_bsa` and extraction calls.
@@ -36,7 +36,7 @@ private:
     archive_view view_;
 };
 
-/// Opens a TES4-family BSA archive and parses its metadata tables.
+/// Opens a BSA-family archive and parses its metadata tables.
 ///
 /// The source is read through bounded random-access calls; payload data remains
 /// in the source until a caller extracts a selected entry.

@@ -7,10 +7,15 @@
 namespace libbsa::detail {
 
 inline constexpr std::uint32_t bsa_magic = 0x00415342;
+inline constexpr std::uint32_t magic_tes3 = 0x00000100;
 inline constexpr std::uint32_t version_tes4 = 0x67;
 inline constexpr std::uint32_t version_fo3 = 0x68;
 inline constexpr std::uint32_t version_sse = 0x69;
 inline constexpr std::uint64_t header_size = 36;
+inline constexpr std::uint64_t tes3_header_size = 12;
+inline constexpr std::uint64_t tes3_file_record_size = 8;
+inline constexpr std::uint64_t tes3_name_offset_size = 4;
+inline constexpr std::uint64_t tes3_hash_size = 8;
 inline constexpr std::uint32_t archive_pathnames = 0x0001;
 inline constexpr std::uint32_t archive_filenames = 0x0002;
 inline constexpr std::uint32_t archive_compress = 0x0004;

@@ -164,6 +164,28 @@ result<std::vector<std::string>> read_file_names(const byte_source& source, std:
     return success(std::move(names));
 }
 
+result<std::string> read_tes3_name(const byte_source& source, std::uint64_t offset, std::uint64_t limit)
+{
+    if (offset >= limit) {
+        return failure<std::string>(truncated_table_error());
+    }
+
+    std::string name;
+    for (std::uint64_t cursor = offset; cursor < limit; ++cursor) {
+        auto byte = read_bytes(source, cursor, 1);
+        if (!byte.has_value()) {
+            return failure<std::string>(byte.error());
+        }
+        const auto ch = static_cast<char>(std::to_integer<unsigned char>(byte.value()[0]));
+        if (ch == '\0') {
+            return success(std::move(name));
+        }
+        name.push_back(ch);
+    }
+
+    return failure<std::string>(truncated_table_error());
+}
+
 compression_state compression_for(std::uint32_t version, std::uint32_t archive_flags, std::uint32_t stored_size_field) noexcept
 {
     // Reference: TES5Edit/Core/wbBSArchive.pas TwbBSFileTES4.Compressed uses archive default XOR per-file flag.
@@ -173,6 +195,105 @@ compression_state compression_for(std::uint32_t version, std::uint32_t archive_f
         return compression_state::raw;
     }
     return version == detail::version_sse ? compression_state::lz4_frame : compression_state::deflate;
+}
+
+result<bsa_archive> open_tes3_bsa(const byte_source& source)
+{
+    auto header = read_bytes(source, 0, detail::tes3_header_size);
+    if (!header.has_value()) {
+        return failure<bsa_archive>(header.error());
+    }
+
+    const auto hash_offset = le_u32(header.value(), 4);
+    const auto file_count = le_u32(header.value(), 8);
+    std::uint64_t record_table_size = 0;
+    std::uint64_t name_offsets_size = 0;
+    std::uint64_t name_block_start = 0;
+    std::uint64_t hash_table_start = 0;
+    std::uint64_t data_offset = 0;
+    if (!checked_add(static_cast<std::uint64_t>(file_count) * detail::tes3_file_record_size, 0, record_table_size) ||
+        !checked_add(static_cast<std::uint64_t>(file_count) * detail::tes3_name_offset_size, 0, name_offsets_size) ||
+        !checked_add(detail::tes3_header_size, record_table_size, name_block_start) ||
+        !checked_add(name_block_start, name_offsets_size, name_block_start) ||
+        !checked_add(detail::tes3_header_size, hash_offset, hash_table_start) ||
+        !checked_add(hash_table_start, static_cast<std::uint64_t>(file_count) * detail::tes3_hash_size, data_offset)) {
+        return failure<bsa_archive>(truncated_table_error());
+    }
+
+    // TES3 stores HashOffset relative to byte 12; enforce that the hash table comes after names.
+    if (hash_table_start < name_block_start || data_offset > source.size()) {
+        return failure<bsa_archive>(truncated_table_error());
+    }
+    if (!range_fits(detail::tes3_header_size, record_table_size, source.size()) ||
+        !range_fits(detail::tes3_header_size + record_table_size, name_offsets_size, source.size())) {
+        return failure<bsa_archive>(truncated_table_error());
+    }
+
+    struct tes3_record {
+        std::uint32_t size{};
+        std::uint32_t relative_offset{};
+        std::uint32_t name_offset{};
+    };
+
+    std::vector<tes3_record> records;
+    records.reserve(file_count);
+    for (std::uint32_t i = 0; i < file_count; ++i) {
+        auto record = read_bytes(source, detail::tes3_header_size + (static_cast<std::uint64_t>(i) * detail::tes3_file_record_size), detail::tes3_file_record_size);
+        if (!record.has_value()) {
+            return failure<bsa_archive>(record.error());
+        }
+        tes3_record parsed{};
+        parsed.size = le_u32(record.value(), 0);
+        parsed.relative_offset = le_u32(record.value(), 4);
+        records.push_back(parsed);
+    }
+
+    const auto name_offsets_start = detail::tes3_header_size + record_table_size;
+    for (std::uint32_t i = 0; i < file_count; ++i) {
+        auto offset_bytes = read_bytes(source, name_offsets_start + (static_cast<std::uint64_t>(i) * detail::tes3_name_offset_size), detail::tes3_name_offset_size);
+        if (!offset_bytes.has_value()) {
+            return failure<bsa_archive>(offset_bytes.error());
+        }
+        records[i].name_offset = le_u32(offset_bytes.value(), 0);
+    }
+
+    std::vector<entry_metadata> entries;
+    entries.reserve(file_count);
+    for (std::uint32_t i = 0; i < file_count; ++i) {
+        std::uint64_t name_offset = 0;
+        std::uint64_t payload_offset = 0;
+        if (!checked_add(name_block_start, records[i].name_offset, name_offset) || name_offset >= hash_table_start ||
+            !checked_add(data_offset, records[i].relative_offset, payload_offset)) {
+            return failure<bsa_archive>(truncated_table_error());
+        }
+        auto name = read_tes3_name(source, name_offset, hash_table_start);
+        if (!name.has_value()) {
+            return failure<bsa_archive>(name.error());
+        }
+        auto hash_bytes = read_bytes(source, hash_table_start + (static_cast<std::uint64_t>(i) * detail::tes3_hash_size), detail::tes3_hash_size);
+        if (!hash_bytes.has_value()) {
+            return failure<bsa_archive>(hash_bytes.error());
+        }
+
+        entry_metadata metadata{};
+        metadata.path = std::move(name.value());
+        metadata.size = records[i].size;
+        metadata.packed_size = records[i].size;
+        metadata.stored_size = records[i].size;
+        metadata.offset = payload_offset;
+        metadata.name_hash = le_u64(hash_bytes.value(), 0);
+        metadata.directory_hash = 0;
+        metadata.compression = compression_state::raw;
+        entries.push_back(std::move(metadata));
+    }
+
+    archive_summary summary{};
+    summary.format = archive_format::tes3_bsa;
+    summary.version = detail::magic_tes3;
+    summary.folder_count = 0;
+    summary.file_count = file_count;
+    summary.file_table_offset = detail::tes3_header_size;
+    return success(bsa_archive{summary, std::move(entries)});
 }
 
 } // namespace
@@ -202,7 +323,7 @@ result<entry_metadata> bsa_archive::entry(std::string path) const
     return view_.entry(std::move(path));
 }
 
-result<bsa_archive> open_bsa(const byte_source& source)
+result<bsa_archive> open_tes4_bsa(const byte_source& source)
 {
     auto header_bytes = read_bytes(source, 0, detail::header_size);
     if (!header_bytes.has_value()) {
@@ -334,6 +455,22 @@ result<bsa_archive> open_bsa(const byte_source& source)
     summary.file_count = file_count;
     summary.file_table_offset = file_names_offset;
     return success(bsa_archive{summary, std::move(entries)});
+}
+
+result<bsa_archive> open_bsa(const byte_source& source)
+{
+    auto magic_bytes = read_bytes(source, 0, 4);
+    if (!magic_bytes.has_value()) {
+        return failure<bsa_archive>(magic_bytes.error());
+    }
+    const auto magic = le_u32(magic_bytes.value(), 0);
+    if (magic == detail::magic_tes3) {
+        return open_tes3_bsa(source);
+    }
+    if (magic == detail::bsa_magic) {
+        return open_tes4_bsa(source);
+    }
+    return failure<bsa_archive>({error_code::unsupported_format, "unsupported BSA magic"});
 }
 
 result<void> extract_bsa_entry(const bsa_archive& archive, const byte_source& source, std::string path, byte_sink& sink)
