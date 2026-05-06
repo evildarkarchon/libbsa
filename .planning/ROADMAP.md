@@ -146,7 +146,7 @@ Plans:
 - [x] 05-01-PLAN.md — Parse TES3 BSA metadata with generated fixtures and data-section-relative offset checks.
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 05-02-PLAN.md — Prove TES3 raw extraction and normalized lookup through the streaming sink API.
+- [x] 05-02-PLAN.md — Prove TES3 raw extraction and normalized lookup through the streaming sink API.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 05-03-PLAN.md — Harden TES3 malformed table, name/hash, and payload range handling.
