@@ -58,6 +58,8 @@ target_sources(libbsa
     src/compression/lz4_frame_codec.cpp
     src/hash.cpp
     src/io.cpp
+    src/texture/dds_reconstruction.cpp
+    src/texture/dds_validation.cpp
   PUBLIC
     FILE_SET public_headers
     TYPE HEADERS
