@@ -292,8 +292,23 @@ result<ba2_archive> parse_ba2_gnrl(const byte_source& source)
 } // namespace
 
 ba2_archive::ba2_archive(archive_summary summary, std::vector<entry_metadata> entries)
+    : ba2_archive(std::move(summary), std::move(entries), std::vector<libbsa::texture_metadata>{})
+{
+}
+
+ba2_archive::ba2_archive(archive_summary summary,
+                         std::vector<entry_metadata> entries,
+                         std::vector<libbsa::texture_metadata> textures)
     : view_(std::move(summary), std::move(entries))
 {
+    for (auto texture : textures) {
+        auto normalized = normalize_archive_path(texture.path);
+        if (!normalized.has_value()) {
+            continue;
+        }
+        texture.path = normalized.value().string();
+        textures_.insert_or_assign(texture.path, std::move(texture));
+    }
 }
 
 const archive_summary& ba2_archive::summary() const noexcept
@@ -314,6 +329,47 @@ bool ba2_archive::contains(std::string path) const
 result<entry_metadata> ba2_archive::entry(std::string path) const
 {
     return view_.entry(std::move(path));
+}
+
+result<libbsa::texture_metadata> ba2_archive::texture_metadata(std::string path) const
+{
+    auto normalized = normalize_archive_path(std::move(path));
+    if (!normalized.has_value()) {
+        return failure<libbsa::texture_metadata>(normalized.error());
+    }
+
+    const auto found = textures_.find(normalized.value().string());
+    if (found == textures_.end()) {
+        return failure<libbsa::texture_metadata>({error_code::malformed_archive, "BA2 texture metadata not found"});
+    }
+
+    return success(found->second);
+}
+
+std::string_view dxgi_format_name(dxgi_format format) noexcept
+{
+    switch (format.value) {
+    case 28:
+        return "R8G8B8A8_UNORM";
+    case 71:
+        return "BC1_UNORM";
+    case 74:
+        return "BC2_UNORM";
+    case 77:
+        return "BC3_UNORM";
+    case 80:
+        return "BC4_UNORM";
+    case 83:
+        return "BC5_UNORM";
+    case 87:
+        return "B8G8R8A8_UNORM";
+    case 95:
+        return "BC6H_UF16";
+    case 98:
+        return "BC7_UNORM";
+    default:
+        return "UNKNOWN";
+    }
 }
 
 result<ba2_archive> open_ba2(const byte_source& source)
