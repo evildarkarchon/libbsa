@@ -16,9 +16,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Streaming API, Archive Model, Detection, and Hashes** - Consumers can identify archives, inspect entries, and perform path/hash lookup through streaming-safe public APIs.
 - [x] **Phase 3: Compression Services and Policy** - Archive payloads and writers use explicit deflate, LZ4 frame, and raw LZ4 block routing without codec confusion.
 - [x] **Phase 4: TES4-Family BSA Read and Extract** - Consumers can open, inspect, and extract Oblivion, FO3/FNV/Skyrim LE, and Skyrim SE/AE BSA archives.
-- [ ] **Phase 5: TES3 BSA Read and Extract** - Consumers can open, inspect, and extract Morrowind BSA archives with TES3-specific offset semantics.
-- [ ] **Phase 6: BA2 GNRL Read and Extract** - Consumers can open, inspect, and extract Fallout 4 and Starfield general BA2 archives.
-- [ ] **Phase 7: BA2 DDS Read and DDS Reconstruction** - Consumers can extract Fallout 4 and Starfield texture BA2 entries as valid DDS files.
+- [x] **Phase 5: TES3 BSA Read and Extract** - Consumers can open, inspect, and extract Morrowind BSA archives with TES3-specific offset semantics.
+- [x] **Phase 6: BA2 GNRL Read and Extract** - Consumers can open, inspect, and extract Fallout 4 and Starfield general BA2 archives.
+- [x] **Phase 7: BA2 DDS Read and DDS Reconstruction** - Consumers can extract Fallout 4 and Starfield texture BA2 entries as valid DDS files.
 - [ ] **Phase 8: Writer Planning, Streaming Emit, and Dedup Core** - Consumers can finalize archives through deterministic streaming writer foundations with optional deduplication.
 - [ ] **Phase 9: BSA Writers** - Consumers can create TES4-family and TES3 BSA archives compatible with target engines.
 - [ ] **Phase 10: BA2 Writers** - Consumers can create Fallout 4 and Starfield BA2 GNRL and DDS archives.
@@ -201,7 +201,23 @@ Plans:
   2. Consumer can extract BA2 DDS texture entries with reconstructed DDS/DX10 headers, dimensions, DXGI formats, mip levels, and cubemap metadata.
   3. Consumer receives texture metadata through libbsa-owned public types without DirectXTex leaking into public headers.
   4. Maintainer can validate reconstructed DDS output as loadable and metadata-correct with DirectXTex-backed fixtures.
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+**Wave 1**
+- [x] 07-01-PLAN.md - Add the Phase 7 public texture metadata surface.
+- [x] 07-02-PLAN.md - Add generated BA2 DDS fixture helpers and reader test target.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 07-03-PLAN.md - Parse Fallout 4 and Starfield DX10 texture metadata and chunk routing.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 07-04-PLAN.md - Reconstruct DDS/DX10 headers and validate through the private DirectXTex helper.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [x] 07-05-PLAN.md - Extract BA2 DX10 texture chunks as valid DDS output.
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [x] 07-06-PLAN.md - Harden malformed BA2 DDS inputs and finalize documentation and validation gates.
 
 ### Phase 8: Writer Planning, Streaming Emit, and Dedup Core
 **Goal**: Consumers can build deterministic archive write plans and finalize archive bytes without whole-archive output buffering.
@@ -269,10 +285,10 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Build, Error, and Test Foundation | 3/3 | Complete | 2026-05-05 |
 | 2. Streaming API, Archive Model, Detection, and Hashes | 5/5 | Complete | 2026-05-05 |
 | 3. Compression Services and Policy | 4/4 | Complete | 2026-05-06 |
-| 4. TES4-Family BSA Read and Extract | 0/5 | Planned | - |
-| 5. TES3 BSA Read and Extract | 0/4 | Planned | - |
-| 6. BA2 GNRL Read and Extract | 0/TBD | Not started | - |
-| 7. BA2 DDS Read and DDS Reconstruction | 0/6 | Planned    |  |
+| 4. TES4-Family BSA Read and Extract | 5/5 | Complete | 2026-05-06 |
+| 5. TES3 BSA Read and Extract | 4/4 | Complete | 2026-05-06 |
+| 6. BA2 GNRL Read and Extract | 7/7 | Complete | 2026-05-06 |
+| 7. BA2 DDS Read and DDS Reconstruction | 6/6 | Complete | 2026-05-06 |
 | 8. Writer Planning, Streaming Emit, and Dedup Core | 0/TBD | Not started | - |
 | 9. BSA Writers | 0/TBD | Not started | - |
 | 10. BA2 Writers | 0/TBD | Not started | - |
