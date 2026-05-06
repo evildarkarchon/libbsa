@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 6 verification gap context gathered
-last_updated: "2026-05-06T03:04:44.634Z"
-last_activity: 2026-05-06 -- Phase 06 execution started
+stopped_at: Completed 06-07-PLAN.md
+last_updated: "2026-05-06T03:22:21.158Z"
+last_activity: 2026-05-06
 progress:
   total_phases: 12
   completed_phases: 6
-  total_plans: 27
-  completed_plans: 27
+  total_plans: 28
+  completed_plans: 28
   percent: 100
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 06 (ba2-gnrl-read-and-extract) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 06
-Last activity: 2026-05-06 -- Phase 06 execution started
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-05-06
 
 Progress: [██████████] 100%
 
@@ -59,6 +59,7 @@ Progress: [██████████] 100%
 | Phase 03-compression-services-and-policy P01-P04 | 18min | 9 tasks | 18 files |
 | Phase 04-tes4-family-bsa-read-and-extract P01-P05 | 17min | 11 tasks | 11 files |
 | Phase 05-tes3-bsa-read-and-extract P01-P04 | 21min | 8 tasks | 7 files |
+| Phase 06-ba2-gnrl-read-and-extract P07 | 12min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - [Phase 03]: Compression routing is explicit by archive format, entry state, and Starfield CompressionMethod; codec libraries remain behind private implementation wrappers.
 - [Phase 04]: TES4-family BSA read/extract uses `bsa_archive` with `archive_view` lookup, bounded parsing, compression dispatcher extraction, and TES5Edit-provenance compatibility tests.
 - [Phase 05]: TES3 BSA read/extract reuses `bsa_archive` and `open_bsa` with validated table parsing, absolute `entry_metadata` payload offsets, raw extraction, and public-header-only API exposure.
+- [Phase 06]: Kept duplicate normalized BA2 name rejection in parse_ba2_gnrl because duplicate name-table associations are BA2 malformed-input validation, not a generic archive_view policy.
+- [Phase 06]: Validated FileTableOffset against byte_source::size even for zero-entry BA2 archives so empty archives remain allowed but impossible metadata is rejected.
 
 ### Pending Todos
 
@@ -101,6 +104,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-06T03:04:44.628Z
-Stopped at: Phase 6 verification gap context gathered
-Resume file: .planning/phases/06-ba2-gnrl-read-and-extract/06-CONTEXT.md
+Last session: 2026-05-06T03:22:21.152Z
+Stopped at: Completed 06-07-PLAN.md
+Resume file: None

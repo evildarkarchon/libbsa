@@ -52,7 +52,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **BA2-01**: Consumer can open, list, inspect, and extract Fallout 4 BA2 GNRL archives across supported v1/v7/v8 variants.
 - [ ] **BA2-02**: Consumer can open, list, inspect, and extract Starfield BA2 GNRL v2 archives with the additional header fields preserved in metadata where relevant.
 - [ ] **BA2-03**: Consumer can open, list, inspect, and extract Starfield BA2 GNRL v3 archives with correct compression-method routing.
-- [ ] **BA2-04**: Consumer can parse BA2 file name tables located at `FileTableOffset` and associate length-prefixed names with entries.
+- [x] **BA2-04**: Consumer can parse BA2 file name tables located at `FileTableOffset` and associate length-prefixed names with entries.
 - [ ] **BA2-05**: Consumer can open, list, inspect, and extract Fallout 4 and Starfield BA2 DDS archives.
 - [ ] **BA2-06**: Consumer can extract BA2 DDS texture entries as valid, loadable DDS files with reconstructed headers, dimensions, DXGI formats, mip levels, and cubemap metadata.
 
@@ -153,7 +153,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BA2-01 | Phase 6 | Pending |
 | BA2-02 | Phase 6 | Pending |
 | BA2-03 | Phase 6 | Pending |
-| BA2-04 | Phase 6 | Pending |
+| BA2-04 | Phase 6 | Complete |
 | BA2-05 | Phase 7 | Pending |
 | BA2-06 | Phase 7 | Pending |
 | WRT-01 | Phase 9 | Pending |
