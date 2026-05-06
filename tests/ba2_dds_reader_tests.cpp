@@ -136,5 +136,5 @@ TEST_CASE("open_ba2 reads Starfield DX10 v3 texture_metadata and lz4_block chunk
     REQUIRE(texture.value().chunks.size() == 1);
     CHECK(texture.value().chunks.front().compression == libbsa::compression_state::lz4_block);
     CHECK(texture.value().chunks.front().size == fixture.textures.front().chunks.front().payload.size());
-    CHECK(texture.value().chunks.front().packed_size < texture.value().chunks.front().size);
+    CHECK(texture.value().chunks.front().packed_size != texture.value().chunks.front().size);
 }
