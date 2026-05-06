@@ -1,4 +1,5 @@
 #include <libbsa/ba2.hpp>
+#include <libbsa/compression.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -252,11 +253,38 @@ result<ba2_archive> open_ba2(const byte_source& source)
 
 result<void> extract_ba2_entry(const ba2_archive& archive, const byte_source& source, std::string path, byte_sink& sink)
 {
-    static_cast<void>(archive);
-    static_cast<void>(source);
-    static_cast<void>(path);
-    static_cast<void>(sink);
-    return failure<void>({error_code::unsupported_format, "BA2 GNRL extraction is not implemented yet"});
+    auto metadata = archive.entry(std::move(path));
+    if (!metadata.has_value()) {
+        return failure<void>(metadata.error());
+    }
+
+    if (metadata.value().stored_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()) ||
+        !range_fits(metadata.value().offset, metadata.value().stored_size, source.size())) {
+        return failure<void>({error_code::malformed_archive, "BA2 payload range exceeds source size"});
+    }
+
+    auto payload = read_bytes(source, metadata.value().offset, metadata.value().stored_size);
+    if (!payload.has_value()) {
+        return failure<void>({error_code::malformed_archive, "BA2 payload range exceeds source size"});
+    }
+
+    payload_codec_request request{};
+    request.format = archive.summary().format;
+    request.entry_state = metadata.value().compression;
+    request.compression_method = archive.summary().compression_method;
+    auto algorithm = resolve_payload_codec(request);
+    if (!algorithm.has_value()) {
+        return failure<void>(algorithm.error());
+    }
+
+    // BA2 records supply the unpacked Size and compressed PackedSize fields;
+    // unlike TES4-family BSA payloads, there is no embedded size prefix per D-11.
+    auto output = decompress_payload(algorithm.value(), std::span<const std::byte>{payload.value()}, metadata.value().size);
+    if (!output.has_value()) {
+        return failure<void>(output.error());
+    }
+
+    return sink.write(std::span<const std::byte>{output.value()});
 }
 
 } // namespace libbsa
