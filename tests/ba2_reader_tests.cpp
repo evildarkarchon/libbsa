@@ -7,9 +7,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -39,6 +41,13 @@ void append_u64(std::vector<std::byte>& bytes, std::uint64_t value)
 {
     for (int shift = 0; shift < 64; shift += 8) {
         bytes.push_back(static_cast<std::byte>((value >> shift) & 0xffU));
+    }
+}
+
+void write_u64(std::vector<std::byte>& bytes, std::size_t offset, std::uint64_t value)
+{
+    for (int shift = 0; shift < 64; shift += 8) {
+        bytes[offset + static_cast<std::size_t>(shift / 8)] = static_cast<std::byte>((value >> shift) & 0xffU);
     }
 }
 
@@ -199,6 +208,16 @@ std::vector<std::byte> expected_lz4_block_output(std::uint32_t version)
 {
     return {std::byte{0x14}, std::byte{0x24}, static_cast<std::byte>(version), std::byte{0x34},
             std::byte{0x44}, std::byte{0x54}, std::byte{0x64}, std::byte{0x74}};
+}
+
+libbsa::ba2_archive archive_with_entry(libbsa::entry_metadata metadata)
+{
+    libbsa::archive_summary summary{};
+    summary.format = libbsa::archive_format::fo4_ba2_gnrl;
+    summary.version = VERSION_FO4_V1;
+    summary.subtype = 0x4c524e47U;
+    summary.file_count = 1;
+    return libbsa::ba2_archive{summary, std::vector{std::move(metadata)}};
 }
 
 void assert_common_gnrl_metadata(std::uint32_t version, libbsa::archive_format expected_format)
@@ -456,5 +475,104 @@ TEST_CASE("extract_ba2_entry rejects Starfield v3 codec confusion without partia
     REQUIRE_FALSE(extracted.has_value());
     CHECK((extracted.error().code == libbsa::error_code::unsupported_format ||
            extracted.error().code == libbsa::error_code::malformed_archive));
+    CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("open_ba2 rejects truncated BA2 headers", "[unit]")
+{
+    const std::vector<std::byte> bytes{std::byte{'B'}, std::byte{'T'}, std::byte{'D'}, std::byte{'X'}};
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+}
+
+TEST_CASE("open_ba2 rejects truncated BA2 records", "[unit]")
+{
+    auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V1, {raw_entry(VERSION_FO4_V1)});
+    bytes.resize(header_size_for(VERSION_FO4_V1) + RECORD_SIZE - 1U);
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+}
+
+TEST_CASE("open_ba2 rejects truncated BA2 name tables", "[unit]")
+{
+    auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V1, {raw_entry(VERSION_FO4_V1)});
+    bytes.resize(header_size_for(VERSION_FO4_V1) + RECORD_SIZE + 1U);
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+}
+
+TEST_CASE("open_ba2 rejects mismatched BA2 file name counts", "[unit]")
+{
+    auto entry = raw_entry(VERSION_FO4_V1);
+    auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V1, {entry});
+    auto extra_name = name_table_bytes({ba2_entry_fixture{.path = "meshes/extra/name.nif"}});
+    const auto name_table_end = header_size_for(VERSION_FO4_V1) + RECORD_SIZE + name_table_bytes({entry}).size();
+    const auto payload_offset = static_cast<std::uint64_t>(name_table_end + extra_name.size());
+    bytes.insert(bytes.begin() + static_cast<std::ptrdiff_t>(name_table_end), extra_name.begin(), extra_name.end());
+    write_u64(bytes, header_size_for(VERSION_FO4_V1) + 16U, payload_offset);
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+}
+
+TEST_CASE("open_ba2 rejects BA2 names with traversal", "[unit]")
+{
+    ba2_entry_fixture entry;
+    entry.path = "meshes/../evil.nif";
+
+    const auto opened = open_bytes(ba2_gnrl_archive_bytes(VERSION_FO4_V1, {entry}));
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+}
+
+TEST_CASE("extract_ba2_entry rejects impossible BA2 payload ranges", "[unit]")
+{
+    libbsa::entry_metadata metadata{};
+    metadata.path = "meshes/impossible.bin";
+    metadata.size = 4;
+    metadata.packed_size = 4;
+    metadata.stored_size = 4;
+    metadata.offset = 128;
+    metadata.compression = libbsa::compression_state::raw;
+    const std::vector<std::byte> bytes{std::byte{0x01}, std::byte{0x02}};
+    const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+    libbsa::memory_sink sink;
+
+    const auto extracted = libbsa::extract_ba2_entry(archive_with_entry(metadata), source, metadata.path, sink);
+
+    REQUIRE_FALSE(extracted.has_value());
+    CHECK(extracted.error().code == libbsa::error_code::malformed_archive);
+    CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("extract_ba2_entry rejects BA2 offset overflow without writing bytes", "[unit]")
+{
+    libbsa::entry_metadata metadata{};
+    metadata.path = "meshes/overflow.bin";
+    metadata.size = 4;
+    metadata.packed_size = 4;
+    metadata.stored_size = 4;
+    metadata.offset = std::numeric_limits<std::uint64_t>::max() - 1U;
+    metadata.compression = libbsa::compression_state::raw;
+    const std::vector<std::byte> bytes{std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
+    const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+    libbsa::memory_sink sink;
+
+    const auto extracted = libbsa::extract_ba2_entry(archive_with_entry(metadata), source, metadata.path, sink);
+
+    REQUIRE_FALSE(extracted.has_value());
+    CHECK(extracted.error().code == libbsa::error_code::malformed_archive);
     CHECK(sink.bytes().empty());
 }
