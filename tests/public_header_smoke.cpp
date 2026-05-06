@@ -1,6 +1,7 @@
 #include <libbsa/archive.hpp>
 #include <libbsa/archive_path.hpp>
 #include <libbsa/archive_view.hpp>
+#include <libbsa/bsa.hpp>
 #include <libbsa/compression.hpp>
 #include <libbsa/detect.hpp>
 #include <libbsa/io.hpp>
@@ -36,16 +37,28 @@ int main()
     metadata.path = "textures/actors/hero.dds";
     metadata.size = 2;
     metadata.packed_size = 2;
+    metadata.stored_size = 2;
     metadata.offset = 0;
     metadata.compression = libbsa::compression_state::none;
+    libbsa::entry_metadata bsa_metadata{};
+    bsa_metadata.path = "meshes/armor/iron.nif";
+    bsa_metadata.size = 4;
+    bsa_metadata.packed_size = 4;
+    bsa_metadata.stored_size = 4;
+    bsa_metadata.offset = 128;
+    bsa_metadata.compression = libbsa::compression_state::raw;
 
     auto path = libbsa::normalize_archive_path("textures/actors/hero.dds");
     const libbsa::archive_view view{summary, std::vector{metadata}};
+    const libbsa::bsa_archive bsa{summary, std::vector{bsa_metadata}};
+    const auto bsa_paths = bsa.paths();
+    const auto bsa_entry = bsa.entry("meshes/armor/iron.nif");
 
     return ok.has_value() && source.size() == 2 && write.has_value() && sink.bytes().size() == 2 && codec.has_value() &&
             codec.value() == libbsa::compression_algorithm::lz4_block && write_compression.has_value() &&
             write_compression.value() == libbsa::compression_state::lz4_frame && path.has_value() &&
-            path.value().string() == "textures/actors/hero.dds" && view.contains("textures\\actors\\hero.dds")
+            path.value().string() == "textures/actors/hero.dds" && view.contains("textures\\actors\\hero.dds") &&
+            bsa_paths.size() == 1 && bsa.contains("meshes\\armor\\iron.nif") && bsa_entry.has_value()
         ? 0
         : 1;
 }
