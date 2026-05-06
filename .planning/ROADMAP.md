@@ -85,7 +85,19 @@ Cross-cutting constraints:
   3. Consumer can transparently extract Starfield BA2 v3 payloads through raw LZ4 block decompression when `CompressionMethod == 3`.
   4. Maintainer can run tests proving deflate, LZ4 frame, and LZ4 block routes cannot be accidentally interchanged.
   5. Consumer can select archive-default, force-compressed, or force-raw write policy where the target format supports it.
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+- [ ] 03-01-PLAN.md — Define compression routing and writer policy contracts.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 03-02-PLAN.md — Implement exact-size libdeflate payload compression and decompression.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 03-03-PLAN.md — Implement separate LZ4 frame and raw LZ4 block payload codecs.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 03-04-PLAN.md — Finalize public smoke coverage, documentation, and boundary gates.
 
 ### Phase 4: TES4-Family BSA Read and Extract
 **Goal**: Consumers can open, inspect, list, look up, and extract every TES4-family BSA variant in scope.
