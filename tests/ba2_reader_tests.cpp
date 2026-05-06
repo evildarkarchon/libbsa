@@ -526,6 +526,45 @@ TEST_CASE("open_ba2 rejects mismatched BA2 file name counts", "[unit]")
     CHECK(opened.error().code == libbsa::error_code::malformed_archive);
 }
 
+TEST_CASE("open_ba2 rejects duplicate normalized BA2 names", "[unit]")
+{
+    ba2_entry_fixture first;
+    first.path = "Meshes/Armor/Iron.NIF";
+    first.name_hash = 0x10101010;
+    ba2_entry_fixture second;
+    second.path = "meshes\\armor\\iron.nif";
+    second.name_hash = 0x20202020;
+    second.offset = 256;
+    second.size = 2;
+    second.payload = {std::byte{0x20}, std::byte{0x26}};
+
+    const auto opened = open_bytes(ba2_gnrl_archive_bytes(VERSION_FO4_V1, {first, second}));
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+}
+
+TEST_CASE("open_ba2 rejects empty BA2 archives with impossible FileTableOffset", "[unit]")
+{
+    auto bytes = ba2_gnrl_archive_bytes(VERSION_FO4_V1, {});
+    write_u64(bytes, 16U, static_cast<std::uint64_t>(bytes.size() + 1U));
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+}
+
+TEST_CASE("open_ba2 accepts empty BA2 archives with in-range FileTableOffset", "[unit]")
+{
+    const auto opened = open_bytes(ba2_gnrl_archive_bytes(VERSION_FO4_V1, {}));
+
+    REQUIRE(opened.has_value());
+    REQUIRE(opened.value().summary().file_count.has_value());
+    CHECK(*opened.value().summary().file_count == 0);
+    CHECK(opened.value().paths().empty());
+}
+
 TEST_CASE("open_ba2 rejects BA2 names with traversal", "[unit]")
 {
     ba2_entry_fixture entry;
