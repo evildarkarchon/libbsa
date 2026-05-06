@@ -16,10 +16,12 @@ constexpr std::uint32_t magic_btdx = 0x58445442U;
 constexpr std::uint32_t magic_gnrl = 0x4c524e47U;
 constexpr std::uint32_t version_fo4_v1 = 0x01U;
 constexpr std::uint32_t version_starfield_v2 = 0x02U;
+constexpr std::uint32_t version_starfield_v3 = 0x03U;
 constexpr std::uint32_t version_fo4_v7 = 0x07U;
 constexpr std::uint32_t version_fo4_v8 = 0x08U;
 constexpr std::uint64_t base_header_size = 24U;
 constexpr std::uint64_t starfield_v2_header_size = 32U;
+constexpr std::uint64_t starfield_v3_header_size = 36U;
 constexpr std::uint64_t record_size = 36U;
 
 error truncated_table_error()
@@ -81,17 +83,41 @@ std::uint64_t le_u64(std::span<const std::byte> bytes, std::size_t offset) noexc
 
 bool supported_version(std::uint32_t version) noexcept
 {
-    return version == version_fo4_v1 || version == version_fo4_v7 || version == version_fo4_v8 || version == version_starfield_v2;
+    return version == version_fo4_v1 || version == version_fo4_v7 || version == version_fo4_v8 ||
+           version == version_starfield_v2 || version == version_starfield_v3;
 }
 
 std::uint64_t header_size_for(std::uint32_t version) noexcept
 {
+    if (version == version_starfield_v3) {
+        return starfield_v3_header_size;
+    }
     return version == version_starfield_v2 ? starfield_v2_header_size : base_header_size;
 }
 
 archive_format format_for_version(std::uint32_t version) noexcept
 {
-    return version == version_starfield_v2 ? archive_format::starfield_ba2_gnrl : archive_format::fo4_ba2_gnrl;
+    return version == version_starfield_v2 || version == version_starfield_v3 ? archive_format::starfield_ba2_gnrl
+                                                                              : archive_format::fo4_ba2_gnrl;
+}
+
+compression_state compression_for_record(std::uint32_t version, std::uint32_t compression_method, std::uint32_t packed_size) noexcept
+{
+    if (packed_size == 0) {
+        return compression_state::raw;
+    }
+
+    // Starfield BA2 v3 method 3 uses raw LZ4 blocks, not LZ4 frames, and raw entries remain raw.
+    if (version == version_starfield_v3) {
+        if (compression_method == 3) {
+            return compression_state::lz4_block;
+        }
+        if (compression_method != 0) {
+            return compression_state::unknown;
+        }
+    }
+
+    return compression_state::deflate;
 }
 
 struct ba2_record {
@@ -156,6 +182,7 @@ result<ba2_archive> parse_ba2_gnrl(const byte_source& source)
 
     const auto file_count = le_u32(header.value(), 12);
     const auto file_table_offset = le_u64(header.value(), 16);
+    const auto compression_method = version == version_starfield_v3 ? le_u32(header.value(), 32) : 0U;
     std::uint64_t record_table_size = 0;
     std::uint64_t record_table_end = 0;
     if (!checked_add(static_cast<std::uint64_t>(file_count) * record_size, 0, record_table_size) ||
@@ -201,7 +228,7 @@ result<ba2_archive> parse_ba2_gnrl(const byte_source& source)
         // raw bytes, so public packed/stored size follows Size rather than zero.
         metadata.packed_size = record.packed_size == 0 ? record.size : record.packed_size;
         metadata.stored_size = metadata.packed_size;
-        metadata.compression = record.packed_size == 0 ? compression_state::raw : compression_state::deflate;
+        metadata.compression = compression_for_record(version, compression_method, record.packed_size);
         metadata.name_hash = record.name_hash;
         metadata.directory_hash = record.directory_hash;
         if (!range_fits(metadata.offset, metadata.stored_size, source.size())) {
@@ -216,6 +243,9 @@ result<ba2_archive> parse_ba2_gnrl(const byte_source& source)
     summary.subtype = subtype;
     summary.file_count = file_count;
     summary.file_table_offset = file_table_offset;
+    if (version == version_starfield_v3) {
+        summary.compression_method = compression_method;
+    }
     return success(ba2_archive{summary, std::move(entries)});
 }
 
