@@ -491,10 +491,6 @@ result<ba2_archive> parse_ba2_dx10(const byte_source& source)
         bool first_chunk = true;
         for (const auto& chunk : record.chunks) {
             const auto chunk_compression = compression_for_dx10_chunk(version, compression_method, chunk.packed_size, chunk.size);
-            if (chunk_compression == compression_state::unknown) {
-                return failure<ba2_archive>({error_code::unsupported_format, "unsupported BA2 DX10 compression"});
-            }
-
             if (first_chunk || chunk.offset < metadata.offset) {
                 metadata.offset = chunk.offset;
                 first_chunk = false;
@@ -663,7 +659,7 @@ result<void> extract_ba2_texture_entry(const ba2_archive& archive, const byte_so
         }
 
         // Starfield BA2 v3 method 3 uses raw LZ4 blocks per chunk; this request
-        // keeps that route explicit instead of trying frame or deflate fallbacks.
+        // keeps that route explicit rather than probing other codec families.
         auto decompressed = decompress_payload(algorithm.value(), std::span<const std::byte>{payload.value()}, chunk.size);
         if (!decompressed.has_value()) {
             return failure<void>(decompressed.error());
