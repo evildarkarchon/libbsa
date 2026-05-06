@@ -44,7 +44,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **BSA-01**: Consumer can open, list, inspect, and extract TES4 v103 BSA archives for Oblivion.
 - [x] **BSA-02**: Consumer can open, list, inspect, and extract FO3/FNV/Skyrim LE v104 BSA archives.
 - [x] **BSA-03**: Consumer can open, list, inspect, and extract Skyrim SE/AE v105 BSA archives.
-- [ ] **BSA-04**: Consumer can open, list, inspect, and extract TES3 Morrowind BSA archives with correct data-section-relative offsets.
+- [x] **BSA-04**: Consumer can open, list, inspect, and extract TES3 Morrowind BSA archives with correct data-section-relative offsets.
 - [x] **BSA-05**: Consumer can extract BSA entries with embedded filenames while preserving payload bytes after the embedded-name prefix is handled.
 
 ### BA2 Reading
@@ -148,7 +148,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BSA-01 | Phase 4 | Complete |
 | BSA-02 | Phase 4 | Complete |
 | BSA-03 | Phase 4 | Complete |
-| BSA-04 | Phase 5 | Pending |
+| BSA-04 | Phase 5 | Complete |
 | BSA-05 | Phase 4 | Complete |
 | BA2-01 | Phase 6 | Pending |
 | BA2-02 | Phase 6 | Pending |

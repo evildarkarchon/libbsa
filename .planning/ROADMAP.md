@@ -143,7 +143,7 @@ Cross-cutting constraints:
 **Plans**: 4 plans
 Plans:
 **Wave 1**
-- [ ] 05-01-PLAN.md — Parse TES3 BSA metadata with generated fixtures and data-section-relative offset checks.
+- [x] 05-01-PLAN.md — Parse TES3 BSA metadata with generated fixtures and data-section-relative offset checks.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 05-02-PLAN.md — Prove TES3 raw extraction and normalized lookup through the streaming sink API.
