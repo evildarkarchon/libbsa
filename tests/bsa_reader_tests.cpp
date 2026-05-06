@@ -376,6 +376,35 @@ TEST_CASE("extract_bsa_entry writes raw TES4 bytes", "[fixture]")
           std::vector{std::byte{0x10}, std::byte{0x20}, std::byte{0x30}, std::byte{0x40}});
 }
 
+TEST_CASE("extract_bsa_entry writes raw TES3 bytes", "[fixture]")
+{
+    tes3_entry marker;
+    marker.name = "meshes\\marker.nif";
+    marker.payload = {std::byte{0x4d}, std::byte{0x57}, std::byte{0x21}};
+    const auto bytes = tes3_archive_bytes({marker});
+
+    CHECK(extract_bytes(bytes, "meshes/marker.nif") == marker.payload);
+}
+
+TEST_CASE("TES3 lookup uses normalized archive paths", "[fixture]")
+{
+    tes3_entry marker;
+    marker.name = "meshes\\marker.nif";
+    marker.payload = {std::byte{0x4d}, std::byte{0x57}, std::byte{0x21}};
+    marker.relative_offset = 0;
+    tes3_entry texture;
+    texture.name = "textures\\marker.dds";
+    texture.payload = {std::byte{0xdd}, std::byte{0x05}};
+    texture.relative_offset = 4;
+    const auto bytes = tes3_archive_bytes({marker, texture});
+
+    const auto opened = open_bytes(bytes);
+    REQUIRE(opened.has_value());
+    CHECK(opened.value().contains("Meshes/Marker.NIF"));
+    CHECK(extract_bytes(bytes, "Meshes/Marker.NIF") == marker.payload);
+    CHECK(extract_bytes(bytes, "textures\\marker.dds") == texture.payload);
+}
+
 TEST_CASE("extract_bsa_entry inflates deflate v104 payloads", "[fixture]")
 {
     packed_entry entry;
