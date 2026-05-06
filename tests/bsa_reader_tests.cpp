@@ -13,8 +13,15 @@
 #include <string_view>
 #include <vector>
 
+namespace libbsa::detail {
+
+[[nodiscard]] std::uint64_t hash_tes3_path(std::string_view path);
+
+} // namespace libbsa::detail
+
 namespace {
 
+constexpr std::uint32_t VERSION_TES3 = 0x00000100;
 constexpr std::uint32_t BSA_MAGIC = 0x00415342;
 constexpr std::uint32_t VERSION_TES4 = 0x67;
 constexpr std::uint32_t VERSION_FO3 = 0x68;
@@ -91,6 +98,54 @@ struct packed_entry {
     std::uint32_t stored_size_override{};
     std::uint32_t payload_offset_override{};
 };
+
+struct tes3_entry {
+    std::string name{"meshes\\marker.nif"};
+    std::vector<std::byte> payload{std::byte{0x4d}, std::byte{0x57}};
+    std::uint32_t relative_offset{};
+    std::uint64_t hash{};
+};
+
+std::vector<std::byte> tes3_archive_bytes(std::vector<tes3_entry> entries)
+{
+    std::vector<std::byte> names;
+    std::vector<std::uint32_t> name_offsets;
+    name_offsets.reserve(entries.size());
+    for (const auto& entry : entries) {
+        name_offsets.push_back(static_cast<std::uint32_t>(names.size()));
+        append_cstring(names, entry.name);
+    }
+
+    const auto file_count = static_cast<std::uint32_t>(entries.size());
+    const auto hash_offset = static_cast<std::uint32_t>((file_count * 8U) + (file_count * 4U) + names.size());
+
+    std::vector<std::byte> bytes;
+    append_u32(bytes, VERSION_TES3);
+    append_u32(bytes, hash_offset);
+    append_u32(bytes, file_count);
+    for (const auto& entry : entries) {
+        append_u32(bytes, static_cast<std::uint32_t>(entry.payload.size()));
+        append_u32(bytes, entry.relative_offset);
+    }
+    for (const auto offset : name_offsets) {
+        append_u32(bytes, offset);
+    }
+    bytes.insert(bytes.end(), names.begin(), names.end());
+    for (const auto& entry : entries) {
+        append_u64(bytes, entry.hash == 0 ? libbsa::detail::hash_tes3_path(entry.name) : entry.hash);
+    }
+
+    std::uint32_t cursor = 0;
+    for (const auto& entry : entries) {
+        if (entry.relative_offset > cursor) {
+            bytes.resize(bytes.size() + (entry.relative_offset - cursor), std::byte{0});
+            cursor = entry.relative_offset;
+        }
+        bytes.insert(bytes.end(), entry.payload.begin(), entry.payload.end());
+        cursor += static_cast<std::uint32_t>(entry.payload.size());
+    }
+    return bytes;
+}
 
 std::vector<std::byte> make_payload(const packed_entry& entry)
 {
@@ -273,6 +328,33 @@ TEST_CASE("open_bsa parses SSE v105 folder records", "[fixture]")
     const auto metadata = opened.value().entry("textures/actors/hero.dds");
     REQUIRE(metadata.has_value());
     CHECK(metadata.value().compression == libbsa::compression_state::lz4_frame);
+}
+
+TEST_CASE("open_bsa lists TES3 metadata with data-section-relative offsets", "[fixture]")
+{
+    tes3_entry marker;
+    marker.name = "meshes\\marker.nif";
+    marker.payload = {std::byte{0x4d}, std::byte{0x57}};
+    marker.hash = libbsa::detail::hash_tes3_path(marker.name);
+    const auto bytes = tes3_archive_bytes({marker});
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE(opened.has_value());
+    CHECK(opened.value().summary().format == libbsa::archive_format::tes3_bsa);
+    CHECK(opened.value().summary().version == VERSION_TES3);
+    const auto paths = opened.value().paths();
+    REQUIRE(paths.size() == 1);
+    CHECK(paths[0].string() == "meshes/marker.nif");
+
+    const auto metadata = opened.value().entry("meshes/marker.nif");
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().size == 2);
+    CHECK(metadata.value().packed_size == 2);
+    CHECK(metadata.value().stored_size == 2);
+    CHECK(metadata.value().compression == libbsa::compression_state::raw);
+    CHECK(metadata.value().directory_hash == 0);
+    CHECK(metadata.value().offset == bytes.size() - marker.payload.size());
+    CHECK(metadata.value().name_hash == libbsa::detail::hash_tes3_path("meshes\\marker.nif"));
 }
 
 std::vector<std::byte> extract_bytes(const std::vector<std::byte>& bytes, std::string path)
