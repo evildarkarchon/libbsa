@@ -50,6 +50,7 @@ target_sources(libbsa
     src/detect.cpp
     src/archive_path.cpp
     src/archive_view.cpp
+    src/ba2_reader.cpp
     src/bsa_reader.cpp
     src/compression.cpp
     src/compression/deflate_codec.cpp
@@ -66,6 +67,7 @@ target_sources(libbsa
       include/libbsa/archive.hpp
       include/libbsa/archive_path.hpp
       include/libbsa/archive_view.hpp
+      include/libbsa/ba2.hpp
       include/libbsa/bsa.hpp
       include/libbsa/compression.hpp
       include/libbsa/detect.hpp
