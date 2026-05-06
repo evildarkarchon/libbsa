@@ -1,6 +1,7 @@
 #include <libbsa/ba2.hpp>
 #include <libbsa/compression.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -193,6 +194,9 @@ result<ba2_archive> parse_ba2_gnrl(const byte_source& source)
     const auto file_count = le_u32(header.value(), 12);
     const auto file_table_offset = le_u64(header.value(), 16);
     const auto compression_method = version == version_starfield_v3 ? le_u32(header.value(), 32) : 0U;
+    if (file_table_offset > source.size()) {
+        return failure<ba2_archive>(truncated_table_error());
+    }
     std::uint64_t record_table_size = 0;
     std::uint64_t record_table_end = 0;
     if (!checked_add(static_cast<std::uint64_t>(file_count) * record_size, 0, record_table_size) ||
@@ -242,6 +246,8 @@ result<ba2_archive> parse_ba2_gnrl(const byte_source& source)
 
     std::vector<entry_metadata> entries;
     entries.reserve(file_count);
+    std::vector<std::string> normalized_paths;
+    normalized_paths.reserve(file_count);
     for (std::uint32_t i = 0; i < file_count; ++i) {
         const auto& record = records[i];
         entry_metadata metadata{};
@@ -250,6 +256,12 @@ result<ba2_archive> parse_ba2_gnrl(const byte_source& source)
             return failure<ba2_archive>({error_code::malformed_archive, "invalid BA2 name"});
         }
         metadata.path = normalized.value().string();
+        // BA2 name tables associate names by record index; reject duplicate normalized
+        // keys before archive_view::insert_or_assign can overwrite and hide a bad table.
+        if (std::find(normalized_paths.begin(), normalized_paths.end(), metadata.path) != normalized_paths.end()) {
+            return failure<ba2_archive>({error_code::malformed_archive, "duplicate BA2 name"});
+        }
+        normalized_paths.push_back(metadata.path);
         metadata.offset = record.offset;
         metadata.size = record.size;
         // BA2 records store archive-absolute payload offsets. PackedSize == 0 means
