@@ -50,6 +50,7 @@ target_sources(libbsa
     src/detect.cpp
     src/archive_path.cpp
     src/archive_view.cpp
+    src/bsa_reader.cpp
     src/compression.cpp
     src/compression/deflate_codec.cpp
     src/compression/lz4_block_codec.cpp
