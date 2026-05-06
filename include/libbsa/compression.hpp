@@ -3,8 +3,11 @@
 #include <libbsa/archive.hpp>
 #include <libbsa/result.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <span>
+#include <vector>
 
 namespace libbsa {
 
@@ -49,5 +52,20 @@ struct payload_codec_request {
 [[nodiscard]] result<compression_state> resolve_write_compression(archive_format format,
                                                                   compression_policy policy,
                                                                   bool archive_default_compressed);
+
+/// Decompresses a packed payload with the requested codec and exact output size.
+///
+/// `expected_size` comes from archive metadata and is enforced exactly so callers
+/// cannot accidentally accept truncated or over-expanded native codec output.
+[[nodiscard]] result<std::vector<std::byte>> decompress_payload(compression_algorithm algorithm,
+                                                               std::span<const std::byte> packed,
+                                                               std::uint64_t expected_size);
+
+/// Compresses an unpacked payload with the requested codec.
+///
+/// The dispatcher keeps third-party codec details private; unsupported algorithms
+/// return a structured failure instead of exposing implementation-specific APIs.
+[[nodiscard]] result<std::vector<std::byte>> compress_payload(compression_algorithm algorithm,
+                                                             std::span<const std::byte> unpacked);
 
 } // namespace libbsa

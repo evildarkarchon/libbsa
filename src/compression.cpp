@@ -1,5 +1,9 @@
 #include <libbsa/compression.hpp>
 
+#include "compression/deflate_codec.hpp"
+
+#include <limits>
+
 namespace libbsa {
 namespace {
 
@@ -11,6 +15,11 @@ result<compression_algorithm> unsupported_route()
 result<compression_state> unsupported_policy()
 {
     return failure<compression_state>({error_code::unsupported_format, "unsupported compression route"});
+}
+
+result<std::vector<std::byte>> unsupported_payload_codec()
+{
+    return failure<std::vector<std::byte>>({error_code::unsupported_format, "unsupported compression route"});
 }
 
 bool is_fo4_ba2(archive_format format)
@@ -93,6 +102,42 @@ result<compression_state> resolve_write_compression(archive_format format,
     }
 
     return unsupported_policy();
+}
+
+result<std::vector<std::byte>> decompress_payload(compression_algorithm algorithm,
+                                                  std::span<const std::byte> packed,
+                                                  std::uint64_t expected_size)
+{
+    switch (algorithm) {
+    case compression_algorithm::none:
+        if (expected_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()) ||
+            packed.size() != static_cast<std::size_t>(expected_size)) {
+            return failure<std::vector<std::byte>>({error_code::decompression_failure, "uncompressed size mismatch"});
+        }
+        return success(std::vector<std::byte>{packed.begin(), packed.end()});
+    case compression_algorithm::deflate:
+        return detail::deflate_decompress(packed, expected_size);
+    case compression_algorithm::lz4_frame:
+    case compression_algorithm::lz4_block:
+        return unsupported_payload_codec();
+    }
+
+    return unsupported_payload_codec();
+}
+
+result<std::vector<std::byte>> compress_payload(compression_algorithm algorithm, std::span<const std::byte> unpacked)
+{
+    switch (algorithm) {
+    case compression_algorithm::none:
+        return success(std::vector<std::byte>{unpacked.begin(), unpacked.end()});
+    case compression_algorithm::deflate:
+        return detail::deflate_compress(unpacked);
+    case compression_algorithm::lz4_frame:
+    case compression_algorithm::lz4_block:
+        return unsupported_payload_codec();
+    }
+
+    return unsupported_payload_codec();
 }
 
 } // namespace libbsa
