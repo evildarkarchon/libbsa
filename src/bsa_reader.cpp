@@ -77,6 +77,19 @@ result<std::vector<std::byte>> read_bytes(const byte_source& source, std::uint64
     return success(std::move(bytes));
 }
 
+result<std::vector<std::byte>> read_payload_bytes(const byte_source& source, std::uint64_t offset, std::uint64_t size)
+{
+    if (size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()) || !range_fits(offset, size, source.size())) {
+        return failure<std::vector<std::byte>>({error_code::malformed_archive, "BSA payload range exceeds source size"});
+    }
+    std::vector<std::byte> bytes(static_cast<std::size_t>(size));
+    auto read = source.read_at(offset, std::span<std::byte>{bytes});
+    if (!read.has_value()) {
+        return failure<std::vector<std::byte>>(read.error());
+    }
+    return success(std::move(bytes));
+}
+
 std::uint32_t le_u32(std::span<const std::byte> bytes, std::size_t offset) noexcept
 {
     return static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset])) |
@@ -325,11 +338,52 @@ result<bsa_archive> open_bsa(const byte_source& source)
 
 result<void> extract_bsa_entry(const bsa_archive& archive, const byte_source& source, std::string path, byte_sink& sink)
 {
-    (void)archive;
-    (void)source;
-    (void)path;
-    (void)sink;
-    return failure<void>({error_code::unsupported_format, "unsupported BSA version"});
+    auto metadata = archive.entry(std::move(path));
+    if (!metadata.has_value()) {
+        return failure<void>(metadata.error());
+    }
+
+    auto payload = read_payload_bytes(source, metadata.value().offset, metadata.value().stored_size);
+    if (!payload.has_value()) {
+        return failure<void>(payload.error());
+    }
+
+    std::size_t cursor = 0;
+    if (archive.summary().flags.has_value() && ((*archive.summary().flags & detail::archive_embed_name) != 0)) {
+        // Reference: TES5Edit/Core/wbBSArchive.pas ExtractFileData skips the embedded archive name before payload bytes.
+        if (payload.value().empty()) {
+            return failure<void>({error_code::malformed_archive, "truncated embedded BSA name"});
+        }
+        const auto name_length = static_cast<std::size_t>(std::to_integer<unsigned char>(payload.value()[0]));
+        if (name_length + 1U > payload.value().size()) {
+            return failure<void>({error_code::malformed_archive, "truncated embedded BSA name"});
+        }
+        cursor = name_length + 1U;
+    }
+
+    std::uint64_t expected_size = payload.value().size() - cursor;
+    if (metadata.value().compression != compression_state::raw && metadata.value().compression != compression_state::none) {
+        if (payload.value().size() - cursor < 4U) {
+            return failure<void>({error_code::malformed_archive, "BSA payload range exceeds source size"});
+        }
+        expected_size = le_u32(payload.value(), cursor);
+        cursor += 4U;
+    }
+
+    payload_codec_request request{};
+    request.format = archive.summary().format;
+    request.entry_state = metadata.value().compression;
+    request.compression_method = archive.summary().compression_method;
+    auto algorithm = resolve_payload_codec(request);
+    if (!algorithm.has_value()) {
+        return failure<void>(algorithm.error());
+    }
+    const auto packed = std::span<const std::byte>{payload.value()}.subspan(cursor);
+    auto unpacked = decompress_payload(algorithm.value(), packed, expected_size);
+    if (!unpacked.has_value()) {
+        return failure<void>(unpacked.error());
+    }
+    return sink.write(std::span<const std::byte>{unpacked.value()});
 }
 
 } // namespace libbsa
