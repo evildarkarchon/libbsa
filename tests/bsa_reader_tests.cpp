@@ -320,3 +320,77 @@ TEST_CASE("extract_bsa_entry skips embedded name prefixes", "[fixture]")
 
     CHECK(extract_bytes(bytes, "meshes/armor/iron.nif") == entry.output);
 }
+
+TEST_CASE("open_bsa rejects unsupported BSA versions", "[unit]")
+{
+    const auto opened = open_bytes(bsa_header(0x6a, 0, 0));
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::unsupported_format);
+    CHECK(opened.error().message == "unsupported BSA version");
+}
+
+TEST_CASE("open_bsa rejects truncated folder tables", "[unit]")
+{
+    auto bytes = bsa_archive_bytes(VERSION_TES4, 0, {});
+    bytes.resize(40);
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+    CHECK(opened.error().message == "truncated BSA table");
+}
+
+TEST_CASE("extract_bsa_entry rejects impossible payload ranges", "[unit]")
+{
+    packed_entry entry;
+    entry.payload_offset_override = 0xfffffff0U;
+    auto bytes = bsa_archive_bytes(VERSION_TES4, 0, entry);
+    bytes.resize(128);
+    const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+    auto archive = libbsa::open_bsa(source);
+    REQUIRE(archive.has_value());
+    libbsa::memory_sink sink;
+
+    auto extracted = libbsa::extract_bsa_entry(archive.value(), source, "meshes/armor/iron.nif", sink);
+
+    REQUIRE_FALSE(extracted.has_value());
+    CHECK(extracted.error().code == libbsa::error_code::malformed_archive);
+    CHECK(extracted.error().message == "BSA payload range exceeds source size");
+}
+
+TEST_CASE("extract_bsa_entry follows compression XOR inversion", "[fixture]")
+{
+    // Reference: TES5Edit/Core/wbBSArchive.pas TwbBSFileTES4.Compressed
+    packed_entry archive_default;
+    archive_default.algorithm = libbsa::compression_algorithm::deflate;
+    const auto default_bytes = bsa_archive_bytes(VERSION_FO3, ARCHIVE_COMPRESS, archive_default);
+
+    packed_entry file_override;
+    file_override.algorithm = libbsa::compression_algorithm::deflate;
+    file_override.file_compress_flag = true;
+    const auto override_bytes = bsa_archive_bytes(VERSION_FO3, 0, file_override);
+
+    CHECK(extract_bytes(default_bytes, "meshes/armor/iron.nif") == archive_default.output);
+    CHECK(extract_bytes(override_bytes, "meshes/armor/iron.nif") == file_override.output);
+}
+
+TEST_CASE("extract_bsa_entry rejects truncated embedded names", "[unit]")
+{
+    // Reference: TES5Edit/Core/wbBSArchive.pas ExtractFileData embedded-name skip
+    packed_entry entry;
+    entry.embedded_name = true;
+    entry.stored_size_override = 1;
+    const auto bytes = bsa_archive_bytes(VERSION_FO3, ARCHIVE_EMBEDNAME, entry);
+    const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+    auto archive = libbsa::open_bsa(source);
+    REQUIRE(archive.has_value());
+    libbsa::memory_sink sink;
+
+    auto extracted = libbsa::extract_bsa_entry(archive.value(), source, "meshes/armor/iron.nif", sink);
+
+    REQUIRE_FALSE(extracted.has_value());
+    CHECK(extracted.error().code == libbsa::error_code::malformed_archive);
+    CHECK(extracted.error().message == "truncated embedded BSA name");
+}
