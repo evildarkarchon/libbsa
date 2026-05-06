@@ -272,7 +272,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 4. TES4-Family BSA Read and Extract | 0/5 | Planned | - |
 | 5. TES3 BSA Read and Extract | 0/4 | Planned | - |
 | 6. BA2 GNRL Read and Extract | 0/TBD | Not started | - |
-| 7. BA2 DDS Read and DDS Reconstruction | 0/TBD | Not started | - |
+| 7. BA2 DDS Read and DDS Reconstruction | 0/6 | Planned    |  |
 | 8. Writer Planning, Streaming Emit, and Dedup Core | 0/TBD | Not started | - |
 | 9. BSA Writers | 0/TBD | Not started | - |
 | 10. BA2 Writers | 0/TBD | Not started | - |
