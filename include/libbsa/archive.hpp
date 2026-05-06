@@ -54,6 +54,12 @@ struct entry_metadata {
     std::string path;
     std::uint64_t size{};
     std::uint64_t packed_size{};
+    /// Number of bytes occupied by this entry's on-disk record payload.
+    ///
+    /// For formats with embedded names or compression headers this can be larger
+    /// than `packed_size`; extractors use it to validate the complete source
+    /// range before skipping archive-internal prefixes.
+    std::uint64_t stored_size{};
     std::uint64_t offset{};
     std::uint64_t name_hash{};
     std::uint64_t directory_hash{};

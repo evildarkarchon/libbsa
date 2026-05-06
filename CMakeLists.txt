@@ -65,6 +65,7 @@ target_sources(libbsa
       include/libbsa/archive.hpp
       include/libbsa/archive_path.hpp
       include/libbsa/archive_view.hpp
+      include/libbsa/bsa.hpp
       include/libbsa/compression.hpp
       include/libbsa/detect.hpp
       include/libbsa/io.hpp)
@@ -160,6 +161,14 @@ if(BUILD_TESTING)
       Catch2::Catch2WithMain)
 
   catch_discover_tests(libbsa_lz4_codec_tests TEST_PREFIX "libbsa_lz4_codec_tests." ADD_TAGS_AS_LABELS PROPERTIES LABELS "unit;codec")
+
+  add_executable(libbsa_bsa_reader_tests tests/bsa_reader_tests.cpp)
+  target_link_libraries(libbsa_bsa_reader_tests
+    PRIVATE
+      libbsa::libbsa
+      Catch2::Catch2WithMain)
+
+  catch_discover_tests(libbsa_bsa_reader_tests TEST_PREFIX "libbsa_bsa_reader_tests." ADD_TAGS_AS_LABELS PROPERTIES LABELS "unit;fixture")
 
   add_executable(libbsa_public_header_smoke tests/public_header_smoke.cpp)
   target_link_libraries(libbsa_public_header_smoke
