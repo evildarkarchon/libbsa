@@ -53,12 +53,15 @@ int main()
     const libbsa::bsa_archive bsa{summary, std::vector{bsa_metadata}};
     const auto bsa_paths = bsa.paths();
     const auto bsa_entry = bsa.entry("meshes/armor/iron.nif");
+    const auto open_bsa_fn = &libbsa::open_bsa;
+    const auto extract_bsa_entry_fn = &libbsa::extract_bsa_entry;
 
     return ok.has_value() && source.size() == 2 && write.has_value() && sink.bytes().size() == 2 && codec.has_value() &&
             codec.value() == libbsa::compression_algorithm::lz4_block && write_compression.has_value() &&
             write_compression.value() == libbsa::compression_state::lz4_frame && path.has_value() &&
             path.value().string() == "textures/actors/hero.dds" && view.contains("textures\\actors\\hero.dds") &&
-            bsa_paths.size() == 1 && bsa.contains("meshes\\armor\\iron.nif") && bsa_entry.has_value()
+            bsa_paths.size() == 1 && bsa.contains("meshes\\armor\\iron.nif") && bsa_entry.has_value() &&
+            open_bsa_fn != nullptr && extract_bsa_entry_fn != nullptr
         ? 0
         : 1;
 }
