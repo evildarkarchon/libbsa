@@ -16,6 +16,7 @@ namespace {
 
 constexpr std::uint32_t VERSION_FO4_V1 = 0x01;
 constexpr std::uint32_t VERSION_STARFIELD_V2 = 0x02;
+constexpr std::uint32_t VERSION_STARFIELD_V3 = 0x03;
 constexpr std::uint32_t VERSION_FO4_V7 = 0x07;
 constexpr std::uint32_t VERSION_FO4_V8 = 0x08;
 constexpr std::uint32_t RECORD_SIZE = 36;
@@ -60,6 +61,9 @@ struct ba2_entry_fixture {
 
 std::uint32_t header_size_for(std::uint32_t version)
 {
+    if (version == VERSION_STARFIELD_V3) {
+        return 36U;
+    }
     return version == VERSION_STARFIELD_V2 ? 32U : 24U;
 }
 
@@ -99,7 +103,7 @@ std::vector<std::byte> ba2_gnrl_archive_bytes(std::uint32_t version,
     if (version == VERSION_STARFIELD_V2) {
         append_u32(bytes, 0);
         append_u32(bytes, 0);
-    } else if (compression_method != 0) {
+    } else if (version == VERSION_STARFIELD_V3) {
         append_u32(bytes, 0);
         append_u32(bytes, 0);
         append_u32(bytes, compression_method);
@@ -158,6 +162,22 @@ ba2_entry_fixture deflate_entry(std::uint32_t version, std::string path)
     return entry;
 }
 
+ba2_entry_fixture lz4_block_entry(std::uint32_t version, std::string path)
+{
+    ba2_entry_fixture entry;
+    entry.path = std::move(path);
+    entry.name_hash = 0x50000000U + version;
+    entry.directory_hash = 0x60000000U + version;
+    entry.size = 8;
+    const std::vector<std::byte> output{std::byte{0x14}, std::byte{0x24}, static_cast<std::byte>(version), std::byte{0x34},
+                                        std::byte{0x44}, std::byte{0x54}, std::byte{0x64}, std::byte{0x74}};
+    auto compressed = libbsa::compress_payload(libbsa::compression_algorithm::lz4_block, std::span<const std::byte>{output});
+    REQUIRE(compressed.has_value());
+    entry.payload = std::move(compressed.value());
+    entry.packed_size = static_cast<std::uint32_t>(entry.payload.size());
+    return entry;
+}
+
 std::vector<std::byte> extract_ba2_bytes(const std::vector<std::byte>& bytes, std::string path)
 {
     const libbsa::memory_source source{std::span<const std::byte>{bytes}};
@@ -173,6 +193,12 @@ std::vector<std::byte> expected_deflate_output(std::uint32_t version)
 {
     return {std::byte{0xde}, std::byte{0xf1}, static_cast<std::byte>(version), std::byte{0x04},
             std::byte{0x06}, std::byte{0x03}, std::byte{0xba}, std::byte{0x2a}};
+}
+
+std::vector<std::byte> expected_lz4_block_output(std::uint32_t version)
+{
+    return {std::byte{0x14}, std::byte{0x24}, static_cast<std::byte>(version), std::byte{0x34},
+            std::byte{0x44}, std::byte{0x54}, std::byte{0x64}, std::byte{0x74}};
 }
 
 void assert_common_gnrl_metadata(std::uint32_t version, libbsa::archive_format expected_format)
@@ -359,5 +385,76 @@ TEST_CASE("extract_ba2_entry returns lookup failure without writing bytes", "[un
     const auto extracted = libbsa::extract_ba2_entry(archive.value(), source, "missing/file.bin", sink);
 
     REQUIRE_FALSE(extracted.has_value());
+    CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("open_ba2 reports Starfield v3 compression method", "[fixture][codec]")
+{
+    const auto entry = raw_entry(VERSION_STARFIELD_V3);
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_STARFIELD_V3, {entry}, 3);
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE(opened.has_value());
+    CHECK(opened.value().summary().format == libbsa::archive_format::starfield_ba2_gnrl);
+    REQUIRE(opened.value().summary().version.has_value());
+    CHECK(*opened.value().summary().version == VERSION_STARFIELD_V3);
+    REQUIRE(opened.value().summary().compression_method.has_value());
+    CHECK(*opened.value().summary().compression_method == 3);
+}
+
+TEST_CASE("extract_ba2_entry writes Starfield v3 CompressionMethod 3 LZ4 block bytes", "[fixture][codec]")
+{
+    const auto entry = lz4_block_entry(VERSION_STARFIELD_V3, "data/starfield/v3/lz4-block.bin");
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_STARFIELD_V3, {entry}, 3);
+    const auto opened = open_bytes(bytes);
+    REQUIRE(opened.has_value());
+    const auto metadata = opened.value().entry(entry.path);
+    REQUIRE(metadata.has_value());
+
+    CHECK(metadata.value().compression == libbsa::compression_state::lz4_block);
+    CHECK(extract_ba2_bytes(bytes, entry.path) == expected_lz4_block_output(VERSION_STARFIELD_V3));
+}
+
+TEST_CASE("extract_ba2_entry keeps raw Starfield v3 method 3 entries raw", "[fixture][codec]")
+{
+    const auto entry = raw_entry(VERSION_STARFIELD_V3);
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_STARFIELD_V3, {entry}, 3);
+    const auto opened = open_bytes(bytes);
+    REQUIRE(opened.has_value());
+    const auto metadata = opened.value().entry(entry.path);
+    REQUIRE(metadata.has_value());
+
+    CHECK(metadata.value().compression == libbsa::compression_state::raw);
+    CHECK(extract_ba2_bytes(bytes, entry.path) == entry.payload);
+}
+
+TEST_CASE("extract_ba2_entry writes Starfield v3 default deflate bytes", "[fixture][codec]")
+{
+    const auto entry = deflate_entry(VERSION_STARFIELD_V3, "data/starfield/v3/default-deflate.bin");
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_STARFIELD_V3, {entry});
+    const auto opened = open_bytes(bytes);
+    REQUIRE(opened.has_value());
+    const auto metadata = opened.value().entry(entry.path);
+    REQUIRE(metadata.has_value());
+
+    CHECK(metadata.value().compression == libbsa::compression_state::deflate);
+    CHECK(extract_ba2_bytes(bytes, entry.path) == expected_deflate_output(VERSION_STARFIELD_V3));
+}
+
+TEST_CASE("extract_ba2_entry rejects Starfield v3 codec confusion without partial writes", "[fixture][codec]")
+{
+    auto entry = lz4_block_entry(VERSION_STARFIELD_V3, "data/starfield/v3/confused.bin");
+    const auto bytes = ba2_gnrl_archive_bytes(VERSION_STARFIELD_V3, {entry}, 99);
+    const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+    const auto opened = libbsa::open_ba2(source);
+    REQUIRE(opened.has_value());
+    libbsa::memory_sink sink;
+
+    const auto extracted = libbsa::extract_ba2_entry(opened.value(), source, entry.path, sink);
+
+    REQUIRE_FALSE(extracted.has_value());
+    CHECK((extracted.error().code == libbsa::error_code::unsupported_format ||
+           extracted.error().code == libbsa::error_code::malformed_archive));
     CHECK(sink.bytes().empty());
 }
