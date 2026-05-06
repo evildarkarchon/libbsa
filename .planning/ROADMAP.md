@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Build, Error, and Test Foundation** - Consumers and maintainers get a reusable C++20 library skeleton, structured failures, and executable tests.
 - [ ] **Phase 2: Streaming API, Archive Model, Detection, and Hashes** - Consumers can identify archives, inspect entries, and perform path/hash lookup through streaming-safe public APIs.
 - [ ] **Phase 3: Compression Services and Policy** - Archive payloads and writers use explicit deflate, LZ4 frame, and raw LZ4 block routing without codec confusion.
-- [ ] **Phase 4: TES4-Family BSA Read and Extract** - Consumers can open, inspect, and extract Oblivion, FO3/FNV/Skyrim LE, and Skyrim SE/AE BSA archives.
+- [x] **Phase 4: TES4-Family BSA Read and Extract** - Consumers can open, inspect, and extract Oblivion, FO3/FNV/Skyrim LE, and Skyrim SE/AE BSA archives.
 - [ ] **Phase 5: TES3 BSA Read and Extract** - Consumers can open, inspect, and extract Morrowind BSA archives with TES3-specific offset semantics.
 - [ ] **Phase 6: BA2 GNRL Read and Extract** - Consumers can open, inspect, and extract Fallout 4 and Starfield general BA2 archives.
 - [ ] **Phase 7: BA2 DDS Read and DDS Reconstruction** - Consumers can extract Fallout 4 and Starfield texture BA2 entries as valid DDS files.
@@ -112,19 +112,19 @@ Plans:
 **Plans**: 5 plans
 Plans:
 **Wave 1**
-- [ ] 04-01-PLAN.md — Define public/private TES4-family BSA contracts and fixture builders.
+- [x] 04-01-PLAN.md — Define public/private TES4-family BSA contracts and fixture builders.
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 04-02-PLAN.md — Implement bounded v103/v104/v105 BSA table parsing and metadata lookup.
+- [x] 04-02-PLAN.md — Implement bounded v103/v104/v105 BSA table parsing and metadata lookup.
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 04-03-PLAN.md — Implement raw, deflate, LZ4-frame, and embedded-name extraction.
+- [x] 04-03-PLAN.md — Implement raw, deflate, LZ4-frame, and embedded-name extraction.
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 04-04-PLAN.md — Harden malformed input and lock compatibility edge cases.
+- [x] 04-04-PLAN.md — Harden malformed input and lock compatibility edge cases.
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 04-05-PLAN.md — Finalize public smoke coverage, documentation, and boundary gates.
+- [x] 04-05-PLAN.md — Finalize public smoke coverage, documentation, and boundary gates.
 
 Cross-cutting constraints:
 - TES4-family BSA support covers Oblivion v103, FO3/FNV/Skyrim LE v104, and Skyrim SE/AE v105.
