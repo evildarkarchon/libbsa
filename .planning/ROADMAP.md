@@ -149,7 +149,7 @@ Plans:
 - [x] 05-02-PLAN.md — Prove TES3 raw extraction and normalized lookup through the streaming sink API.
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 05-03-PLAN.md — Harden TES3 malformed table, name/hash, and payload range handling.
+- [x] 05-03-PLAN.md — Harden TES3 malformed table, name/hash, and payload range handling.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 05-04-PLAN.md — Finalize TES3 documentation, public smoke coverage, and validation gates.
