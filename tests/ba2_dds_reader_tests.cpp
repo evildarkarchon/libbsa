@@ -4,6 +4,7 @@
 #include <libbsa/io.hpp>
 
 #include "ba2_dds_fixture_helpers.hpp"
+#include "texture/dds_validation.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -67,6 +68,34 @@ void assert_fo4_dx10_fixture(const libbsa::test::ba2_dds_fixture& fixture,
     CHECK(texture.value().chunks.front().size == fixture.textures.front().chunks.front().payload.size());
     CHECK(texture.value().chunks.front().packed_size == fixture.textures.front().chunks.front().payload.size());
     CHECK(texture.value().chunks.front().compression == libbsa::compression_state::raw);
+}
+
+std::vector<std::byte> extract_fixture(const libbsa::test::ba2_dds_fixture& fixture, std::string path)
+{
+    const libbsa::memory_source source{std::span<const std::byte>{fixture.bytes}};
+    const auto opened = libbsa::open_ba2(source);
+    REQUIRE(opened.has_value());
+    libbsa::memory_sink sink;
+    const auto extracted = libbsa::extract_ba2_entry(opened.value(), source, std::move(path), sink);
+    REQUIRE(extracted.has_value());
+    return sink.bytes();
+}
+
+void assert_validated_dds(const std::vector<std::byte>& bytes,
+                          std::uint32_t width,
+                          std::uint32_t height,
+                          std::uint32_t mip_count,
+                          std::uint32_t array_size,
+                          bool cubemap)
+{
+    // The private validation helper wraps DirectXTex LoadFromDDSMemory for these extraction tests.
+    const auto validated = libbsa::detail::validate_dds(std::span<const std::byte>{bytes});
+    REQUIRE(validated.has_value());
+    CHECK(validated.value().width == width);
+    CHECK(validated.value().height == height);
+    CHECK(validated.value().mip_count == mip_count);
+    CHECK(validated.value().array_size == array_size);
+    CHECK(validated.value().is_cubemap == cubemap);
 }
 
 } // namespace
@@ -137,4 +166,67 @@ TEST_CASE("open_ba2 reads Starfield DX10 v3 texture_metadata and lz4_block chunk
     CHECK(texture.value().chunks.front().compression == libbsa::compression_state::lz4_block);
     CHECK(texture.value().chunks.front().size == fixture.textures.front().chunks.front().payload.size());
     CHECK(texture.value().chunks.front().packed_size != texture.value().chunks.front().size);
+}
+
+TEST_CASE("extract_ba2_entry writes FO4 deflate DX10 texture as DDS", "[fixture][codec]")
+{
+    const auto fixture = libbsa::test::deflate_chunk_fixture(libbsa::test::VERSION_FO4_DX10_V1);
+
+    const auto bytes = extract_fixture(fixture, "textures/generated/deflate.dds");
+
+    assert_validated_dds(bytes, 4, 4, 1, 1, false);
+}
+
+TEST_CASE("extract_ba2_entry writes Starfield LZ4 DX10 texture as DDS", "[fixture][codec]")
+{
+    const auto fixture = libbsa::test::starfield_dx10_v3_lz4_block_fixture();
+
+    const auto bytes = extract_fixture(fixture, "textures/generated/lz4_block.dds");
+
+    assert_validated_dds(bytes, 4, 4, 1, 1, false);
+}
+
+TEST_CASE("extract_ba2_entry writes raw chunk DX10 texture as DDS", "[fixture]")
+{
+    const auto fixture = libbsa::test::raw_chunk_fixture(libbsa::test::VERSION_FO4_DX10_V8);
+
+    const auto bytes = extract_fixture(fixture, "textures/generated/one_mip.dds");
+
+    assert_validated_dds(bytes, 4, 4, 1, 1, false);
+}
+
+TEST_CASE("extract_ba2_entry writes one-mip and multi-mip DX10 textures as DDS", "[fixture]")
+{
+    const auto one_mip = extract_fixture(libbsa::test::one_mip_fixture(libbsa::test::VERSION_FO4_DX10_V1),
+                                         "textures/generated/one_mip.dds");
+    const auto multi_mip = extract_fixture(libbsa::test::multi_mip_fixture(libbsa::test::VERSION_FO4_DX10_V8),
+                                           "textures/generated/multi_mip.dds");
+
+    assert_validated_dds(one_mip, 4, 4, 1, 1, false);
+    assert_validated_dds(multi_mip, 16, 16, 3, 1, false);
+}
+
+TEST_CASE("extract_ba2_entry writes cubemap and array DX10 textures as DDS", "[fixture]")
+{
+    const auto cubemap = extract_fixture(libbsa::test::cubemap_fixture(libbsa::test::VERSION_FO4_DX10_V1),
+                                         "textures/generated/cubemap.dds");
+    const auto array = extract_fixture(libbsa::test::array_fixture(libbsa::test::VERSION_FO4_DX10_V8),
+                                       "textures/generated/array.dds");
+
+    assert_validated_dds(cubemap, 4, 4, 1, 6, true);
+    assert_validated_dds(array, 4, 4, 1, 4, false);
+}
+
+TEST_CASE("extract_ba2_entry leaves no partial bytes when DX10 validation fails", "[fixture]")
+{
+    const auto fixture = libbsa::test::malformed_reconstruction_failure_fixture();
+    const libbsa::memory_source source{std::span<const std::byte>{fixture.bytes}};
+    const auto opened = libbsa::open_ba2(source);
+    REQUIRE(opened.has_value());
+    libbsa::memory_sink sink;
+
+    const auto extracted = libbsa::extract_ba2_entry(opened.value(), source, "textures/generated/reconstruction_failure.dds", sink);
+
+    REQUIRE_FALSE(extracted.has_value());
+    CHECK(sink.bytes().empty());
 }

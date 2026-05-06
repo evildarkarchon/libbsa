@@ -186,6 +186,9 @@ if(BUILD_TESTING)
   add_executable(libbsa_ba2_dds_reader_tests
     tests/ba2_dds_reader_tests.cpp
     tests/ba2_dds_fixture_helpers.cpp)
+  target_include_directories(libbsa_ba2_dds_reader_tests
+    PRIVATE
+      src)
   target_link_libraries(libbsa_ba2_dds_reader_tests
     PRIVATE
       libbsa::libbsa
