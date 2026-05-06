@@ -169,7 +169,7 @@ Cross-cutting constraints:
   3. Consumer can open, list, inspect, and extract Starfield BA2 GNRL v3 archives with version-specific compression-method routing.
   4. Consumer can resolve BA2 entry names from length-prefixed file name tables located at `FileTableOffset`.
   5. Maintainer can validate BA2 general metadata, hash, file-table, deflate, and raw LZ4 behavior against fixtures.
-**Plans**: 6 plans
+**Plans**: 7 plans
 Plans:
 **Wave 1**
 - [ ] 06-01-PLAN.md — Add the BA2 public API surface, metadata-only wrapper, CMake wiring, and public smoke coverage.
@@ -188,6 +188,9 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 06-06-PLAN.md — Finalize README documentation, public smoke confirmation, and Phase 6 validation gates.
+
+**Wave 7** *(gap closure; blocked on Wave 6 completion)*
+- [ ] 06-07-PLAN.md — Close BA2 malformed verification gaps for duplicate normalized names and zero-entry FileTableOffset validation.
 
 ### Phase 7: BA2 DDS Read and DDS Reconstruction
 **Goal**: Consumers can extract Fallout 4 and Starfield BA2 texture entries as valid, loadable DDS files.
