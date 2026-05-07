@@ -1,7 +1,7 @@
 {
   "model_profile": "inherit",
   "commit_docs": true,
-  "parallelization": true,
+  "parallelization": false,
   "search_gitignored": false,
   "brave_search": false,
   "firecrawl": false,
@@ -18,7 +18,7 @@
     "verifier": true,
     "nyquist_validation": true,
     "auto_advance": true,
-    "_auto_chain_active": false,
+    "_auto_chain_active": true,
     "node_repair": true,
     "node_repair_budget": 2,
     "ui_phase": true,
