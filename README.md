@@ -175,6 +175,18 @@ TES4-family BSA writer output uses native headers, folder/file tables, name bloc
 
 Generated writer tests perform read-after-write validation by reopening every supported BSA variant through `open_bsa` and extracting entries through `extract_bsa_entry`. Phase 09 does not claim BA2 writer support, DDS packing, CLI or GUI workflows, external corpus comparison, performance or multi-threaded packing, or true in-place mutation; those remain deferred to later phases or out of scope for libbsa.
 
+## BA2 writer support
+
+Phase 10 adds production BA2 writer support for Fallout 4 and Starfield GNRL and DDS/DX10 archives. Consumers can use `include/libbsa/ba2_writer.hpp` to plan archives for GNRL targets `fallout4_gnrl_v1`, `fallout4_gnrl_v7`, `fallout4_gnrl_v8`, `starfield_gnrl_v2`, and `starfield_gnrl_v3`, plus DX10 targets `fallout4_dx10_v1`, `fallout4_dx10_v7`, `fallout4_dx10_v8`, and `starfield_dx10_v3`.
+
+BA2 GNRL writing accepts memory-backed entries (`ba2_gnrl_memory_entry`) and disk-backed entries (`ba2_gnrl_disk_entry`). BA2 DDS writing accepts memory-backed DDS inputs (`ba2_dds_memory_entry`) and disk-backed DDS files (`ba2_dds_disk_entry`), analyzes actual DDS bytes during planning, and stores only libbsa-owned texture metadata, chunk payloads, table bytes, and stored payload bytes in the returned `ba2_write_plan`.
+
+Planning owns all compatibility-critical bytes and layout decisions before output starts. `finalize_ba2_write` only streams plan-owned table and payload bytes to a caller-owned `byte_sink`; callers keep sink ownership and receive the first structured sink failure unchanged. Native BA2 output supports raw payloads, Fallout 4 / Starfield method-0 deflate payloads, and Starfield v3 method-3 raw LZ4-block payloads selected by explicit target/options rather than file extension inference. Opt-in deduplication shares identical post-policy GNRL payloads and DDS chunk payloads where BA2 offsets can legally point at the same stored bytes.
+
+Generated writer tests perform read-after-write validation by reopening emitted BA2 bytes through `open_ba2`, inspecting `ba2_archive` entry or texture metadata, and extracting entries through `extract_ba2_entry`. DDS writer tests validate reconstructed DDS output after extraction through the private texture-validation boundary.
+
+Phase 10 does not claim external corpus comparison against BSArchPro or official Bethesda tools, broad malformed archive hardening beyond writer-input validation, texture transcoding/resizing/optimization, CLI or GUI packing workflows, performance or multi-threaded packing, or true in-place mutation. Those remain deferred to later phases or out of scope for libbsa.
+
 ## TES5Edit/ reference boundary
 
 `TES5Edit/` is a read-only reference submodule. It documents prior BSArchPro-compatible behavior, but it is not vendored source for libbsa.
