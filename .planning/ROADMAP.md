@@ -237,7 +237,7 @@ Plans:
 - [x] 08-02-PLAN.md — TDD deterministic writer planning, validation, compression-policy resolution, and checked layout preview.
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 08-03-PLAN.md — TDD opt-in post-policy payload deduplication and unsupported-target failure behavior.
+- [x] 08-03-PLAN.md — TDD opt-in post-policy payload deduplication and unsupported-target failure behavior.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 08-04-PLAN.md — TDD streaming finalization through caller-owned `byte_sink` implementations.

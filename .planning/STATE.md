@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-05-07T00:47:01.309Z"
+last_updated: "2026-05-07T00:53:39.369Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 12
   completed_phases: 7
   total_plans: 40
-  completed_plans: 36
-  percent: 90
+  completed_plans: 37
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 08 (writer-planning-streaming-emit-and-dedup-core) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [█████████░] 90%
 | Phase 07 P06 | 3min | 3 tasks | 3 files |
 | Phase 08 P01 | 3min | 2 tasks | 6 files |
 | Phase 08 P02 | 4min | 2 tasks | 4 files |
+| Phase 08 P03 | 3min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,9 @@ Recent decisions affecting current work:
 - [Phase 08]: Writer planning now normalizes and sorts entries before layout, preserving deterministic preview order independent of caller input order.
 - [Phase 08]: Writer plans own stored payload bytes produced through resolve_write_compression, resolve_payload_codec, and compress_payload.
 - [Phase 08]: Writer layout arithmetic failures return malformed_archive / writer layout overflow before any finalization sink can be touched.
+- [Phase 08]: Writer deduplication groups exact post-policy stored payload bytes only after compression routing succeeds. — Writer deduplication groups exact post-policy stored payload bytes only after compression routing succeeds.
+- [Phase 08]: Unsupported deduplication requests fail early with unsupported_format instead of silently emitting non-dedup output. — Unsupported deduplication requests fail early with unsupported_format instead of silently emitting non-dedup output.
+- [Phase 08]: Public writer comments use digest-neutral wording so no public content hash surface is implied. — Public writer comments use digest-neutral wording so no public content hash surface is implied.
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T00:47:01.302Z
+Last session: 2026-05-07T00:53:07.609Z
 Stopped at: Completed 08-02-PLAN.md
 Resume file: None
