@@ -272,7 +272,7 @@ Plans:
 - [x] 09-04-PLAN.md — TDD disk-backed BSA inputs and finalization failure safety.
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 09-05-PLAN.md — TDD TES3 Morrowind native BSA serialization.
+- [x] 09-05-PLAN.md — TDD TES3 Morrowind native BSA serialization.
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 09-06-PLAN.md — Finalize public smoke coverage, documentation, validation, and boundary gates.
