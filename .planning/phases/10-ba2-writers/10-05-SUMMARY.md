@@ -73,7 +73,7 @@ Each task was committed atomically:
 1. **Task 1 RED: Add failing DDS disk, compression, dedup, and failure tests** - `d2a5bea` (test)
 2. **Task 2 GREEN: Implement DDS disk planning, chunk codecs, dedup, and safety failures** - `448388a` (feat)
 
-**Plan metadata:** pending final metadata commit
+**Plan metadata:** `a9bfc17` (docs)
 
 _Note: TDD tasks produced RED and GREEN commits; no separate refactor commit was needed._
 
