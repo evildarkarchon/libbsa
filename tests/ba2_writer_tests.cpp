@@ -25,7 +25,11 @@ constexpr std::uint32_t magic_dx10 = 0x30315844U;
 constexpr std::uint64_t gnrl_record_size = 36U;
 constexpr std::uint32_t dds_header_size = 124U;
 constexpr std::uint32_t dds_pixel_format_size = 32U;
+constexpr std::uint32_t dxgi_format_r8g8b8a8_unorm = 28U;
 constexpr std::uint32_t dxgi_format_bc1_unorm = 71U;
+constexpr std::uint32_t dxgi_format_bc3_unorm = 77U;
+constexpr std::uint32_t dxgi_format_bc5_unorm = 83U;
+constexpr std::uint32_t dxgi_format_bc7_unorm = 98U;
 constexpr std::uint32_t dds_dimension_texture2d = 3U;
 constexpr std::uint32_t dds_resource_misc_texturecube = 0x00000004U;
 constexpr std::uint32_t ddscaps_complex = 0x00000008U;
@@ -103,9 +107,14 @@ std::uint32_t expected_header_size(libbsa::ba2_write_target target)
     }
 }
 
-std::uint32_t bc1_mip_size(std::uint32_t width, std::uint32_t height) noexcept
+std::uint32_t dds_mip_size(std::uint32_t format, std::uint32_t width, std::uint32_t height) noexcept
 {
-    return std::max(1U, (width + 3U) / 4U) * std::max(1U, (height + 3U) / 4U) * 8U;
+    if (format == dxgi_format_r8g8b8a8_unorm) {
+        return std::max(1U, width) * std::max(1U, height) * 4U;
+    }
+
+    const auto block_bytes = format == dxgi_format_bc1_unorm ? 8U : 16U;
+    return std::max(1U, (width + 3U) / 4U) * std::max(1U, (height + 3U) / 4U) * block_bytes;
 }
 
 std::vector<std::byte> deterministic_dds_payload(std::size_t size, std::byte seed)
@@ -117,17 +126,18 @@ std::vector<std::byte> deterministic_dds_payload(std::size_t size, std::byte see
     return payload;
 }
 
-std::vector<std::byte> generated_bc1_dds(std::uint32_t width,
-                                         std::uint32_t height,
-                                         std::uint32_t mip_count,
-                                         std::uint32_t array_size,
-                                         bool cubemap,
-                                         std::byte seed)
+std::vector<std::byte> generated_dx10_dds(std::uint32_t format,
+                                          std::uint32_t width,
+                                          std::uint32_t height,
+                                          std::uint32_t mip_count,
+                                          std::uint32_t array_size,
+                                          bool cubemap,
+                                          std::byte seed)
 {
     std::size_t payload_size = 0;
     for (std::uint32_t item = 0; item < array_size; ++item) {
         for (std::uint32_t mip = 0; mip < mip_count; ++mip) {
-            payload_size += bc1_mip_size(std::max(1U, width >> mip), std::max(1U, height >> mip));
+            payload_size += dds_mip_size(format, std::max(1U, width >> mip), std::max(1U, height >> mip));
         }
     }
 
@@ -139,7 +149,7 @@ std::vector<std::byte> generated_bc1_dds(std::uint32_t width,
                           (mip_count > 1 ? 0x00020000U : 0U));
     append_u32(bytes, height);
     append_u32(bytes, width);
-    append_u32(bytes, bc1_mip_size(width, height) * array_size);
+    append_u32(bytes, dds_mip_size(format, width, height) * array_size);
     append_u32(bytes, 0U);
     append_u32(bytes, mip_count);
     for (int i = 0; i < 11; ++i) {
@@ -157,7 +167,7 @@ std::vector<std::byte> generated_bc1_dds(std::uint32_t width,
     append_u32(bytes, 0U);
     append_u32(bytes, 0U);
     append_u32(bytes, 0U);
-    append_u32(bytes, dxgi_format_bc1_unorm);
+    append_u32(bytes, format);
     append_u32(bytes, dds_dimension_texture2d);
     append_u32(bytes, cubemap ? dds_resource_misc_texturecube : 0U);
     // The DDS DX10 header stores cubemap arrays as cube counts; DirectXTex expands one cube to six faces.
@@ -167,6 +177,16 @@ std::vector<std::byte> generated_bc1_dds(std::uint32_t width,
     auto payload = deterministic_dds_payload(payload_size, seed);
     bytes.insert(bytes.end(), payload.begin(), payload.end());
     return bytes;
+}
+
+std::vector<std::byte> generated_bc1_dds(std::uint32_t width,
+                                         std::uint32_t height,
+                                         std::uint32_t mip_count,
+                                         std::uint32_t array_size,
+                                         bool cubemap,
+                                         std::byte seed)
+{
+    return generated_dx10_dds(dxgi_format_bc1_unorm, width, height, mip_count, array_size, cubemap, seed);
 }
 
 libbsa::ba2_dds_memory_entry dds_entry(std::string path,
@@ -185,10 +205,12 @@ void require_valid_dds(std::span<const std::byte> bytes,
                        std::uint32_t height,
                        std::uint32_t mip_count,
                        std::uint32_t array_size,
-                       bool cubemap)
+                       bool cubemap,
+                       std::uint32_t expected_format = dxgi_format_bc1_unorm)
 {
     const auto validated = libbsa::detail::validate_dds(bytes);
     REQUIRE(validated.has_value());
+    CHECK(validated.value().format.value == expected_format);
     CHECK(validated.value().width == width);
     CHECK(validated.value().height == height);
     CHECK(validated.value().mip_count == mip_count);
@@ -495,6 +517,76 @@ TEST_CASE("BA2 DDS planning rejects malformed input structurally", "[unit][ba2-w
 
     REQUIRE_FALSE(malformed.has_value());
     CHECK(malformed.error().code == libbsa::error_code::malformed_archive);
+}
+
+TEST_CASE("BA2 DDS writer accepts the supported DX10 format set", "[unit][ba2-writer][roundtrip][fixture]")
+{
+    struct supported_format_case {
+        std::uint32_t format{};
+        std::string_view path;
+        std::byte seed{};
+    };
+
+    const std::array formats{supported_format_case{dxgi_format_bc1_unorm, "textures/generated/supported_bc1.dds", std::byte{0x12}},
+                             supported_format_case{dxgi_format_bc3_unorm, "textures/generated/supported_bc3.dds", std::byte{0x23}},
+                             supported_format_case{dxgi_format_bc5_unorm, "textures/generated/supported_bc5.dds", std::byte{0x34}},
+                             supported_format_case{dxgi_format_bc7_unorm, "textures/generated/supported_bc7.dds", std::byte{0x45}},
+                             supported_format_case{dxgi_format_r8g8b8a8_unorm, "textures/generated/supported_rgba.dds", std::byte{0x56}}};
+
+    for (const auto& format : formats) {
+        const std::vector entries{dds_entry(std::string{format.path}, generated_dx10_dds(format.format, 4, 4, 1, 1, false, format.seed))};
+
+        const auto plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                    std::span<const libbsa::ba2_dds_memory_entry>{entries});
+
+        REQUIRE(plan.has_value());
+        const auto& texture = find_planned_dds_texture(plan.value(), format.path);
+        CHECK(texture.format.value == format.format);
+
+        const auto bytes = finalize_to_bytes(plan.value());
+        const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+        const auto archive = libbsa::open_ba2(source);
+        REQUIRE(archive.has_value());
+        const auto metadata = archive.value().texture_metadata(std::string{format.path});
+        REQUIRE(metadata.has_value());
+        CHECK(metadata.value().format.value == format.format);
+        require_valid_dds(extract_ba2_bytes(bytes, std::string{format.path}), 4, 4, 1, 1, false, format.format);
+    }
+}
+
+TEST_CASE("BA2 DDS writer rejects unsupported DX10 formats outside the supported set", "[unit][ba2-writer][failure]")
+{
+    auto unsupported = generated_dx10_dds(dxgi_format_bc1_unorm, 4, 4, 1, 1, false, std::byte{0x67});
+    unsupported[128] = std::byte{0x4a};
+    unsupported[129] = std::byte{0x00};
+    unsupported[130] = std::byte{0x00};
+    unsupported[131] = std::byte{0x00};
+    const std::vector entries{dds_entry("textures/generated/unsupported-format.dds", unsupported)};
+
+    const auto plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                std::span<const libbsa::ba2_dds_memory_entry>{entries});
+
+    REQUIRE_FALSE(plan.has_value());
+    CHECK(plan.error().code == libbsa::error_code::unsupported_format);
+}
+
+TEST_CASE("BA2 DX10 forced compression stores equal or larger chunks raw to avoid PackedSize Size ambiguity", "[unit][ba2-writer][codec][roundtrip]")
+{
+    const std::vector entries{dds_entry("textures/generated/tiny-forced.dds",
+                                        generated_dx10_dds(dxgi_format_bc1_unorm, 4, 4, 1, 1, false, std::byte{0x78}),
+                                        libbsa::compression_policy::force_compressed)};
+
+    const auto plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                std::span<const libbsa::ba2_dds_memory_entry>{entries});
+
+    REQUIRE(plan.has_value());
+    const auto& texture = find_planned_dds_texture(plan.value(), "textures/generated/tiny-forced.dds");
+    REQUIRE(texture.chunks.size() == 1U);
+    CHECK(texture.chunks.front().compression == libbsa::compression_state::raw);
+    CHECK(texture.chunks.front().packed_size == texture.chunks.front().unpacked_size);
+
+    const auto bytes = finalize_to_bytes(plan.value());
+    require_valid_dds(extract_ba2_bytes(bytes, "textures/generated/tiny-forced.dds"), 4, 4, 1, 1, false);
 }
 
 TEST_CASE("plans BA2 DX10 archives from in-memory DDS inputs", "[unit][ba2-writer][roundtrip][fixture]")
