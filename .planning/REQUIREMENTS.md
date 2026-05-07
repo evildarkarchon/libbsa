@@ -1,0 +1,168 @@
+# Requirements: libbsa
+
+**Defined:** 2026-05-07
+**Core Value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
+
+## v1 Requirements
+
+Requirements for the initial complete library scope. Each maps to roadmap phases.
+
+### Foundation
+
+- [ ] **FND-01**: Consumer can build libbsa as a reusable C++20 library with CMake and vcpkg.
+- [ ] **FND-02**: Consumer can choose static or shared library builds without changing public headers.
+- [ ] **FND-03**: Consumer can include public libbsa headers without transitively depending on libdeflate, lz4, DirectXTex, or TES5Edit headers.
+- [ ] **FND-04**: Consumer can receive structured C++20-compatible result/error values for I/O and format failures.
+- [ ] **FND-05**: Consumer can use libbsa objects without process-wide mutable global state or singleton behavior.
+- [ ] **FND-06**: Maintainer can run Catch2/CTest test suites for unit, fixture, round-trip, compatibility, and slow tests.
+- [ ] **FND-07**: Maintainer can add small legal archive fixtures without mutating the `TES5Edit/` submodule or relying on copyrighted game archives in the repo.
+
+### Format Detection and Metadata
+
+- [ ] **FMT-01**: Consumer can open an archive and have libbsa detect its format from magic bytes, archive type fields, and version fields rather than file extension.
+- [ ] **FMT-02**: Consumer can inspect archive type, variant, version, flags, file count, and supported compression behavior.
+- [ ] **FMT-03**: Consumer can list archive file paths in a stable library-owned path representation.
+- [ ] **FMT-04**: Consumer can check whether a path exists in an archive using normalized archive virtual path semantics.
+- [ ] **FMT-05**: Consumer can retrieve per-entry metadata including raw size, compressed size, offset, compression method, hash values, and format-specific record data where applicable.
+- [ ] **FMT-06**: Maintainer can add a future archive version by extending detection/record handling without rewriting unrelated format families.
+
+### Shared Binary and Compression Services
+
+- [ ] **BIN-01**: Parser can read little-endian integer fields with checked offset, count, and size arithmetic.
+- [ ] **BIN-02**: Parser rejects truncated or malformed archives with structured errors instead of out-of-bounds reads or undefined behavior.
+- [ ] **BIN-03**: Extraction can stream payloads to caller-provided sinks without loading whole archives into memory.
+- [ ] **BIN-04**: Compression service can decompress deflate payloads with exact expected output size validation.
+- [ ] **BIN-05**: Compression service can decompress Skyrim SE/AE BSA LZ4 frame payloads through the LZ4 frame API.
+- [ ] **BIN-06**: Compression service can decompress Starfield BA2 v3 raw LZ4 block payloads through the LZ4 block API.
+- [ ] **BIN-07**: Compression service can compress deflate, LZ4 frame, and raw LZ4 block payloads for writer phases using explicit target-format routing.
+- [ ] **BIN-08**: Hash service can compute TES3, TES4-family, and FO4/BA2 hashes with fixture-backed expected values.
+
+### BSA Read Support
+
+- [ ] **BSA-01**: Consumer can read and extract files from TES4/Oblivion BSA v103 archives.
+- [ ] **BSA-02**: Consumer can read and extract files from FO3/FNV/Skyrim LE BSA v104 archives.
+- [ ] **BSA-03**: Consumer can read and extract files from Skyrim SE/AE BSA v105 archives.
+- [ ] **BSA-04**: Consumer can read and extract files from TES3/Morrowind BSA archives.
+- [ ] **BSA-05**: Consumer can locate TES4-family BSA entries by path using hash-based lookup behavior compatible with BSArchPro.
+- [ ] **BSA-06**: Consumer can extract embedded-name BSA entries while preserving payload bytes compatible with BSArchPro output.
+- [ ] **BSA-07**: Consumer can extract BSA entries that are stored raw, deflate-compressed, or LZ4-frame-compressed according to archive version and flags.
+- [ ] **BSA-08**: Consumer can extract TES3 entries using data-section-relative offset semantics.
+
+### BA2 General Read Support
+
+- [ ] **GNRL-01**: Consumer can read and extract files from Fallout 4 BA2 GNRL archives.
+- [ ] **GNRL-02**: Consumer can read and extract files from Starfield BA2 v2 GNRL archives.
+- [ ] **GNRL-03**: Consumer can read and extract structurally valid Starfield BA2 v3 GNRL archives.
+- [ ] **GNRL-04**: Consumer can parse BA2 filename tables located at `FileTableOffset` with length-prefixed names.
+- [ ] **GNRL-05**: Consumer can distinguish raw BA2 entries from compressed entries using `PackedSize` and format metadata.
+- [ ] **GNRL-06**: Consumer can extract BA2 GNRL entries compressed with deflate.
+- [ ] **GNRL-07**: Consumer can extract Starfield BA2 v3 GNRL entries compressed with raw LZ4 block when `CompressionMethod == 3`.
+- [ ] **GNRL-08**: Consumer can inspect and preserve Starfield BA2 v2/v3 version-specific header fields in metadata.
+
+### BA2 DDS Read Support
+
+- [ ] **DDS-01**: Consumer can read Fallout 4 BA2 DX10/DDS texture archives.
+- [ ] **DDS-02**: Consumer can read Starfield BA2 v3 DX10/DDS texture archives.
+- [ ] **DDS-03**: Consumer can inspect texture metadata including dimensions, mip count, DXGI format, cubemap/array information, and chunk layout.
+- [ ] **DDS-04**: Consumer can extract BA2 DDS entries as valid DDS files with reconstructed headers.
+- [ ] **DDS-05**: Consumer can extract BA2 DDS chunks compressed with deflate or raw LZ4 block according to archive version and chunk metadata.
+- [ ] **DDS-06**: Maintainer can validate reconstructed DDS outputs through DirectXTex metadata loading without exposing DirectXTex types publicly.
+- [ ] **DDS-07**: Consumer can extract cubemap textures with correct DDS metadata and face/mip ordering.
+
+### BSA Write Support
+
+- [ ] **WBSA-01**: Consumer can create new TES4/Oblivion BSA v103 archives from disk files or memory buffers.
+- [ ] **WBSA-02**: Consumer can create new FO3/FNV/Skyrim LE BSA v104 archives from disk files or memory buffers.
+- [ ] **WBSA-03**: Consumer can create new Skyrim SE/AE BSA v105 archives from disk files or memory buffers.
+- [ ] **WBSA-04**: Consumer can create new TES3/Morrowind BSA archives from disk files or memory buffers.
+- [ ] **WBSA-05**: Writer can generate folder and file indexes sorted by format-compatible hash order.
+- [ ] **WBSA-06**: Writer can derive archive flags and file flags from content using compatible behavior.
+- [ ] **WBSA-07**: Writer can apply per-file compression overrides while respecting target archive defaults.
+- [ ] **WBSA-08**: Writer can write embedded file names where appropriate without triggering known compatibility hazards.
+- [ ] **WBSA-09**: Writer can optionally deduplicate identical file payloads by content hash.
+- [ ] **WBSA-10**: Maintainer can round-trip BSA writer output by packing, reopening, extracting, and byte-comparing source files.
+
+### BA2 Write Support
+
+- [ ] **WBA2-01**: Consumer can create new Fallout 4 BA2 GNRL archives from disk files or memory buffers.
+- [ ] **WBA2-02**: Consumer can create new Starfield BA2 GNRL archives with explicit target version and compression method policy.
+- [ ] **WBA2-03**: Writer can serialize BA2 filename tables at the end of the archive.
+- [ ] **WBA2-04**: Writer can compress BA2 GNRL entries with deflate or raw LZ4 block according to target format/version.
+- [ ] **WBA2-05**: Writer can preserve or set version-specific BA2 header fields according to documented target profiles.
+- [ ] **WBA2-06**: Consumer can create new Fallout 4 BA2 DX10/DDS texture archives from DDS files.
+- [ ] **WBA2-07**: Consumer can create new Starfield BA2 v3 DX10/DDS texture archives from DDS files.
+- [ ] **WBA2-08**: Writer can analyze DDS input through DirectXTex and generate BA2 texture records from library-owned metadata.
+- [ ] **WBA2-09**: Writer can split DDS textures into compatible mip/chunk records with configurable chunk limits.
+- [ ] **WBA2-10**: Writer can apply per-chunk compression and serialize chunk metadata so extracted DDS output remains valid.
+- [ ] **WBA2-11**: Maintainer can round-trip BA2 writer output by packing, reopening, extracting, and byte-comparing or metadata-validating source files.
+
+### Compatibility and Validation
+
+- [ ] **COMP-01**: Maintainer can compare extracted fixture output against BSArchPro-derived expected bytes or metadata.
+- [ ] **COMP-02**: Maintainer can verify archives produced by libbsa load or validate as compatible with their target game/archive family.
+- [ ] **COMP-03**: Consumer can receive structured compatibility warnings for known Bethesda quirks without requiring a logging framework.
+- [ ] **COMP-04**: Parser can gracefully reject malformed, truncated, oversized, or internally inconsistent archives.
+- [ ] **COMP-05**: Maintainer can run sanitizer-backed malformed-input tests for parser and decompressor hardening.
+- [ ] **COMP-06**: Maintainer can document each non-obvious compatibility rule with reference evidence or fixture coverage.
+
+### Performance and Concurrency
+
+- [ ] **PERF-01**: Consumer can extract large archives using streaming I/O and bounded scratch buffers.
+- [ ] **PERF-02**: Consumer can pack large archives using streaming writer flows and bounded scratch buffers.
+- [ ] **PERF-03**: Consumer can opt into parallel compression during packing after single-threaded correctness is established.
+- [ ] **PERF-04**: Consumer can opt into parallel decompression during bulk extraction after single-threaded correctness is established.
+- [ ] **PERF-05**: Maintainer can run benchmarks comparing single-threaded and multi-threaded packing/extraction for large archives.
+- [ ] **PERF-06**: Consumer can understand documented thread-safety guarantees for readers, writers, entries, callbacks, and sinks.
+
+### Documentation and Examples
+
+- [ ] **DOC-01**: Consumer can read Doxygen-generated public API documentation for supported archive operations.
+- [ ] **DOC-02**: Consumer can follow integration examples for opening archives, listing files, extracting files, creating archives, and handling errors.
+- [ ] **DOC-03**: Consumer can read target-format guidance that explains supported variants, compression methods, and known compatibility warnings.
+- [ ] **DOC-04**: Maintainer can run CI for build and test validation on MSVC and optionally Clang/GCC.
+
+## v2 Requirements
+
+Deferred to future releases. Tracked but not in current roadmap.
+
+### Tooling
+
+- **TOOL-01**: Consumer can use an optional sample CLI that demonstrates library APIs without becoming the primary product.
+- **TOOL-02**: Consumer can use optional fuzzing harnesses as public developer tooling after strict parsers stabilize.
+
+### Advanced Compatibility
+
+- **ADV-01**: Consumer can request lenient recovery mode for partially corrupt archives after strict validation is complete.
+- **ADV-02**: Consumer can use a stable long-term ABI policy if libbsa is published as a binary package.
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| GUI application | The product is a reusable library; consumers build their own UI. |
+| First-party CLI as v1 scope | A CLI can be a later example, but it must not shape the core library API. |
+| Network or URL archive access | v1 focuses on local/stream archive I/O. |
+| ZIP, 7z, libarchive, or non-Bethesda formats | libbsa's value is Bethesda-specific behavior and compatibility. |
+| Editing, formatting, compiling, or staging `TES5Edit/` | TES5Edit is a read-only behavioral reference submodule. |
+| In-place mutation of existing archives in v1 | Write-new flows are safer until all format writers, offsets, and transactional rules are proven. |
+| Public DirectXTex, libdeflate, or lz4 types | Public headers should remain portable and dependency-light. |
+| External logging or formatting libraries | Consumers should decide their own logging and formatting stack. |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| FND-01..DOC-04 | Pending roadmap | Pending |
+
+**Coverage:**
+- v1 requirements: 81 total
+- Mapped to phases: 0
+- Unmapped: 81
+
+---
+*Requirements defined: 2026-05-07*
+*Last updated: 2026-05-07 after initial definition*
