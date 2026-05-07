@@ -3,6 +3,7 @@
 #include <libbsa/archive_view.hpp>
 #include <libbsa/ba2.hpp>
 #include <libbsa/bsa.hpp>
+#include <libbsa/bsa_writer.hpp>
 #include <libbsa/compression.hpp>
 #include <libbsa/detect.hpp>
 #include <libbsa/io.hpp>
@@ -13,7 +14,42 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
+
+namespace {
+
+bool can_write_and_reopen_bsa(libbsa::bsa_write_target target, const std::string& path)
+{
+    libbsa::bsa_memory_entry entry{};
+    entry.path = path;
+    entry.payload = {std::byte{0x41}, std::byte{0x42}, std::byte{0x43}};
+    entry.compression = libbsa::compression_policy::force_raw;
+    std::vector entries{entry};
+
+    const auto plan = libbsa::plan_bsa_write(target, std::span<const libbsa::bsa_memory_entry>{entries});
+    if (!plan.has_value()) {
+        return false;
+    }
+
+    libbsa::memory_sink archive_sink;
+    const auto finalized = libbsa::finalize_bsa_write(plan.value(), archive_sink);
+    if (!finalized.has_value()) {
+        return false;
+    }
+
+    const libbsa::memory_source archive_source{std::span<const std::byte>{archive_sink.bytes()}};
+    const auto archive = libbsa::open_bsa(archive_source);
+    if (!archive.has_value() || !archive.value().contains(path)) {
+        return false;
+    }
+
+    libbsa::memory_sink extracted;
+    const auto extracted_result = libbsa::extract_bsa_entry(archive.value(), archive_source, path, extracted);
+    return extracted_result.has_value() && extracted.bytes() == entry.payload;
+}
+
+} // namespace
 
 int main()
 {
@@ -115,10 +151,18 @@ int main()
         target, std::span<const libbsa::writer_entry>{writer_entries}, libbsa::writer_options{.deduplicate = true});
     libbsa::memory_sink writer_sink;
     const auto writer_finalized = writer_plan.has_value() ? libbsa::finalize_archive_write(writer_plan.value(), writer_sink)
-                                                          : libbsa::failure<void>({libbsa::error_code::unsupported_format,
-                                                                                   "writer smoke planning failed"});
+                                                           : libbsa::failure<void>({libbsa::error_code::unsupported_format,
+                                                                                    "writer smoke planning failed"});
     const auto plan_writer_fn = &libbsa::plan_archive_write;
     const auto finalize_writer_fn = &libbsa::finalize_archive_write;
+    const auto plan_bsa_write_fn = &libbsa::plan_bsa_write;
+    const auto plan_bsa_write_from_disk_fn = &libbsa::plan_bsa_write_from_disk;
+    const auto finalize_bsa_write_fn = &libbsa::finalize_bsa_write;
+    const bool bsa_writer_smoke_ok =
+        can_write_and_reopen_bsa(libbsa::bsa_write_target::tes3_morrowind, "meshes/public_smoke_tes3.nif") &&
+        can_write_and_reopen_bsa(libbsa::bsa_write_target::oblivion_v103, "meshes/public_smoke_v103.nif") &&
+        can_write_and_reopen_bsa(libbsa::bsa_write_target::fo3_fnv_skyrim_le_v104, "meshes/public_smoke_v104.nif") &&
+        can_write_and_reopen_bsa(libbsa::bsa_write_target::skyrim_se_ae_v105, "meshes/public_smoke_v105.nif");
 
     return ok.has_value() && source.size() == 2 && write.has_value() && sink.bytes().size() == 2 && codec.has_value() &&
             codec.value() == libbsa::compression_algorithm::lz4_block && write_compression.has_value() &&
@@ -135,7 +179,8 @@ int main()
             extract_ba2_entry_fn != nullptr && writer_plan.has_value() && writer_plan.value().entries.size() == 2 &&
             writer_plan.value().table_regions.size() == 4 && writer_plan.value().data_regions.size() == 2 &&
             writer_plan.value().total_size == writer_sink.bytes().size() && writer_finalized.has_value() &&
-            plan_writer_fn != nullptr && finalize_writer_fn != nullptr
+            plan_writer_fn != nullptr && finalize_writer_fn != nullptr && plan_bsa_write_fn != nullptr &&
+            plan_bsa_write_from_disk_fn != nullptr && finalize_bsa_write_fn != nullptr && bsa_writer_smoke_ok
         ? 0
         : 1;
 }
