@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
+status: verifying
 stopped_at: Phase 10 context gathered
-last_updated: "2026-05-07T11:11:46.888Z"
+last_updated: "2026-05-07T11:17:00.205Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 12
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 52
-  completed_plans: 51
-  percent: 98
+  completed_plans: 52
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 Phase: 10 (ba2-writers) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-07
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -128,6 +128,8 @@ Recent decisions affecting current work:
 - [Phase 10-ba2-writers]: BA2 DDS writer tests verify disk input equivalence through libbsa read-back metadata and extracted DDS bytes. — Matches WRT-03 read-back proof and avoids relying on host file lifetimes after planning.
 - [Phase 10-ba2-writers]: Unsupported DX10 formats are rejected before DirectXTex load when the DDS header advertises an unsupported format. — Keeps unsupported DDS inputs as structured unsupported_format failures rather than generic malformed-load failures.
 - [Phase 10-ba2-writers]: Native DX10 raw chunk records keep packed_size == size, unlike BA2 GNRL's zero packed-size raw marker. — Prevents confusing two BA2 native size encodings and preserves reader codec routing.
+- [Phase 10-ba2-writers]: Phase 10 public documentation claims production BA2 writer support only for the implemented Fallout 4 and Starfield GNRL/DX10 targets; external corpus comparison, broad hardening, texture transforms, CLI/GUI, performance/multithreading, and in-place mutation remain deferred or out of scope. — Keeps Phase 10 claims aligned with implemented support and SPEC boundaries.
+- [Phase 10-ba2-writers]: The public-header smoke now validates BA2 writer APIs by creating, finalizing, reopening, and extracting GNRL and DDS archives for both Fallout 4 and Starfield through public headers only. — Proves consumer-facing BA2 writer compile/link/runtime usability without private headers.
 
 ### Pending Todos
 
@@ -148,10 +150,11 @@ Items acknowledged and carried forward from previous milestone close:
 | Phase 10-ba2-writers P03 | 2min | 2 tasks | 2 files |
 | Phase 10-ba2-writers P04 | 6 min | 2 tasks | 5 files |
 | Phase 10-ba2-writers P05 | 5 min | 2 tasks | 4 files |
+| Phase 10-ba2-writers P06 | 3min | 3 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-05-07T11:11:40.229Z
+Last session: 2026-05-07T11:16:51.695Z
 Stopped at: Phase 10 context gathered
 Stopped at: Completed 10-ba2-writers-02-PLAN.md
 Resume file: None

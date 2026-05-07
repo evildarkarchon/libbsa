@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: BA2 DDS Read and DDS Reconstruction** - Consumers can extract Fallout 4 and Starfield texture BA2 entries as valid DDS files.
 - [x] **Phase 8: Writer Planning, Streaming Emit, and Dedup Core** - Consumers can finalize archives through deterministic streaming writer foundations with optional deduplication.
 - [ ] **Phase 9: BSA Writers** - Consumers can create TES4-family and TES3 BSA archives compatible with target engines.
-- [ ] **Phase 10: BA2 Writers** - Consumers can create Fallout 4 and Starfield BA2 GNRL and DDS archives.
+- [x] **Phase 10: BA2 Writers** - Consumers can create Fallout 4 and Starfield BA2 GNRL and DDS archives. (completed 2026-05-07)
 - [ ] **Phase 11: Compatibility Validation and Hardening** - Maintainers can prove compatibility and malformed-input safety across supported archive families.
 - [ ] **Phase 12: Performance and Documentation** - Consumers get bulk/parallel workflows, benchmarks, and complete API documentation/examples.
 
@@ -304,7 +304,7 @@ Plans:
 - [x] 10-05-PLAN.md — TDD BA2 DX10 disk inputs, chunk compression, deduplication, and DDS safety failures.
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 10-06-PLAN.md — Finalize public smoke coverage, documentation, validation, and boundary gates.
+- [x] 10-06-PLAN.md — Finalize public smoke coverage, documentation, validation, and boundary gates.
 
 ### Phase 11: Compatibility Validation and Hardening
 **Goal**: Maintainers can prove supported formats match reference behavior and malformed archives fail safely.
@@ -345,6 +345,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. BA2 DDS Read and DDS Reconstruction | 6/6 | Complete | 2026-05-06 |
 | 8. Writer Planning, Streaming Emit, and Dedup Core | 6/6 | Complete | 2026-05-06 |
 | 9. BSA Writers | 0/TBD | Not started | - |
-| 10. BA2 Writers | 5/6 | In Progress|  |
+| 10. BA2 Writers | 6/6 | Complete   | 2026-05-07 |
 | 11. Compatibility Validation and Hardening | 0/TBD | Not started | - |
 | 12. Performance and Documentation | 0/TBD | Not started | - |
