@@ -211,6 +211,9 @@ if(BUILD_TESTING)
   catch_discover_tests(libbsa_ba2_dds_reader_tests TEST_PREFIX "libbsa_ba2_dds_reader_tests." ADD_TAGS_AS_LABELS PROPERTIES LABELS "unit;fixture;codec")
 
   add_executable(libbsa_ba2_writer_tests tests/ba2_writer_tests.cpp)
+  target_include_directories(libbsa_ba2_writer_tests
+    PRIVATE
+      src)
   target_link_libraries(libbsa_ba2_writer_tests
     PRIVATE
       libbsa::libbsa

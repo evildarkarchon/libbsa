@@ -3,6 +3,8 @@
 #include <libbsa/ba2.hpp>
 #include <libbsa/ba2_writer.hpp>
 
+#include "texture/dds_validation.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -21,7 +23,17 @@ constexpr std::string_view dds_placeholder = "BA2 DDS writer planning is not imp
 
 constexpr std::uint32_t magic_btdx = 0x58445442U;
 constexpr std::uint32_t magic_gnrl = 0x4c524e47U;
+constexpr std::uint32_t magic_dx10 = 0x30315844U;
 constexpr std::uint64_t gnrl_record_size = 36U;
+constexpr std::uint32_t dds_header_size = 124U;
+constexpr std::uint32_t dds_pixel_format_size = 32U;
+constexpr std::uint32_t dxgi_format_bc1_unorm = 71U;
+constexpr std::uint32_t dds_dimension_texture2d = 3U;
+constexpr std::uint32_t dds_resource_misc_texturecube = 0x00000004U;
+constexpr std::uint32_t ddscaps_complex = 0x00000008U;
+constexpr std::uint32_t ddscaps_texture = 0x00001000U;
+constexpr std::uint32_t ddscaps_mipmap = 0x00400000U;
+constexpr std::uint32_t ddscaps2_cubemap_all_faces = 0x0000fe00U;
 
 template <typename Result>
 void require_unsupported_placeholder(const Result& result, std::string_view message)
@@ -29,6 +41,13 @@ void require_unsupported_placeholder(const Result& result, std::string_view mess
     REQUIRE_FALSE(result.has_value());
     CHECK(result.error().code == libbsa::error_code::unsupported_format);
     CHECK(result.error().message.find(message) != std::string::npos);
+}
+
+void append_u32(std::vector<std::byte>& bytes, std::uint32_t value)
+{
+    for (int shift = 0; shift < 32; shift += 8) {
+        bytes.push_back(static_cast<std::byte>((value >> shift) & 0xffU));
+    }
 }
 
 std::uint16_t le_u16(std::span<const std::byte> bytes, std::size_t offset)
@@ -68,6 +87,14 @@ std::uint32_t expected_version(libbsa::ba2_write_target target)
         return 2U;
     case libbsa::ba2_write_target::starfield_gnrl_v3:
         return 3U;
+    case libbsa::ba2_write_target::fallout4_dx10_v1:
+        return 1U;
+    case libbsa::ba2_write_target::fallout4_dx10_v7:
+        return 7U;
+    case libbsa::ba2_write_target::fallout4_dx10_v8:
+        return 8U;
+    case libbsa::ba2_write_target::starfield_dx10_v3:
+        return 3U;
     default:
         return 0U;
     }
@@ -79,10 +106,104 @@ std::uint32_t expected_header_size(libbsa::ba2_write_target target)
     case libbsa::ba2_write_target::starfield_gnrl_v2:
         return 32U;
     case libbsa::ba2_write_target::starfield_gnrl_v3:
+    case libbsa::ba2_write_target::starfield_dx10_v3:
         return 36U;
     default:
         return 24U;
     }
+}
+
+std::uint32_t bc1_mip_size(std::uint32_t width, std::uint32_t height) noexcept
+{
+    return std::max(1U, (width + 3U) / 4U) * std::max(1U, (height + 3U) / 4U) * 8U;
+}
+
+std::vector<std::byte> deterministic_dds_payload(std::size_t size, std::byte seed)
+{
+    std::vector<std::byte> payload(size);
+    for (std::size_t index = 0; index < payload.size(); ++index) {
+        payload[index] = static_cast<std::byte>((std::to_integer<unsigned char>(seed) + index) & 0xffU);
+    }
+    return payload;
+}
+
+std::vector<std::byte> generated_bc1_dds(std::uint32_t width,
+                                         std::uint32_t height,
+                                         std::uint32_t mip_count,
+                                         std::uint32_t array_size,
+                                         bool cubemap,
+                                         std::byte seed)
+{
+    std::size_t payload_size = 0;
+    for (std::uint32_t item = 0; item < array_size; ++item) {
+        for (std::uint32_t mip = 0; mip < mip_count; ++mip) {
+            payload_size += bc1_mip_size(std::max(1U, width >> mip), std::max(1U, height >> mip));
+        }
+    }
+
+    std::vector<std::byte> bytes;
+    bytes.reserve(4U + dds_header_size + 20U + payload_size);
+    append_u32(bytes, 0x20534444U);
+    append_u32(bytes, dds_header_size);
+    append_u32(bytes, 0x00000001U | 0x00000002U | 0x00000004U | 0x00001000U | 0x00080000U |
+                          (mip_count > 1 ? 0x00020000U : 0U));
+    append_u32(bytes, height);
+    append_u32(bytes, width);
+    append_u32(bytes, bc1_mip_size(width, height) * array_size);
+    append_u32(bytes, 0U);
+    append_u32(bytes, mip_count);
+    for (int i = 0; i < 11; ++i) {
+        append_u32(bytes, 0U);
+    }
+    append_u32(bytes, dds_pixel_format_size);
+    append_u32(bytes, 0x00000004U);
+    append_u32(bytes, magic_dx10);
+    for (int i = 0; i < 5; ++i) {
+        append_u32(bytes, 0U);
+    }
+    append_u32(bytes, ddscaps_texture | (mip_count > 1 ? (ddscaps_complex | ddscaps_mipmap) : 0U) |
+                          (array_size > 1 || cubemap ? ddscaps_complex : 0U));
+    append_u32(bytes, cubemap ? ddscaps2_cubemap_all_faces : 0U);
+    append_u32(bytes, 0U);
+    append_u32(bytes, 0U);
+    append_u32(bytes, 0U);
+    append_u32(bytes, dxgi_format_bc1_unorm);
+    append_u32(bytes, dds_dimension_texture2d);
+    append_u32(bytes, cubemap ? dds_resource_misc_texturecube : 0U);
+    // The DDS DX10 header stores cubemap arrays as cube counts; DirectXTex expands one cube to six faces.
+    append_u32(bytes, cubemap ? std::max(1U, array_size / 6U) : array_size);
+    append_u32(bytes, 0U);
+
+    auto payload = deterministic_dds_payload(payload_size, seed);
+    bytes.insert(bytes.end(), payload.begin(), payload.end());
+    return bytes;
+}
+
+libbsa::ba2_dds_memory_entry dds_entry(std::string path,
+                                       std::vector<std::byte> dds_bytes,
+                                       libbsa::compression_policy compression = libbsa::compression_policy::force_raw)
+{
+    libbsa::ba2_dds_memory_entry entry{};
+    entry.path = std::move(path);
+    entry.dds_bytes = std::move(dds_bytes);
+    entry.compression = compression;
+    return entry;
+}
+
+void require_valid_dds(std::span<const std::byte> bytes,
+                       std::uint32_t width,
+                       std::uint32_t height,
+                       std::uint32_t mip_count,
+                       std::uint32_t array_size,
+                       bool cubemap)
+{
+    const auto validated = libbsa::detail::validate_dds(bytes);
+    REQUIRE(validated.has_value());
+    CHECK(validated.value().width == width);
+    CHECK(validated.value().height == height);
+    CHECK(validated.value().mip_count == mip_count);
+    CHECK(validated.value().array_size == array_size);
+    CHECK(validated.value().is_cubemap == cubemap);
 }
 
 std::vector<libbsa::ba2_gnrl_memory_entry> gnrl_memory_entries()
@@ -321,24 +442,96 @@ TEST_CASE("GNRL write plans expose native table and payload preview details", "[
 
 TEST_CASE("BA2 DDS planning placeholders fail structurally", "[unit][ba2-writer]")
 {
-    libbsa::ba2_dds_memory_entry memory_entry{};
-    memory_entry.path = "textures/a.dds";
-    memory_entry.dds_bytes = {std::byte{0x44}, std::byte{0x44}, std::byte{0x53}, std::byte{0x20}};
-    memory_entry.compression = libbsa::compression_policy::force_compressed;
-    const std::vector memory_entries{memory_entry};
+    const std::vector memory_entries{dds_entry("textures/a.dds", {std::byte{0x44}, std::byte{0x44}, std::byte{0x53}, std::byte{0x20}})};
 
-    libbsa::ba2_dds_disk_entry disk_entry{};
-    disk_entry.host_path = "missing-texture.dds";
-    disk_entry.path = memory_entry.path;
-    disk_entry.compression = memory_entry.compression;
-    const std::vector disk_entries{disk_entry};
+    const auto malformed = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                     std::span<const libbsa::ba2_dds_memory_entry>{memory_entries});
 
-    require_unsupported_placeholder(libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
-                                                              std::span<const libbsa::ba2_dds_memory_entry>{memory_entries}),
-                                    dds_placeholder);
-    require_unsupported_placeholder(libbsa::plan_ba2_dds_write_from_disk(libbsa::ba2_write_target::starfield_dx10_v3,
-                                                                        std::span<const libbsa::ba2_dds_disk_entry>{disk_entries}),
-                                    dds_placeholder);
+    REQUIRE_FALSE(malformed.has_value());
+    CHECK(malformed.error().code == libbsa::error_code::malformed_archive);
+}
+
+TEST_CASE("plans BA2 DX10 archives from in-memory DDS inputs", "[unit][ba2-writer][roundtrip][fixture]")
+{
+    const std::vector entries{dds_entry("textures/generated/one_mip.dds", generated_bc1_dds(4, 4, 1, 1, false, std::byte{0x10})),
+                              dds_entry("textures/generated/multi_mip.dds", generated_bc1_dds(512, 512, 4, 1, false, std::byte{0x20})),
+                              dds_entry("textures/generated/cubemap.dds", generated_bc1_dds(4, 4, 1, 6, true, std::byte{0x30})),
+                              dds_entry("textures/generated/array.dds", generated_bc1_dds(4, 4, 1, 4, false, std::byte{0x40}))};
+
+    for (const auto target : {libbsa::ba2_write_target::fallout4_dx10_v1,
+                              libbsa::ba2_write_target::fallout4_dx10_v7,
+                              libbsa::ba2_write_target::fallout4_dx10_v8,
+                              libbsa::ba2_write_target::starfield_dx10_v3}) {
+        const auto plan = libbsa::plan_ba2_dds_write(target, std::span<const libbsa::ba2_dds_memory_entry>{entries});
+        REQUIRE(plan.has_value());
+        CHECK(plan.value().native.subtype == libbsa::ba2_write_subtype::dx10);
+        CHECK(plan.value().native.version == expected_version(target));
+        CHECK(plan.value().dds.textures.size() == entries.size());
+
+        const auto bytes = finalize_to_bytes(plan.value());
+        CHECK(le_u32(bytes, 0) == magic_btdx);
+        CHECK(le_u32(bytes, 4) == expected_version(target));
+        CHECK(le_u32(bytes, 8) == magic_dx10);
+        CHECK(le_u32(bytes, 12) == entries.size());
+        CHECK(le_u64(bytes, 16) == plan.value().dds.file_table_offset);
+
+        const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+        const auto archive = libbsa::open_ba2(source);
+        REQUIRE(archive.has_value());
+
+        const auto one_mip = archive.value().texture_metadata("textures/generated/one_mip.dds");
+        REQUIRE(one_mip.has_value());
+        CHECK(one_mip.value().format.value == dxgi_format_bc1_unorm);
+        CHECK(one_mip.value().width == 4U);
+        CHECK(one_mip.value().height == 4U);
+        CHECK(one_mip.value().mip_count == 1U);
+        CHECK(one_mip.value().array_size == 1U);
+        REQUIRE(one_mip.value().chunks.size() == 1U);
+        CHECK(one_mip.value().chunks.front().offset >= plan.value().dds.file_table_offset);
+        require_valid_dds(extract_ba2_bytes(bytes, "textures/generated/one_mip.dds"), 4, 4, 1, 1, false);
+        require_valid_dds(extract_ba2_bytes(bytes, "textures/generated/multi_mip.dds"), 512, 512, 4, 1, false);
+        require_valid_dds(extract_ba2_bytes(bytes, "textures/generated/cubemap.dds"), 4, 4, 1, 6, true);
+        require_valid_dds(extract_ba2_bytes(bytes, "textures/generated/array.dds"), 4, 4, 1, 4, false);
+    }
+}
+
+TEST_CASE("DX10 write plans expose texture and chunk preview details", "[unit][ba2-writer][preview]")
+{
+    const std::vector entries{dds_entry("textures/generated/multi_mip.dds", generated_bc1_dds(512, 512, 4, 1, false, std::byte{0x50})),
+                              dds_entry("textures/generated/cubemap.dds", generated_bc1_dds(4, 4, 1, 6, true, std::byte{0x60})),
+                              dds_entry("textures/generated/array.dds", generated_bc1_dds(4, 4, 1, 4, false, std::byte{0x70}))};
+
+    const auto plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                std::span<const libbsa::ba2_dds_memory_entry>{entries});
+
+    REQUIRE(plan.has_value());
+    REQUIRE(plan.value().dds.table_regions.size() >= 2U);
+    CHECK(plan.value().dds.table_regions[0].name == "DX10 texture and chunk table");
+    CHECK(plan.value().dds.table_regions[1].name == "FileTableOffset name table");
+    REQUIRE(plan.value().dds.textures.size() == 3U);
+
+    const auto& multi = plan.value().dds.textures[1];
+    CHECK(multi.path == "textures/generated/multi_mip.dds");
+    CHECK(multi.width == 512U);
+    CHECK(multi.height == 512U);
+    CHECK(multi.mip_count == 4U);
+    REQUIRE(multi.chunks.size() == 2U);
+    CHECK(multi.chunks[0].start_mip == 0U);
+    CHECK(multi.chunks[0].end_mip == 0U);
+    CHECK(multi.chunks[1].start_mip == 1U);
+    CHECK(multi.chunks[1].end_mip == 3U);
+    CHECK(multi.chunks[0].offset < multi.chunks[1].offset);
+    CHECK(multi.chunks[0].packed_size == multi.chunks[0].unpacked_size);
+
+    const auto& cubemap = plan.value().dds.textures[0];
+    CHECK(cubemap.path == "textures/generated/cubemap.dds");
+    CHECK(cubemap.is_cubemap);
+    CHECK(cubemap.array_size == 6U);
+
+    const auto& array = plan.value().dds.textures[2];
+    CHECK(array.path == "textures/generated/array.dds");
+    CHECK_FALSE(array.is_cubemap);
+    CHECK(array.array_size == 4U);
 }
 
 TEST_CASE("BA2 finalization streams an empty plan without touching payload regions", "[unit][ba2-writer]")
