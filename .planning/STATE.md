@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 09 context gathered
-last_updated: "2026-05-07T06:46:52.388Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-05-07T06:53:59.119Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 46
-  completed_plans: 41
-  percent: 89
+  completed_plans: 42
+  percent: 91
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 09 (bsa-writers) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Progress: [█████████░] 89%
 | Phase 08 P05 | 11min | 2 tasks | 5 files |
 | Phase 08 P06 | 5min | 3 tasks | 3 files |
 | Phase 09-bsa-writers P01 | 3min | 2 tasks | 5 files |
+| Phase 09-bsa-writers P02 | 3min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,8 @@ Recent decisions affecting current work:
 - [Phase 08]: Starfield writer planning preserves nonzero CompressionMethod routing through lz4_block so unsupported method values cannot silently fall back to deflate.
 - [Phase 08]: Public smoke and README document writer-core foundations without claiming complete BSA/BA2 writer compatibility.
 - [Phase 09]: BSA writer API seam uses explicit targets, separate memory/disk inputs, and structured unsupported placeholders. — Preserves Phase 9 decisions D-01, D-02, D-08 and keeps later TDD plans behind stable public function names.
+- [Phase 09]: TES4-family BSA finalization writes plan-owned native table bytes — Preserves plan/finalize determinism and avoids recomputing native layout during sink emission.
+- [Phase 09]: TES4-family FileFlags are computed from known entry extensions without a public override — Keeps public controls semantic and minimal while matching Phase 9 research.
 
 ### Pending Todos
 
@@ -132,6 +135,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T06:46:40.189Z
-Stopped at: Phase 09 context gathered
+Last session: 2026-05-07T06:53:59.113Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None

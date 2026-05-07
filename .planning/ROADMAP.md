@@ -263,7 +263,7 @@ Plans:
 - [x] 09-01-PLAN.md — Add the public BSA writer API seam, placeholder implementation, and focused test target.
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 09-02-PLAN.md — TDD native TES4-family raw BSA layout and read-after-write behavior.
+- [x] 09-02-PLAN.md — TDD native TES4-family raw BSA layout and read-after-write behavior.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 09-03-PLAN.md — TDD TES4-family compression, embedded-name, and dedup semantics.
