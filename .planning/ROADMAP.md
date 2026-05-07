@@ -286,7 +286,7 @@ Plans:
   2. Consumer can create Fallout 4 and Starfield BA2 DDS archives from DDS inputs with proper metadata analysis and mipmap chunking.
   3. Consumer can read back libbsa-written BA2 archives and retrieve matching paths, metadata, and payload bytes.
   4. Maintainer can validate BA2 DDS pack/extract behavior with mip, cubemap, DXGI format, chunking, and compression fixtures.
-**Plans**: 6 plans
+**Plans**: 7 plans
 Plans:
 **Wave 1**
 - [x] 10-01-PLAN.md — Add the BA2 writer public API seam, placeholder implementation, and focused test target.
@@ -305,6 +305,9 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [x] 10-06-PLAN.md — Finalize public smoke coverage, documentation, validation, and boundary gates.
+
+**Wave 7** *(gap closure; blocked on Wave 6 completion)*
+- [ ] 10-07-PLAN.md — Close BA2 DDS/DX10 format support and compressed chunk ambiguity verification gaps.
 
 ### Phase 11: Compatibility Validation and Hardening
 **Goal**: Maintainers can prove supported formats match reference behavior and malformed archives fail safely.
@@ -345,6 +348,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. BA2 DDS Read and DDS Reconstruction | 6/6 | Complete | 2026-05-06 |
 | 8. Writer Planning, Streaming Emit, and Dedup Core | 6/6 | Complete | 2026-05-06 |
 | 9. BSA Writers | 0/TBD | Not started | - |
-| 10. BA2 Writers | 6/6 | Complete   | 2026-05-07 |
+| 10. BA2 Writers | 6/7 | Ready to execute | - |
 | 11. Compatibility Validation and Hardening | 0/TBD | Not started | - |
 | 12. Performance and Documentation | 0/TBD | Not started | - |
