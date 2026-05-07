@@ -439,7 +439,7 @@ TEST_CASE("GNRL write plans expose native table and payload preview details", "[
     }
 }
 
-TEST_CASE("BA2 DDS planning placeholders fail structurally", "[unit][ba2-writer]")
+TEST_CASE("BA2 DDS planning rejects malformed input structurally", "[unit][ba2-writer]")
 {
     const std::vector memory_entries{dds_entry("textures/a.dds", {std::byte{0x44}, std::byte{0x44}, std::byte{0x53}, std::byte{0x20}})};
 
