@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-05-07T06:53:59.119Z"
+last_updated: "2026-05-07T06:58:16.223Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 46
-  completed_plans: 42
-  percent: 91
+  completed_plans: 43
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 09 (bsa-writers) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -74,6 +74,7 @@ Progress: [█████████░] 91%
 | Phase 08 P06 | 5min | 3 tasks | 3 files |
 | Phase 09-bsa-writers P01 | 3min | 2 tasks | 5 files |
 | Phase 09-bsa-writers P02 | 3min | 2 tasks | 4 files |
+| Phase 09-bsa-writers P03 | 1min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,8 @@ Recent decisions affecting current work:
 - [Phase 09]: BSA writer API seam uses explicit targets, separate memory/disk inputs, and structured unsupported placeholders. — Preserves Phase 9 decisions D-01, D-02, D-08 and keeps later TDD plans behind stable public function names.
 - [Phase 09]: TES4-family BSA finalization writes plan-owned native table bytes — Preserves plan/finalize determinism and avoids recomputing native layout during sink emission.
 - [Phase 09]: TES4-family FileFlags are computed from known entry extensions without a public override — Keeps public controls semantic and minimal while matching Phase 9 research.
+- [Phase 09-bsa-writers]: TES4-family embedded-name prefixes use native backslash archive path bytes. — Matches native BSA embedded-name byte spelling while reader extraction remains length-based.
+- [Phase 09-bsa-writers]: BSA deduplication shares exact post-policy stored payload bytes. — Sharing after compression and embedded-name shaping prevents source-byte dedup from reusing incompatible native payload regions.
 
 ### Pending Todos
 
@@ -135,6 +138,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T06:53:59.113Z
+Last session: 2026-05-07T06:58:09.040Z
 Stopped at: Completed 09-02-PLAN.md
 Resume file: None

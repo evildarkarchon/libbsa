@@ -266,7 +266,7 @@ Plans:
 - [x] 09-02-PLAN.md — TDD native TES4-family raw BSA layout and read-after-write behavior.
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 09-03-PLAN.md — TDD TES4-family compression, embedded-name, and dedup semantics.
+- [x] 09-03-PLAN.md — TDD TES4-family compression, embedded-name, and dedup semantics.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 09-04-PLAN.md — TDD disk-backed BSA inputs and finalization failure safety.
