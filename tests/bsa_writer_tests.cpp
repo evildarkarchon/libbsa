@@ -16,6 +16,7 @@
 
 namespace libbsa::detail {
 
+[[nodiscard]] std::uint64_t hash_tes3_path(std::string_view path);
 [[nodiscard]] std::uint64_t hash_tes4_path(std::string_view path);
 
 } // namespace libbsa::detail
@@ -23,6 +24,7 @@ namespace libbsa::detail {
 namespace {
 
 constexpr std::uint32_t bsa_magic = 0x00415342;
+constexpr std::uint32_t version_tes3 = 0x00000100;
 constexpr std::uint32_t version_tes4 = 0x67;
 constexpr std::uint32_t version_fo3 = 0x68;
 constexpr std::uint32_t version_sse = 0x69;
@@ -35,6 +37,10 @@ constexpr std::uint32_t file_textures = 0x0002;
 constexpr std::uint32_t file_menus = 0x0004;
 constexpr std::uint32_t file_sounds = 0x0008;
 constexpr std::uint32_t file_size_compress = 0x40000000;
+constexpr std::size_t tes3_header_size = 12;
+constexpr std::size_t tes3_file_record_size = 8;
+constexpr std::size_t tes3_name_offset_size = 4;
+constexpr std::size_t tes3_hash_size = 8;
 
 std::uint32_t le_u32(std::span<const std::byte> bytes, std::size_t offset)
 {
@@ -52,6 +58,29 @@ std::uint64_t le_u64(std::span<const std::byte> bytes, std::size_t offset)
                  << static_cast<unsigned>(shift);
     }
     return value;
+}
+
+std::uint64_t tes3_reference_hash_word_order(std::span<const std::byte> bytes, std::size_t offset)
+{
+    const auto high = static_cast<std::uint64_t>(le_u32(bytes, offset));
+    const auto low = static_cast<std::uint64_t>(le_u32(bytes, offset + 4U));
+    return (high << 32U) | low;
+}
+
+std::uint32_t tes3_hash_offset(std::span<const std::byte> bytes)
+{
+    return le_u32(bytes, 4);
+}
+
+std::size_t tes3_hash_table_offset(std::span<const std::byte> bytes)
+{
+    return tes3_header_size + tes3_hash_offset(bytes);
+}
+
+std::size_t tes3_data_section_offset(std::span<const std::byte> bytes)
+{
+    const auto count = le_u32(bytes, 8);
+    return tes3_hash_table_offset(bytes) + (static_cast<std::size_t>(count) * tes3_hash_size);
 }
 
 std::vector<libbsa::bsa_memory_entry> tes4_family_entries()
@@ -158,6 +187,31 @@ libbsa::bsa_memory_entry bsa_entry(std::string path,
     entry.payload = std::move(payload);
     entry.compression = compression;
     return entry;
+}
+
+std::vector<libbsa::bsa_memory_entry> tes3_entries_unordered()
+{
+    return {bsa_entry("textures/tx_sand.dds", ascii_bytes("sand"), libbsa::compression_policy::force_raw),
+            bsa_entry("meshes/marker.nif", ascii_bytes("mesh"), libbsa::compression_policy::force_raw),
+            bsa_entry("icons/marker.tga", ascii_bytes("icon"), libbsa::compression_policy::force_raw)};
+}
+
+std::vector<std::string> tes3_paths_sorted_by_hash(std::span<const libbsa::bsa_memory_entry> entries)
+{
+    std::vector<std::string> paths;
+    paths.reserve(entries.size());
+    for (const auto& entry : entries) {
+        paths.push_back(entry.path);
+    }
+    std::sort(paths.begin(), paths.end(), [](const auto& left, const auto& right) {
+        const auto left_hash = libbsa::detail::hash_tes3_path(left);
+        const auto right_hash = libbsa::detail::hash_tes3_path(right);
+        if (left_hash != right_hash) {
+            return left_hash < right_hash;
+        }
+        return left < right;
+    });
+    return paths;
 }
 
 libbsa::bsa_disk_entry disk_entry(std::filesystem::path host_path,
@@ -275,6 +329,98 @@ TEST_CASE("plans and finalizes TES4-family raw BSA archives for every required v
             CHECK(extract_bytes(bytes, normalized) == entry.payload);
         }
     }
+}
+
+TEST_CASE("writes TES3 BSA records in TES3-compatible hash sorting order", "[unit][bsa-writer][tes3]")
+{
+    const auto entries = tes3_entries_unordered();
+    const auto expected_paths = tes3_paths_sorted_by_hash(std::span<const libbsa::bsa_memory_entry>{entries});
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::tes3_morrowind,
+                                            std::span<const libbsa::bsa_memory_entry>{entries});
+
+    REQUIRE(plan.has_value());
+    REQUIRE(plan.value().entries.size() == expected_paths.size());
+    for (std::size_t i = 0; i < expected_paths.size(); ++i) {
+        CHECK(plan.value().entries[i].path == expected_paths[i]);
+        CHECK(plan.value().entries[i].file_hash == libbsa::detail::hash_tes3_path(expected_paths[i]));
+    }
+}
+
+TEST_CASE("serializes TES3 name offsets hash table and data-section-relative offsets", "[unit][bsa-writer][tes3]")
+{
+    const auto entries = tes3_entries_unordered();
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::tes3_morrowind,
+                                            std::span<const libbsa::bsa_memory_entry>{entries});
+    REQUIRE(plan.has_value());
+    const auto bytes = finalize_to_bytes(plan.value());
+
+    CHECK(le_u32(bytes, 0) == version_tes3);
+    CHECK(le_u32(bytes, 8) == entries.size());
+    const auto hash_table_offset = tes3_hash_table_offset(bytes);
+    const auto data_section_offset = tes3_data_section_offset(bytes);
+    CHECK(hash_table_offset < data_section_offset);
+    REQUIRE(bytes.size() == plan.value().total_size);
+
+    std::size_t expected_name_offset = 0;
+    for (std::size_t i = 0; i < plan.value().entries.size(); ++i) {
+        const auto record_offset = tes3_header_size + (i * tes3_file_record_size);
+        const auto name_offset_offset = tes3_header_size + (plan.value().entries.size() * tes3_file_record_size) +
+                                        (i * tes3_name_offset_size);
+        const auto relative_offset = le_u32(bytes, record_offset + 4U);
+        CHECK(le_u32(bytes, name_offset_offset) == expected_name_offset);
+        CHECK(tes3_reference_hash_word_order(bytes, hash_table_offset + (i * tes3_hash_size)) == plan.value().entries[i].file_hash);
+        CHECK(plan.value().entries[i].offset == data_section_offset + relative_offset);
+        expected_name_offset += plan.value().entries[i].path.size() + 1U;
+    }
+}
+
+TEST_CASE("round trips TES3 raw payloads through open_bsa and extract_bsa_entry", "[unit][bsa-writer][tes3][roundtrip]")
+{
+    const auto entries = tes3_entries_unordered();
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::tes3_morrowind,
+                                            std::span<const libbsa::bsa_memory_entry>{entries});
+    REQUIRE(plan.has_value());
+    const auto bytes = finalize_to_bytes(plan.value());
+    const libbsa::memory_source source{std::span<const std::byte>{bytes}};
+    const auto archive = libbsa::open_bsa(source);
+    REQUIRE(archive.has_value());
+    CHECK(archive.value().summary().format == libbsa::archive_format::tes3_bsa);
+
+    for (const auto& entry : entries) {
+        const auto metadata = archive.value().entry(entry.path);
+        REQUIRE(metadata.has_value());
+        const auto& planned = find_planned_entry(plan.value(), entry.path);
+        CHECK(metadata.value().offset == planned.offset);
+        CHECK(metadata.value().stored_size == entry.payload.size());
+        CHECK(metadata.value().compression == libbsa::compression_state::raw);
+        CHECK(extract_bytes(bytes, entry.path) == entry.payload);
+    }
+}
+
+TEST_CASE("rejects TES3 compression requests with unsupported_format", "[unit][bsa-writer][tes3][failure]")
+{
+    const std::vector entries{bsa_entry("meshes/packed.nif", ascii_bytes("packed"), libbsa::compression_policy::force_compressed)};
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::tes3_morrowind,
+                                            std::span<const libbsa::bsa_memory_entry>{entries});
+
+    REQUIRE_FALSE(plan.has_value());
+    CHECK(plan.error().code == libbsa::error_code::unsupported_format);
+}
+
+TEST_CASE("rejects TES3 embedded-name requests with malformed_archive or unsupported_format", "[unit][bsa-writer][tes3][failure]")
+{
+    const std::vector entries{bsa_entry("meshes/plain.nif", ascii_bytes("plain"), libbsa::compression_policy::force_raw)};
+    libbsa::bsa_write_options options{};
+    options.embedded_names = true;
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::tes3_morrowind,
+                                            std::span<const libbsa::bsa_memory_entry>{entries},
+                                            options);
+
+    REQUIRE_FALSE(plan.has_value());
+    CHECK((plan.error().code == libbsa::error_code::malformed_archive || plan.error().code == libbsa::error_code::unsupported_format));
 }
 
 TEST_CASE("exposes native TES4 table regions and offsets before finalization", "[unit][bsa-writer]")
