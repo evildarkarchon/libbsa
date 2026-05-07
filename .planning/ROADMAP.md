@@ -286,7 +286,25 @@ Plans:
   2. Consumer can create Fallout 4 and Starfield BA2 DDS archives from DDS inputs with proper metadata analysis and mipmap chunking.
   3. Consumer can read back libbsa-written BA2 archives and retrieve matching paths, metadata, and payload bytes.
   4. Maintainer can validate BA2 DDS pack/extract behavior with mip, cubemap, DXGI format, chunking, and compression fixtures.
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+**Wave 1**
+- [ ] 10-01-PLAN.md — Add the BA2 writer public API seam, placeholder implementation, and focused test target.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 10-02-PLAN.md — TDD native BA2 GNRL memory layout and read-after-write behavior.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 10-03-PLAN.md — TDD BA2 GNRL disk inputs, compression routes, deduplication, and structured failures.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 10-04-PLAN.md — TDD DDS input analysis and native BA2 DX10 memory layout.
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 10-05-PLAN.md — TDD BA2 DX10 disk inputs, chunk compression, deduplication, and DDS safety failures.
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 10-06-PLAN.md — Finalize public smoke coverage, documentation, validation, and boundary gates.
 
 ### Phase 11: Compatibility Validation and Hardening
 **Goal**: Maintainers can prove supported formats match reference behavior and malformed archives fail safely.
