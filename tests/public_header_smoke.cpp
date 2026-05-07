@@ -7,6 +7,7 @@
 #include <libbsa/detect.hpp>
 #include <libbsa/io.hpp>
 #include <libbsa/result.hpp>
+#include <libbsa/writer.hpp>
 
 #include <array>
 #include <cstddef>
@@ -95,6 +96,30 @@ int main()
     const auto open_ba2_fn = &libbsa::open_ba2;
     const auto extract_ba2_entry_fn = &libbsa::extract_ba2_entry;
 
+    libbsa::writer_target target{};
+    target.format = libbsa::archive_format::fo4_ba2_gnrl;
+    target.archive_default_compressed = false;
+    target.supports_compression = true;
+    target.supports_shared_data_regions = true;
+
+    libbsa::writer_entry writer_first{};
+    writer_first.path = "meshes/armor/iron.nif";
+    writer_first.payload = {std::byte{0x01}, std::byte{0x02}};
+    writer_first.compression = libbsa::compression_policy::force_raw;
+    libbsa::writer_entry writer_second{};
+    writer_second.path = "textures/interface/lut.dds";
+    writer_second.payload = {std::byte{0x03}};
+    writer_second.compression = libbsa::compression_policy::force_raw;
+    std::vector writer_entries{writer_first, writer_second};
+    const auto writer_plan = libbsa::plan_archive_write(
+        target, std::span<const libbsa::writer_entry>{writer_entries}, libbsa::writer_options{.deduplicate = true});
+    libbsa::memory_sink writer_sink;
+    const auto writer_finalized = writer_plan.has_value() ? libbsa::finalize_archive_write(writer_plan.value(), writer_sink)
+                                                          : libbsa::failure<void>({libbsa::error_code::unsupported_format,
+                                                                                   "writer smoke planning failed"});
+    const auto plan_writer_fn = &libbsa::plan_archive_write;
+    const auto finalize_writer_fn = &libbsa::finalize_archive_write;
+
     return ok.has_value() && source.size() == 2 && write.has_value() && sink.bytes().size() == 2 && codec.has_value() &&
             codec.value() == libbsa::compression_algorithm::lz4_block && write_compression.has_value() &&
             write_compression.value() == libbsa::compression_state::lz4_frame && path.has_value() &&
@@ -107,7 +132,10 @@ int main()
             ba2_texture.value().chunks.size() == 1 && ba2_texture.value().chunks.front().offset == 96 &&
             !missing_texture.has_value() && missing_texture.error().code == libbsa::error_code::malformed_archive &&
             open_bsa_fn != nullptr && extract_bsa_entry_fn != nullptr && open_ba2_fn != nullptr &&
-            extract_ba2_entry_fn != nullptr
+            extract_ba2_entry_fn != nullptr && writer_plan.has_value() && writer_plan.value().entries.size() == 2 &&
+            writer_plan.value().table_regions.size() == 4 && writer_plan.value().data_regions.size() == 2 &&
+            writer_plan.value().total_size == writer_sink.bytes().size() && writer_finalized.has_value() &&
+            plan_writer_fn != nullptr && finalize_writer_fn != nullptr
         ? 0
         : 1;
 }

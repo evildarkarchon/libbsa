@@ -147,6 +147,24 @@ rg -n "DirectXTex|DXGI_FORMAT|Windows\.h|libdeflate|lz4|TES5Edit" include/libbsa
 git status --short TES5Edit
 ```
 
+## Writer planning and streaming finalization
+
+Phase 08 adds writer-core foundations for deterministic planning, optional deduplication, and sink-based finalization. `plan_archive_write` accepts in-memory `writer_entry` values, normalizes and sorts archive paths, resolves compression policy, and returns a `write_plan` before any output sink is touched.
+
+`write_plan` exposes sorted entries, table regions, data regions, compression states, archive-absolute offsets, stored sizes, and total size. Each planned data region owns its post-policy stored payload bytes so `finalize_archive_write` can write plan-owned bytes to a caller-owned `byte_sink` without recomputing compression, path normalization, sorting, or deduplication decisions.
+
+Deduplication is opt-in via `writer_options{.deduplicate = true}`. It shares byte-identical post-policy stored payloads only when `writer_target::supports_shared_data_regions` is true; unsupported target capabilities return structured errors instead of silently changing layout behavior.
+
+Phase 08 uses generated test-only harness read-back to validate emitted bytes and round-trip payload extraction through real codec routes. It does not claim complete TES3/TES4 BSA or BA2 GNRL/DDS writer compatibility; production archive-family writers remain deferred to the dedicated writer phases.
+
+Phase 08 validation commands:
+
+```powershell
+ctest --preset windows-msvc-vcpkg -R "libbsa_writer_tests|libbsa.public_header_smoke" --output-on-failure
+ctest --preset windows-msvc-vcpkg --output-on-failure
+git status --short TES5Edit
+```
+
 ## TES5Edit/ reference boundary
 
 `TES5Edit/` is a read-only reference submodule. It documents prior BSArchPro-compatible behavior, but it is not vendored source for libbsa.
