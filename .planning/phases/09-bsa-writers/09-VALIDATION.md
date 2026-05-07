@@ -76,3 +76,14 @@ created: 2026-05-06T23:07:43.3423504-07:00
 - [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** Phase 09 validation sign-off complete after 09-06 focused and full boundary gates.
+
+## Final Phase Gate Results
+
+| Gate | Command | Result |
+|------|---------|--------|
+| Focused BSA writer, writer-core, BSA reader, compression policy, and public smoke tests | `ctest --test-dir build/windows-vs2026-vcpkg --output-on-failure -C Debug -R "libbsa_bsa_writer_tests\|libbsa_writer_tests\|libbsa_bsa_reader_tests\|libbsa_compression_policy_tests\|libbsa.public_header_smoke"` | ✅ 70/70 passed |
+| Full regression suite | `ctest --test-dir build/windows-vs2026-vcpkg --output-on-failure -C Debug` | ✅ 158/158 passed |
+| Public-header private-token boundary | `rg -n "DirectXTex\|DXGI_FORMAT\|Windows\.h\|libdeflate\|TES5Edit\|lz4\.h\|lz4frame\.h\|LZ4_" include/libbsa` | ✅ no matches |
+| Explicit CMake source boundary | `rg -n "^[^#]*\b(GLOB\|GLOB_RECURSE)\b" CMakeLists.txt` | ✅ no matches |
+| Stale writer placeholder check | `rg -n "BSA (disk )?writer (planning\|finalization) is not implemented" tests/bsa_writer_tests.cpp` | ✅ no matches |
+| TES5Edit submodule boundary | `git status --short TES5Edit` | ✅ empty |
