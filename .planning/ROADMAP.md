@@ -307,7 +307,7 @@ Plans:
 - [x] 10-06-PLAN.md — Finalize public smoke coverage, documentation, validation, and boundary gates.
 
 **Wave 7** *(gap closure; blocked on Wave 6 completion)*
-- [ ] 10-07-PLAN.md — Close BA2 DDS/DX10 format support and compressed chunk ambiguity verification gaps.
+- [x] 10-07-PLAN.md — Close BA2 DDS/DX10 format support and compressed chunk ambiguity verification gaps.
 
 ### Phase 11: Compatibility Validation and Hardening
 **Goal**: Maintainers can prove supported formats match reference behavior and malformed archives fail safely.
@@ -348,6 +348,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. BA2 DDS Read and DDS Reconstruction | 6/6 | Complete | 2026-05-06 |
 | 8. Writer Planning, Streaming Emit, and Dedup Core | 6/6 | Complete | 2026-05-06 |
 | 9. BSA Writers | 0/TBD | Not started | - |
-| 10. BA2 Writers | 6/7 | Ready to execute | - |
+| 10. BA2 Writers | 7/7 | Complete   | 2026-05-07 |
 | 11. Compatibility Validation and Hardening | 0/TBD | Not started | - |
 | 12. Performance and Documentation | 0/TBD | Not started | - |
