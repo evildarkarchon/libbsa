@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-05-07T00:39:19.913Z"
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-05-07T00:47:01.309Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 12
   completed_phases: 7
   total_plans: 40
-  completed_plans: 35
-  percent: 88
+  completed_plans: 36
+  percent: 90
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 08 (writer-planning-streaming-emit-and-dedup-core) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [█████████░] 88%
 | Phase 07 P05 | 3min | 2 tasks | 4 files |
 | Phase 07 P06 | 3min | 3 tasks | 3 files |
 | Phase 08 P01 | 3min | 2 tasks | 6 files |
+| Phase 08 P02 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Validated FileTableOffset against byte_source::size even for zero-entry BA2 archives so empty archives remain allowed but impossible metadata is rejected.
 - [Phase 08]: Established writer planning as an operation-style public API with in-memory entries and caller-owned finalization sinks. — Matches Phase 8 D-01 through D-04 and existing operation-style archive APIs.
 - [Phase 08]: Kept writer planning/finalization behavior behind structured unsupported_format placeholders for later TDD plans. — Prevents false writer compatibility claims while establishing compile-safe seams for subsequent behavior work.
+- [Phase 08]: Writer planning now normalizes and sorts entries before layout, preserving deterministic preview order independent of caller input order.
+- [Phase 08]: Writer plans own stored payload bytes produced through resolve_write_compression, resolve_payload_codec, and compress_payload.
+- [Phase 08]: Writer layout arithmetic failures return malformed_archive / writer layout overflow before any finalization sink can be touched.
 
 ### Pending Todos
 
@@ -113,6 +117,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T00:39:19.907Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-05-07T00:47:01.302Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None

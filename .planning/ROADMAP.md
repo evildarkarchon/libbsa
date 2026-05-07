@@ -234,7 +234,7 @@ Plans:
 - [x] 08-01-PLAN.md — Add the writer contract skeleton, source wiring, and writer test target.
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 08-02-PLAN.md — TDD deterministic writer planning, validation, compression-policy resolution, and checked layout preview.
+- [x] 08-02-PLAN.md — TDD deterministic writer planning, validation, compression-policy resolution, and checked layout preview.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 08-03-PLAN.md — TDD opt-in post-policy payload deduplication and unsupported-target failure behavior.
