@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: TES3 BSA Read and Extract** - Consumers can open, inspect, and extract Morrowind BSA archives with TES3-specific offset semantics.
 - [x] **Phase 6: BA2 GNRL Read and Extract** - Consumers can open, inspect, and extract Fallout 4 and Starfield general BA2 archives.
 - [x] **Phase 7: BA2 DDS Read and DDS Reconstruction** - Consumers can extract Fallout 4 and Starfield texture BA2 entries as valid DDS files.
-- [ ] **Phase 8: Writer Planning, Streaming Emit, and Dedup Core** - Consumers can finalize archives through deterministic streaming writer foundations with optional deduplication.
+- [x] **Phase 8: Writer Planning, Streaming Emit, and Dedup Core** - Consumers can finalize archives through deterministic streaming writer foundations with optional deduplication.
 - [ ] **Phase 9: BSA Writers** - Consumers can create TES4-family and TES3 BSA archives compatible with target engines.
 - [ ] **Phase 10: BA2 Writers** - Consumers can create Fallout 4 and Starfield BA2 GNRL and DDS archives.
 - [ ] **Phase 11: Compatibility Validation and Hardening** - Maintainers can prove compatibility and malformed-input safety across supported archive families.
@@ -243,10 +243,10 @@ Plans:
 - [x] 08-04-PLAN.md — TDD streaming finalization through caller-owned `byte_sink` implementations.
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 08-05-PLAN.md — TDD generated test-only harness read-after-write, metadata comparison, and round-trip extraction.
+- [x] 08-05-PLAN.md — TDD generated test-only harness read-after-write, metadata comparison, and round-trip extraction.
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 08-06-PLAN.md — Finalize public smoke coverage, documentation, and Phase 8 validation gates.
+- [x] 08-06-PLAN.md — Finalize public smoke coverage, documentation, and Phase 8 validation gates.
 
 ### Phase 9: BSA Writers
 **Goal**: Consumers can create TES4-family and TES3 BSA archives compatible with their target game engines.
@@ -307,7 +307,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. TES3 BSA Read and Extract | 4/4 | Complete | 2026-05-06 |
 | 6. BA2 GNRL Read and Extract | 7/7 | Complete | 2026-05-06 |
 | 7. BA2 DDS Read and DDS Reconstruction | 6/6 | Complete | 2026-05-06 |
-| 8. Writer Planning, Streaming Emit, and Dedup Core | 1/6 | In Progress | - |
+| 8. Writer Planning, Streaming Emit, and Dedup Core | 6/6 | Complete | 2026-05-06 |
 | 9. BSA Writers | 0/TBD | Not started | - |
 | 10. BA2 Writers | 0/TBD | Not started | - |
 | 11. Compatibility Validation and Hardening | 0/TBD | Not started | - |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 08-04-PLAN.md
-last_updated: "2026-05-07T01:00:04.274Z"
+stopped_at: Completed Phase 08
+last_updated: "2026-05-07T01:08:42.000Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 12
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 40
-  completed_plans: 38
-  percent: 95
+  completed_plans: 40
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 08 — writer-planning-streaming-emit-and-dedup-core
+**Current focus:** Phase 09 — bsa-writers
 
 ## Current Position
 
-Phase: 08 (writer-planning-streaming-emit-and-dedup-core) — EXECUTING
-Plan: 5 of 6
-Status: Ready to execute
+Phase: 09 (bsa-writers) — READY
+Plan: TBD
+Status: Ready to plan
 Last activity: 2026-05-07
 
-Progress: [██████████] 95%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 23
+- Total plans completed: 25
 - Average duration: 5min
 - Total execution time: 0.82 hours
 
@@ -70,6 +70,8 @@ Progress: [██████████] 95%
 | Phase 08 P02 | 4min | 2 tasks | 4 files |
 | Phase 08 P03 | 3min | 2 tasks | 4 files |
 | Phase 08 P04 | 3min | 2 tasks | 4 files |
+| Phase 08 P05 | 11min | 2 tasks | 5 files |
+| Phase 08 P06 | 5min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -105,6 +107,9 @@ Recent decisions affecting current work:
 - [Phase 08]: Writer finalization streams chunks in frozen plan order — 16-byte LBSW header, entry table, data-region table, then data regions.
 - [Phase 08]: Finalization serializes entry table records using the layout sizing contract — Records use fixed numeric fields plus exact normalized path bytes.
 - [Phase 08]: Finalization propagates first byte_sink write error unchanged — No compression, normalization, sorting, or dedup decisions happen during finalization.
+- [Phase 08]: Generated LBSW harness read-back remains test-only and validates metadata plus raw/deflate extraction through real codec routes.
+- [Phase 08]: Starfield writer planning preserves nonzero CompressionMethod routing through lz4_block so unsupported method values cannot silently fall back to deflate.
+- [Phase 08]: Public smoke and README document writer-core foundations without claiming complete BSA/BA2 writer compatibility.
 
 ### Pending Todos
 
@@ -125,6 +130,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T01:00:04.268Z
-Stopped at: Completed 08-04-PLAN.md
+Last session: 2026-05-07T01:08:42.000Z
+Stopped at: Completed Phase 08
 Resume file: None
