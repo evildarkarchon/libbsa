@@ -260,10 +260,21 @@ libbsa::ba2_gnrl_memory_entry gnrl_entry(std::string path,
 }
 
 libbsa::ba2_gnrl_disk_entry gnrl_disk_entry(std::filesystem::path host_path,
-                                            std::string path,
-                                            libbsa::compression_policy compression = libbsa::compression_policy::archive_default)
+                                             std::string path,
+                                             libbsa::compression_policy compression = libbsa::compression_policy::archive_default)
 {
     libbsa::ba2_gnrl_disk_entry entry{};
+    entry.host_path = host_path.string();
+    entry.path = std::move(path);
+    entry.compression = compression;
+    return entry;
+}
+
+libbsa::ba2_dds_disk_entry dds_disk_entry(std::filesystem::path host_path,
+                                          std::string path,
+                                          libbsa::compression_policy compression = libbsa::compression_policy::archive_default)
+{
+    libbsa::ba2_dds_disk_entry entry{};
     entry.host_path = host_path.string();
     entry.path = std::move(path);
     entry.compression = compression;
@@ -314,8 +325,8 @@ private:
 };
 
 void require_gnrl_archives_equivalent(std::span<const std::byte> memory_bytes,
-                                      std::span<const std::byte> disk_bytes,
-                                      std::span<const libbsa::ba2_gnrl_memory_entry> entries)
+                                       std::span<const std::byte> disk_bytes,
+                                       std::span<const libbsa::ba2_gnrl_memory_entry> entries)
 {
     const libbsa::memory_source memory_source{memory_bytes};
     const libbsa::memory_source disk_source{disk_bytes};
@@ -338,6 +349,42 @@ void require_gnrl_archives_equivalent(std::span<const std::byte> memory_bytes,
         CHECK(memory_metadata.value().name_hash == disk_metadata.value().name_hash);
         CHECK(extract_ba2_bytes(std::vector<std::byte>{memory_bytes.begin(), memory_bytes.end()}, entry.path) == entry.payload);
         CHECK(extract_ba2_bytes(std::vector<std::byte>{disk_bytes.begin(), disk_bytes.end()}, entry.path) == entry.payload);
+    }
+}
+
+void require_dds_archives_equivalent(std::span<const std::byte> memory_bytes,
+                                     std::span<const std::byte> disk_bytes,
+                                     std::span<const libbsa::ba2_dds_memory_entry> entries)
+{
+    const libbsa::memory_source memory_source{memory_bytes};
+    const libbsa::memory_source disk_source{disk_bytes};
+    const auto memory_archive = libbsa::open_ba2(memory_source);
+    const auto disk_archive = libbsa::open_ba2(disk_source);
+    REQUIRE(memory_archive.has_value());
+    REQUIRE(disk_archive.has_value());
+    CHECK(memory_archive.value().paths() == disk_archive.value().paths());
+
+    for (const auto& entry : entries) {
+        const auto memory_texture = memory_archive.value().texture_metadata(entry.path);
+        const auto disk_texture = disk_archive.value().texture_metadata(entry.path);
+        REQUIRE(memory_texture.has_value());
+        REQUIRE(disk_texture.has_value());
+        CHECK(memory_texture.value().path == disk_texture.value().path);
+        CHECK(memory_texture.value().width == disk_texture.value().width);
+        CHECK(memory_texture.value().height == disk_texture.value().height);
+        CHECK(memory_texture.value().mip_count == disk_texture.value().mip_count);
+        CHECK(memory_texture.value().array_size == disk_texture.value().array_size);
+        CHECK(memory_texture.value().is_cubemap == disk_texture.value().is_cubemap);
+        CHECK(memory_texture.value().format.value == disk_texture.value().format.value);
+        REQUIRE(memory_texture.value().chunks.size() == disk_texture.value().chunks.size());
+        for (std::size_t chunk = 0; chunk < memory_texture.value().chunks.size(); ++chunk) {
+            CHECK(memory_texture.value().chunks[chunk].mip_level == disk_texture.value().chunks[chunk].mip_level);
+            CHECK(memory_texture.value().chunks[chunk].size == disk_texture.value().chunks[chunk].size);
+            CHECK(memory_texture.value().chunks[chunk].packed_size == disk_texture.value().chunks[chunk].packed_size);
+            CHECK(memory_texture.value().chunks[chunk].compression == disk_texture.value().chunks[chunk].compression);
+        }
+        CHECK(extract_ba2_bytes(std::vector<std::byte>{memory_bytes.begin(), memory_bytes.end()}, entry.path) ==
+              extract_ba2_bytes(std::vector<std::byte>{disk_bytes.begin(), disk_bytes.end()}, entry.path));
     }
 }
 
@@ -531,6 +578,181 @@ TEST_CASE("DX10 write plans expose texture and chunk preview details", "[unit][b
     CHECK(array.path == "textures/generated/array.dds");
     CHECK_FALSE(array.is_cubemap);
     CHECK(array.array_size == 4U);
+}
+
+TEST_CASE("disk-backed and memory-backed BA2 DDS inputs read back equivalently", "[unit][ba2-writer][disk][roundtrip]")
+{
+    const std::vector memory_entries{dds_entry("textures/generated/disk_one.dds", generated_bc1_dds(4, 4, 1, 1, false, std::byte{0x80})),
+                                     dds_entry("textures/generated/disk_multi.dds", generated_bc1_dds(512, 512, 4, 1, false, std::byte{0x90}))};
+    const auto one_path = unique_temp_file("dds-one");
+    const auto multi_path = unique_temp_file("dds-multi");
+    write_temp_file(one_path, memory_entries[0].dds_bytes);
+    write_temp_file(multi_path, memory_entries[1].dds_bytes);
+    const std::vector disk_entries{dds_disk_entry(one_path, memory_entries[0].path, memory_entries[0].compression),
+                                   dds_disk_entry(multi_path, memory_entries[1].path, memory_entries[1].compression)};
+
+    const auto memory_plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                       std::span<const libbsa::ba2_dds_memory_entry>{memory_entries});
+    const auto disk_plan = libbsa::plan_ba2_dds_write_from_disk(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                               std::span<const libbsa::ba2_dds_disk_entry>{disk_entries});
+
+    REQUIRE(memory_plan.has_value());
+    REQUIRE(disk_plan.has_value());
+    write_temp_file(one_path, generated_bc1_dds(4, 4, 1, 1, false, std::byte{0xa0}));
+    std::filesystem::remove(multi_path);
+    require_dds_archives_equivalent(finalize_to_bytes(memory_plan.value()), finalize_to_bytes(disk_plan.value()), memory_entries);
+}
+
+TEST_CASE("BA2 DX10 chunk compression routes raw deflate and Starfield LZ4-block", "[unit][ba2-writer][codec][roundtrip]")
+{
+    const auto raw_dds = generated_bc1_dds(4, 4, 1, 1, false, std::byte{0xb0});
+    const auto compressed_dds = generated_bc1_dds(512, 512, 4, 1, false, std::byte{0xc0});
+    const std::vector fo4_entries{dds_entry("textures/generated/raw.dds", raw_dds, libbsa::compression_policy::force_raw),
+                                  dds_entry("textures/generated/deflate.dds", compressed_dds, libbsa::compression_policy::force_compressed)};
+
+    const auto deflate_plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                        std::span<const libbsa::ba2_dds_memory_entry>{fo4_entries});
+    REQUIRE(deflate_plan.has_value());
+    const auto& raw_texture = find_planned_dds_texture(deflate_plan.value(), "textures/generated/raw.dds");
+    const auto& deflate_texture = find_planned_dds_texture(deflate_plan.value(), "textures/generated/deflate.dds");
+    REQUIRE(raw_texture.chunks.size() == 1U);
+    REQUIRE(deflate_texture.chunks.size() == 2U);
+    CHECK(raw_texture.chunks.front().compression == libbsa::compression_state::raw);
+    CHECK(raw_texture.chunks.front().packed_size == raw_texture.chunks.front().unpacked_size);
+    for (const auto& chunk : deflate_texture.chunks) {
+        CHECK(chunk.compression == libbsa::compression_state::deflate);
+        CHECK(chunk.packed_size > 0U);
+        CHECK(chunk.unpacked_size > 0U);
+    }
+    const auto deflate_bytes = finalize_to_bytes(deflate_plan.value());
+    require_valid_dds(extract_ba2_bytes(deflate_bytes, "textures/generated/raw.dds"), 4, 4, 1, 1, false);
+    require_valid_dds(extract_ba2_bytes(deflate_bytes, "textures/generated/deflate.dds"), 512, 512, 4, 1, false);
+
+    libbsa::ba2_write_options lz4_options{};
+    lz4_options.archive_default_compressed = true;
+    lz4_options.starfield_v3_compression_method = 3U;
+    const std::vector starfield_entries{dds_entry("textures/generated/lz4.dds", compressed_dds),
+                                        dds_entry("textures/generated/raw-in-method3.dds", raw_dds, libbsa::compression_policy::force_raw)};
+    const auto lz4_plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::starfield_dx10_v3,
+                                                    std::span<const libbsa::ba2_dds_memory_entry>{starfield_entries},
+                                                    lz4_options);
+    REQUIRE(lz4_plan.has_value());
+    CHECK(lz4_plan.value().native.compression_method == 3U);
+    const auto& lz4_texture = find_planned_dds_texture(lz4_plan.value(), "textures/generated/lz4.dds");
+    const auto& method3_raw_texture = find_planned_dds_texture(lz4_plan.value(), "textures/generated/raw-in-method3.dds");
+    for (const auto& chunk : lz4_texture.chunks) {
+        CHECK(chunk.compression == libbsa::compression_state::lz4_block);
+    }
+    REQUIRE(method3_raw_texture.chunks.size() == 1U);
+    CHECK(method3_raw_texture.chunks.front().compression == libbsa::compression_state::raw);
+    CHECK(method3_raw_texture.chunks.front().packed_size == method3_raw_texture.chunks.front().unpacked_size);
+    const auto lz4_bytes = finalize_to_bytes(lz4_plan.value());
+    require_valid_dds(extract_ba2_bytes(lz4_bytes, "textures/generated/lz4.dds"), 512, 512, 4, 1, false);
+    require_valid_dds(extract_ba2_bytes(lz4_bytes, "textures/generated/raw-in-method3.dds"), 4, 4, 1, 1, false);
+}
+
+TEST_CASE("BA2 DX10 dedup shares exact post-policy chunks", "[unit][ba2-writer][dedup]")
+{
+    const auto shared_dds = generated_bc1_dds(4, 4, 1, 1, false, std::byte{0xd0});
+    const std::vector entries{dds_entry("textures/generated/shared-a.dds", shared_dds, libbsa::compression_policy::force_compressed),
+                              dds_entry("textures/generated/shared-b.dds", shared_dds, libbsa::compression_policy::force_compressed),
+                              dds_entry("textures/generated/different.dds", generated_bc1_dds(4, 4, 1, 1, false, std::byte{0xe0}),
+                                        libbsa::compression_policy::force_compressed)};
+    libbsa::ba2_write_options options{};
+    options.deduplicate = true;
+    const auto dedup_plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                      std::span<const libbsa::ba2_dds_memory_entry>{entries},
+                                                      options);
+    REQUIRE(dedup_plan.has_value());
+    const auto& first = find_planned_dds_texture(dedup_plan.value(), "textures/generated/shared-a.dds").chunks.front();
+    const auto& second = find_planned_dds_texture(dedup_plan.value(), "textures/generated/shared-b.dds").chunks.front();
+    const auto& different = find_planned_dds_texture(dedup_plan.value(), "textures/generated/different.dds").chunks.front();
+    CHECK(first.data_region_id == second.data_region_id);
+    CHECK(first.offset == second.offset);
+    CHECK(first.data_region_id != different.data_region_id);
+    CHECK(dedup_plan.value().data_regions.size() == 2U);
+
+    const auto no_dedup_plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                         std::span<const libbsa::ba2_dds_memory_entry>{entries});
+    REQUIRE(no_dedup_plan.has_value());
+    CHECK(find_planned_dds_texture(no_dedup_plan.value(), "textures/generated/shared-a.dds").chunks.front().offset !=
+          find_planned_dds_texture(no_dedup_plan.value(), "textures/generated/shared-b.dds").chunks.front().offset);
+    CHECK(no_dedup_plan.value().data_regions.size() == entries.size());
+}
+
+TEST_CASE("BA2 DDS writer rejects malformed unsupported and unsafe inputs", "[unit][ba2-writer][failure]")
+{
+    const std::vector malformed_entries{dds_entry("textures/generated/malformed.dds", ascii_bytes("not a DDS"))};
+    const auto malformed = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                     std::span<const libbsa::ba2_dds_memory_entry>{malformed_entries});
+    REQUIRE_FALSE(malformed.has_value());
+    CHECK(malformed.error().code == libbsa::error_code::malformed_archive);
+
+    auto unsupported_format_bytes = generated_bc1_dds(4, 4, 1, 1, false, std::byte{0xf0});
+    unsupported_format_bytes[160] = std::byte{0xff};
+    unsupported_format_bytes[161] = std::byte{0x00};
+    unsupported_format_bytes[162] = std::byte{0x00};
+    unsupported_format_bytes[163] = std::byte{0x00};
+    const std::vector unsupported_format_entries{dds_entry("textures/generated/unsupported.dds", unsupported_format_bytes)};
+    const auto unsupported_format = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                              std::span<const libbsa::ba2_dds_memory_entry>{unsupported_format_entries});
+    REQUIRE_FALSE(unsupported_format.has_value());
+    CHECK(unsupported_format.error().code == libbsa::error_code::unsupported_format);
+
+    const std::vector duplicate_entries{dds_entry("Textures/Generated/Duplicate.DDS", generated_bc1_dds(4, 4, 1, 1, false, std::byte{0x11})),
+                                        dds_entry("textures\\generated\\duplicate.dds", generated_bc1_dds(4, 4, 1, 1, false, std::byte{0x22}))};
+    const auto duplicate = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                     std::span<const libbsa::ba2_dds_memory_entry>{duplicate_entries});
+    REQUIRE_FALSE(duplicate.has_value());
+    CHECK(duplicate.error().code == libbsa::error_code::malformed_archive);
+
+    const auto existing_path = unique_temp_file("dds-duplicate-existing");
+    const auto missing_path = unique_temp_file("dds-duplicate-missing");
+    write_temp_file(existing_path, generated_bc1_dds(4, 4, 1, 1, false, std::byte{0x33}));
+    std::filesystem::remove(missing_path);
+    const std::vector duplicate_disk_entries{dds_disk_entry(existing_path, "Textures/Generated/Duplicate.DDS"),
+                                             dds_disk_entry(missing_path, "textures\\generated\\duplicate.dds")};
+    const auto duplicate_disk = libbsa::plan_ba2_dds_write_from_disk(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                                    std::span<const libbsa::ba2_dds_disk_entry>{duplicate_disk_entries});
+    REQUIRE_FALSE(duplicate_disk.has_value());
+    CHECK(duplicate_disk.error().code == libbsa::error_code::malformed_archive);
+
+    const std::vector missing_disk_entries{dds_disk_entry(missing_path, "textures/generated/missing.dds")};
+    const auto missing_disk = libbsa::plan_ba2_dds_write_from_disk(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                                  std::span<const libbsa::ba2_dds_disk_entry>{missing_disk_entries});
+    REQUIRE_FALSE(missing_disk.has_value());
+    CHECK(missing_disk.error().code == libbsa::error_code::io_failure);
+
+    libbsa::ba2_write_options unsupported_method{};
+    unsupported_method.archive_default_compressed = true;
+    unsupported_method.starfield_v3_compression_method = 7U;
+    const std::vector valid_entries{dds_entry("textures/generated/valid.dds", generated_bc1_dds(4, 4, 1, 1, false, std::byte{0x44}))};
+    const auto unsupported_method_plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::starfield_dx10_v3,
+                                                                   std::span<const libbsa::ba2_dds_memory_entry>{valid_entries},
+                                                                   unsupported_method);
+    REQUIRE_FALSE(unsupported_method_plan.has_value());
+    CHECK(unsupported_method_plan.error().code == libbsa::error_code::unsupported_format);
+
+    const std::string too_long_name(static_cast<std::size_t>(std::numeric_limits<std::uint16_t>::max()) + 1U, 'a');
+    const std::vector overflow_entries{dds_entry("textures/" + too_long_name + ".dds", generated_bc1_dds(4, 4, 1, 1, false, std::byte{0x55}))};
+    const auto overflow = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                    std::span<const libbsa::ba2_dds_memory_entry>{overflow_entries});
+    REQUIRE_FALSE(overflow.has_value());
+    CHECK(overflow.error().code == libbsa::error_code::malformed_archive);
+
+    const auto subtype_misuse = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_gnrl_v1,
+                                                          std::span<const libbsa::ba2_dds_memory_entry>{valid_entries});
+    REQUIRE_FALSE(subtype_misuse.has_value());
+    CHECK(subtype_misuse.error().code == libbsa::error_code::unsupported_format);
+
+    const auto plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
+                                                std::span<const libbsa::ba2_dds_memory_entry>{valid_entries});
+    REQUIRE(plan.has_value());
+    failing_sink sink{8};
+    const auto finalized = libbsa::finalize_ba2_write(plan.value(), sink);
+    REQUIRE_FALSE(finalized.has_value());
+    CHECK(finalized.error().code == libbsa::error_code::io_failure);
+    CHECK(finalized.error().message == "first sink failure");
 }
 
 TEST_CASE("BA2 finalization streams an empty plan without touching payload regions", "[unit][ba2-writer]")
