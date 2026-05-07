@@ -1,72 +1,89 @@
 ---
 phase: 10-ba2-writers
-reviewed: 2026-05-07T11:19:54Z
+reviewed: 2026-05-07T12:00:00Z
 depth: standard
-files_reviewed: 8
+files_reviewed: 9
 files_reviewed_list:
   - CMakeLists.txt
-  - include/libbsa/ba2_writer.hpp
   - README.md
+  - include/libbsa/ba2_writer.hpp
   - src/ba2_writer.cpp
-  - src/texture/dds_analysis.cpp
   - src/texture/dds_analysis.hpp
+  - src/texture/dds_analysis.cpp
+  - src/texture/dds_reconstruction.cpp
   - tests/ba2_writer_tests.cpp
   - tests/public_header_smoke.cpp
 findings:
-  critical: 2
-  warning: 0
+  critical: 3
+  warning: 1
   info: 0
-  total: 2
+  total: 4
 status: issues_found
 ---
 
 # Phase 10: Code Review Report
 
-**Reviewed:** 2026-05-07T11:19:54Z
+**Reviewed:** 2026-05-07T12:00:00Z
 **Depth:** standard
-**Files Reviewed:** 8
+**Files Reviewed:** 9
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the BA2 writer public API, implementation, DDS analysis boundary, build wiring, README phase notes, and writer/smoke tests. The implementation has correctness blockers in DX10 compression edge handling and DDS format coverage that can produce unreadable output or reject valid BA2 texture inputs.
+Reviewed the BA2 writer API, implementation, DDS analysis/reconstruction paths, build wiring, README claims, and writer/smoke tests. The implementation still has correctness blockers that the current read-after-write tests miss because they mostly reopen through libbsa itself and do not assert several native BA2/DDS compatibility bytes or multi-array texture layouts.
 
 ## Critical Issues
 
-### CR-01: BLOCKER - Compressed DX10 chunks become silently corrupt when packed size equals unpacked size
+### CR-01: BLOCKER - Native BA2 extension field is written with the dot
 
-**File:** `src/ba2_writer.cpp:619-637`
-**Issue:** DX10 chunk records have no explicit compression flag in this implementation; the reader classifies `packed_size == size` as raw. The writer always records `chunk.packed_size = stored_size.value()` for both raw and compressed chunks. If deflate or Starfield LZ4-block output ever has exactly the same byte count as the unpacked chunk, `open_ba2` will mark that compressed chunk as raw and extraction will return compressed bytes as image data. This is a data-corruption bug for valid writer inputs.
-**Fix:** After compression, handle the ambiguous equality case before emitting the chunk record. Either store the chunk raw, or retry/return a structured failure. For example:
+**File:** `src/ba2_writer.cpp:103-109`
+**Issue:** `append_extension4` starts copying at the period returned by `find_last_of('.')`, so native records store values like `.nif`, `.dds`, and `.str`. BA2's four-byte extension field is the extension text without the separator, padded/truncated to four bytes. The libbsa reader ignores this field, so all current round-trip tests can pass while emitted archives remain incompatible with native/BSArchPro consumers that rely on the record extension.
+**Fix:** Skip the dot and pad with NUL bytes. Add tests that assert the raw record bytes for GNRL and DX10 records, including a 3-character extension and a longer extension.
 
 ```cpp
-auto effective_compression = compression.value();
-auto effective_stored = std::move(stored.value());
-
-if (effective_compression != compression_state::raw &&
-    effective_stored.size() == source_chunk.payload.size()) {
-    // BA2 DX10 readers use PackedSize == Size as the raw marker, so equal-size
-    // compressed bytes would be decoded as raw payload and corrupt extraction.
-    effective_compression = compression_state::raw;
-    effective_stored.assign(source_chunk.payload.begin(), source_chunk.payload.end());
+void append_extension4(std::vector<std::byte>& bytes, std::string_view path)
+{
+    const auto dot = path.find_last_of('.');
+    const auto extension = dot == std::string_view::npos
+        ? std::string_view{}
+        : path.substr(dot + 1U, std::min<std::size_t>(4U, path.size() - dot - 1U));
+    for (std::size_t i = 0; i < 4U; ++i) {
+        bytes.push_back(i < extension.size()
+            ? static_cast<std::byte>(static_cast<unsigned char>(extension[i]))
+            : std::byte{0});
+    }
 }
-
-auto unpacked_size = checked_u32(source_chunk.payload.size());
-auto stored_size = checked_u32(effective_stored.size());
-chunk.packed_size = stored_size.value();
-chunk.compression = effective_compression;
 ```
 
-Add a focused test that forces the equal-size path, e.g. by factoring/stubbing compression at the planning boundary or by adding a helper that exercises the DX10 chunk-size decision directly.
+### CR-02: BLOCKER - Multi-mip array/cubemap DDS payloads are reordered incorrectly
 
-### CR-02: BLOCKER - DDS writer rejects valid non-BC1 DDS textures despite BA2 DX10 writer support
+**File:** `src/texture/dds_analysis.cpp:149-164`, `src/texture/dds_reconstruction.cpp:112`
+**Issue:** `analyze_dds` serializes chunk payloads in mip-major order (`mip` outer, `array item` inner), and extraction reconstructs DDS files by appending chunk bytes directly. DDS texture arrays/cubemaps are item-major: all mips for array item/face 0, then all mips for item/face 1, etc. The current tests cover multi-mip single-item textures and single-mip arrays/cubemaps, but not multi-mip arrays/cubemaps, so this data corruption is invisible. A valid 2-item, 2-mip texture will be written/extracted with mip 0 for every item before mip 1, producing a DDS whose image payload no longer matches the source texture layout.
+**Fix:** Either reject `array_size > 1 && mip_count > 1` during planning until safe reordering exists, or preserve enough per-item/per-mip layout metadata to reconstruct DDS payloads in the required item-major order. Add a regression test using a multi-mip array or cubemap DDS with distinct bytes per item/mip and compare extracted DDS payload order against the source.
 
-**File:** `src/texture/dds_analysis.cpp:67-68,121-123`
-**Issue:** `analyze_dds` hard-codes support to `DXGI_FORMAT_BC1_UNORM` (`71`) and rejects every other valid DDS format. BA2 DX10 archives commonly contain other DDS formats, and the Phase 10 public API/README presents DDS/DX10 writer support rather than a BC1-only writer. This means valid DDS inputs such as BC3, BC5, BC7, or R8G8B8A8 textures cannot be planned or written.
-**Fix:** Replace the single-format gate with a supported-format policy that covers the BA2 formats intended for this phase, and carry the real DirectXTex-derived `metadata.format` through the plan. If reconstruction/extraction currently only supports BC1, either extend that boundary in the same change or explicitly fail planning only for formats that cannot be round-tripped by libbsa yet with public documentation and tests for the declared limitation.
+### CR-03: BLOCKER - Cubemap arrays are silently collapsed to a single cube in BA2 records
+
+**File:** `src/ba2_writer.cpp:692`, `src/texture/dds_analysis.cpp:106-147`
+**Issue:** DDS analysis accepts any DirectXTex cubemap metadata, including cubemap arrays where `metadata.arraySize` is 12, 18, etc. The BA2 writer then serializes the DX10 record's array/cubemap field as `6` for every cubemap, discarding additional cubes. The plan preview still reports the original `array_size`, so callers see a successful plan for data that is not faithfully encoded in the archive table. This is silent metadata/data loss for valid DDS inputs.
+**Fix:** If Phase 10 only supports one cubemap, reject cubemap inputs where `array_size != 6` with `unsupported_format`. If cubemap arrays are intended to be supported, encode the native field according to the BA2 format and update reader/reconstruction tests to prove multi-cube extraction preserves all faces.
+
+```cpp
+if (analyzed.is_cubemap && analyzed.array_size != 6U) {
+    return failure<analyzed_dds_texture>({error_code::unsupported_format,
+        "DDS analysis failed: cubemap arrays are not supported"});
+}
+```
+
+## Warnings
+
+### WR-01: WARNING - Finalization accepts a default-constructed invalid plan as success
+
+**File:** `src/ba2_writer.cpp:736-748`, `tests/ba2_writer_tests.cpp:850-859`
+**Issue:** `finalize_ba2_write` writes whatever bytes are present in the public `ba2_write_plan` and returns success for an empty/default plan. The test suite explicitly locks in this behavior. Since `ba2_write_plan` is public and mutable, callers can accidentally finalize an unplanned or corrupted plan and receive success with an empty/non-BA2 output stream, which is a robustness and data-loss risk.
+**Fix:** Validate basic plan invariants before writing: non-empty `table_bytes`, `table_bytes.size() <= total_size`, `magic == BTDX`, subtype/target consistency, and data-region sizes matching stored payloads. Replace the current empty-plan success test with a failure expectation.
 
 ---
 
-_Reviewed: 2026-05-07T11:19:54Z_
+_Reviewed: 2026-05-07T12:00:00Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
