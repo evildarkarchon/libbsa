@@ -51,6 +51,7 @@ target_sources(libbsa
     src/archive_path.cpp
     src/archive_view.cpp
     src/ba2_reader.cpp
+    src/ba2_writer.cpp
     src/bsa_reader.cpp
     src/bsa_writer.cpp
     src/compression.cpp
@@ -72,6 +73,7 @@ target_sources(libbsa
       include/libbsa/archive_path.hpp
       include/libbsa/archive_view.hpp
       include/libbsa/ba2.hpp
+      include/libbsa/ba2_writer.hpp
       include/libbsa/bsa.hpp
       include/libbsa/bsa_writer.hpp
       include/libbsa/compression.hpp
@@ -207,6 +209,14 @@ if(BUILD_TESTING)
       Catch2::Catch2WithMain)
 
   catch_discover_tests(libbsa_ba2_dds_reader_tests TEST_PREFIX "libbsa_ba2_dds_reader_tests." ADD_TAGS_AS_LABELS PROPERTIES LABELS "unit;fixture;codec")
+
+  add_executable(libbsa_ba2_writer_tests tests/ba2_writer_tests.cpp)
+  target_link_libraries(libbsa_ba2_writer_tests
+    PRIVATE
+      libbsa::libbsa
+      Catch2::Catch2WithMain)
+
+  catch_discover_tests(libbsa_ba2_writer_tests TEST_PREFIX "libbsa_ba2_writer_tests." ADD_TAGS_AS_LABELS PROPERTIES LABELS "unit;fixture;codec;roundtrip")
 
   add_executable(libbsa_writer_tests
     tests/writer_core_tests.cpp
