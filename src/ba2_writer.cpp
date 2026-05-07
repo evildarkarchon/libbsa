@@ -160,6 +160,27 @@ result<std::vector<normalized_gnrl_entry>> normalize_gnrl_entries(std::span<cons
     return success(std::move(normalized_entries));
 }
 
+result<void> validate_gnrl_disk_entry_archive_paths(std::span<const ba2_gnrl_disk_entry> entries)
+{
+    std::vector<std::string> paths;
+    paths.reserve(entries.size());
+
+    for (const auto& entry : entries) {
+        auto normalized = normalize_archive_path(entry.path);
+        if (!normalized.has_value()) {
+            return failure<void>(normalized.error());
+        }
+
+        auto path = normalized.value().string();
+        if (std::find(paths.begin(), paths.end(), path) != paths.end()) {
+            return failure<void>({error_code::malformed_archive, "duplicate BA2 writer path"});
+        }
+        paths.push_back(std::move(path));
+    }
+
+    return success();
+}
+
 std::uint32_t directory_hash_for(std::string_view path)
 {
     const auto slash = path.find_last_of('/');
@@ -355,17 +376,17 @@ result<ba2_write_plan> plan_ba2_gnrl_write(ba2_write_target target,
 }
 
 result<ba2_write_plan> plan_ba2_gnrl_write_from_disk(ba2_write_target target,
-                                                     std::span<const ba2_gnrl_disk_entry> entries,
-                                                     ba2_write_options options)
+                                                      std::span<const ba2_gnrl_disk_entry> entries,
+                                                      ba2_write_options options)
 {
+    auto paths_validated = validate_gnrl_disk_entry_archive_paths(entries);
+    if (!paths_validated.has_value()) {
+        return failure<ba2_write_plan>(paths_validated.error());
+    }
+
     std::vector<ba2_gnrl_memory_entry> memory_entries;
     memory_entries.reserve(entries.size());
     for (const auto& entry : entries) {
-        auto normalized = normalize_archive_path(entry.path);
-        if (!normalized.has_value()) {
-            return failure<ba2_write_plan>(normalized.error());
-        }
-
         std::ifstream stream{entry.host_path, std::ios::binary};
         if (!stream) {
             return failure<ba2_write_plan>({error_code::io_failure, "failed to open BA2 GNRL writer input file"});
