@@ -298,7 +298,7 @@ Plans:
 - [x] 10-03-PLAN.md — TDD BA2 GNRL disk inputs, compression routes, deduplication, and structured failures.
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 10-04-PLAN.md — TDD DDS input analysis and native BA2 DX10 memory layout.
+- [x] 10-04-PLAN.md — TDD DDS input analysis and native BA2 DX10 memory layout.
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 10-05-PLAN.md — TDD BA2 DX10 disk inputs, chunk compression, deduplication, and DDS safety failures.
@@ -345,6 +345,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. BA2 DDS Read and DDS Reconstruction | 6/6 | Complete | 2026-05-06 |
 | 8. Writer Planning, Streaming Emit, and Dedup Core | 6/6 | Complete | 2026-05-06 |
 | 9. BSA Writers | 0/TBD | Not started | - |
-| 10. BA2 Writers | 3/6 | In Progress|  |
+| 10. BA2 Writers | 4/6 | In Progress|  |
 | 11. Compatibility Validation and Hardening | 0/TBD | Not started | - |
 | 12. Performance and Documentation | 0/TBD | Not started | - |

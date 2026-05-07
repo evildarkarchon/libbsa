@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 10 context gathered
-last_updated: "2026-05-07T10:56:38.751Z"
+last_updated: "2026-05-07T11:04:48.308Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 12
   completed_phases: 9
   total_plans: 52
-  completed_plans: 49
-  percent: 94
+  completed_plans: 50
+  percent: 96
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 10 (ba2-writers) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [█████████░] 94%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -123,6 +123,8 @@ Recent decisions affecting current work:
 - [Phase 10-ba2-writers]: Raw BA2 GNRL records write native PackedSize as zero while data-region previews retain the actual stored byte count.
 - [Phase 10-ba2-writers]: BA2 finalization streams frozen plan table bytes followed by plan-owned payload regions without recomputing layout.
 - [Phase 10-ba2-writers]: BA2 GNRL disk planning validates archive-virtual paths and duplicate normalized names before opening host files. — Preserves structured writer-input errors ahead of filesystem errors and satisfies Phase 10 T-10-07 mitigation.
+- [Phase 10-ba2-writers]: BA2 DDS writer planning analyzes source DDS bytes through a private DirectXTex adapter and stores only libbsa-owned metadata/chunk bytes in the write plan. — Preserves DirectXTex/private dependency boundaries while ensuring planning owns derived texture metadata and payload bytes before finalization.
+- [Phase 10-ba2-writers]: BA2 DX10 chunking follows the resolved target rule: individual chunks above 256x256, then one final chunk for the first 256x256-or-smaller mip and all lower mips. — Matches Phase 10 research decision D-15 and keeps public callers from supplying native chunk descriptors.
 
 ### Pending Todos
 
@@ -141,10 +143,11 @@ Items acknowledged and carried forward from previous milestone close:
 |----------|------|--------|-------------|
 | *(none)* | | | |
 | Phase 10-ba2-writers P03 | 2min | 2 tasks | 2 files |
+| Phase 10-ba2-writers P04 | 6 min | 2 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-05-07T10:56:28.111Z
+Last session: 2026-05-07T11:04:22.666Z
 Stopped at: Phase 10 context gathered
 Stopped at: Completed 10-ba2-writers-02-PLAN.md
 Resume file: None
