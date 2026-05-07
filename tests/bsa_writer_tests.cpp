@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <span>
 #include <string>
 #include <string_view>
@@ -26,6 +27,7 @@ constexpr std::uint32_t version_sse = 0x69;
 constexpr std::uint32_t archive_pathnames = 0x0001;
 constexpr std::uint32_t archive_filenames = 0x0002;
 constexpr std::uint32_t archive_compress = 0x0004;
+constexpr std::uint32_t archive_embedname = 0x0100;
 constexpr std::uint32_t file_meshes = 0x0001;
 constexpr std::uint32_t file_textures = 0x0002;
 constexpr std::uint32_t file_menus = 0x0004;
@@ -120,6 +122,40 @@ const libbsa::planned_bsa_entry& find_planned_entry(const libbsa::bsa_write_plan
     });
     REQUIRE(found != plan.entries.end());
     return *found;
+}
+
+std::uint32_t raw_size_field_for(const libbsa::bsa_write_plan& plan, std::string_view path)
+{
+    const auto& entry = find_planned_entry(plan, path);
+    const auto bytes = std::span<const std::byte>{plan.table_bytes};
+    for (std::size_t offset = 0; offset + 16U <= bytes.size(); ++offset) {
+        if (le_u64(bytes, offset) == entry.file_hash && le_u32(bytes, offset + 12U) == entry.offset) {
+            return le_u32(bytes, offset + 8U);
+        }
+    }
+    FAIL("file record not found for planned BSA entry");
+    return 0;
+}
+
+std::vector<std::byte> ascii_bytes(std::string_view text)
+{
+    std::vector<std::byte> bytes;
+    bytes.reserve(text.size());
+    for (char ch : text) {
+        bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+    }
+    return bytes;
+}
+
+libbsa::bsa_memory_entry bsa_entry(std::string path,
+                                   std::vector<std::byte> payload,
+                                   libbsa::compression_policy compression = libbsa::compression_policy::archive_default)
+{
+    libbsa::bsa_memory_entry entry{};
+    entry.path = std::move(path);
+    entry.payload = std::move(payload);
+    entry.compression = compression;
+    return entry;
 }
 
 } // namespace
@@ -235,4 +271,150 @@ TEST_CASE("orders TES4 folders and files by reference hashes independent of inpu
     CHECK(find_planned_entry(first.value(), "sounds/s.wav").file_hash == libbsa::detail::hash_tes4_path("s.wav"));
     CHECK((le_u32(bytes, 12) & (archive_pathnames | archive_filenames | archive_compress)) == (archive_pathnames | archive_filenames));
     CHECK((le_u32(bytes, 36 + 8) == 1));
+}
+
+TEST_CASE("archive-default compressed TES4 entries use XOR size flags", "[unit][bsa-writer][codec]")
+{
+    const std::vector entries{bsa_entry("meshes/armor/iron.nif", ascii_bytes("mesh payload that compresses"))};
+    libbsa::bsa_write_options options{};
+    options.archive_default_compressed = true;
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::oblivion_v103,
+                                            std::span<const libbsa::bsa_memory_entry>{entries},
+                                            options);
+
+    REQUIRE(plan.has_value());
+    CHECK((plan.value().flags & archive_compress) == archive_compress);
+    CHECK((raw_size_field_for(plan.value(), "meshes/armor/iron.nif") & file_size_compress) == 0U);
+    CHECK(find_planned_entry(plan.value(), "meshes/armor/iron.nif").compression == libbsa::compression_state::deflate);
+    CHECK(extract_bytes(finalize_to_bytes(plan.value()), "meshes/armor/iron.nif") == entries.front().payload);
+}
+
+TEST_CASE("force raw and force compressed override archive defaults", "[unit][bsa-writer][codec]")
+{
+    const std::vector entries{bsa_entry("meshes/raw.nif", ascii_bytes("raw bytes"), libbsa::compression_policy::force_raw),
+                              bsa_entry("meshes/packed.nif", ascii_bytes("packed bytes packed bytes"),
+                                        libbsa::compression_policy::force_compressed)};
+    libbsa::bsa_write_options options{};
+    options.archive_default_compressed = true;
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::fo3_fnv_skyrim_le_v104,
+                                            std::span<const libbsa::bsa_memory_entry>{entries},
+                                            options);
+
+    REQUIRE(plan.has_value());
+    CHECK((raw_size_field_for(plan.value(), "meshes/raw.nif") & file_size_compress) == file_size_compress);
+    CHECK((raw_size_field_for(plan.value(), "meshes/packed.nif") & file_size_compress) == 0U);
+    CHECK(find_planned_entry(plan.value(), "meshes/raw.nif").compression == libbsa::compression_state::raw);
+    CHECK(find_planned_entry(plan.value(), "meshes/packed.nif").compression == libbsa::compression_state::deflate);
+    const auto bytes = finalize_to_bytes(plan.value());
+    CHECK(extract_bytes(bytes, "meshes/raw.nif") == entries[0].payload);
+    CHECK(extract_bytes(bytes, "meshes/packed.nif") == entries[1].payload);
+}
+
+TEST_CASE("v105 compressed BSA entries use LZ4-frame not deflate", "[unit][bsa-writer][codec]")
+{
+    const std::vector entries{bsa_entry("meshes/armor/iron.nif", ascii_bytes("SSE payload uses LZ4-frame"),
+                                        libbsa::compression_policy::force_compressed)};
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::skyrim_se_ae_v105,
+                                            std::span<const libbsa::bsa_memory_entry>{entries});
+
+    REQUIRE(plan.has_value());
+    CHECK(find_planned_entry(plan.value(), "meshes/armor/iron.nif").compression == libbsa::compression_state::lz4_frame);
+    CHECK(extract_bytes(finalize_to_bytes(plan.value()), "meshes/armor/iron.nif") == entries.front().payload);
+}
+
+TEST_CASE("embedded names are opt-in and extract after prefix skip", "[unit][bsa-writer][roundtrip]")
+{
+    const std::vector entries{bsa_entry("meshes/armor/iron.nif", ascii_bytes("embedded payload"),
+                                        libbsa::compression_policy::force_raw)};
+
+    const auto without_embed = libbsa::plan_bsa_write(libbsa::bsa_write_target::fo3_fnv_skyrim_le_v104,
+                                                     std::span<const libbsa::bsa_memory_entry>{entries});
+    libbsa::bsa_write_options options{};
+    options.embedded_names = true;
+    const auto with_embed = libbsa::plan_bsa_write(libbsa::bsa_write_target::fo3_fnv_skyrim_le_v104,
+                                                  std::span<const libbsa::bsa_memory_entry>{entries},
+                                                  options);
+
+    REQUIRE(without_embed.has_value());
+    REQUIRE(with_embed.has_value());
+    CHECK((without_embed.value().flags & archive_embedname) == 0U);
+    CHECK((with_embed.value().flags & archive_embedname) == archive_embedname);
+    CHECK(extract_bytes(finalize_to_bytes(with_embed.value()), "meshes/armor/iron.nif") == entries.front().payload);
+}
+
+TEST_CASE("embedded names serialize exact archive path prefix bytes", "[unit][bsa-writer]")
+{
+    const std::vector entries{bsa_entry("meshes/armor/iron.nif", ascii_bytes("mesh"), libbsa::compression_policy::force_raw)};
+    libbsa::bsa_write_options options{};
+    options.embedded_names = true;
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::skyrim_se_ae_v105,
+                                            std::span<const libbsa::bsa_memory_entry>{entries},
+                                            options);
+
+    REQUIRE(plan.has_value());
+    const auto& region = plan.value().data_regions[find_planned_entry(plan.value(), "meshes/armor/iron.nif").data_region_id];
+    const std::string expected_name = "meshes\\armor\\iron.nif";
+    REQUIRE(region.stored_payload.size() > expected_name.size());
+    CHECK(std::to_integer<unsigned char>(region.stored_payload[0]) == expected_name.size());
+    CHECK(std::vector<std::byte>{region.stored_payload.begin() + 1, region.stored_payload.begin() + 1 + expected_name.size()} ==
+          ascii_bytes(expected_name));
+}
+
+TEST_CASE("unsupported compression requests fail during planning with unsupported_format", "[unit][bsa-writer]")
+{
+    const std::vector entries{bsa_entry("meshes/armor/iron.nif", ascii_bytes("mesh"),
+                                        libbsa::compression_policy::force_compressed)};
+    libbsa::memory_sink sink;
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::tes3_morrowind,
+                                            std::span<const libbsa::bsa_memory_entry>{entries});
+
+    REQUIRE_FALSE(plan.has_value());
+    CHECK(plan.error().code == libbsa::error_code::unsupported_format);
+    CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("malformed embedded-name requests fail during planning with malformed_archive", "[unit][bsa-writer]")
+{
+    std::string long_folder(260, 'a');
+    const std::vector entries{bsa_entry("meshes/" + long_folder + "/iron.nif", ascii_bytes("mesh"),
+                                        libbsa::compression_policy::force_raw)};
+    libbsa::bsa_write_options options{};
+    options.embedded_names = true;
+    libbsa::memory_sink sink;
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::fo3_fnv_skyrim_le_v104,
+                                            std::span<const libbsa::bsa_memory_entry>{entries},
+                                            options);
+
+    REQUIRE_FALSE(plan.has_value());
+    CHECK(plan.error().code == libbsa::error_code::malformed_archive);
+    CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("dedup shares only identical native BSA stored payloads", "[unit][bsa-writer]")
+{
+    const auto shared_payload = ascii_bytes("same source bytes");
+    const std::vector entries{bsa_entry("meshes/a.nif", shared_payload, libbsa::compression_policy::force_raw),
+                              bsa_entry("textures/a.dds", shared_payload, libbsa::compression_policy::force_raw),
+                              bsa_entry("sounds/a.wav", ascii_bytes("different bytes"), libbsa::compression_policy::force_raw)};
+    libbsa::bsa_write_options options{};
+    options.deduplicate = true;
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::oblivion_v103,
+                                            std::span<const libbsa::bsa_memory_entry>{entries},
+                                            options);
+
+    REQUIRE(plan.has_value());
+    const auto& first = find_planned_entry(plan.value(), "meshes/a.nif");
+    const auto& second = find_planned_entry(plan.value(), "textures/a.dds");
+    const auto& different = find_planned_entry(plan.value(), "sounds/a.wav");
+    CHECK(first.data_region_id == second.data_region_id);
+    CHECK(first.offset == second.offset);
+    CHECK(first.data_region_id != different.data_region_id);
+    CHECK(plan.value().data_regions.size() == 2);
 }
