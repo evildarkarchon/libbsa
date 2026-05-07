@@ -3,6 +3,7 @@
 #include <libbsa/archive.hpp>
 #include <libbsa/archive_path.hpp>
 #include <libbsa/archive_view.hpp>
+#include <libbsa/bsa_writer.hpp>
 #include <libbsa/io.hpp>
 #include <libbsa/result.hpp>
 
