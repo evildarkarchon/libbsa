@@ -240,7 +240,7 @@ Plans:
 - [x] 08-03-PLAN.md — TDD opt-in post-policy payload deduplication and unsupported-target failure behavior.
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 08-04-PLAN.md — TDD streaming finalization through caller-owned `byte_sink` implementations.
+- [x] 08-04-PLAN.md — TDD streaming finalization through caller-owned `byte_sink` implementations.
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 08-05-PLAN.md — TDD generated test-only harness read-after-write, metadata comparison, and round-trip extraction.
