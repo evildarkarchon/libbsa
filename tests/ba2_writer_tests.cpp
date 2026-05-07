@@ -19,8 +19,6 @@
 
 namespace {
 
-constexpr std::string_view dds_placeholder = "BA2 DDS writer planning is not implemented";
-
 constexpr std::uint32_t magic_btdx = 0x58445442U;
 constexpr std::uint32_t magic_gnrl = 0x4c524e47U;
 constexpr std::uint32_t magic_dx10 = 0x30315844U;
@@ -34,14 +32,6 @@ constexpr std::uint32_t ddscaps_complex = 0x00000008U;
 constexpr std::uint32_t ddscaps_texture = 0x00001000U;
 constexpr std::uint32_t ddscaps_mipmap = 0x00400000U;
 constexpr std::uint32_t ddscaps2_cubemap_all_faces = 0x0000fe00U;
-
-template <typename Result>
-void require_unsupported_placeholder(const Result& result, std::string_view message)
-{
-    REQUIRE_FALSE(result.has_value());
-    CHECK(result.error().code == libbsa::error_code::unsupported_format);
-    CHECK(result.error().message.find(message) != std::string::npos);
-}
 
 void append_u32(std::vector<std::byte>& bytes, std::uint32_t value)
 {
@@ -246,6 +236,15 @@ const libbsa::planned_ba2_gnrl_entry& find_planned_gnrl_entry(const libbsa::ba2_
         return entry.path == path;
     });
     REQUIRE(found != plan.gnrl.entries.end());
+    return *found;
+}
+
+const libbsa::planned_ba2_dds_texture& find_planned_dds_texture(const libbsa::ba2_write_plan& plan, std::string_view path)
+{
+    const auto found = std::find_if(plan.dds.textures.begin(), plan.dds.textures.end(), [path](const auto& texture) {
+        return texture.path == path;
+    });
+    REQUIRE(found != plan.dds.textures.end());
     return *found;
 }
 
@@ -510,7 +509,7 @@ TEST_CASE("DX10 write plans expose texture and chunk preview details", "[unit][b
     CHECK(plan.value().dds.table_regions[1].name == "FileTableOffset name table");
     REQUIRE(plan.value().dds.textures.size() == 3U);
 
-    const auto& multi = plan.value().dds.textures[1];
+    const auto& multi = find_planned_dds_texture(plan.value(), "textures/generated/multi_mip.dds");
     CHECK(multi.path == "textures/generated/multi_mip.dds");
     CHECK(multi.width == 512U);
     CHECK(multi.height == 512U);
@@ -523,12 +522,12 @@ TEST_CASE("DX10 write plans expose texture and chunk preview details", "[unit][b
     CHECK(multi.chunks[0].offset < multi.chunks[1].offset);
     CHECK(multi.chunks[0].packed_size == multi.chunks[0].unpacked_size);
 
-    const auto& cubemap = plan.value().dds.textures[0];
+    const auto& cubemap = find_planned_dds_texture(plan.value(), "textures/generated/cubemap.dds");
     CHECK(cubemap.path == "textures/generated/cubemap.dds");
     CHECK(cubemap.is_cubemap);
     CHECK(cubemap.array_size == 6U);
 
-    const auto& array = plan.value().dds.textures[2];
+    const auto& array = find_planned_dds_texture(plan.value(), "textures/generated/array.dds");
     CHECK(array.path == "textures/generated/array.dds");
     CHECK_FALSE(array.is_cubemap);
     CHECK(array.array_size == 4U);

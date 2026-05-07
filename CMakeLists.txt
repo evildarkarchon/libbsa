@@ -61,6 +61,7 @@ target_sources(libbsa
     src/hash.cpp
     src/io.cpp
     src/writer.cpp
+    src/texture/dds_analysis.cpp
     src/texture/dds_reconstruction.cpp
     src/texture/dds_validation.cpp
   PUBLIC
