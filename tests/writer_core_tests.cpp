@@ -35,6 +35,13 @@ libbsa::writer_entry writer_entry(std::string path, std::vector<std::byte> paylo
     return entry;
 }
 
+libbsa::writer_entry compressed_writer_entry(std::string path, std::vector<std::byte> payload)
+{
+    auto entry = writer_entry(std::move(path), std::move(payload));
+    entry.compression = libbsa::compression_policy::force_compressed;
+    return entry;
+}
+
 class failing_sink final : public libbsa::byte_sink {
 public:
     explicit failing_sink(std::size_t fail_after) : fail_after_(fail_after) {}
@@ -335,6 +342,81 @@ TEST_CASE("returns sink failure during finalization", "[unit][writer]")
     REQUIRE_FALSE(finalized.has_value());
     CHECK(finalized.error().code == libbsa::error_code::io_failure);
     CHECK(finalized.error().message == "injected sink failure");
+}
+
+TEST_CASE("reads finalized harness bytes back and compares plan metadata", "[unit][writer]")
+{
+    const auto target = raw_fo4_target();
+    libbsa::writer_options options{};
+    options.deduplicate = true;
+    const std::vector entries{writer_entry("textures/c.dds", {std::byte{0x44}, std::byte{0x55}}),
+                              writer_entry("meshes/a.nif", {std::byte{0x44}, std::byte{0x55}})};
+    const auto planned = libbsa::plan_archive_write(target, std::span<const libbsa::writer_entry>{entries}, options);
+    REQUIRE(planned.has_value());
+    libbsa::memory_sink sink;
+    REQUIRE(libbsa::finalize_archive_write(planned.value(), sink).has_value());
+
+    const auto harness = libbsa::test::read_writer_harness(std::span<const std::byte>{sink.bytes()});
+
+    libbsa::test::require_harness_matches_plan(harness, planned.value());
+    const std::vector expected{std::byte{0x44}, std::byte{0x55}};
+    CHECK(libbsa::test::extract_writer_harness_entry(harness, "meshes/a.nif") == expected);
+    CHECK(libbsa::test::extract_writer_harness_entry(harness, "textures/c.dds") == expected);
+}
+
+TEST_CASE("round trips compressed harness payloads through real codec routes", "[unit][writer][codec]")
+{
+    const auto target = raw_fo4_target();
+    const std::vector expected{std::byte{0x10}, std::byte{0x20}, std::byte{0x30}, std::byte{0x40}};
+    const std::vector entries{compressed_writer_entry("meshes/a.nif", expected)};
+    const auto planned = libbsa::plan_archive_write(target, std::span<const libbsa::writer_entry>{entries});
+    REQUIRE(planned.has_value());
+    libbsa::memory_sink sink;
+    REQUIRE(libbsa::finalize_archive_write(planned.value(), sink).has_value());
+
+    const auto harness = libbsa::test::read_writer_harness(std::span<const std::byte>{sink.bytes()});
+
+    libbsa::test::require_harness_matches_plan(harness, planned.value());
+    CHECK(libbsa::test::extract_writer_harness_entry(harness, "meshes/a.nif") == expected);
+}
+
+TEST_CASE("archive default compression records exact stored size in plan and harness", "[unit][writer][codec]")
+{
+    auto target = raw_fo4_target();
+    target.archive_default_compressed = true;
+    const std::vector entries{writer_entry("meshes/a.nif", {std::byte{0x10}, std::byte{0x20}, std::byte{0x30}, std::byte{0x40}})};
+    const auto planned = libbsa::plan_archive_write(target, std::span<const libbsa::writer_entry>{entries});
+    REQUIRE(planned.has_value());
+    REQUIRE(planned.value().entries.size() == 1);
+    REQUIRE(planned.value().data_regions.size() == 1);
+    CHECK(planned.value().entries.front().compression == libbsa::compression_state::deflate);
+    CHECK(planned.value().data_regions.front().compression == libbsa::compression_state::deflate);
+    CHECK(planned.value().entries.front().stored_size == planned.value().data_regions.front().stored_payload.size());
+    libbsa::memory_sink sink;
+    REQUIRE(libbsa::finalize_archive_write(planned.value(), sink).has_value());
+
+    const auto harness = libbsa::test::read_writer_harness(std::span<const std::byte>{sink.bytes()});
+
+    libbsa::test::require_harness_matches_plan(harness, planned.value());
+    REQUIRE(harness.entries.size() == 1);
+    REQUIRE(harness.data_regions.size() == 1);
+    CHECK(harness.entries.front().stored_size == planned.value().entries.front().stored_size);
+    CHECK(harness.data_regions.front().stored_size == planned.value().data_regions.front().stored_size);
+}
+
+TEST_CASE("writer planning rejects unsupported codec route without fallback", "[unit][writer][codec]")
+{
+    auto target = raw_fo4_target();
+    target.format = libbsa::archive_format::starfield_ba2_gnrl;
+    target.archive_default_compressed = true;
+    target.compression_method = 2;
+    const std::vector entries{compressed_writer_entry("meshes/a.nif", {std::byte{0x10}, std::byte{0x20}})};
+
+    const auto planned = libbsa::plan_archive_write(target, std::span<const libbsa::writer_entry>{entries});
+
+    REQUIRE_FALSE(planned.has_value());
+    CHECK(planned.error().code == libbsa::error_code::unsupported_format);
+    CHECK(planned.error().message == "unsupported compression route");
 }
 
 TEST_CASE("rejects duplicate normalized writer paths before layout", "[unit][writer]")
