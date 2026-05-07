@@ -78,6 +78,24 @@ bool supported_writer_target(archive_format format) noexcept
     return false;
 }
 
+bool is_starfield_ba2(archive_format format) noexcept
+{
+    return format == archive_format::starfield_ba2_gnrl || format == archive_format::starfield_ba2_dds;
+}
+
+compression_state resolved_writer_compression(const writer_target& target, compression_state state) noexcept
+{
+    // Starfield BA2 v3 stores the native codec in the archive-level compression
+    // method. Preserve that route so unsupported method values cannot silently
+    // fall back to deflate during writer planning.
+    if (is_starfield_ba2(target.format) && target.compression_method.has_value() && *target.compression_method != 0 &&
+        state != compression_state::raw && state != compression_state::none) {
+        return compression_state::lz4_block;
+    }
+
+    return state;
+}
+
 std::uint64_t layout_header_size_for(const writer_target& target) noexcept
 {
     // The current public target has no oversized metadata field. Reserve an
@@ -143,14 +161,16 @@ result<stored_writer_entry> store_entry_payload(const writer_target& target, nor
         return failure<stored_writer_entry>(resolved.error());
     }
 
-    if (!target.supports_compression && resolved.value() != compression_state::raw && resolved.value() != compression_state::none &&
-        resolved.value() != compression_state::archive_default) {
+    const auto writer_compression = resolved_writer_compression(target, resolved.value());
+
+    if (!target.supports_compression && writer_compression != compression_state::raw && writer_compression != compression_state::none &&
+        writer_compression != compression_state::archive_default) {
         return failure<stored_writer_entry>({error_code::unsupported_format, "writer target does not support compression"});
     }
 
     payload_codec_request request{};
     request.format = target.format;
-    request.entry_state = resolved.value();
+    request.entry_state = writer_compression;
     request.compression_method = target.compression_method;
     auto algorithm = resolve_payload_codec(request);
     if (!algorithm.has_value()) {
@@ -163,9 +183,9 @@ result<stored_writer_entry> store_entry_payload(const writer_target& target, nor
     }
 
     return success(stored_writer_entry{std::move(entry.path),
-                                       static_cast<std::uint64_t>(entry.source->payload.size()),
-                                       resolved.value(),
-                                       std::move(stored.value())});
+                                        static_cast<std::uint64_t>(entry.source->payload.size()),
+                                        writer_compression,
+                                        std::move(stored.value())});
 }
 
 void append_u32(std::vector<std::byte>& bytes, std::uint32_t value)
