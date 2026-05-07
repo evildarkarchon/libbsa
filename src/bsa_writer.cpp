@@ -388,6 +388,9 @@ result<bsa_write_plan> plan_tes4_write(bsa_write_target target,
             if (!checked_add(file_names_size, entry.file.size() + 1U, file_names_size)) {
                 return failure<bsa_write_plan>(writer_layout_overflow());
             }
+            if (file_count == std::numeric_limits<std::uint32_t>::max()) {
+                return failure<bsa_write_plan>(writer_layout_overflow());
+            }
             ++file_count;
         }
     }
@@ -445,15 +448,28 @@ result<bsa_write_plan> plan_tes4_write(bsa_write_target target,
     plan.table_regions.push_back(planned_bsa_table_region{"tes4 folder blocks", detail::header_size + folder_records_size, folder_blocks_size});
     plan.table_regions.push_back(planned_bsa_table_region{"tes4 file names", detail::header_size + folder_records_size + folder_blocks_size, file_names_size});
 
+    auto folder_count = checked_u32(folders.size());
+    auto total_folder_name_length = checked_u32(folder_names_size);
+    auto total_file_name_length = checked_u32(file_names_size);
+    if (!folder_count.has_value()) {
+        return failure<bsa_write_plan>(folder_count.error());
+    }
+    if (!total_folder_name_length.has_value()) {
+        return failure<bsa_write_plan>(total_folder_name_length.error());
+    }
+    if (!total_file_name_length.has_value()) {
+        return failure<bsa_write_plan>(total_file_name_length.error());
+    }
+
     append_u32(plan.table_bytes, detail::bsa_magic);
     append_u32(plan.table_bytes, version_for(target));
     append_u32(plan.table_bytes, static_cast<std::uint32_t>(detail::header_size));
     append_u32(plan.table_bytes, plan.flags);
-    append_u32(plan.table_bytes, static_cast<std::uint32_t>(folders.size()));
+    append_u32(plan.table_bytes, folder_count.value());
     append_u32(plan.table_bytes, file_count);
     // TES4 header offset 24 stores folder-name bytes only, not the file records that share the folder block region.
-    append_u32(plan.table_bytes, static_cast<std::uint32_t>(folder_names_size));
-    append_u32(plan.table_bytes, static_cast<std::uint32_t>(file_names_size));
+    append_u32(plan.table_bytes, total_folder_name_length.value());
+    append_u32(plan.table_bytes, total_file_name_length.value());
     append_u32(plan.table_bytes, file_flags);
 
     for (const auto& folder : folders) {
