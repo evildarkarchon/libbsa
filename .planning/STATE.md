@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 09 context gathered
-last_updated: "2026-05-07T06:32:11.056Z"
-last_activity: 2026-05-07 -- Phase 09 planning complete
+last_updated: "2026-05-07T06:46:52.388Z"
+last_activity: 2026-05-07
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 46
-  completed_plans: 40
-  percent: 87
+  completed_plans: 41
+  percent: 89
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 09 (bsa-writers) — READY
-Plan: TBD
+Phase: 09 (bsa-writers) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-05-07 -- Phase 09 planning complete
+Last activity: 2026-05-07
 
-Progress: [██████████] 100%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [██████████] 100%
 | Phase 08 P04 | 3min | 2 tasks | 4 files |
 | Phase 08 P05 | 11min | 2 tasks | 5 files |
 | Phase 08 P06 | 5min | 3 tasks | 3 files |
+| Phase 09-bsa-writers P01 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,7 @@ Recent decisions affecting current work:
 - [Phase 08]: Generated LBSW harness read-back remains test-only and validates metadata plus raw/deflate extraction through real codec routes.
 - [Phase 08]: Starfield writer planning preserves nonzero CompressionMethod routing through lz4_block so unsupported method values cannot silently fall back to deflate.
 - [Phase 08]: Public smoke and README document writer-core foundations without claiming complete BSA/BA2 writer compatibility.
+- [Phase 09]: BSA writer API seam uses explicit targets, separate memory/disk inputs, and structured unsupported placeholders. — Preserves Phase 9 decisions D-01, D-02, D-08 and keeps later TDD plans behind stable public function names.
 
 ### Pending Todos
 
@@ -130,6 +132,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T06:08:59.599Z
+Last session: 2026-05-07T06:46:40.189Z
 Stopped at: Phase 09 context gathered
-Resume file: .planning/phases/09-bsa-writers/09-CONTEXT.md
+Resume file: None
