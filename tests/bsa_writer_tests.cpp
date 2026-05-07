@@ -307,6 +307,7 @@ TEST_CASE("plans and finalizes TES4-family raw BSA archives for every required v
         CHECK(le_u32(bytes, 8) == 36);
         CHECK(le_u32(bytes, 16) == 3);
         CHECK(le_u32(bytes, 20) == 3);
+        CHECK(le_u32(bytes, 24) == 26);
         CHECK(le_u32(bytes, 32) == (file_meshes | file_textures | file_sounds));
 
         const libbsa::memory_source source{std::span<const std::byte>{bytes}};

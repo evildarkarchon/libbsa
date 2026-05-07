@@ -368,6 +368,7 @@ result<bsa_write_plan> plan_tes4_write(bsa_write_target target,
     }
 
     std::uint64_t folder_blocks_size = 0;
+    std::uint64_t folder_names_size = 0;
     std::uint64_t file_names_size = 0;
     std::uint32_t file_count = 0;
     for (auto& folder : folders) {
@@ -376,6 +377,7 @@ result<bsa_write_plan> plan_tes4_write(bsa_write_target target,
         std::uint64_t file_records_size = 0;
         std::uint64_t folder_block_size = 0;
         if (!checked_add(folder.folder.size(), 2, folder_name_record_size) ||
+            !checked_add(folder_names_size, folder_name_record_size, folder_names_size) ||
             !checked_mul(16, folder.entries.size(), file_records_size) ||
             !checked_add(folder_name_record_size, file_records_size, folder_block_size) ||
             !checked_add(folder_blocks_size, folder_block_size, folder_blocks_size) ||
@@ -449,7 +451,8 @@ result<bsa_write_plan> plan_tes4_write(bsa_write_target target,
     append_u32(plan.table_bytes, plan.flags);
     append_u32(plan.table_bytes, static_cast<std::uint32_t>(folders.size()));
     append_u32(plan.table_bytes, file_count);
-    append_u32(plan.table_bytes, static_cast<std::uint32_t>(folder_blocks_size));
+    // TES4 header offset 24 stores folder-name bytes only, not the file records that share the folder block region.
+    append_u32(plan.table_bytes, static_cast<std::uint32_t>(folder_names_size));
     append_u32(plan.table_bytes, static_cast<std::uint32_t>(file_names_size));
     append_u32(plan.table_bytes, file_flags);
 
