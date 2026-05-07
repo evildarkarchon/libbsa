@@ -165,6 +165,16 @@ ctest --preset windows-msvc-vcpkg --output-on-failure
 git status --short TES5Edit
 ```
 
+## BSA writer support
+
+Phase 09 adds production BSA writer support for TES3 Morrowind and TES4-family BSA archives. Consumers can use `include/libbsa/bsa_writer.hpp` to plan archives for `tes3_morrowind`, `oblivion_v103`, `fo3_fnv_skyrim_le_v104`, and `skyrim_se_ae_v105`, then stream final bytes through `finalize_bsa_write` and a caller-owned `byte_sink`.
+
+The BSA writer accepts both in-memory entries (`bsa_memory_entry`) and explicit disk-file mappings (`bsa_disk_entry`). Disk-backed planning reads caller-selected host files during planning and stores archive-virtual paths separately so host filesystem paths are not confused with normalized BSA paths.
+
+TES4-family BSA writer output uses native headers, folder/file tables, name blocks, hashes, flags, archive-default and per-entry compression flag behavior, and optional embedded-name payload prefixes. v103 and v104 compressed payloads use deflate; v105 compressed payloads use LZ4-frame storage. TES3 writer output uses raw payloads, TES3-compatible hash-sorted records, null-terminated name blocks, hash table bytes, and data-section-relative offsets.
+
+Generated writer tests perform read-after-write validation by reopening every supported BSA variant through `open_bsa` and extracting entries through `extract_bsa_entry`. Phase 09 does not claim BA2 writer support, DDS packing, CLI or GUI workflows, external corpus comparison, performance or multi-threaded packing, or true in-place mutation; those remain deferred to later phases or out of scope for libbsa.
+
 ## TES5Edit/ reference boundary
 
 `TES5Edit/` is a read-only reference submodule. It documents prior BSArchPro-compatible behavior, but it is not vendored source for libbsa.
