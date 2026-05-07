@@ -115,8 +115,8 @@ struct write_plan {
 ///
 /// The sink object and any backing storage remain owned by the caller and must
 /// live only for the duration of this call; the write plan owns all bytes needed
-/// for emission. Later behavior plans replace the initial placeholder with
-/// deterministic streaming and first-failure propagation.
+/// for emission. The function returns the first structured sink write failure
+/// without retaining the sink after the operation returns.
 [[nodiscard]] result<void> finalize_archive_write(const write_plan& plan, byte_sink& sink);
 
 } // namespace libbsa
