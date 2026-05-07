@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <limits>
 #include <span>
 #include <string>
@@ -156,6 +158,79 @@ libbsa::bsa_memory_entry bsa_entry(std::string path,
     entry.payload = std::move(payload);
     entry.compression = compression;
     return entry;
+}
+
+libbsa::bsa_disk_entry disk_entry(std::filesystem::path host_path,
+                                  std::string path,
+                                  libbsa::compression_policy compression = libbsa::compression_policy::archive_default)
+{
+    libbsa::bsa_disk_entry entry{};
+    entry.host_path = host_path.string();
+    entry.path = std::move(path);
+    entry.compression = compression;
+    return entry;
+}
+
+std::filesystem::path unique_temp_file(std::string_view stem)
+{
+    static int counter = 0;
+    return std::filesystem::temp_directory_path() /
+           (std::string{"libbsa-bsa-writer-"} + std::string{stem} + "-" + std::to_string(++counter) + ".bin");
+}
+
+void write_temp_file(const std::filesystem::path& path, std::span<const std::byte> bytes)
+{
+    std::ofstream output{path, std::ios::binary | std::ios::trunc};
+    REQUIRE(output.good());
+    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(output.good());
+}
+
+class failing_sink final : public libbsa::byte_sink {
+public:
+    explicit failing_sink(std::size_t fail_after) : fail_after_(fail_after) {}
+
+    [[nodiscard]] libbsa::result<void> write(std::span<const std::byte> bytes) override
+    {
+        if (written_ + bytes.size() > fail_after_) {
+            return libbsa::failure<void>({libbsa::error_code::io_failure, "injected BSA sink failure"});
+        }
+
+        written_ += bytes.size();
+        return libbsa::success();
+    }
+
+private:
+    std::size_t fail_after_{};
+    std::size_t written_{};
+};
+
+void require_archives_equivalent(std::span<const std::byte> memory_bytes,
+                                 std::span<const std::byte> disk_bytes,
+                                 std::span<const libbsa::bsa_memory_entry> entries)
+{
+    const libbsa::memory_source memory_source{memory_bytes};
+    const libbsa::memory_source disk_source{disk_bytes};
+    const auto memory_archive = libbsa::open_bsa(memory_source);
+    const auto disk_archive = libbsa::open_bsa(disk_source);
+    REQUIRE(memory_archive.has_value());
+    REQUIRE(disk_archive.has_value());
+    CHECK(memory_archive.value().paths() == disk_archive.value().paths());
+
+    for (const auto& entry : entries) {
+        const auto memory_metadata = memory_archive.value().entry(entry.path);
+        const auto disk_metadata = disk_archive.value().entry(entry.path);
+        REQUIRE(memory_metadata.has_value());
+        REQUIRE(disk_metadata.has_value());
+        CHECK(memory_metadata.value().path == disk_metadata.value().path);
+        CHECK(memory_metadata.value().size == disk_metadata.value().size);
+        CHECK(memory_metadata.value().stored_size == disk_metadata.value().stored_size);
+        CHECK(memory_metadata.value().compression == disk_metadata.value().compression);
+        CHECK(memory_metadata.value().directory_hash == disk_metadata.value().directory_hash);
+        CHECK(memory_metadata.value().name_hash == disk_metadata.value().name_hash);
+        CHECK(extract_bytes(std::vector<std::byte>{memory_bytes.begin(), memory_bytes.end()}, entry.path) == entry.payload);
+        CHECK(extract_bytes(std::vector<std::byte>{disk_bytes.begin(), disk_bytes.end()}, entry.path) == entry.payload);
+    }
 }
 
 } // namespace
@@ -417,4 +492,147 @@ TEST_CASE("dedup shares only identical native BSA stored payloads", "[unit][bsa-
     CHECK(first.offset == second.offset);
     CHECK(first.data_region_id != different.data_region_id);
     CHECK(plan.value().data_regions.size() == 2);
+}
+
+TEST_CASE("disk-backed and memory-backed BSA inputs read back equivalently", "[unit][bsa-writer][disk][roundtrip]")
+{
+    const std::vector memory_entries{bsa_entry("meshes/from-disk.nif", ascii_bytes("disk mesh"), libbsa::compression_policy::force_raw),
+                                     bsa_entry("textures/from-disk.dds", ascii_bytes("disk texture"), libbsa::compression_policy::force_raw)};
+    const auto mesh_path = unique_temp_file("mesh");
+    const auto texture_path = unique_temp_file("texture");
+    write_temp_file(mesh_path, memory_entries[0].payload);
+    write_temp_file(texture_path, memory_entries[1].payload);
+    const std::vector disk_entries{disk_entry(mesh_path, memory_entries[0].path, memory_entries[0].compression),
+                                   disk_entry(texture_path, memory_entries[1].path, memory_entries[1].compression)};
+
+    const auto memory_plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::fo3_fnv_skyrim_le_v104,
+                                                   std::span<const libbsa::bsa_memory_entry>{memory_entries});
+    const auto disk_plan = libbsa::plan_bsa_write_from_disk(libbsa::bsa_write_target::fo3_fnv_skyrim_le_v104,
+                                                           std::span<const libbsa::bsa_disk_entry>{disk_entries});
+
+    REQUIRE(memory_plan.has_value());
+    REQUIRE(disk_plan.has_value());
+    require_archives_equivalent(finalize_to_bytes(memory_plan.value()), finalize_to_bytes(disk_plan.value()), memory_entries);
+}
+
+TEST_CASE("disk files are read during planning and not reopened during finalization", "[unit][bsa-writer][disk]")
+{
+    const auto host_path = unique_temp_file("owned-by-plan");
+    const auto original = ascii_bytes("original disk bytes");
+    write_temp_file(host_path, original);
+    const std::vector disk_entries{disk_entry(host_path, "meshes/owned.nif", libbsa::compression_policy::force_raw)};
+
+    const auto plan = libbsa::plan_bsa_write_from_disk(libbsa::bsa_write_target::oblivion_v103,
+                                                       std::span<const libbsa::bsa_disk_entry>{disk_entries});
+    REQUIRE(plan.has_value());
+    write_temp_file(host_path, ascii_bytes("mutated bytes that must not leak into finalization"));
+    std::filesystem::remove(host_path);
+
+    const auto bytes = finalize_to_bytes(plan.value());
+
+    CHECK(extract_bytes(bytes, "meshes/owned.nif") == original);
+}
+
+TEST_CASE("duplicate normalized BSA paths fail during planning", "[unit][bsa-writer][failure]")
+{
+    const std::vector entries{bsa_entry("Meshes/Armor/Iron.NIF", ascii_bytes("first")),
+                              bsa_entry("meshes\\armor\\iron.nif", ascii_bytes("second"))};
+    libbsa::memory_sink sink;
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::skyrim_se_ae_v105,
+                                             std::span<const libbsa::bsa_memory_entry>{entries});
+
+    REQUIRE_FALSE(plan.has_value());
+    CHECK(plan.error().code == libbsa::error_code::malformed_archive);
+    CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("duplicate normalized disk BSA paths fail before host file reads", "[unit][bsa-writer][disk][failure]")
+{
+    const auto existing_path = unique_temp_file("duplicate-existing");
+    const auto missing_path = unique_temp_file("duplicate-missing");
+    write_temp_file(existing_path, ascii_bytes("first"));
+    std::filesystem::remove(missing_path);
+    const std::vector entries{disk_entry(existing_path, "Meshes/Armor/Iron.NIF"),
+                              disk_entry(missing_path, "meshes\\armor\\iron.nif")};
+    libbsa::memory_sink sink;
+
+    const auto plan = libbsa::plan_bsa_write_from_disk(libbsa::bsa_write_target::oblivion_v103,
+                                                       std::span<const libbsa::bsa_disk_entry>{entries});
+
+    REQUIRE_FALSE(plan.has_value());
+    CHECK(plan.error().code == libbsa::error_code::malformed_archive);
+    CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("invalid archive paths fail during planning", "[unit][bsa-writer][failure]")
+{
+    const std::vector entries{bsa_entry("", ascii_bytes("payload"))};
+    libbsa::memory_sink sink;
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::oblivion_v103,
+                                             std::span<const libbsa::bsa_memory_entry>{entries});
+
+    REQUIRE_FALSE(plan.has_value());
+    CHECK(plan.error().code == libbsa::error_code::malformed_archive);
+    CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("missing disk inputs fail before finalization", "[unit][bsa-writer][disk][failure]")
+{
+    const auto missing_path = unique_temp_file("missing");
+    std::filesystem::remove(missing_path);
+    const std::vector disk_entries{disk_entry(missing_path, "meshes/missing.nif", libbsa::compression_policy::force_raw)};
+    libbsa::memory_sink sink;
+
+    const auto plan = libbsa::plan_bsa_write_from_disk(libbsa::bsa_write_target::fo3_fnv_skyrim_le_v104,
+                                                       std::span<const libbsa::bsa_disk_entry>{disk_entries});
+
+    REQUIRE_FALSE(plan.has_value());
+    CHECK(plan.error().code == libbsa::error_code::io_failure);
+    CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("impossible BSA layout arithmetic fails before finalization", "[unit][bsa-writer][failure]")
+{
+    const std::string folder_too_large_for_len8(260, 'a');
+    const std::vector entries{bsa_entry("meshes/" + folder_too_large_for_len8 + "/iron.nif", ascii_bytes("mesh"),
+                                        libbsa::compression_policy::force_raw)};
+    libbsa::memory_sink sink;
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::fo3_fnv_skyrim_le_v104,
+                                             std::span<const libbsa::bsa_memory_entry>{entries});
+
+    REQUIRE_FALSE(plan.has_value());
+    CHECK(plan.error().code == libbsa::error_code::malformed_archive);
+    CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("unsupported BSA target version combinations fail during planning", "[unit][bsa-writer][failure]")
+{
+    const std::vector entries{bsa_entry("meshes/packed.nif", ascii_bytes("payload"),
+                                        libbsa::compression_policy::force_compressed)};
+    libbsa::memory_sink sink;
+
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::tes3_morrowind,
+                                             std::span<const libbsa::bsa_memory_entry>{entries});
+
+    REQUIRE_FALSE(plan.has_value());
+    CHECK(plan.error().code == libbsa::error_code::unsupported_format);
+    CHECK(sink.bytes().empty());
+}
+
+TEST_CASE("BSA finalization returns first sink failure unchanged", "[unit][bsa-writer][failure]")
+{
+    const std::vector entries{bsa_entry("meshes/a.nif", ascii_bytes("payload"), libbsa::compression_policy::force_raw)};
+    const auto plan = libbsa::plan_bsa_write(libbsa::bsa_write_target::oblivion_v103,
+                                             std::span<const libbsa::bsa_memory_entry>{entries});
+    REQUIRE(plan.has_value());
+    failing_sink sink{8};
+
+    const auto finalized = libbsa::finalize_bsa_write(plan.value(), sink);
+
+    REQUIRE_FALSE(finalized.has_value());
+    CHECK(finalized.error().code == libbsa::error_code::io_failure);
+    CHECK(finalized.error().message == "injected BSA sink failure");
 }
