@@ -391,22 +391,22 @@ public:
 | A3 | Writer plan may expose vectors and keep stored region bytes in the plan object even if byte vectors are not all public fields. | Architecture Patterns | Medium: planner must balance inspectability with not exposing excessive internals. |
 | A4 | Failing sink can be implemented in tests with an injected byte threshold. | Code Examples | Low: `byte_sink` is a public virtual interface designed for caller-owned sinks. |
 
-## Open Questions
+## Resolved Questions
 
 1. **Should the harness writer be public-test-visible through `writer_target` or entirely private to tests?**
    - What we know: Phase 8 requires public or test-visible writer foundation types, but the fake harness format itself must not become a public fake archive format. [VERIFIED: `08-SPEC.md`, `08-CONTEXT.md`]
    - What's unclear: Whether the public target descriptor needs a generic/custom variant now or whether tests can use internal helpers to exercise the same planner. [VERIFIED: `08-CONTEXT.md` leaves exact type names/details to planner]
-   - Recommendation: Keep target capability descriptor public but make harness-specific serializer/reader helpers test-only. [VERIFIED: `08-CONTEXT.md`]
+   - RESOLVED: Keep the target capability descriptor public as `writer_target`; keep harness-specific serializer/reader helpers test-only under `tests/writer_harness_helpers.*`. Do not add a public fake archive format or harness enum/value under `include/libbsa/`. [VERIFIED: `08-CONTEXT.md`, `08-SPEC.md`]
 
 2. **How should finalization report partial writes after sink failure?**
    - What we know: It must propagate structured sink failure and not expose partial success as success. [VERIFIED: `08-SPEC.md`]
    - What's unclear: Current `error_code` lacks a writer-specific category; `io_failure` is the closest existing code. [VERIFIED: `include/libbsa/result.hpp`]
-   - Recommendation: Use `error_code::io_failure` for sink failures unless the planner adds writer-specific messages within existing codes. [VERIFIED: `include/libbsa/result.hpp`]
+   - RESOLVED: Propagate the first sink failure unchanged. Tests use `error_code::io_failure` with message `injected sink failure`; finalization must not wrap it as success or as a different writer error. [VERIFIED: `include/libbsa/result.hpp`, `08-SPEC.md`]
 
 3. **Do Phase 8 tests need no-partial-write semantics for finalization?**
    - What we know: Acceptance requires structured sink failure; prior DDS extraction intentionally touches the sink only after validation succeeds. [VERIFIED: `08-SPEC.md`, `src/ba2_reader.cpp`]
    - What's unclear: Streaming archive finalization cannot generally roll back caller-owned sinks after some chunks have been accepted. [ASSUMED]
-   - Recommendation: Assert failure propagation and exact byte count from a failing sink; do not promise rollback semantics for arbitrary streaming sinks. [VERIFIED: `include/libbsa/io.hpp`]
+   - RESOLVED: Assert failure propagation and the failing sink's accepted byte count; do not promise rollback/no-partial-write semantics for arbitrary streaming sinks because `byte_sink` is caller-owned and cannot be rewound generically. Planning failures still occur before any sink access. [VERIFIED: `include/libbsa/io.hpp`, `08-SPEC.md`]
 
 ## Environment Availability
 

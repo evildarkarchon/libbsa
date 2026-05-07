@@ -228,7 +228,25 @@ Plans:
   2. Consumer can opt into content deduplication so identical files share a data region when the target format allows it.
   3. Consumer can preview deterministic writer layout choices for offsets, tables, compression state, and data regions before bytes are emitted.
   4. Maintainer can verify written archives through read-after-write, round-trip extraction, and metadata comparison tests.
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+**Wave 1**
+- [ ] 08-01-PLAN.md — Add the writer contract skeleton, source wiring, and writer test target.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 08-02-PLAN.md — TDD deterministic writer planning, validation, compression-policy resolution, and checked layout preview.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 08-03-PLAN.md — TDD opt-in post-policy payload deduplication and unsupported-target failure behavior.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 08-04-PLAN.md — TDD streaming finalization through caller-owned `byte_sink` implementations.
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 08-05-PLAN.md — TDD generated test-only harness read-after-write, metadata comparison, and round-trip extraction.
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 08-06-PLAN.md — Finalize public smoke coverage, documentation, and Phase 8 validation gates.
 
 ### Phase 9: BSA Writers
 **Goal**: Consumers can create TES4-family and TES3 BSA archives compatible with their target game engines.
