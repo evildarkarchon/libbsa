@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <libbsa/archive.hpp>
+#include <libbsa/io.hpp>
 #include <libbsa/writer.hpp>
 
 #include "writer_harness_helpers.hpp"
@@ -32,6 +33,58 @@ libbsa::writer_entry writer_entry(std::string path, std::vector<std::byte> paylo
     entry.payload = std::move(payload);
     entry.compression = libbsa::compression_policy::archive_default;
     return entry;
+}
+
+class failing_sink final : public libbsa::byte_sink {
+public:
+    explicit failing_sink(std::size_t fail_after) : fail_after_(fail_after) {}
+
+    [[nodiscard]] libbsa::result<void> write(std::span<const std::byte> bytes) override
+    {
+        if (written_ + bytes.size() > fail_after_) {
+            return libbsa::failure<void>({libbsa::error_code::io_failure, "injected sink failure"});
+        }
+
+        written_ += bytes.size();
+        return libbsa::success();
+    }
+
+private:
+    std::size_t fail_after_{};
+    std::size_t written_{};
+};
+
+bool contains_bytes(std::span<const std::byte> bytes, std::span<const std::byte> needle)
+{
+    if (needle.empty() || needle.size() > bytes.size()) {
+        return false;
+    }
+
+    for (std::size_t offset = 0; offset <= bytes.size() - needle.size(); ++offset) {
+        bool matches = true;
+        for (std::size_t index = 0; index < needle.size(); ++index) {
+            if (bytes[offset + index] != needle[index]) {
+                matches = false;
+                break;
+            }
+        }
+        if (matches) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+const libbsa::planned_table_region* table_region_named(const libbsa::write_plan& plan, std::string_view name)
+{
+    for (const auto& region : plan.table_regions) {
+        if (region.name == name) {
+            return &region;
+        }
+    }
+
+    return nullptr;
 }
 
 void require_plans_equal(const libbsa::write_plan& left, const libbsa::write_plan& right)
@@ -216,6 +269,72 @@ TEST_CASE("rejects deduplication when target disallows shared regions", "[unit][
     REQUIRE_FALSE(planned.has_value());
     CHECK(planned.error().code == libbsa::error_code::unsupported_format);
     CHECK(planned.error().message == "writer target does not support deduplication");
+}
+
+TEST_CASE("finalizes planned bytes to caller-owned sink", "[unit][writer]")
+{
+    const auto target = raw_fo4_target();
+    const std::vector entries{writer_entry("textures/z.dds", {std::byte{0x7a}}),
+                              writer_entry("meshes/a.nif", {std::byte{0x61}, std::byte{0x62}}),
+                              writer_entry("textures/m.dds", {std::byte{0x6d}})};
+    const auto plan = libbsa::plan_archive_write(target, std::span<const libbsa::writer_entry>{entries});
+    REQUIRE(plan.has_value());
+    libbsa::memory_sink sink;
+
+    const auto finalized = libbsa::finalize_archive_write(plan.value(), sink);
+
+    REQUIRE(finalized.has_value());
+    REQUIRE(sink.bytes().size() == plan.value().total_size);
+    REQUIRE(sink.bytes().size() >= 4);
+    constexpr char magic[] = "LBSW";
+    CHECK(sink.bytes()[0] == std::byte{magic[0]});
+    CHECK(sink.bytes()[1] == std::byte{magic[1]});
+    CHECK(sink.bytes()[2] == std::byte{magic[2]});
+    CHECK(sink.bytes()[3] == std::byte{magic[3]});
+    const std::vector first_payload{std::byte{0x61}, std::byte{0x62}};
+    const std::vector second_payload{std::byte{0x6d}};
+    CHECK(contains_bytes(std::span<const std::byte>{sink.bytes()}, std::span<const std::byte>{first_payload}));
+    CHECK(contains_bytes(std::span<const std::byte>{sink.bytes()}, std::span<const std::byte>{second_payload}));
+}
+
+TEST_CASE("emits entry table with planned variable path byte size", "[unit][writer]")
+{
+    const auto target = raw_fo4_target();
+    const std::vector entries{writer_entry("textures/z.dds", {std::byte{0x7a}}),
+                              writer_entry("meshes/a.nif", {std::byte{0x61}, std::byte{0x62}}),
+                              writer_entry("textures/m.dds", {std::byte{0x6d}})};
+    const auto plan = libbsa::plan_archive_write(target, std::span<const libbsa::writer_entry>{entries});
+    REQUIRE(plan.has_value());
+    const auto* entry_table = table_region_named(plan.value(), "entry_table");
+    REQUIRE(entry_table != nullptr);
+    libbsa::memory_sink sink;
+
+    const auto finalized = libbsa::finalize_archive_write(plan.value(), sink);
+
+    REQUIRE(finalized.has_value());
+    REQUIRE(entry_table->offset <= sink.bytes().size());
+    REQUIRE(entry_table->size <= sink.bytes().size() - entry_table->offset);
+    const auto emitted_entry_table = std::span<const std::byte>{sink.bytes()}.subspan(
+        static_cast<std::size_t>(entry_table->offset), static_cast<std::size_t>(entry_table->size));
+    CHECK(emitted_entry_table.size() == entry_table->size);
+    CHECK(entry_table->size == (32 + std::string{"meshes/a.nif"}.size()) +
+                                   (32 + std::string{"textures/m.dds"}.size()) +
+                                   (32 + std::string{"textures/z.dds"}.size()));
+}
+
+TEST_CASE("returns sink failure during finalization", "[unit][writer]")
+{
+    const auto target = raw_fo4_target();
+    const std::vector entries{writer_entry("meshes/a.nif", {std::byte{0x61}, std::byte{0x62}})};
+    const auto plan = libbsa::plan_archive_write(target, std::span<const libbsa::writer_entry>{entries});
+    REQUIRE(plan.has_value());
+    failing_sink sink{8};
+
+    const auto finalized = libbsa::finalize_archive_write(plan.value(), sink);
+
+    REQUIRE_FALSE(finalized.has_value());
+    CHECK(finalized.error().code == libbsa::error_code::io_failure);
+    CHECK(finalized.error().message == "injected sink failure");
 }
 
 TEST_CASE("rejects duplicate normalized writer paths before layout", "[unit][writer]")
