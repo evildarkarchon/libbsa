@@ -147,13 +147,17 @@ result<std::string> read_len8_string(const byte_source& source, std::uint64_t& o
     return success(std::move(value));
 }
 
-result<std::vector<std::string>> read_file_names(const byte_source& source, std::uint64_t offset, std::uint32_t count)
+result<std::vector<std::string>> read_file_names(const byte_source& source,
+                                                 std::uint64_t offset,
+                                                 std::uint64_t limit,
+                                                 std::uint32_t count)
 {
     std::vector<std::string> names;
     names.reserve(count);
     for (std::uint32_t i = 0; i < count; ++i) {
         std::string name;
-        for (;;) {
+        bool terminated = false;
+        while (offset < limit) {
             auto byte = read_bytes(source, offset, 1);
             if (!byte.has_value()) {
                 return failure<std::vector<std::string>>(byte.error());
@@ -161,9 +165,13 @@ result<std::vector<std::string>> read_file_names(const byte_source& source, std:
             ++offset;
             const auto ch = static_cast<char>(std::to_integer<unsigned char>(byte.value()[0]));
             if (ch == '\0') {
+                terminated = true;
                 break;
             }
             name.push_back(ch);
+        }
+        if (!terminated) {
+            return failure<std::vector<std::string>>(truncated_table_error());
         }
         names.push_back(std::move(name));
     }
@@ -413,10 +421,12 @@ result<bsa_archive> open_tes4_bsa(const byte_source& source)
         }
         file_names_offset = cursor;
     }
-    if (observed_files != file_count || !range_fits(file_names_offset, total_file_name_length, source.size())) {
+    std::uint64_t file_names_end = 0;
+    if (observed_files != file_count || !checked_add(file_names_offset, total_file_name_length, file_names_end) || file_names_end > source.size()) {
         return failure<bsa_archive>(truncated_table_error());
     }
-    auto names = read_file_names(source, file_names_offset, file_count);
+    // The TES4 header declares the filename table length; bytes after that bound are payload, not fallback name storage.
+    auto names = read_file_names(source, file_names_offset, file_names_end, file_count);
     if (!names.has_value()) {
         return failure<bsa_archive>(names.error());
     }

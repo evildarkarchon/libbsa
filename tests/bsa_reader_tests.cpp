@@ -467,6 +467,18 @@ TEST_CASE("open_bsa rejects truncated folder tables", "[unit]")
     CHECK(opened.error().message == "truncated BSA table");
 }
 
+TEST_CASE("open_bsa rejects names outside the declared TES4 filename table", "[unit]")
+{
+    auto bytes = bsa_archive_bytes(VERSION_TES4, 0, {});
+    write_u32(bytes, 28, 0);
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+    CHECK(opened.error().message == "truncated BSA table");
+}
+
 TEST_CASE("open_bsa rejects truncated TES3 tables", "[unit]")
 {
     auto bytes = tes3_archive_bytes({{}});
