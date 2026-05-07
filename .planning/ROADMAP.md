@@ -286,7 +286,7 @@ Plans:
   2. Consumer can create Fallout 4 and Starfield BA2 DDS archives from DDS inputs with proper metadata analysis and mipmap chunking.
   3. Consumer can read back libbsa-written BA2 archives and retrieve matching paths, metadata, and payload bytes.
   4. Maintainer can validate BA2 DDS pack/extract behavior with mip, cubemap, DXGI format, chunking, and compression fixtures.
-**Plans**: 7 plans
+**Plans**: 8 plans
 Plans:
 **Wave 1**
 - [x] 10-01-PLAN.md — Add the BA2 writer public API seam, placeholder implementation, and focused test target.
@@ -308,6 +308,9 @@ Plans:
 
 **Wave 7** *(gap closure; blocked on Wave 6 completion)*
 - [x] 10-07-PLAN.md — Close BA2 DDS/DX10 format support and compressed chunk ambiguity verification gaps.
+
+**Wave 8** *(gap closure; blocked on Wave 7 completion)*
+- [ ] 10-08-PLAN.md — Close BA2 native extension-field, multi-mip DDS array/cubemap, and cubemap-array verification gaps.
 
 ### Phase 11: Compatibility Validation and Hardening
 **Goal**: Maintainers can prove supported formats match reference behavior and malformed archives fail safely.
