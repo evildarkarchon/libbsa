@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 10 context gathered
-last_updated: "2026-05-07T10:40:25.148Z"
-last_activity: 2026-05-07 -- Phase 10 planning complete
+last_updated: "2026-05-07T10:45:29.474Z"
+last_activity: 2026-05-07
 progress:
   total_phases: 12
   completed_phases: 9
   total_plans: 52
-  completed_plans: 46
-  percent: 88
+  completed_plans: 47
+  percent: 90
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 09 — bsa-writers
+**Current focus:** Phase 10 — ba2-writers
 
 ## Current Position
 
-Phase: 09 (bsa-writers) — EXECUTING
-Plan: 6 of 6
+Phase: 10 (ba2-writers) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-05-07 -- Phase 10 planning complete
+Last activity: 2026-05-07
 
-Progress: [██████████] 100%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Progress: [██████████] 100%
 | Phase 09-bsa-writers P04 | 3min | 2 tasks | 2 files |
 | Phase 09-bsa-writers P05 | 3min | 2 tasks | 4 files |
 | Phase 09-bsa-writers P06 | 2min | 3 tasks | 4 files |
+| Phase 10-ba2-writers P01 | 10min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ Recent decisions affecting current work:
 - [Phase 09-bsa-writers]: TES3 planning rejects compression and embedded-name options structurally instead of downgrading to raw output. — TES3 native BSA writer only supports raw payloads and has no safe embedded-name representation.
 - [Phase 09-bsa-writers]: Phase 09 public documentation claims production BSA writer support only for TES3 Morrowind and TES4-family v103/v104/v105 targets; BA2 writers, DDS packing, CLI/GUI, corpus comparison, performance/multithreading, and in-place mutation remain deferred or out of scope. — Keeps Phase 09 claims aligned with SPEC boundaries and protects Phase 10/11/12 scope.
 - [Phase 09-bsa-writers]: The public-header smoke now validates BSA writer APIs by creating, finalizing, reopening, and extracting all required BSA targets through public headers only. — Ensures consumer-facing coverage proves runtime usability without private headers.
+- [Phase 10-ba2-writers]: BA2 writer discovery uses a dedicated public header rather than extending the reader-focused BA2 header. — Matches Phase 10 D-01 and the Phase 9 BSA writer precedent.
+- [Phase 10-ba2-writers]: BA2 GNRL and DDS/DX10 planning/finalization entry points return structured unsupported_format placeholders until downstream TDD plans implement native writer behavior. — Prevents false BA2 writer compatibility claims while establishing stable public names for downstream plans.
 
 ### Pending Todos
 
@@ -146,6 +149,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T10:18:52.453Z
+Last session: 2026-05-07T10:45:22.470Z
 Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-ba2-writers/10-CONTEXT.md
+Resume file: None

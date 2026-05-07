@@ -59,8 +59,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Writing
 
 - [x] **WRT-01**: Consumer can create TES4-family BSA archives for Oblivion, FO3/FNV/Skyrim LE, and Skyrim SE/AE from disk paths or in-memory buffers.
-- [ ] **WRT-02**: Consumer can create Fallout 4 and Starfield BA2 GNRL archives with version-specific headers, file tables, offsets, and compression metadata.
-- [ ] **WRT-03**: Consumer can create Fallout 4 and Starfield BA2 DDS archives from DDS inputs with proper metadata analysis and mipmap chunking.
+- [x] **WRT-02**: Consumer can create Fallout 4 and Starfield BA2 GNRL archives with version-specific headers, file tables, offsets, and compression metadata.
+- [x] **WRT-03**: Consumer can create Fallout 4 and Starfield BA2 DDS archives from DDS inputs with proper metadata analysis and mipmap chunking.
 - [x] **WRT-04**: Consumer can create TES3 Morrowind BSA archives with correct hash sorting and data-section-relative offsets.
 - [x] **WRT-05**: Consumer can finalize new archives through streaming output without requiring the entire archive image in memory.
 - [x] **WRT-06**: Consumer can opt into content deduplication so identical files share a data region when the target format allows it.
@@ -157,8 +157,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BA2-05 | Phase 7 | Complete |
 | BA2-06 | Phase 7 | Complete |
 | WRT-01 | Phase 9 | Complete |
-| WRT-02 | Phase 10 | Pending |
-| WRT-03 | Phase 10 | Pending |
+| WRT-02 | Phase 10 | Complete |
+| WRT-03 | Phase 10 | Complete |
 | WRT-04 | Phase 9 | Complete |
 | WRT-05 | Phase 8 | Complete |
 | WRT-06 | Phase 8 | Complete |
