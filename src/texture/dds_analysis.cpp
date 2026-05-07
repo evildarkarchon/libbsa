@@ -10,7 +10,11 @@
 namespace libbsa::detail {
 namespace {
 
-constexpr std::uint32_t supported_bc1_unorm = 71U;
+constexpr std::uint32_t dxgi_format_r8g8b8a8_unorm = 28U;
+constexpr std::uint32_t dxgi_format_bc1_unorm = 71U;
+constexpr std::uint32_t dxgi_format_bc3_unorm = 77U;
+constexpr std::uint32_t dxgi_format_bc5_unorm = 83U;
+constexpr std::uint32_t dxgi_format_bc7_unorm = 98U;
 constexpr std::uint32_t dds_magic = 0x20534444U;
 constexpr std::uint32_t dds_header_size = 124U;
 constexpr std::uint32_t dds_pixel_format_size = 32U;
@@ -55,6 +59,14 @@ std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) noe
            (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset + 3U])) << 24U);
 }
 
+bool supported_dds_writer_format(std::uint32_t format) noexcept
+{
+    // Phase 10 supports the DDS formats libbsa can package and reconstruct without transcoding;
+    // broader corpus-driven format expansion belongs to Phase 11 compatibility validation.
+    return format == dxgi_format_r8g8b8a8_unorm || format == dxgi_format_bc1_unorm || format == dxgi_format_bc3_unorm ||
+           format == dxgi_format_bc5_unorm || format == dxgi_format_bc7_unorm;
+}
+
 result<void> reject_unsupported_dx10_format(std::span<const std::byte> dds_bytes)
 {
     if (dds_bytes.size() < dds_dx10_format_offset + sizeof(std::uint32_t)) {
@@ -64,7 +76,7 @@ result<void> reject_unsupported_dx10_format(std::span<const std::byte> dds_bytes
         read_u32(dds_bytes, dds_pixel_format_size_offset) != dds_pixel_format_size || read_u32(dds_bytes, dds_fourcc_offset) != dds_fourcc_dx10) {
         return success();
     }
-    if (read_u32(dds_bytes, dds_dx10_format_offset) != supported_bc1_unorm) {
+    if (!supported_dds_writer_format(read_u32(dds_bytes, dds_dx10_format_offset))) {
         return failure<void>({error_code::unsupported_format, "DDS analysis failed: unsupported DDS format"});
     }
     return success();
@@ -118,7 +130,7 @@ result<analyzed_dds_texture> analyze_dds(std::span<const std::byte> dds_bytes)
     if (width.value() == 0 || height.value() == 0 || mip_count.value() == 0 || array_size.value() == 0) {
         return failure<analyzed_dds_texture>(dds_analysis_error("DDS analysis failed: empty texture metadata"));
     }
-    if (format.value() != supported_bc1_unorm) {
+    if (!supported_dds_writer_format(format.value())) {
         return failure<analyzed_dds_texture>({error_code::unsupported_format, "DDS analysis failed: unsupported DDS format"});
     }
     if (!checked_metadata_u16(metadata.width).has_value() || !checked_metadata_u16(metadata.height).has_value() ||

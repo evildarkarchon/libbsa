@@ -23,6 +23,11 @@ constexpr std::uint32_t ddscaps_mipmap = 0x00400000U;
 constexpr std::uint32_t ddscaps2_cubemap_all_faces = 0x0000fe00U;
 constexpr std::uint32_t dds_dimension_texture2d = 3U;
 constexpr std::uint32_t dds_resource_misc_texturecube = 0x00000004U;
+constexpr std::uint32_t dxgi_format_r8g8b8a8_unorm = 28U;
+constexpr std::uint32_t dxgi_format_bc1_unorm = 71U;
+constexpr std::uint32_t dxgi_format_bc3_unorm = 77U;
+constexpr std::uint32_t dxgi_format_bc5_unorm = 83U;
+constexpr std::uint32_t dxgi_format_bc7_unorm = 98U;
 
 void append_u32(std::vector<std::byte>& bytes, std::uint32_t value)
 {
@@ -31,16 +36,24 @@ void append_u32(std::vector<std::byte>& bytes, std::uint32_t value)
     }
 }
 
-std::uint32_t bc1_top_level_size(std::uint32_t width, std::uint32_t height) noexcept
+std::uint32_t top_level_linear_size(dxgi_format format, std::uint32_t width, std::uint32_t height) noexcept
 {
+    if (format.value == dxgi_format_r8g8b8a8_unorm) {
+        return width * 4U;
+    }
+
     const auto blocks_wide = std::max(1U, (width + 3U) / 4U);
     const auto blocks_high = std::max(1U, (height + 3U) / 4U);
-    return blocks_wide * blocks_high * 8U;
+    const auto block_bytes = format.value == dxgi_format_bc1_unorm ? 8U : 16U;
+    return blocks_wide * blocks_high * block_bytes;
 }
 
 bool supported_reconstruction_format(dxgi_format format) noexcept
 {
-    return format.value == 71U;
+    // Phase 10 supports the DDS formats libbsa can reconstruct and validate without transcoding;
+    // broader corpus-driven format expansion belongs to Phase 11 compatibility validation.
+    return format.value == dxgi_format_r8g8b8a8_unorm || format.value == dxgi_format_bc1_unorm || format.value == dxgi_format_bc3_unorm ||
+           format.value == dxgi_format_bc5_unorm || format.value == dxgi_format_bc7_unorm;
 }
 
 } // namespace
@@ -63,7 +76,7 @@ result<std::vector<std::byte>> reconstruct_dds(const texture_metadata& metadata,
                           (metadata.mip_count > 1 ? ddsd_mipmap_count : 0U));
     append_u32(bytes, metadata.height);
     append_u32(bytes, metadata.width);
-    append_u32(bytes, bc1_top_level_size(metadata.width, metadata.height) * metadata.array_size);
+    append_u32(bytes, top_level_linear_size(metadata.format, metadata.width, metadata.height) * metadata.array_size);
     append_u32(bytes, 0);
     append_u32(bytes, metadata.mip_count);
     for (int i = 0; i < 11; ++i) {
