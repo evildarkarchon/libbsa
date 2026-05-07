@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 10 context gathered
-last_updated: "2026-05-07T10:45:29.474Z"
+stopped_at: Completed 10-ba2-writers-02-PLAN.md
+last_updated: "2026-05-07T10:51:40.585Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 12
   completed_phases: 9
   total_plans: 52
-  completed_plans: 47
-  percent: 90
+  completed_plans: 48
+  percent: 92
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 10 (ba2-writers) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -39,17 +39,6 @@ Progress: [█████████░] 90%
 - Total plans completed: 25
 - Average duration: 5min
 - Total execution time: 0.82 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 07 | 6 | - | - |
-
-**Recent Trend:**
-
-- Last 5 plans: N/A
-- Trend: N/A
 
 *Updated after each plan completion*
 | Phase 01-build-error-and-test-foundation P01 | 3min | 3 tasks | 6 files |
@@ -79,6 +68,7 @@ Progress: [█████████░] 90%
 | Phase 09-bsa-writers P05 | 3min | 2 tasks | 4 files |
 | Phase 09-bsa-writers P06 | 2min | 3 tasks | 4 files |
 | Phase 10-ba2-writers P01 | 10min | 2 tasks | 4 files |
+| Phase 10-ba2-writers P02 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -129,7 +119,9 @@ Recent decisions affecting current work:
 - [Phase 09-bsa-writers]: The public-header smoke now validates BSA writer APIs by creating, finalizing, reopening, and extracting all required BSA targets through public headers only. — Ensures consumer-facing coverage proves runtime usability without private headers.
 - [Phase 10-ba2-writers]: BA2 writer discovery uses a dedicated public header rather than extending the reader-focused BA2 header. — Matches Phase 10 D-01 and the Phase 9 BSA writer precedent.
 - [Phase 10-ba2-writers]: BA2 GNRL and DDS/DX10 planning/finalization entry points return structured unsupported_format placeholders until downstream TDD plans implement native writer behavior. — Prevents false BA2 writer compatibility claims while establishing stable public names for downstream plans.
-
+- [Phase 10-ba2-writers]: Native BA2 GNRL planning sorts normalized archive paths before layout so generated records and name tables are deterministic.
+- [Phase 10-ba2-writers]: Raw BA2 GNRL records write native PackedSize as zero while data-region previews retain the actual stored byte count.
+- [Phase 10-ba2-writers]: BA2 finalization streams frozen plan table bytes followed by plan-owned payload regions without recomputing layout.
 ### Pending Todos
 
 None yet.
@@ -149,6 +141,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T10:45:22.470Z
+Last session: 2026-05-07T10:51:30.863Z
 Stopped at: Phase 10 context gathered
+Stopped at: Completed 10-ba2-writers-02-PLAN.md
 Resume file: None

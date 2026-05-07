@@ -292,7 +292,7 @@ Plans:
 - [x] 10-01-PLAN.md — Add the BA2 writer public API seam, placeholder implementation, and focused test target.
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 10-02-PLAN.md — TDD native BA2 GNRL memory layout and read-after-write behavior.
+- [x] 10-02-PLAN.md — TDD native BA2 GNRL memory layout and read-after-write behavior.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 10-03-PLAN.md — TDD BA2 GNRL disk inputs, compression routes, deduplication, and structured failures.
@@ -345,6 +345,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. BA2 DDS Read and DDS Reconstruction | 6/6 | Complete | 2026-05-06 |
 | 8. Writer Planning, Streaming Emit, and Dedup Core | 6/6 | Complete | 2026-05-06 |
 | 9. BSA Writers | 0/TBD | Not started | - |
-| 10. BA2 Writers | 1/6 | In Progress|  |
+| 10. BA2 Writers | 2/6 | In Progress|  |
 | 11. Compatibility Validation and Hardening | 0/TBD | Not started | - |
 | 12. Performance and Documentation | 0/TBD | Not started | - |
