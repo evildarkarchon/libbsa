@@ -156,13 +156,93 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01..DOC-04 | Pending roadmap | Pending |
+| FND-01 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
+| FND-02 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
+| FND-03 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
+| FND-04 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
+| FND-05 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
+| FND-06 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
+| FND-07 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
+| FMT-01 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| FMT-02 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| FMT-03 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| FMT-04 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| FMT-05 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| FMT-06 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| BIN-01 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
+| BIN-02 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
+| BIN-03 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
+| BIN-04 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
+| BIN-05 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
+| BIN-06 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
+| BIN-07 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
+| BIN-08 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
+| BSA-01 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| BSA-02 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| BSA-03 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| BSA-04 | Phase 4: TES3 BSA Read/Extract | Pending |
+| BSA-05 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| BSA-06 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| BSA-07 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| BSA-08 | Phase 4: TES3 BSA Read/Extract | Pending |
+| GNRL-01 | Phase 5: BA2 GNRL Read/Extract | Pending |
+| GNRL-02 | Phase 5: BA2 GNRL Read/Extract | Pending |
+| GNRL-03 | Phase 5: BA2 GNRL Read/Extract | Pending |
+| GNRL-04 | Phase 5: BA2 GNRL Read/Extract | Pending |
+| GNRL-05 | Phase 5: BA2 GNRL Read/Extract | Pending |
+| GNRL-06 | Phase 5: BA2 GNRL Read/Extract | Pending |
+| GNRL-07 | Phase 5: BA2 GNRL Read/Extract | Pending |
+| GNRL-08 | Phase 5: BA2 GNRL Read/Extract | Pending |
+| DDS-01 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
+| DDS-02 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
+| DDS-03 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
+| DDS-04 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
+| DDS-05 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
+| DDS-06 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
+| DDS-07 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
+| WBSA-01 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBSA-02 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBSA-03 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBSA-04 | Phase 10: TES3 Write Support and BSA Format Completeness | Pending |
+| WBSA-05 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBSA-06 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBSA-07 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBSA-08 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBSA-09 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBSA-10 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBA2-01 | Phase 8: BA2 GNRL Write-New Support | Pending |
+| WBA2-02 | Phase 8: BA2 GNRL Write-New Support | Pending |
+| WBA2-03 | Phase 8: BA2 GNRL Write-New Support | Pending |
+| WBA2-04 | Phase 8: BA2 GNRL Write-New Support | Pending |
+| WBA2-05 | Phase 8: BA2 GNRL Write-New Support | Pending |
+| WBA2-06 | Phase 9: BA2 DX10 Write-New Support | Pending |
+| WBA2-07 | Phase 9: BA2 DX10 Write-New Support | Pending |
+| WBA2-08 | Phase 9: BA2 DX10 Write-New Support | Pending |
+| WBA2-09 | Phase 9: BA2 DX10 Write-New Support | Pending |
+| WBA2-10 | Phase 9: BA2 DX10 Write-New Support | Pending |
+| WBA2-11 | Phase 9: BA2 DX10 Write-New Support | Pending |
+| COMP-01 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Pending |
+| COMP-02 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Pending |
+| COMP-03 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Pending |
+| COMP-04 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Pending |
+| COMP-05 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Pending |
+| COMP-06 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Pending |
+| PERF-01 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| PERF-02 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| PERF-03 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| PERF-04 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| PERF-05 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| PERF-06 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| DOC-01 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| DOC-02 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| DOC-03 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| DOC-04 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
 
 **Coverage:**
 - v1 requirements: 81 total
-- Mapped to phases: 0
-- Unmapped: 81
+- Mapped to phases: 81
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-07*
-*Last updated: 2026-05-07 after initial definition*
+*Last updated: 2026-05-07 after roadmap creation*
