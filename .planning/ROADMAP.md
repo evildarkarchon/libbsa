@@ -257,7 +257,25 @@ Plans:
   2. Consumer can create TES3 Morrowind BSA archives with correct hash sorting and data-section-relative offsets.
   3. Consumer can read back libbsa-written BSA archives and retrieve matching paths, metadata, and payload bytes.
   4. Maintainer can compare BSA writer sorting, flags, hashes, offsets, compression, and embedded-name decisions against target compatibility fixtures.
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+**Wave 1**
+- [ ] 09-01-PLAN.md — Add the public BSA writer API seam, placeholder implementation, and focused test target.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 09-02-PLAN.md — TDD native TES4-family raw BSA layout and read-after-write behavior.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 09-03-PLAN.md — TDD TES4-family compression, embedded-name, and dedup semantics.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 09-04-PLAN.md — TDD disk-backed BSA inputs and finalization failure safety.
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 09-05-PLAN.md — TDD TES3 Morrowind native BSA serialization.
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 09-06-PLAN.md — Finalize public smoke coverage, documentation, validation, and boundary gates.
 
 ### Phase 10: BA2 Writers
 **Goal**: Consumers can create Fallout 4 and Starfield BA2 GNRL and DDS archives with correct version-specific layout and texture chunking.
