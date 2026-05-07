@@ -380,17 +380,11 @@ Two compatibility caveats should shape tests. [VERIFIED: `09-SPEC.md`] First, em
 | A2 | BSA writer tests may be a new `libbsa_bsa_writer_tests` target rather than extending `libbsa_writer_tests`. | Standard Stack / Validation Architecture | Low: CMake organization is planner discretion if labels and commands remain clear. |
 | A3 | Multi-folder TES4 table placement is the most likely offset bug. | Common Pitfalls | Medium: inferred from format complexity and tests should validate it either way. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should TES3 hash table byte order be changed to match TES5Edit exactly or kept reader-compatible first?**
-   - What we know: TES5Edit writes `Hash shr 32` then `Hash and $FFFFFFFF` as two 32-bit values, while the existing test helper emits `append_u64(hash)` and the current reader reads `le_u64`. [VERIFIED: `TES5Edit/Core/wbBSArchive.pas:1612-1616`, `tests/bsa_reader_tests.cpp:141-143`, `src/bsa_reader.cpp:273-285`]
-   - What's unclear: Whether prior golden-vector tests intentionally normalized this byte-order difference or missed raw hash table byte assertions. [ASSUMED]
-   - Recommendation: Make the first TES3 writer plan include a failing byte-level test for known hash table bytes, then adjust writer and reader tests together if reference byte order differs from current assumptions. [VERIFIED: `09-SPEC.md`]
+1. **TES3 hash table byte order resolution:** Use TES5Edit/BSArchPro byte order as canonical for Phase 9 writer output: write each TES3 64-bit hash as two little-endian 32-bit words, high 32 bits first (`Hash shr 32`) and low 32 bits second (`Hash and $FFFFFFFF`). If the current reader/test helper's `append_u64(hash)` / `le_u64` assumption differs, update reader parsing and reader tests in the same plan so libbsa read-back matches reference bytes instead of preserving the test-helper shortcut. [VERIFIED: `TES5Edit/Core/wbBSArchive.pas:1612-1616`, `tests/bsa_reader_tests.cpp:141-143`, `src/bsa_reader.cpp:273-285`, `09-SPEC.md`]
 
-2. **Which TES4-family file flags should be automatically computed versus caller-specified?**
-   - What we know: BSArchPro computes file flags from folders/extensions and applies some version-specific masks/flags. [VERIFIED: `TES5Edit/Core/wbBSArchive.pas:1410-1525`]
-   - What's unclear: Phase 9 SPEC requires flags to be correct but does not lock a public caller override shape. [VERIFIED: `09-SPEC.md`]
-   - Recommendation: Start with deterministic reference-style computed `FileFlags` from path/extension and expose them in the plan; add public override only if tests or user requirements need it. [ASSUMED]
+2. **TES4-family header file flags resolution:** Compute `FileFlags` deterministically from archive paths/extensions using reference-style rules and expose the computed value in the BSA plan preview. Do not add a public caller override in Phase 9; public controls remain semantic BSA target/options and per-entry compression policy. If a path extension is unknown, keep the archive valid by omitting that extension bit rather than inventing a new public flag surface. [VERIFIED: `TES5Edit/Core/wbBSArchive.pas:1410-1525`, `09-CONTEXT.md` D-01 through D-12, `09-SPEC.md`]
 
 ## Environment Availability
 
