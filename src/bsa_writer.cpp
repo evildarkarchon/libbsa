@@ -143,6 +143,13 @@ void append_cstring(std::vector<std::byte>& bytes, std::string_view value)
     bytes.push_back(std::byte{0});
 }
 
+std::string embedded_name_for(std::string_view path)
+{
+    std::string embedded{path};
+    std::replace(embedded.begin(), embedded.end(), '/', '\\');
+    return embedded;
+}
+
 result<void> append_len8_string(std::vector<std::byte>& bytes, std::string_view value)
 {
     if (value.size() + 1U > std::numeric_limits<std::uint8_t>::max()) {
@@ -215,12 +222,13 @@ result<planned_tes4_entry> plan_tes4_entry(const normalized_memory_entry& entry,
 
     std::vector<std::byte> native_payload;
     if (options.embedded_names) {
-        // The reader skips a one-byte length plus name bytes before decompression, so the prefix is part of stored size.
-        if (entry.path.size() > std::numeric_limits<std::uint8_t>::max()) {
+        // TES4-family embedded names use the native archive path byte spelling; the reader only skips by length.
+        const auto embedded_name = embedded_name_for(entry.path);
+        if (embedded_name.size() > std::numeric_limits<std::uint8_t>::max()) {
             return failure<planned_tes4_entry>(writer_layout_overflow());
         }
-        append_u8(native_payload, static_cast<std::uint8_t>(entry.path.size()));
-        append_string_bytes(native_payload, entry.path);
+        append_u8(native_payload, static_cast<std::uint8_t>(embedded_name.size()));
+        append_string_bytes(native_payload, embedded_name);
     }
 
     if (compression.value() == compression_state::raw) {
@@ -358,16 +366,31 @@ result<bsa_write_plan> plan_tes4_write(bsa_write_target target,
 
     for (auto& folder : folders) {
         for (auto& entry : folder.entries) {
-            auto payload_offset = checked_u32(payload_cursor);
-            if (!payload_offset.has_value()) {
-                return failure<bsa_write_plan>(payload_offset.error());
-            }
-            entry.payload_offset = payload_offset.value();
-            entry.data_region_id = static_cast<std::uint32_t>(plan.data_regions.size());
-            plan.data_regions.push_back(planned_bsa_data_region{entry.data_region_id, payload_cursor, entry.stored_payload.size(), entry.unpacked_size,
-                                                                entry.compression, entry.stored_payload});
-            if (!checked_add(payload_cursor, entry.stored_payload.size(), payload_cursor)) {
-                return failure<bsa_write_plan>(writer_layout_overflow());
+            const auto shared = options.deduplicate
+                ? std::find_if(plan.data_regions.begin(), plan.data_regions.end(), [&entry](const auto& region) {
+                      return region.stored_payload == entry.stored_payload;
+                  })
+                : plan.data_regions.end();
+
+            if (shared != plan.data_regions.end()) {
+                auto payload_offset = checked_u32(shared->offset);
+                if (!payload_offset.has_value()) {
+                    return failure<bsa_write_plan>(payload_offset.error());
+                }
+                entry.payload_offset = payload_offset.value();
+                entry.data_region_id = shared->id;
+            } else {
+                auto payload_offset = checked_u32(payload_cursor);
+                if (!payload_offset.has_value()) {
+                    return failure<bsa_write_plan>(payload_offset.error());
+                }
+                entry.payload_offset = payload_offset.value();
+                entry.data_region_id = static_cast<std::uint32_t>(plan.data_regions.size());
+                plan.data_regions.push_back(planned_bsa_data_region{entry.data_region_id, payload_cursor, entry.stored_payload.size(), entry.unpacked_size,
+                                                                    entry.compression, entry.stored_payload});
+                if (!checked_add(payload_cursor, entry.stored_payload.size(), payload_cursor)) {
+                    return failure<bsa_write_plan>(writer_layout_overflow());
+                }
             }
         }
     }
