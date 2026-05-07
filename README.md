@@ -181,6 +181,8 @@ Phase 10 adds production BA2 writer support for Fallout 4 and Starfield GNRL and
 
 BA2 GNRL writing accepts memory-backed entries (`ba2_gnrl_memory_entry`) and disk-backed entries (`ba2_gnrl_disk_entry`). BA2 DDS writing accepts memory-backed DDS inputs (`ba2_dds_memory_entry`) and disk-backed DDS files (`ba2_dds_disk_entry`), analyzes actual DDS bytes during planning, and stores only libbsa-owned texture metadata, chunk payloads, table bytes, and stored payload bytes in the returned `ba2_write_plan`.
 
+Supported DDS writer formats: R8G8B8A8_UNORM, BC1_UNORM, BC3_UNORM, BC5_UNORM, and BC7_UNORM. Unsupported DDS/DX10 formats return structured `unsupported_format` errors during planning; texture transcoding and format conversion remain out of scope for libbsa.
+
 Planning owns all compatibility-critical bytes and layout decisions before output starts. `finalize_ba2_write` only streams plan-owned table and payload bytes to a caller-owned `byte_sink`; callers keep sink ownership and receive the first structured sink failure unchanged. Native BA2 output supports raw payloads, Fallout 4 / Starfield method-0 deflate payloads, and Starfield v3 method-3 raw LZ4-block payloads selected by explicit target/options rather than file extension inference. Opt-in deduplication shares identical post-policy GNRL payloads and DDS chunk payloads where BA2 offsets can legally point at the same stored bytes.
 
 Generated writer tests perform read-after-write validation by reopening emitted BA2 bytes through `open_ba2`, inspecting `ba2_archive` entry or texture metadata, and extracting entries through `extract_ba2_entry`. DDS writer tests validate reconstructed DDS output after extraction through the private texture-validation boundary.

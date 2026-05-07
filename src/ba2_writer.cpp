@@ -616,9 +616,15 @@ result<ba2_write_plan> plan_ba2_dds_write(ba2_write_target target,
             if (!compression.has_value()) {
                 return failure<ba2_write_plan>(compression.error());
             }
-            auto stored = stored_dds_payload_for(info.value(), std::span<const std::byte>{source_chunk.payload}, compression.value(), options);
+            auto effective_compression = compression.value();
+            auto stored = stored_dds_payload_for(info.value(), std::span<const std::byte>{source_chunk.payload}, effective_compression, options);
             if (!stored.has_value()) {
                 return failure<ba2_write_plan>(stored.error());
+            }
+            if (effective_compression != compression_state::raw && stored.value().size() >= source_chunk.payload.size()) {
+                // BA2 DX10 readers use PackedSize == Size as the raw marker, so equal-size compressed bytes would be extracted as image data.
+                stored = success(std::vector<std::byte>{source_chunk.payload.begin(), source_chunk.payload.end()});
+                effective_compression = compression_state::raw;
             }
             auto unpacked_size = checked_u32(source_chunk.payload.size());
             auto stored_size = checked_u32(stored.value().size());
@@ -636,7 +642,7 @@ result<ba2_write_plan> plan_ba2_dds_write(ba2_write_target target,
             // Native DX10 differs from GNRL: raw chunk records use packed_size == size, not a zero raw marker.
             chunk.packed_size = stored_size.value();
             chunk.unpacked_size = unpacked_size.value();
-            chunk.compression = compression.value();
+            chunk.compression = effective_compression;
 
             const auto shared = options.deduplicate ? std::find_if(plan.data_regions.begin(), plan.data_regions.end(), [&stored](const auto& region) {
                 return region.stored_payload == stored.value();
@@ -648,11 +654,11 @@ result<ba2_write_plan> plan_ba2_dds_write(ba2_write_target target,
                 chunk.offset = payload_cursor;
                 chunk.data_region_id = static_cast<std::uint32_t>(plan.data_regions.size());
                 plan.data_regions.push_back(planned_ba2_data_region{chunk.data_region_id,
-                                                                    payload_cursor,
-                                                                    static_cast<std::uint64_t>(stored.value().size()),
-                                                                    chunk.unpacked_size,
-                                                                    compression.value(),
-                                                                    std::move(stored.value())});
+                                                                     payload_cursor,
+                                                                     static_cast<std::uint64_t>(stored.value().size()),
+                                                                     chunk.unpacked_size,
+                                                                     effective_compression,
+                                                                     std::move(stored.value())});
                 if (!checked_add(payload_cursor, plan.data_regions.back().stored_size, payload_cursor)) {
                     return failure<ba2_write_plan>(writer_layout_overflow());
                 }
