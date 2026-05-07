@@ -447,12 +447,24 @@ result<bsa_archive> open_tes4_bsa(const byte_source& source)
             metadata.size = stored_size;
         } else {
             std::uint64_t size_offset = partial.offset;
+            std::uint64_t metadata_prefix_size = 0;
+            if (!range_fits(partial.offset, stored_size, source.size())) {
+                return failure<bsa_archive>({error_code::malformed_archive, "BSA payload range exceeds source size"});
+            }
             if ((flags & detail::archive_embed_name) != 0) {
                 auto prefix = read_bytes(source, size_offset, 1);
                 if (!prefix.has_value()) {
                     return failure<bsa_archive>(prefix.error());
                 }
-                size_offset += 1U + std::to_integer<unsigned char>(prefix.value()[0]);
+                metadata_prefix_size = 1U + std::to_integer<unsigned char>(prefix.value()[0]);
+                if (metadata_prefix_size > stored_size) {
+                    return failure<bsa_archive>({error_code::malformed_archive, "truncated embedded BSA name"});
+                }
+                size_offset += metadata_prefix_size;
+            }
+            // The compressed-size header is part of the declared stored payload; bytes after that span belong to other archive data.
+            if (stored_size - metadata_prefix_size < 4U) {
+                return failure<bsa_archive>({error_code::malformed_archive, "BSA payload range exceeds source size"});
             }
             auto size = read_u32(source, size_offset);
             if (!size.has_value()) {

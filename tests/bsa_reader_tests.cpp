@@ -479,6 +479,20 @@ TEST_CASE("open_bsa rejects names outside the declared TES4 filename table", "[u
     CHECK(opened.error().message == "truncated BSA table");
 }
 
+TEST_CASE("open_bsa rejects compressed metadata outside the declared BSA payload", "[unit]")
+{
+    packed_entry entry;
+    entry.algorithm = libbsa::compression_algorithm::deflate;
+    entry.stored_size_override = 2;
+    const auto bytes = bsa_archive_bytes(VERSION_FO3, ARCHIVE_COMPRESS, entry);
+
+    const auto opened = open_bytes(bytes);
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::malformed_archive);
+    CHECK(opened.error().message == "BSA payload range exceeds source size");
+}
+
 TEST_CASE("open_bsa rejects truncated TES3 tables", "[unit]")
 {
     auto bytes = tes3_archive_bytes({{}});
