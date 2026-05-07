@@ -156,6 +156,68 @@ TEST_CASE("exposes exact planned table regions before finalization", "[unit][wri
     CHECK(plan.table_regions[3].offset == plan.data_regions.front().offset);
 }
 
+TEST_CASE("deduplicates byte-identical stored payloads when enabled", "[unit][writer]")
+{
+    const auto target = raw_fo4_target();
+    libbsa::writer_options options{};
+    options.deduplicate = true;
+    const std::vector entries{writer_entry("textures/c.dds", {std::byte{0x44}, std::byte{0x55}}),
+                              writer_entry("meshes/a.nif", {std::byte{0x44}, std::byte{0x55}}),
+                              writer_entry("textures/unique.dds", {std::byte{0x66}})};
+
+    const auto planned = libbsa::plan_archive_write(target, std::span<const libbsa::writer_entry>{entries}, options);
+
+    REQUIRE(planned.has_value());
+    const auto& plan = planned.value();
+    REQUIRE(plan.entries.size() == 3);
+    REQUIRE(plan.data_regions.size() == 2);
+    CHECK(plan.entries[0].path == "meshes/a.nif");
+    CHECK(plan.entries[1].path == "textures/c.dds");
+    CHECK(plan.entries[2].path == "textures/unique.dds");
+    CHECK(plan.entries[0].data_region_id == plan.entries[1].data_region_id);
+    CHECK(plan.entries[0].offset == plan.entries[1].offset);
+    CHECK(plan.entries[2].data_region_id != plan.entries[0].data_region_id);
+    CHECK(plan.entries[2].offset != plan.entries[0].offset);
+}
+
+TEST_CASE("keeps duplicate payloads distinct when deduplication is disabled", "[unit][writer]")
+{
+    const auto target = raw_fo4_target();
+    libbsa::writer_options options{};
+    options.deduplicate = false;
+    const std::vector entries{writer_entry("textures/c.dds", {std::byte{0x44}, std::byte{0x55}}),
+                              writer_entry("meshes/a.nif", {std::byte{0x44}, std::byte{0x55}}),
+                              writer_entry("textures/unique.dds", {std::byte{0x66}})};
+
+    const auto planned = libbsa::plan_archive_write(target, std::span<const libbsa::writer_entry>{entries}, options);
+
+    REQUIRE(planned.has_value());
+    const auto& plan = planned.value();
+    REQUIRE(plan.entries.size() == 3);
+    REQUIRE(plan.data_regions.size() == 3);
+    CHECK(plan.entries[0].data_region_id != plan.entries[1].data_region_id);
+    CHECK(plan.entries[0].offset != plan.entries[1].offset);
+    CHECK(plan.entries[2].data_region_id != plan.entries[0].data_region_id);
+    CHECK(plan.entries[2].data_region_id != plan.entries[1].data_region_id);
+}
+
+TEST_CASE("rejects deduplication when target disallows shared regions", "[unit][writer]")
+{
+    auto target = raw_fo4_target();
+    target.supports_shared_data_regions = false;
+    libbsa::writer_options options{};
+    options.deduplicate = true;
+    const std::vector entries{writer_entry("meshes/a.nif", {std::byte{0x44}, std::byte{0x55}}),
+                              writer_entry("textures/c.dds", {std::byte{0x44}, std::byte{0x55}}),
+                              writer_entry("textures/unique.dds", {std::byte{0x66}})};
+
+    const auto planned = libbsa::plan_archive_write(target, std::span<const libbsa::writer_entry>{entries}, options);
+
+    REQUIRE_FALSE(planned.has_value());
+    CHECK(planned.error().code == libbsa::error_code::unsupported_format);
+    CHECK(planned.error().message == "writer target does not support deduplication");
+}
+
 TEST_CASE("rejects duplicate normalized writer paths before layout", "[unit][writer]")
 {
     const auto target = raw_fo4_target();
