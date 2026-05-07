@@ -66,6 +66,13 @@ void write_u32(std::vector<std::byte>& bytes, std::size_t offset, std::uint32_t 
     }
 }
 
+void append_tes3_hash(std::vector<std::byte>& bytes, std::uint64_t value)
+{
+    // Match TES5Edit save order: high 32 bits first, then low 32 bits, each little-endian.
+    append_u32(bytes, static_cast<std::uint32_t>(value >> 32U));
+    append_u32(bytes, static_cast<std::uint32_t>(value & 0xffffffffULL));
+}
+
 void append_cstring(std::vector<std::byte>& bytes, std::string_view value)
 {
     for (char ch : value) {
@@ -139,7 +146,7 @@ std::vector<std::byte> tes3_archive_bytes(std::vector<tes3_entry> entries)
     }
     bytes.insert(bytes.end(), names.begin(), names.end());
     for (const auto& entry : entries) {
-        append_u64(bytes, entry.hash == 0 ? libbsa::detail::hash_tes3_path(entry.name) : entry.hash);
+        append_tes3_hash(bytes, entry.hash == 0 ? libbsa::detail::hash_tes3_path(entry.name) : entry.hash);
     }
 
     std::uint32_t cursor = 0;

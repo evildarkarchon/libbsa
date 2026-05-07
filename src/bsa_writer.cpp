@@ -42,6 +42,17 @@ struct planned_tes4_entry {
     std::vector<std::byte> stored_payload;
 };
 
+struct planned_tes3_entry {
+    std::string path;
+    std::uint64_t hash{};
+    std::uint32_t size{};
+    std::uint32_t relative_offset{};
+    std::uint32_t name_offset{};
+    std::uint32_t data_region_id{};
+    std::uint64_t payload_offset{};
+    std::vector<std::byte> stored_payload;
+};
+
 struct tes4_folder_group {
     std::string folder;
     std::uint64_t hash{};
@@ -128,6 +139,13 @@ void append_u64(std::vector<std::byte>& bytes, std::uint64_t value)
     for (int shift = 0; shift < 64; shift += 8) {
         bytes.push_back(static_cast<std::byte>((value >> shift) & 0xffU));
     }
+}
+
+void append_tes3_hash(std::vector<std::byte>& bytes, std::uint64_t value)
+{
+    // TES5Edit writes TES3 hashes as two little-endian cardinals: Hash shr 32, then Hash and $FFFFFFFF.
+    append_u32(bytes, static_cast<std::uint32_t>(value >> 32U));
+    append_u32(bytes, static_cast<std::uint32_t>(value & 0xffffffffULL));
 }
 
 void append_string_bytes(std::vector<std::byte>& bytes, std::string_view value)
@@ -486,6 +504,169 @@ result<bsa_write_plan> plan_tes4_write(bsa_write_target target,
     return success(std::move(plan));
 }
 
+result<bsa_write_plan> plan_tes3_write(std::span<const bsa_memory_entry> entries, bsa_write_options options)
+{
+    if (options.archive_default_compressed) {
+        return failure<bsa_write_plan>({error_code::unsupported_format, "TES3 BSA does not support compression"});
+    }
+    if (options.embedded_names) {
+        return failure<bsa_write_plan>({error_code::unsupported_format, "TES3 BSA does not support embedded names"});
+    }
+
+    auto normalized = normalize_entries(entries);
+    if (!normalized.has_value()) {
+        return failure<bsa_write_plan>(normalized.error());
+    }
+
+    std::vector<planned_tes3_entry> planned_entries;
+    planned_entries.reserve(normalized.value().size());
+    for (const auto& entry : normalized.value()) {
+        const auto compression = resolve_write_compression(archive_format::tes3_bsa, entry.compression, false);
+        if (!compression.has_value()) {
+            return failure<bsa_write_plan>(compression.error());
+        }
+        if (compression.value() != compression_state::raw) {
+            return failure<bsa_write_plan>({error_code::unsupported_format, "TES3 BSA does not support compression"});
+        }
+        auto size = checked_u32(entry.payload.size());
+        if (!size.has_value()) {
+            return failure<bsa_write_plan>(size.error());
+        }
+
+        planned_tes3_entry planned{};
+        planned.path = entry.path;
+        planned.hash = detail::hash_tes3_path(planned.path);
+        planned.size = size.value();
+        planned.stored_payload = entry.payload;
+        planned_entries.push_back(std::move(planned));
+    }
+
+    std::sort(planned_entries.begin(), planned_entries.end(), [](const auto& left, const auto& right) {
+        if (left.hash != right.hash) {
+            return left.hash < right.hash;
+        }
+        return left.path < right.path;
+    });
+
+    std::uint64_t record_table_size = 0;
+    std::uint64_t name_offset_table_size = 0;
+    std::uint64_t name_block_size = 0;
+    if (!checked_mul(detail::tes3_file_record_size, planned_entries.size(), record_table_size) ||
+        !checked_mul(detail::tes3_name_offset_size, planned_entries.size(), name_offset_table_size)) {
+        return failure<bsa_write_plan>(writer_layout_overflow());
+    }
+    for (auto& entry : planned_entries) {
+        auto name_offset = checked_u32(name_block_size);
+        if (!name_offset.has_value()) {
+            return failure<bsa_write_plan>(name_offset.error());
+        }
+        entry.name_offset = name_offset.value();
+        if (!checked_add(name_block_size, entry.path.size() + 1U, name_block_size)) {
+            return failure<bsa_write_plan>(writer_layout_overflow());
+        }
+    }
+
+    std::uint64_t hash_offset = 0;
+    std::uint64_t hash_table_offset = 0;
+    std::uint64_t data_section_offset = 0;
+    std::uint64_t hash_table_size = 0;
+    if (!checked_add(record_table_size, name_offset_table_size, hash_offset) ||
+        !checked_add(hash_offset, name_block_size, hash_offset) ||
+        !checked_add(detail::tes3_header_size, hash_offset, hash_table_offset) ||
+        !checked_mul(detail::tes3_hash_size, planned_entries.size(), hash_table_size) ||
+        !checked_add(hash_table_offset, hash_table_size, data_section_offset)) {
+        return failure<bsa_write_plan>(writer_layout_overflow());
+    }
+
+    auto hash_offset_u32 = checked_u32(hash_offset);
+    auto file_count_u32 = checked_u32(planned_entries.size());
+    if (!hash_offset_u32.has_value()) {
+        return failure<bsa_write_plan>(hash_offset_u32.error());
+    }
+    if (!file_count_u32.has_value()) {
+        return failure<bsa_write_plan>(file_count_u32.error());
+    }
+
+    bsa_write_plan plan{};
+    plan.target = bsa_write_target::tes3_morrowind;
+    plan.options = options;
+
+    std::uint64_t payload_cursor = data_section_offset;
+    for (auto& entry : planned_entries) {
+        const auto shared = options.deduplicate
+            ? std::find_if(plan.data_regions.begin(), plan.data_regions.end(), [&entry](const auto& region) {
+                  return region.stored_payload == entry.stored_payload;
+              })
+            : plan.data_regions.end();
+
+        if (shared != plan.data_regions.end()) {
+            entry.payload_offset = shared->offset;
+            entry.data_region_id = shared->id;
+        } else {
+            entry.payload_offset = payload_cursor;
+            entry.data_region_id = static_cast<std::uint32_t>(plan.data_regions.size());
+            plan.data_regions.push_back(planned_bsa_data_region{entry.data_region_id,
+                                                                entry.payload_offset,
+                                                                entry.stored_payload.size(),
+                                                                entry.size,
+                                                                compression_state::raw,
+                                                                entry.stored_payload});
+            if (!checked_add(payload_cursor, entry.stored_payload.size(), payload_cursor)) {
+                return failure<bsa_write_plan>(writer_layout_overflow());
+            }
+        }
+
+        if (entry.payload_offset < data_section_offset) {
+            return failure<bsa_write_plan>(writer_layout_overflow());
+        }
+        auto relative_offset = checked_u32(entry.payload_offset - data_section_offset);
+        if (!relative_offset.has_value()) {
+            return failure<bsa_write_plan>(relative_offset.error());
+        }
+        entry.relative_offset = relative_offset.value();
+    }
+
+    plan.table_regions.push_back(planned_bsa_table_region{"tes3 header", 0, detail::tes3_header_size});
+    plan.table_regions.push_back(planned_bsa_table_region{"tes3 file records", detail::tes3_header_size, record_table_size});
+    plan.table_regions.push_back(planned_bsa_table_region{"tes3 name offsets", detail::tes3_header_size + record_table_size, name_offset_table_size});
+    plan.table_regions.push_back(planned_bsa_table_region{"tes3 names", detail::tes3_header_size + record_table_size + name_offset_table_size, name_block_size});
+    plan.table_regions.push_back(planned_bsa_table_region{"tes3 hash table", hash_table_offset, hash_table_size});
+
+    append_u32(plan.table_bytes, detail::magic_tes3);
+    append_u32(plan.table_bytes, hash_offset_u32.value());
+    append_u32(plan.table_bytes, file_count_u32.value());
+    for (const auto& entry : planned_entries) {
+        append_u32(plan.table_bytes, entry.size);
+        append_u32(plan.table_bytes, entry.relative_offset);
+    }
+    for (const auto& entry : planned_entries) {
+        append_u32(plan.table_bytes, entry.name_offset);
+    }
+    for (const auto& entry : planned_entries) {
+        append_cstring(plan.table_bytes, entry.path);
+    }
+    for (const auto& entry : planned_entries) {
+        append_tes3_hash(plan.table_bytes, entry.hash);
+        plan.entries.push_back(planned_bsa_entry{entry.path,
+                                                 "tes3 file records",
+                                                 "tes3 names",
+                                                 0,
+                                                 entry.hash,
+                                                 0,
+                                                 entry.payload_offset,
+                                                 entry.size,
+                                                 entry.stored_payload.size(),
+                                                 entry.data_region_id,
+                                                 compression_state::raw});
+    }
+
+    if (plan.table_bytes.size() != data_section_offset) {
+        return failure<bsa_write_plan>(writer_layout_overflow());
+    }
+    plan.total_size = payload_cursor;
+    return success(std::move(plan));
+}
+
 result<void> write_chunk(byte_sink& sink, std::span<const std::byte> bytes)
 {
     auto written = sink.write(bytes);
@@ -507,7 +688,7 @@ result<bsa_write_plan> plan_bsa_write(bsa_write_target target,
     case bsa_write_target::skyrim_se_ae_v105:
         return plan_tes4_write(target, entries, options);
     case bsa_write_target::tes3_morrowind:
-        return failure<bsa_write_plan>({error_code::unsupported_format, "TES3 BSA writer planning is not implemented"});
+        return plan_tes3_write(entries, options);
     }
     return failure<bsa_write_plan>({error_code::unsupported_format, "unsupported BSA writer target"});
 }

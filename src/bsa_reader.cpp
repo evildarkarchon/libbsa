@@ -108,6 +108,12 @@ std::uint64_t le_u64(std::span<const std::byte> bytes, std::size_t offset) noexc
     return value;
 }
 
+std::uint64_t tes3_hash_from_reference_words(std::span<const std::byte> bytes, std::size_t offset) noexcept
+{
+    // TES5Edit/Core/wbBSArchive.pas saves TES3 hashes as high 32 bits first, then low 32 bits, each little-endian.
+    return (static_cast<std::uint64_t>(le_u32(bytes, offset)) << 32U) | static_cast<std::uint64_t>(le_u32(bytes, offset + 4U));
+}
+
 result<std::uint32_t> read_u32(const byte_source& source, std::uint64_t offset)
 {
     auto bytes = read_bytes(source, offset, 4);
@@ -281,7 +287,7 @@ result<bsa_archive> open_tes3_bsa(const byte_source& source)
         metadata.packed_size = records[i].size;
         metadata.stored_size = records[i].size;
         metadata.offset = payload_offset;
-        metadata.name_hash = le_u64(hash_bytes.value(), 0);
+        metadata.name_hash = tes3_hash_from_reference_words(hash_bytes.value(), 0);
         metadata.directory_hash = 0;
         metadata.compression = compression_state::raw;
         entries.push_back(std::move(metadata));
