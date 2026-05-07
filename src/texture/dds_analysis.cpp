@@ -11,6 +11,14 @@ namespace libbsa::detail {
 namespace {
 
 constexpr std::uint32_t supported_bc1_unorm = 71U;
+constexpr std::uint32_t dds_magic = 0x20534444U;
+constexpr std::uint32_t dds_header_size = 124U;
+constexpr std::uint32_t dds_pixel_format_size = 32U;
+constexpr std::uint32_t dds_fourcc_dx10 = 0x30315844U;
+constexpr std::size_t dds_header_size_offset = 4U;
+constexpr std::size_t dds_pixel_format_size_offset = 76U;
+constexpr std::size_t dds_fourcc_offset = 84U;
+constexpr std::size_t dds_dx10_format_offset = 128U;
 
 error dds_analysis_error(std::string_view message)
 {
@@ -39,6 +47,29 @@ void append_image_bytes(std::vector<std::byte>& bytes, const DirectX::Image& ima
     bytes.insert(bytes.end(), begin, begin + image.slicePitch);
 }
 
+std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t offset) noexcept
+{
+    return static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset])) |
+           (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset + 1U])) << 8U) |
+           (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset + 2U])) << 16U) |
+           (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset + 3U])) << 24U);
+}
+
+result<void> reject_unsupported_dx10_format(std::span<const std::byte> dds_bytes)
+{
+    if (dds_bytes.size() < dds_dx10_format_offset + sizeof(std::uint32_t)) {
+        return success();
+    }
+    if (read_u32(dds_bytes, 0U) != dds_magic || read_u32(dds_bytes, dds_header_size_offset) != dds_header_size ||
+        read_u32(dds_bytes, dds_pixel_format_size_offset) != dds_pixel_format_size || read_u32(dds_bytes, dds_fourcc_offset) != dds_fourcc_dx10) {
+        return success();
+    }
+    if (read_u32(dds_bytes, dds_dx10_format_offset) != supported_bc1_unorm) {
+        return failure<void>({error_code::unsupported_format, "DDS analysis failed: unsupported DDS format"});
+    }
+    return success();
+}
+
 std::uint32_t mip_dimension(std::uint32_t value, std::uint32_t mip) noexcept
 {
     return (std::max)(1U, value >> mip);
@@ -48,6 +79,11 @@ std::uint32_t mip_dimension(std::uint32_t value, std::uint32_t mip) noexcept
 
 result<analyzed_dds_texture> analyze_dds(std::span<const std::byte> dds_bytes)
 {
+    const auto supported_format = reject_unsupported_dx10_format(dds_bytes);
+    if (!supported_format.has_value()) {
+        return failure<analyzed_dds_texture>(supported_format.error());
+    }
+
     DirectX::TexMetadata metadata{};
     DirectX::ScratchImage image{};
     // DirectXTex remains isolated here so public BA2 writer headers expose only libbsa-owned types.

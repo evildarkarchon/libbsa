@@ -633,6 +633,7 @@ result<ba2_write_plan> plan_ba2_dds_write(ba2_write_target target,
             chunk.start_mip = source_chunk.start_mip;
             chunk.end_mip = source_chunk.end_mip;
             chunk.mip_level = source_chunk.start_mip;
+            // Native DX10 differs from GNRL: raw chunk records use packed_size == size, not a zero raw marker.
             chunk.packed_size = stored_size.value();
             chunk.unpacked_size = unpacked_size.value();
             chunk.compression = compression.value();

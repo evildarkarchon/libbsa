@@ -631,7 +631,7 @@ TEST_CASE("BA2 DX10 chunk compression routes raw deflate and Starfield LZ4-block
     libbsa::ba2_write_options lz4_options{};
     lz4_options.archive_default_compressed = true;
     lz4_options.starfield_v3_compression_method = 3U;
-    const std::vector starfield_entries{dds_entry("textures/generated/lz4.dds", compressed_dds),
+    const std::vector starfield_entries{dds_entry("textures/generated/lz4.dds", compressed_dds, libbsa::compression_policy::force_compressed),
                                         dds_entry("textures/generated/raw-in-method3.dds", raw_dds, libbsa::compression_policy::force_raw)};
     const auto lz4_plan = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::starfield_dx10_v3,
                                                     std::span<const libbsa::ba2_dds_memory_entry>{starfield_entries},
@@ -689,10 +689,10 @@ TEST_CASE("BA2 DDS writer rejects malformed unsupported and unsafe inputs", "[un
     CHECK(malformed.error().code == libbsa::error_code::malformed_archive);
 
     auto unsupported_format_bytes = generated_bc1_dds(4, 4, 1, 1, false, std::byte{0xf0});
-    unsupported_format_bytes[160] = std::byte{0xff};
-    unsupported_format_bytes[161] = std::byte{0x00};
-    unsupported_format_bytes[162] = std::byte{0x00};
-    unsupported_format_bytes[163] = std::byte{0x00};
+    unsupported_format_bytes[128] = std::byte{0x4a};
+    unsupported_format_bytes[129] = std::byte{0x00};
+    unsupported_format_bytes[130] = std::byte{0x00};
+    unsupported_format_bytes[131] = std::byte{0x00};
     const std::vector unsupported_format_entries{dds_entry("textures/generated/unsupported.dds", unsupported_format_bytes)};
     const auto unsupported_format = libbsa::plan_ba2_dds_write(libbsa::ba2_write_target::fallout4_dx10_v8,
                                                               std::span<const libbsa::ba2_dds_memory_entry>{unsupported_format_entries});
