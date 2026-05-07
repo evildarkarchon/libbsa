@@ -14,9 +14,7 @@
 
 namespace {
 
-constexpr std::string_view gnrl_placeholder = "BA2 GNRL writer planning is not implemented";
 constexpr std::string_view dds_placeholder = "BA2 DDS writer planning is not implemented";
-constexpr std::string_view finalize_placeholder = "BA2 writer finalization is not implemented";
 
 constexpr std::uint32_t magic_btdx = 0x58445442U;
 constexpr std::uint32_t magic_gnrl = 0x4c524e47U;
@@ -247,11 +245,13 @@ TEST_CASE("BA2 DDS planning placeholders fail structurally", "[unit][ba2-writer]
                                     dds_placeholder);
 }
 
-TEST_CASE("BA2 finalization placeholder fails structurally", "[unit][ba2-writer]")
+TEST_CASE("BA2 finalization streams an empty plan without touching payload regions", "[unit][ba2-writer]")
 {
     const libbsa::ba2_write_plan plan{};
     libbsa::memory_sink sink;
 
-    require_unsupported_placeholder(libbsa::finalize_ba2_write(plan, sink), finalize_placeholder);
+    const auto finalized = libbsa::finalize_ba2_write(plan, sink);
+
+    REQUIRE(finalized.has_value());
     CHECK(sink.bytes().empty());
 }
