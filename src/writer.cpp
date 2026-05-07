@@ -37,6 +37,11 @@ error duplicate_writer_path()
     return {error_code::malformed_archive, "duplicate writer path"};
 }
 
+error unsupported_deduplication()
+{
+    return {error_code::unsupported_format, "writer target does not support deduplication"};
+}
+
 error writer_finalization_not_implemented()
 {
     return {error_code::unsupported_format, "writer finalization is not implemented"};
@@ -98,6 +103,14 @@ struct stored_writer_entry {
     std::uint64_t unpacked_size{};
     compression_state compression{compression_state::unknown};
     std::vector<std::byte> stored_payload;
+};
+
+struct planned_entry_seed {
+    std::string path;
+    std::uint64_t unpacked_size{};
+    std::uint64_t stored_size{};
+    compression_state compression{compression_state::unknown};
+    std::uint32_t data_region_id{};
 };
 
 result<std::vector<normalized_writer_entry>> normalize_entries(std::span<const writer_entry> entries)
@@ -162,11 +175,15 @@ result<stored_writer_entry> store_entry_payload(const writer_target& target, nor
 } // namespace
 
 result<write_plan> plan_archive_write(const writer_target& target,
-                                      std::span<const writer_entry> entries,
-                                       writer_options options)
+                                       std::span<const writer_entry> entries,
+                                        writer_options options)
 {
     if (!supported_writer_target(target.format)) {
         return failure<write_plan>(unsupported_writer_target());
+    }
+
+    if (options.deduplicate && !target.supports_shared_data_regions) {
+        return failure<write_plan>(unsupported_deduplication());
     }
 
     auto normalized = normalize_entries(entries);
@@ -193,7 +210,45 @@ result<write_plan> plan_archive_write(const writer_target& target,
         }
     }
 
-    const auto data_region_count = static_cast<std::uint64_t>(stored_entries.size());
+    write_plan plan{};
+    plan.target = target;
+    plan.options = options;
+    plan.entries.reserve(stored_entries.size());
+    plan.data_regions.reserve(stored_entries.size());
+    std::vector<planned_entry_seed> planned_entries;
+    planned_entries.reserve(stored_entries.size());
+
+    for (auto& stored : stored_entries) {
+        const auto stored_size = static_cast<std::uint64_t>(stored.stored_payload.size());
+        std::uint32_t data_region_id = static_cast<std::uint32_t>(plan.data_regions.size());
+
+        if (options.deduplicate) {
+            const auto existing = std::find_if(plan.data_regions.begin(), plan.data_regions.end(), [&](const auto& region) {
+                return region.stored_payload == stored.stored_payload;
+            });
+            if (existing != plan.data_regions.end()) {
+                data_region_id = existing->id;
+            }
+        }
+
+        if (!options.deduplicate || data_region_id == plan.data_regions.size()) {
+            planned_data_region region{};
+            region.id = data_region_id;
+            region.stored_size = stored_size;
+            region.unpacked_size = stored.unpacked_size;
+            region.compression = stored.compression;
+            region.stored_payload = std::move(stored.stored_payload);
+            plan.data_regions.push_back(std::move(region));
+        }
+
+        planned_entries.push_back(planned_entry_seed{std::move(stored.path),
+                                                     stored.unpacked_size,
+                                                     stored_size,
+                                                     stored.compression,
+                                                     data_region_id});
+    }
+
+    const auto data_region_count = static_cast<std::uint64_t>(plan.data_regions.size());
     std::uint64_t data_region_table_size = 0;
     if (!checked_mul(data_region_count, data_region_record_size, data_region_table_size)) {
         return failure<write_plan>(writer_layout_overflow());
@@ -208,39 +263,32 @@ result<write_plan> plan_archive_write(const writer_target& target,
         return failure<write_plan>(writer_layout_overflow());
     }
 
-    write_plan plan{};
-    plan.target = target;
-    plan.options = options;
-    plan.entries.reserve(stored_entries.size());
-    plan.data_regions.reserve(stored_entries.size());
-
     std::uint64_t payload_cursor = payloads_offset;
-    for (std::size_t index = 0; index < stored_entries.size(); ++index) {
-        auto& stored = stored_entries[index];
-        const auto stored_size = static_cast<std::uint64_t>(stored.stored_payload.size());
-
-        planned_data_region region{};
-        region.id = static_cast<std::uint32_t>(index);
+    for (auto& region : plan.data_regions) {
         region.offset = payload_cursor;
-        region.stored_size = stored_size;
-        region.unpacked_size = stored.unpacked_size;
-        region.compression = stored.compression;
-        region.stored_payload = std::move(stored.stored_payload);
 
-        planned_entry entry{};
-        entry.path = std::move(stored.path);
-        entry.size = region.unpacked_size;
-        entry.stored_size = region.stored_size;
-        entry.offset = region.offset;
-        entry.data_region_id = region.id;
-        entry.compression = region.compression;
+        if (!checked_add(payload_cursor, region.stored_size, payload_cursor)) {
+            return failure<write_plan>(writer_layout_overflow());
+        }
+    }
 
-        if (!checked_add(payload_cursor, stored_size, payload_cursor)) {
+    for (auto& seed : planned_entries) {
+        const auto region = std::find_if(plan.data_regions.begin(), plan.data_regions.end(), [&](const auto& candidate) {
+            return candidate.id == seed.data_region_id;
+        });
+        if (region == plan.data_regions.end()) {
             return failure<write_plan>(writer_layout_overflow());
         }
 
+        planned_entry entry{};
+        entry.path = std::move(seed.path);
+        entry.size = seed.unpacked_size;
+        entry.stored_size = seed.stored_size;
+        entry.offset = region->offset;
+        entry.data_region_id = seed.data_region_id;
+        entry.compression = seed.compression;
+
         plan.entries.push_back(std::move(entry));
-        plan.data_regions.push_back(std::move(region));
     }
 
     plan.table_regions.push_back(planned_table_region{"header", 0, planned_header_size});

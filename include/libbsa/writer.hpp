@@ -61,7 +61,7 @@ struct planned_table_region {
 /// Describes a planned stored payload region owned by a write plan.
 ///
 /// Region IDs are stable numeric preview handles for dedup sharing; public plans
-/// do not expose content hashes or private implementation pointers. The stored
+/// do not expose content digests or private implementation pointers. The stored
 /// payload bytes are owned by the plan per D-09 so finalization cannot recompute
 /// or drift from the previewed archive-absolute offsets and sizes.
 struct planned_data_region {
@@ -77,7 +77,7 @@ struct planned_data_region {
 ///
 /// Offsets are archive-absolute payload offsets in the final stream. `data_region_id`
 /// identifies the planned region that finalization emits, making dedup sharing
-/// visible without leaking implementation-specific hashes or storage objects.
+/// visible without leaking implementation-specific digests or storage objects.
 struct planned_entry {
     std::string path;
     std::uint64_t size{};
