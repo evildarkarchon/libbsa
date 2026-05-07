@@ -188,6 +188,31 @@ result<std::vector<normalized_memory_entry>> normalize_entries(std::span<const b
     return success(std::move(normalized_entries));
 }
 
+result<void> validate_disk_entry_archive_paths(std::span<const bsa_disk_entry> entries)
+{
+    std::vector<std::string> paths;
+    paths.reserve(entries.size());
+
+    for (const auto& entry : entries) {
+        auto normalized = normalize_archive_path(entry.path);
+        if (!normalized.has_value()) {
+            return failure<void>(normalized.error());
+        }
+
+        auto path = normalized.value().string();
+        if (std::find(paths.begin(), paths.end(), path) != paths.end()) {
+            return failure<void>({error_code::malformed_archive, "duplicate BSA writer path"});
+        }
+        const auto slash = path.find_last_of('/');
+        if (slash == std::string::npos || slash == 0 || slash + 1U >= path.size()) {
+            return failure<void>({error_code::malformed_archive, "BSA writer path requires folder and file"});
+        }
+        paths.push_back(std::move(path));
+    }
+
+    return success();
+}
+
 std::uint32_t file_flag_for_extension(std::string_view file) noexcept
 {
     const auto dot = file.find_last_of('.');
@@ -491,6 +516,11 @@ result<bsa_write_plan> plan_bsa_write_from_disk(bsa_write_target target,
                                                 std::span<const bsa_disk_entry> entries,
                                                 bsa_write_options options)
 {
+    auto paths_validated = validate_disk_entry_archive_paths(entries);
+    if (!paths_validated.has_value()) {
+        return failure<bsa_write_plan>(paths_validated.error());
+    }
+
     std::vector<bsa_memory_entry> memory_entries;
     memory_entries.reserve(entries.size());
     for (const auto& entry : entries) {
