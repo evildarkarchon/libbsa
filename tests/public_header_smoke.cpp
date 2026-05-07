@@ -2,6 +2,7 @@
 #include <libbsa/archive_path.hpp>
 #include <libbsa/archive_view.hpp>
 #include <libbsa/ba2.hpp>
+#include <libbsa/ba2_writer.hpp>
 #include <libbsa/bsa.hpp>
 #include <libbsa/bsa_writer.hpp>
 #include <libbsa/compression.hpp>
@@ -11,6 +12,7 @@
 #include <libbsa/writer.hpp>
 
 #include <array>
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -18,6 +20,64 @@
 #include <vector>
 
 namespace {
+
+void append_u32(std::vector<std::byte>& bytes, std::uint32_t value)
+{
+    for (int shift = 0; shift < 32; shift += 8) {
+        bytes.push_back(static_cast<std::byte>((value >> shift) & 0xffU));
+    }
+}
+
+std::uint32_t bc1_mip_size(std::uint32_t width, std::uint32_t height) noexcept
+{
+    return std::max(1U, (width + 3U) / 4U) * std::max(1U, (height + 3U) / 4U) * 8U;
+}
+
+std::vector<std::byte> generated_public_bc1_dds(std::uint32_t width, std::uint32_t height, std::byte seed)
+{
+    constexpr std::uint32_t dds_header_size = 124U;
+    constexpr std::uint32_t dds_pixel_format_size = 32U;
+    constexpr std::uint32_t magic_dx10 = 0x30315844U;
+    constexpr std::uint32_t dxgi_format_bc1_unorm = 71U;
+    constexpr std::uint32_t dds_dimension_texture2d = 3U;
+    constexpr std::uint32_t ddscaps_texture = 0x00001000U;
+
+    std::vector<std::byte> bytes;
+    bytes.reserve(4U + dds_header_size + 20U + bc1_mip_size(width, height));
+    append_u32(bytes, 0x20534444U);
+    append_u32(bytes, dds_header_size);
+    append_u32(bytes, 0x00000001U | 0x00000002U | 0x00000004U | 0x00001000U | 0x00080000U);
+    append_u32(bytes, height);
+    append_u32(bytes, width);
+    append_u32(bytes, bc1_mip_size(width, height));
+    append_u32(bytes, 0U);
+    append_u32(bytes, 1U);
+    for (int i = 0; i < 11; ++i) {
+        append_u32(bytes, 0U);
+    }
+    append_u32(bytes, dds_pixel_format_size);
+    append_u32(bytes, 0x00000004U);
+    append_u32(bytes, magic_dx10);
+    for (int i = 0; i < 5; ++i) {
+        append_u32(bytes, 0U);
+    }
+    append_u32(bytes, ddscaps_texture);
+    append_u32(bytes, 0U);
+    append_u32(bytes, 0U);
+    append_u32(bytes, 0U);
+    append_u32(bytes, 0U);
+    append_u32(bytes, dxgi_format_bc1_unorm);
+    append_u32(bytes, dds_dimension_texture2d);
+    append_u32(bytes, 0U);
+    append_u32(bytes, 1U);
+    append_u32(bytes, 0U);
+
+    const auto payload_size = bc1_mip_size(width, height);
+    for (std::uint32_t index = 0; index < payload_size; ++index) {
+        bytes.push_back(static_cast<std::byte>((std::to_integer<unsigned char>(seed) + index) & 0xffU));
+    }
+    return bytes;
+}
 
 bool can_write_and_reopen_bsa(libbsa::bsa_write_target target, const std::string& path)
 {
@@ -47,6 +107,68 @@ bool can_write_and_reopen_bsa(libbsa::bsa_write_target target, const std::string
     libbsa::memory_sink extracted;
     const auto extracted_result = libbsa::extract_bsa_entry(archive.value(), archive_source, path, extracted);
     return extracted_result.has_value() && extracted.bytes() == entry.payload;
+}
+
+bool can_write_and_reopen_ba2_gnrl(libbsa::ba2_write_target target, libbsa::ba2_write_options options)
+{
+    libbsa::ba2_gnrl_memory_entry entry{};
+    entry.path = "meshes/public_smoke_ba2.nif";
+    entry.payload = {std::byte{0x4e}, std::byte{0x49}, std::byte{0x46}};
+    entry.compression = libbsa::compression_policy::force_raw;
+    std::vector entries{entry};
+
+    const auto plan = libbsa::plan_ba2_gnrl_write(target, std::span<const libbsa::ba2_gnrl_memory_entry>{entries}, options);
+    if (!plan.has_value()) {
+        return false;
+    }
+
+    libbsa::memory_sink archive_sink;
+    const auto finalized = libbsa::finalize_ba2_write(plan.value(), archive_sink);
+    if (!finalized.has_value()) {
+        return false;
+    }
+
+    const libbsa::memory_source archive_source{std::span<const std::byte>{archive_sink.bytes()}};
+    const auto archive = libbsa::open_ba2(archive_source);
+    if (!archive.has_value() || !archive.value().contains(entry.path)) {
+        return false;
+    }
+
+    libbsa::memory_sink extracted;
+    const auto extracted_result = libbsa::extract_ba2_entry(archive.value(), archive_source, entry.path, extracted);
+    return extracted_result.has_value() && extracted.bytes() == entry.payload;
+}
+
+bool can_write_and_reopen_ba2_dds(libbsa::ba2_write_target target, libbsa::ba2_write_options options)
+{
+    libbsa::ba2_dds_memory_entry entry{};
+    entry.path = "textures/public_smoke_ba2.dds";
+    entry.dds_bytes = generated_public_bc1_dds(4, 4, std::byte{0x70});
+    entry.compression = libbsa::compression_policy::force_raw;
+    std::vector entries{entry};
+
+    const auto plan = libbsa::plan_ba2_dds_write(target, std::span<const libbsa::ba2_dds_memory_entry>{entries}, options);
+    if (!plan.has_value()) {
+        return false;
+    }
+
+    libbsa::memory_sink archive_sink;
+    const auto finalized = libbsa::finalize_ba2_write(plan.value(), archive_sink);
+    if (!finalized.has_value()) {
+        return false;
+    }
+
+    const libbsa::memory_source archive_source{std::span<const std::byte>{archive_sink.bytes()}};
+    const auto archive = libbsa::open_ba2(archive_source);
+    if (!archive.has_value() || !archive.value().contains(entry.path)) {
+        return false;
+    }
+
+    const auto texture = archive.value().texture_metadata(entry.path);
+    libbsa::memory_sink extracted;
+    const auto extracted_result = libbsa::extract_ba2_entry(archive.value(), archive_source, entry.path, extracted);
+    return texture.has_value() && texture.value().format.value == 71U && texture.value().width == 4U &&
+           texture.value().height == 4U && extracted_result.has_value() && !extracted.bytes().empty();
 }
 
 } // namespace
@@ -158,11 +280,23 @@ int main()
     const auto plan_bsa_write_fn = &libbsa::plan_bsa_write;
     const auto plan_bsa_write_from_disk_fn = &libbsa::plan_bsa_write_from_disk;
     const auto finalize_bsa_write_fn = &libbsa::finalize_bsa_write;
+    const auto plan_ba2_gnrl_write_fn = &libbsa::plan_ba2_gnrl_write;
+    const auto plan_ba2_gnrl_write_from_disk_fn = &libbsa::plan_ba2_gnrl_write_from_disk;
+    const auto plan_ba2_dds_write_fn = &libbsa::plan_ba2_dds_write;
+    const auto plan_ba2_dds_write_from_disk_fn = &libbsa::plan_ba2_dds_write_from_disk;
+    const auto finalize_ba2_write_fn = &libbsa::finalize_ba2_write;
     const bool bsa_writer_smoke_ok =
         can_write_and_reopen_bsa(libbsa::bsa_write_target::tes3_morrowind, "meshes/public_smoke_tes3.nif") &&
         can_write_and_reopen_bsa(libbsa::bsa_write_target::oblivion_v103, "meshes/public_smoke_v103.nif") &&
         can_write_and_reopen_bsa(libbsa::bsa_write_target::fo3_fnv_skyrim_le_v104, "meshes/public_smoke_v104.nif") &&
         can_write_and_reopen_bsa(libbsa::bsa_write_target::skyrim_se_ae_v105, "meshes/public_smoke_v105.nif");
+    libbsa::ba2_write_options starfield_method3{};
+    starfield_method3.starfield_v3_compression_method = 3U;
+    const bool ba2_writer_smoke_ok =
+        can_write_and_reopen_ba2_gnrl(libbsa::ba2_write_target::fallout4_gnrl_v1, libbsa::ba2_write_options{}) &&
+        can_write_and_reopen_ba2_gnrl(libbsa::ba2_write_target::starfield_gnrl_v3, starfield_method3) &&
+        can_write_and_reopen_ba2_dds(libbsa::ba2_write_target::fallout4_dx10_v1, libbsa::ba2_write_options{}) &&
+        can_write_and_reopen_ba2_dds(libbsa::ba2_write_target::starfield_dx10_v3, starfield_method3);
 
     return ok.has_value() && source.size() == 2 && write.has_value() && sink.bytes().size() == 2 && codec.has_value() &&
             codec.value() == libbsa::compression_algorithm::lz4_block && write_compression.has_value() &&
@@ -180,7 +314,10 @@ int main()
             writer_plan.value().table_regions.size() == 4 && writer_plan.value().data_regions.size() == 2 &&
             writer_plan.value().total_size == writer_sink.bytes().size() && writer_finalized.has_value() &&
             plan_writer_fn != nullptr && finalize_writer_fn != nullptr && plan_bsa_write_fn != nullptr &&
-            plan_bsa_write_from_disk_fn != nullptr && finalize_bsa_write_fn != nullptr && bsa_writer_smoke_ok
+            plan_bsa_write_from_disk_fn != nullptr && finalize_bsa_write_fn != nullptr && plan_ba2_gnrl_write_fn != nullptr &&
+            plan_ba2_gnrl_write_from_disk_fn != nullptr && plan_ba2_dds_write_fn != nullptr &&
+            plan_ba2_dds_write_from_disk_fn != nullptr && finalize_ba2_write_fn != nullptr && bsa_writer_smoke_ok &&
+            ba2_writer_smoke_ok
         ? 0
         : 1;
 }
