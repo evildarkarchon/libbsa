@@ -231,7 +231,7 @@ Plans:
 **Plans**: 6 plans
 Plans:
 **Wave 1**
-- [ ] 08-01-PLAN.md — Add the writer contract skeleton, source wiring, and writer test target.
+- [x] 08-01-PLAN.md — Add the writer contract skeleton, source wiring, and writer test target.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 08-02-PLAN.md — TDD deterministic writer planning, validation, compression-policy resolution, and checked layout preview.
@@ -307,7 +307,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. TES3 BSA Read and Extract | 4/4 | Complete | 2026-05-06 |
 | 6. BA2 GNRL Read and Extract | 7/7 | Complete | 2026-05-06 |
 | 7. BA2 DDS Read and DDS Reconstruction | 6/6 | Complete | 2026-05-06 |
-| 8. Writer Planning, Streaming Emit, and Dedup Core | 0/TBD | Not started | - |
+| 8. Writer Planning, Streaming Emit, and Dedup Core | 1/6 | In Progress | - |
 | 9. BSA Writers | 0/TBD | Not started | - |
 | 10. BA2 Writers | 0/TBD | Not started | - |
 | 11. Compatibility Validation and Hardening | 0/TBD | Not started | - |
