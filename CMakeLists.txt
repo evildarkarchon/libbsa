@@ -58,6 +58,7 @@ target_sources(libbsa
     src/compression/lz4_frame_codec.cpp
     src/hash.cpp
     src/io.cpp
+    src/writer.cpp
     src/texture/dds_reconstruction.cpp
     src/texture/dds_validation.cpp
   PUBLIC
@@ -73,7 +74,8 @@ target_sources(libbsa
       include/libbsa/bsa.hpp
       include/libbsa/compression.hpp
       include/libbsa/detect.hpp
-      include/libbsa/io.hpp)
+      include/libbsa/io.hpp
+      include/libbsa/writer.hpp)
 
 target_include_directories(libbsa
   PUBLIC
@@ -195,6 +197,16 @@ if(BUILD_TESTING)
       Catch2::Catch2WithMain)
 
   catch_discover_tests(libbsa_ba2_dds_reader_tests TEST_PREFIX "libbsa_ba2_dds_reader_tests." ADD_TAGS_AS_LABELS PROPERTIES LABELS "unit;fixture;codec")
+
+  add_executable(libbsa_writer_tests
+    tests/writer_core_tests.cpp
+    tests/writer_harness_helpers.cpp)
+  target_link_libraries(libbsa_writer_tests
+    PRIVATE
+      libbsa::libbsa
+      Catch2::Catch2WithMain)
+
+  catch_discover_tests(libbsa_writer_tests TEST_PREFIX "libbsa_writer_tests." ADD_TAGS_AS_LABELS PROPERTIES LABELS "unit;fixture;codec;roundtrip")
 
   add_executable(libbsa_dds_reconstruction_tests tests/dds_reconstruction_tests.cpp)
   target_include_directories(libbsa_dds_reconstruction_tests
