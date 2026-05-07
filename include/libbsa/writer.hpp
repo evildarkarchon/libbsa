@@ -103,9 +103,10 @@ struct write_plan {
 
 /// Builds a deterministic write plan from caller-owned writer inputs.
 ///
-/// Entries are copied from in-memory payload values, normalized, and inspected
-/// before any sink is touched. Later Phase 8 behavior plans replace the initial
-/// placeholder with structured validation, compression, dedup, and layout logic.
+/// Entries are copied from in-memory payload values, normalized, sorted, and
+/// inspected before any sink is touched. The returned plan owns post-policy
+/// stored payload bytes so finalization can emit the previewed layout without
+/// recomputing compression decisions.
 [[nodiscard]] result<write_plan> plan_archive_write(const writer_target& target,
                                                     std::span<const writer_entry> entries,
                                                     writer_options options = {});

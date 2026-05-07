@@ -68,11 +68,7 @@ void require_plans_equal(const libbsa::write_plan& left, const libbsa::write_pla
 
 TEST_CASE("writer core API surface compiles", "[unit]")
 {
-    libbsa::writer_target target{};
-    target.format = libbsa::archive_format::sse_bsa;
-    target.archive_default_compressed = true;
-    target.supports_compression = true;
-    target.supports_shared_data_regions = true;
+    auto target = raw_fo4_target();
 
     libbsa::writer_entry entry{};
     entry.path = "meshes/generated/fixture.nif";
@@ -89,9 +85,10 @@ TEST_CASE("writer core API surface compiles", "[unit]")
 
     const auto plan = libbsa::plan_archive_write(target, std::span<const libbsa::writer_entry>{entries}, options);
 
-    REQUIRE_FALSE(plan.has_value());
-    CHECK(plan.error().code == libbsa::error_code::unsupported_format);
-    CHECK(plan.error().message == "writer planning is not implemented");
+    REQUIRE(plan.has_value());
+    REQUIRE(plan.value().entries.size() == 1);
+    CHECK(plan.value().entries.front().path == "meshes/generated/fixture.nif");
+    CHECK(plan.value().entries.front().stored_size == 3);
 }
 
 TEST_CASE("plans entries deterministically independent of caller order", "[unit][writer]")
