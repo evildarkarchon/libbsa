@@ -108,6 +108,11 @@ struct bsa_write_plan {
     bsa_write_target target{};
     bsa_write_options options{};
     std::uint32_t flags{};
+    /// Planned native header and metadata table bytes emitted before payloads.
+    ///
+    /// Finalization writes these bytes verbatim so compatibility-critical layout
+    /// decisions made during planning are not recomputed against mutable inputs.
+    std::vector<std::byte> table_bytes;
     std::vector<planned_bsa_table_region> table_regions;
     std::vector<planned_bsa_data_region> data_regions;
     std::vector<planned_bsa_entry> entries;
