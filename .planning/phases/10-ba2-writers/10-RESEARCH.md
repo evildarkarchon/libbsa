@@ -278,24 +278,30 @@ planned.is_cubemap = metadata.IsCubemap();
 planned.format = dxgi_format{static_cast<std::uint32_t>(metadata.format)};
 ```
 
-### Pattern 4: Conservative automatic DDS chunking
+### Pattern 4: Target-rule automatic DDS chunking
 
-**What:** Derive chunks from DDS mip ranges, not public native descriptors. For Phase 10 generated read-back, prefer one chunk per mip level containing that mip's images across all array/cube items; optionally group contiguous low-resolution mip levels into a final chunk only after tests prove output remains semantically equivalent. [VERIFIED: `10-CONTEXT.md`; VERIFIED: `src/ba2_reader.cpp`; ASSUMED]  
+**What:** Derive chunks from DDS mip ranges, not public native descriptors. Use the documented target rule from the resolved research question: for each texture, emit one chunk per mip while `max(width, height) > 256`, then group the first mip with `max(width, height) <= 256` and all remaining lower-resolution mips into one final contiguous chunk. A one-mip texture still emits one chunk; a texture whose top mip is already 256x256 or smaller emits one chunk covering all mips. Each chunk contains the selected mip range for all array/cube items in deterministic DirectXTex image order. [VERIFIED: `10-CONTEXT.md`; VERIFIED: `src/ba2_reader.cpp`; CITED: https://wiki.step-project.com/Guide:Archive2; RESOLVED]
 **When to use:** BA2 DDS planning after DirectXTex loads `ScratchImage`. [CITED: `/microsoft/directxtex`]  
 **Example:**
 
 ```cpp
 // Source: DirectXTex TexMetadata::ComputeIndex and BA2 chunk start/end mip records. [CITED: /microsoft/directxtex; VERIFIED: src/ba2_reader.cpp]
-for (std::uint32_t mip = 0; mip < planned.mip_count; ++mip) {
+for (std::uint32_t mip = 0; mip < planned.mip_count;) {
+    const auto mip_width = std::max<std::uint32_t>(1U, planned.width >> mip);
+    const auto mip_height = std::max<std::uint32_t>(1U, planned.height >> mip);
+    const auto end_mip = std::max(mip_width, mip_height) <= 256U ? planned.mip_count - 1U : mip;
     std::vector<std::byte> chunk_payload;
-    for (std::uint32_t item = 0; item < planned.array_size; ++item) {
-        const auto* image_at_mip = image.GetImage(mip, item, 0);
-        if (image_at_mip == nullptr) {
-            return failure<planned_dds_input>({error_code::malformed_archive, "DDS mip image missing"});
+    for (std::uint32_t chunk_mip = mip; chunk_mip <= end_mip; ++chunk_mip) {
+        for (std::uint32_t item = 0; item < planned.array_size; ++item) {
+            const auto* image_at_mip = image.GetImage(chunk_mip, item, 0);
+            if (image_at_mip == nullptr) {
+                return failure<planned_dds_input>({error_code::malformed_archive, "DDS mip image missing"});
+            }
+            append_bytes(chunk_payload, image_at_mip->pixels, image_at_mip->slicePitch);
         }
-        append_bytes(chunk_payload, image_at_mip->pixels, image_at_mip->slicePitch);
     }
-    chunks.push_back({.start_mip = mip, .end_mip = mip, .payload = std::move(chunk_payload)});
+    chunks.push_back({.start_mip = mip, .end_mip = end_mip, .payload = std::move(chunk_payload)});
+    mip = end_mip + 1U;
 }
 ```
 
@@ -440,19 +446,19 @@ auto finalized = plan.has_value() ? libbsa::finalize_ba2_write(plan.value(), sin
 | A1 | Exact new file names such as `include/libbsa/ba2_writer.hpp`, `src/ba2_writer.cpp`, and `src/texture/dds_analysis.*`. | Summary / Project Structure | Low: context leaves exact helper file names to planner discretion. |
 | A2 | A focused `libbsa_ba2_writer_tests` target is preferable to extending `libbsa_writer_tests`. | Standard Stack / Validation Architecture | Low: CMake organization is planner discretion if labels and gates remain clear. |
 | A3 | BA2 dedup sharing is safe when byte-identical post-policy GNRL payloads or DDS chunks point to the same archive-absolute bytes. | Architectural Responsibility Map | Medium: current reader can extract by offset/size, but external tool compatibility is deferred to Phase 11. Mitigate with generated read-back now and corpus comparison later. |
-| A4 | Conservative one-chunk-per-mip automatic DDS chunking is acceptable for Phase 10 generated read-back unless reference tracing proves stricter target chunk grouping is required. | Pattern 4 | Medium: Archive2 uses texture-streaming heuristics; Step documentation says high mips and low mips are grouped by size thresholds. Mitigate by making chunking internal and testing semantic read-back, while noting Phase 11 corpus comparison may refine grouping. |
+| A4 | Automatic DDS chunking follows the documented target rule: individual chunks for mips above 256x256, with the first 256x256-or-smaller mip and all lower mips grouped into one final chunk. | Pattern 4 / Open Questions (RESOLVED) | Low-Medium: Official Archive2 implementation details remain not first-party documented, but this rule is more production-compatible than one-chunk-per-mip and remains internal so Phase 11 corpus comparison can refine without public API changes. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Exact production-compatible DDS chunk grouping heuristic**
-   - What we know: BA2 chunk records have `start_mip` / `end_mip`, and public decisions require automatic chunking from DDS analysis. [VERIFIED: `src/ba2_reader.cpp`; VERIFIED: `10-CONTEXT.md`]
-   - What's unclear: Official Archive2's exact current chunking heuristic is not first-party documented; Step documentation reports texture archives separate mips above 256x256 and group 256x256 and below, while also noting related settings are not fully understood. [CITED: https://wiki.step-project.com/Guide:Archive2]
-   - Recommendation: Implement one-chunk-per-mip or a simple documented internal threshold algorithm that is fully validated by generated read-back in Phase 10; do not expose public chunk controls. Leave exact external-tool parity to Phase 11 corpus validation. [ASSUMED; VERIFIED: `10-SPEC.md`]
+1. **RESOLVED: Exact production-compatible DDS chunk grouping heuristic**
+    - What we know: BA2 chunk records have `start_mip` / `end_mip`, and public decisions require automatic chunking from DDS analysis. [VERIFIED: `src/ba2_reader.cpp`; VERIFIED: `10-CONTEXT.md`]
+    - What's unclear: Official Archive2's exact current chunking heuristic is not first-party documented; Step documentation reports texture archives separate mips above 256x256 and group 256x256 and below, while also noting related settings are not fully understood. [CITED: https://wiki.step-project.com/Guide:Archive2]
+    - Resolution: Implement the documented target-rule algorithm: compute each mip's dimensions from analyzed DDS metadata; emit individual chunks for mips whose `max(width, height) > 256`; once a mip is `<= 256` in both dimensions, group that mip and all remaining lower-resolution mips into one final chunk. For arrays/cubemaps, each chunk contains the selected mip range for every array/cube item in DirectXTex image order. This satisfies D-15 automatic target-rule chunking, preserves D-11 preview detail through explicit `start_mip`/`end_mip` ranges, and avoids reducing correctness to generated read-back only. Phase 11 external corpus comparison may tune the internal heuristic without adding public manual chunk descriptors. [RESOLVED; CITED: https://wiki.step-project.com/Guide:Archive2; VERIFIED: `10-CONTEXT.md`; VERIFIED: `10-SPEC.md`]
 
-2. **Supported DDS formats beyond current reconstruction helper coverage**
-   - What we know: `dxgi_format_name` lists several known DXGI values, but current `reconstruct_dds` supports only BC1 value 71. [VERIFIED: `include/libbsa/ba2.hpp`; VERIFIED: `src/texture/dds_reconstruction.cpp`]
-   - What's unclear: Phase 10 acceptance names mip, cubemap, DXGI format, chunking, and compression fixtures, but does not enumerate every DXGI format required in v1. [VERIFIED: `10-SPEC.md`]
-   - Recommendation: Plan an early DDS analyzer/reconstruction gap task: support at least the formats needed by generated fixtures, fail unsupported formats structurally during planning, and avoid texture transcoding. [VERIFIED: `10-CONTEXT.md`; VERIFIED: `10-SPEC.md`]
+2. **RESOLVED: Supported DDS formats beyond current reconstruction helper coverage**
+    - What we know: `dxgi_format_name` lists several known DXGI values, but current `reconstruct_dds` supports only BC1 value 71. [VERIFIED: `include/libbsa/ba2.hpp`; VERIFIED: `src/texture/dds_reconstruction.cpp`]
+    - What's unclear: Phase 10 acceptance names mip, cubemap, DXGI format, chunking, and compression fixtures, but does not enumerate every DXGI format required in v1. [VERIFIED: `10-SPEC.md`]
+    - Resolution: Phase 10 implementation must accept and test the generated fixture formats needed for one-mip, multi-mip, cubemap, array, raw, deflate, and LZ4-block DDS writer coverage. At minimum, the existing BC1 / DXGI value 71 path must remain supported; any additional generated fixture format must be added to the private reconstruction/validation boundary in the same task that introduces the fixture. DDS formats not supported by libbsa's private reconstruction path must fail structurally during planning with no partial plan, and Phase 10 must not transcode or optimize textures. This satisfies WRT-03 without claiming broad format coverage before Phase 11 hardening/corpus work. [RESOLVED; VERIFIED: `10-CONTEXT.md`; VERIFIED: `10-SPEC.md`; VERIFIED: `src/texture/dds_reconstruction.cpp`]
 
 ## Environment Availability
 
