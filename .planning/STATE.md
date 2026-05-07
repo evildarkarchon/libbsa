@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 09-05-PLAN.md
-last_updated: "2026-05-07T07:11:12.126Z"
+status: verifying
+stopped_at: Completed 09-06-PLAN.md
+last_updated: "2026-05-07T07:15:54.485Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 12
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 46
-  completed_plans: 45
-  percent: 98
+  completed_plans: 46
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 Phase: 09 (bsa-writers) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-07
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -77,6 +77,7 @@ Progress: [██████████] 98%
 | Phase 09-bsa-writers P03 | 1min | 2 tasks | 3 files |
 | Phase 09-bsa-writers P04 | 3min | 2 tasks | 2 files |
 | Phase 09-bsa-writers P05 | 3min | 2 tasks | 4 files |
+| Phase 09-bsa-writers P06 | 2min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,8 @@ Recent decisions affecting current work:
 - [Phase 09-bsa-writers]: Disk-backed BSA inputs validate caller-provided archive virtual paths before opening host files. — Preserves structured archive-path errors ahead of filesystem I/O failures and keeps host/archive path concerns separate.
 - [Phase 09-bsa-writers]: TES3 hash table bytes now follow TES5Edit save order: high 32 bits first, then low 32 bits, with reader and fixtures updated together. — Matches resolved Phase 9 research and keeps writer output/read-back aligned with BSArchPro compatibility.
 - [Phase 09-bsa-writers]: TES3 planning rejects compression and embedded-name options structurally instead of downgrading to raw output. — TES3 native BSA writer only supports raw payloads and has no safe embedded-name representation.
+- [Phase 09-bsa-writers]: Phase 09 public documentation claims production BSA writer support only for TES3 Morrowind and TES4-family v103/v104/v105 targets; BA2 writers, DDS packing, CLI/GUI, corpus comparison, performance/multithreading, and in-place mutation remain deferred or out of scope. — Keeps Phase 09 claims aligned with SPEC boundaries and protects Phase 10/11/12 scope.
+- [Phase 09-bsa-writers]: The public-header smoke now validates BSA writer APIs by creating, finalizing, reopening, and extracting all required BSA targets through public headers only. — Ensures consumer-facing coverage proves runtime usability without private headers.
 
 ### Pending Todos
 
@@ -143,6 +146,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T07:11:12.120Z
-Stopped at: Completed 09-05-PLAN.md
+Last session: 2026-05-07T07:15:54.479Z
+Stopped at: Completed 09-06-PLAN.md
 Resume file: None

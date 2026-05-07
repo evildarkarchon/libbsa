@@ -275,7 +275,7 @@ Plans:
 - [x] 09-05-PLAN.md — TDD TES3 Morrowind native BSA serialization.
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 09-06-PLAN.md — Finalize public smoke coverage, documentation, validation, and boundary gates.
+- [x] 09-06-PLAN.md — Finalize public smoke coverage, documentation, validation, and boundary gates.
 
 ### Phase 10: BA2 Writers
 **Goal**: Consumers can create Fallout 4 and Starfield BA2 GNRL and DDS archives with correct version-specific layout and texture chunking.
