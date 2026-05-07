@@ -52,7 +52,7 @@ Each task was committed atomically:
 1. **Task 1 RED: Add failing disk equivalence and finalization failure tests** - `2a9cbfd` (test)
 2. **Task 2 GREEN: Implement disk planning and failure propagation** - `95c401a` (feat)
 
-**Plan metadata:** pending final docs commit
+**Plan metadata:** recorded in the plan metadata docs commit history
 
 ## Files Created/Modified
 
