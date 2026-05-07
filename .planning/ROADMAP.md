@@ -269,7 +269,7 @@ Plans:
 - [x] 09-03-PLAN.md — TDD TES4-family compression, embedded-name, and dedup semantics.
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 09-04-PLAN.md — TDD disk-backed BSA inputs and finalization failure safety.
+- [x] 09-04-PLAN.md — TDD disk-backed BSA inputs and finalization failure safety.
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 09-05-PLAN.md — TDD TES3 Morrowind native BSA serialization.

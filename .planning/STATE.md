@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-05-07T06:58:16.223Z"
+last_updated: "2026-05-07T07:04:07.324Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 46
-  completed_plans: 43
-  percent: 93
+  completed_plans: 44
+  percent: 96
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 09 (bsa-writers) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [█████████░] 93%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Progress: [█████████░] 93%
 | Phase 09-bsa-writers P01 | 3min | 2 tasks | 5 files |
 | Phase 09-bsa-writers P02 | 3min | 2 tasks | 4 files |
 | Phase 09-bsa-writers P03 | 1min | 2 tasks | 3 files |
+| Phase 09-bsa-writers P04 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,7 @@ Recent decisions affecting current work:
 - [Phase 09]: TES4-family FileFlags are computed from known entry extensions without a public override — Keeps public controls semantic and minimal while matching Phase 9 research.
 - [Phase 09-bsa-writers]: TES4-family embedded-name prefixes use native backslash archive path bytes. — Matches native BSA embedded-name byte spelling while reader extraction remains length-based.
 - [Phase 09-bsa-writers]: BSA deduplication shares exact post-policy stored payload bytes. — Sharing after compression and embedded-name shaping prevents source-byte dedup from reusing incompatible native payload regions.
+- [Phase 09-bsa-writers]: Disk-backed BSA inputs validate caller-provided archive virtual paths before opening host files. — Preserves structured archive-path errors ahead of filesystem I/O failures and keeps host/archive path concerns separate.
 
 ### Pending Todos
 
@@ -138,6 +140,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T06:58:09.040Z
+Last session: 2026-05-07T07:03:38.040Z
 Stopped at: Completed 09-02-PLAN.md
 Resume file: None
