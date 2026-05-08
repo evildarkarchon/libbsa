@@ -52,6 +52,7 @@ target_sources(libbsa
     src/archive.cpp
     src/detail/archive_path.cpp
     src/detail/binary_io.cpp
+    src/detail/compression_router.cpp
     src/detail/deflate_codec.cpp
     src/detail/lz4_block_codec.cpp
     src/detail/lz4_frame_codec.cpp
