@@ -9,7 +9,7 @@
 
 namespace libbsa::formats::bsa {
 
-/// Byte-classified TES4-family BSA variant selected before parser dispatch.
+/// Byte-classified BSA variant selected before parser dispatch.
 struct detected_bsa_format {
   archive_variant variant;
   std::uint32_t version;
