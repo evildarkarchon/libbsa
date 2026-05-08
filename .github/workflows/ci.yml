@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows-msvc:
+    name: Windows MSVC (${{ matrix.preset }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        preset:
+          - windows-msvc-debug-static
+          - windows-msvc-debug-shared
+
+    env:
+      VCPKG_ROOT: C:\vcpkg
+
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }} --output-on-failure
+
+      - name: Verify TES5Edit stayed read-only
+        shell: pwsh
+        run: |
+          $status = git status --short TES5Edit
+          if ($status) {
+            $status
+            throw "TES5Edit submodule changed during CI"
+          }
