@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 04 context gathered
-last_updated: "2026-05-08T11:40:56.004Z"
-last_activity: 2026-05-08 -- Phase 04 execution started
+last_updated: "2026-05-08T11:48:16.827Z"
+last_activity: 2026-05-08
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 20
-  completed_plans: 16
-  percent: 80
+  completed_plans: 17
+  percent: 85
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 04 (tes3-bsa-read-extract) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 04
-Last activity: 2026-05-08 -- Phase 04 execution started
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-05-08
 
-Progress: [████████████████████] 16/16 plans (100%)
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [████████████████████] 16/16 p
 | Phase 03 P04 | 35min | 2 tasks | 10 files |
 | Phase 03 P05 | 8min | 2 tasks | 7 files |
 | Phase 03 P06 | 24min | 3 tasks | 5 files |
+| Phase 04 P01 | 4 min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 03]: TES4-family extraction remains path-first on archive_reader and returns not_found for valid missing paths while preserving invalid_argument for malformed archive paths. — Plan 03-06 preserves D-14/D-20 caller semantics.
 - [Phase 03]: extract_bytes is a convenience adapter over extract(path, sink), not a separate decoding path. — Keeps embedded-name and compression behavior identical across APIs.
 - [Phase 03]: TES4-family reader state stores host path plus metadata, not whole archive bytes. — Verification required bounded open/extract behavior before completing the phase.
+- [Phase 04]: TES3 fixture manifests record both raw_tes3_data_offset and archive-absolute payload_offset so later parser work can prove D-01 through D-03 without expanding public metadata. — Keeps raw TES3 offset proof in fixtures while preserving public archive-absolute payload offsets.
+- [Phase 04]: TES3 RED tests compare manifest archive_hash values through the current public hash field until the planned Phase 04-02 neutral public rename lands. — Plan 04-01 must compile before the public metadata rename planned for 04-02.
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T11:12:07.740Z
+Last session: 2026-05-08T11:48:07.659Z
 Stopped at: Phase 04 context gathered
-Resume file: .planning/phases/04-tes3-bsa-read-extract/04-CONTEXT.md
+Resume file: None

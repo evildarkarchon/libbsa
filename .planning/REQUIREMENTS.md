@@ -42,11 +42,11 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 - [x] **BSA-01**: Consumer can read and extract files from TES4/Oblivion BSA v103 archives.
 - [x] **BSA-02**: Consumer can read and extract files from FO3/FNV/Skyrim LE BSA v104 archives.
 - [x] **BSA-03**: Consumer can read and extract files from Skyrim SE/AE BSA v105 archives.
-- [ ] **BSA-04**: Consumer can read and extract files from TES3/Morrowind BSA archives.
+- [x] **BSA-04**: Consumer can read and extract files from TES3/Morrowind BSA archives.
 - [x] **BSA-05**: Consumer can locate TES4-family BSA entries by path using hash-based lookup behavior compatible with BSArchPro.
 - [x] **BSA-06**: Consumer can extract embedded-name BSA entries while preserving payload bytes compatible with BSArchPro output.
 - [x] **BSA-07**: Consumer can extract BSA entries that are stored raw, deflate-compressed, or LZ4-frame-compressed according to archive version and flags.
-- [ ] **BSA-08**: Consumer can extract TES3 entries using data-section-relative offset semantics.
+- [x] **BSA-08**: Consumer can extract TES3 entries using data-section-relative offset semantics.
 
 ### BA2 General Read Support
 
@@ -180,11 +180,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BSA-01 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
 | BSA-02 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
 | BSA-03 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
-| BSA-04 | Phase 4: TES3 BSA Read/Extract | Pending |
+| BSA-04 | Phase 4: TES3 BSA Read/Extract | Complete |
 | BSA-05 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
 | BSA-06 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
 | BSA-07 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
-| BSA-08 | Phase 4: TES3 BSA Read/Extract | Pending |
+| BSA-08 | Phase 4: TES3 BSA Read/Extract | Complete |
 | GNRL-01 | Phase 5: BA2 GNRL Read/Extract | Pending |
 | GNRL-02 | Phase 5: BA2 GNRL Read/Extract | Pending |
 | GNRL-03 | Phase 5: BA2 GNRL Read/Extract | Pending |

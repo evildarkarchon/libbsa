@@ -136,7 +136,7 @@ Plans:
 Plans:
 
 **Wave 1**
-- [ ] 04-01-PLAN.md — Create TES3 generated fixtures and RED public reader tests.
+- [x] 04-01-PLAN.md — Create TES3 generated fixtures and RED public reader tests.
 
 **Wave 2** *(blocked on Wave 1 fixture/test contracts)*
 - [ ] 04-02-PLAN.md — Rename hash metadata, document absolute offsets, and add TES3 byte detection/dispatch scaffolding.
