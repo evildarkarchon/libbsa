@@ -121,7 +121,7 @@ Plans:
 - [x] 03-05-PLAN.md — Implement TES4-family table parsing, entry metadata, deterministic listing, and normalized lookup.
 
 **Wave 5** *(blocked on parser metadata and lookup semantics)*
-- [ ] 03-06-PLAN.md — Implement sink-first raw, deflate, LZ4-frame, embedded-name, bounded byte extraction, and final verification.
+- [x] 03-06-PLAN.md — Implement sink-first raw, deflate, LZ4-frame, embedded-name, bounded byte extraction, and final verification.
 
 ### Phase 4: TES3 BSA Read/Extract
 **Goal**: Consumers can read, list, query, and extract TES3/Morrowind BSA archives while preserving TES3-specific data-section-relative offset behavior.

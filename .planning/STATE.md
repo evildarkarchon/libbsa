@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-05-08T07:57:28.544Z"
+status: verifying
+stopped_at: Completed 03-06-PLAN.md
+last_updated: "2026-05-08T08:10:34.830Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 12
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 16
-  completed_plans: 15
-  percent: 94
+  completed_plans: 16
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 
 Phase: 03 (format-detection-and-tes4-family-bsa-read-extract) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-08
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [█████████░] 94%
 | Phase 03 P03 | 10min | 2 tasks | 10 files |
 | Phase 03 P04 | 35min | 2 tasks | 10 files |
 | Phase 03 P05 | 8min | 2 tasks | 7 files |
+| Phase 03 P06 | 24min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 03]: Duplicate canonical path validation remains deferred to Plan 03-05 full entry parsing. — Plan 03-04 intentionally exposes metadata-only open state and does not parse entry names yet.
 - [Phase 03]: TES4-family metadata parsing exposes canonical sorted entries while preserving archive spelling in original_path with `/` separators. — Plan 03-05 prepares extraction selectors without host filesystem semantics.
 - [Phase 03]: TES4-family lookup is canonical-path based and rejects duplicate normalized keys during open. — Ensures deterministic find/contains semantics for archive consumers.
+- [Phase 03]: TES4-family extraction remains path-first on archive_reader and returns not_found for valid missing paths while preserving invalid_argument for malformed archive paths. — Plan 03-06 preserves D-14/D-20 caller semantics.
+- [Phase 03]: extract_bytes is a convenience adapter over extract(path, sink), not a separate decoding path. — Keeps embedded-name and compression behavior identical across APIs.
 
 ### Pending Todos
 
@@ -104,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T07:57:28.538Z
-Stopped at: Completed 03-05-PLAN.md
+Last session: 2026-05-08T08:10:34.825Z
+Stopped at: Completed 03-06-PLAN.md
 Resume file: None
