@@ -59,14 +59,16 @@ struct archive_metadata {
 ///
 /// `path` is the canonical normalized lookup key. `original_path` preserves the
 /// archive-derived display spelling joined with `/` separators, independent of
-/// host filesystem path rules.
+/// host filesystem path rules. `payload_offset` is always an archive-absolute
+/// byte offset for every archive variant; format-specific relative offsets stay
+/// inside parser internals and fixture manifests.
 struct entry_metadata {
   std::string path;
   std::string original_path;
   std::uint64_t raw_size;
   std::uint64_t stored_size;
   std::uint64_t payload_offset;
-  std::uint64_t tes4_hash;
+  std::uint64_t archive_hash;
   entry_compression compression;
   std::uint32_t record_flags;
   bool has_embedded_name;
