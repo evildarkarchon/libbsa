@@ -69,7 +69,7 @@ Cross-cutting constraints:
   3. Compression service can decompress deflate, LZ4 frame, and raw LZ4 block payloads only when the exact expected output size is produced.
   4. Writer support can compress deflate, LZ4 frame, and raw LZ4 block payloads by explicit target-format routing rather than extension guesses.
   5. Maintainer can verify TES3, TES4-family, and FO4/BA2 hash outputs against fixture-backed expected values.
-**Plans**: 5 plans
+**Plans**: 6 plans
 
 Plans:
 
@@ -178,6 +178,9 @@ Plans:
 **Wave 5** *(blocked on Wave 4 extraction behavior)*
 - [x] 05-05-PLAN.md — Close malformed/unsupported BA2 validation and final cross-format regression gates.
 
+**Wave 6** *(gap closure; blocked on Wave 5 verification findings)*
+- [ ] 05-06-PLAN.md — Close bounded BA2 GNRL open/list filename-table read gap.
+
 ### Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction
 **Goal**: Consumers can inspect BA2 DX10/DDS texture metadata and extract entries as valid DDS files while DirectXTex remains an internal validation/analyzer dependency.
 **Depends on**: Phase 5
@@ -268,7 +271,7 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 2. Binary I/O, Paths, Hashes, and Compression Services | 5/5 | Complete | 2026-05-08 |
 | 3. Format Detection and TES4-Family BSA Read/Extract | 6/6 | Complete | 2026-05-08 |
 | 4. TES3 BSA Read/Extract | 2/4 | In Progress|  |
-| 5. BA2 GNRL Read/Extract | 5/5 | Complete | 2026-05-08 |
+| 5. BA2 GNRL Read/Extract | 5/6 | In Progress |  |
 | 6. DDS Boundary and BA2 DX10 Read/Reconstruction | 0/TBD | Not started | - |
 | 7. TES4-Family BSA Write-New Support | 0/TBD | Not started | - |
 | 8. BA2 GNRL Write-New Support | 0/TBD | Not started | - |
