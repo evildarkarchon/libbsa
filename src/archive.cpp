@@ -1,18 +1,70 @@
 #include <libbsa/archive.hpp>
 
+#include "formats/bsa/bsa_format_detector.hpp"
+#include "formats/bsa/tes4_bsa_parser.hpp"
+
+#include <cstddef>
+#include <fstream>
+#include <iterator>
+#include <vector>
+
 namespace libbsa {
+
+struct archive_reader::state {
+  archive_metadata metadata;
+};
+
+archive_reader::archive_reader(archive_metadata metadata)
+    : state_(std::make_shared<state>(state{metadata})) {}
+
+namespace {
+
+result<std::vector<std::byte>> read_archive_bytes(std::string_view host_path) {
+  std::ifstream input{std::string{host_path}, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "failed to open archive host path"};
+  }
+
+  std::vector<std::byte> bytes;
+  for (char ch = 0; input.get(ch);) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+  if (input.bad()) {
+    return error{error_code::io_error, "failed while reading archive host path"};
+  }
+  return bytes;
+}
+
+} // namespace
 
 result<archive_reader> archive_reader::open(std::string_view host_path) {
   if (host_path.empty()) {
     return error{error_code::invalid_argument, "archive path must not be empty"};
   }
 
-  return error{error_code::unsupported,
-               "archive detection and parsing are not implemented in Phase 1"};
+  auto bytes = read_archive_bytes(host_path);
+  if (!bytes) {
+    return bytes.error();
+  }
+
+  auto detected = formats::bsa::detect_bsa_format(bytes.value());
+  if (!detected) {
+    return detected.error();
+  }
+
+  auto metadata = formats::bsa::parse_tes4_bsa_metadata(bytes.value(), detected.value());
+  if (!metadata) {
+    return metadata.error();
+  }
+
+  return archive_reader{metadata.value()};
 }
 
 result<archive_metadata> archive_reader::metadata() const {
-  return error{error_code::unsupported, "archive metadata is not implemented until Phase 3 reader state exists"};
+  if (!state_) {
+    return error{error_code::unsupported, "archive reader is not open"};
+  }
+  return state_->metadata;
 }
 
 result<std::vector<entry_metadata>> archive_reader::entries() const {

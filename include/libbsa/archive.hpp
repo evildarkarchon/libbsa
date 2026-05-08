@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
@@ -121,6 +122,13 @@ class archive_reader {
 
   /// Extracts an entry into a bounded in-memory byte vector convenience result.
   [[nodiscard]] result<std::vector<std::byte>> extract_bytes(std::string_view path) const;
+
+ private:
+  struct state;
+
+  explicit archive_reader(archive_metadata metadata);
+
+  std::shared_ptr<const state> state_;
 };
 
 } // namespace libbsa

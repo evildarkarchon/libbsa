@@ -58,6 +58,8 @@ target_sources(libbsa
     src/detail/lz4_block_codec.cpp
     src/detail/lz4_frame_codec.cpp
     src/detail/payload_stream.cpp
+    src/formats/bsa/bsa_format_detector.cpp
+    src/formats/bsa/tes4_bsa_parser.cpp
     src/libbsa.cpp
 )
 

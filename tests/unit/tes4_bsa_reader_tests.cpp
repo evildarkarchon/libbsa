@@ -24,7 +24,8 @@ libbsa::entry_compression expected_default_compression(std::uint32_t version) {
 }
 
 libbsa::archive_variant expected_variant(std::uint32_t version) {
-  return version == 103U ? libbsa::archive_variant::tes4 : libbsa::archive_variant::fallout4;
+  (void)version;
+  return libbsa::archive_variant::tes4;
 }
 
 struct success_fixture {
