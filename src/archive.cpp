@@ -2,6 +2,7 @@
 
 #include "formats/bsa/bsa_format_detector.hpp"
 #include "formats/bsa/tes3_bsa_parser.hpp"
+#include "formats/bsa/tes3_bsa_reader.hpp"
 #include "formats/bsa/tes4_bsa_parser.hpp"
 #include "formats/bsa/tes4_bsa_reader.hpp"
 
@@ -158,6 +159,9 @@ result<std::vector<entry_metadata>> archive_reader::entries() const {
   if (!state_) {
     return error{error_code::unsupported, "archive reader is not open"};
   }
+  if (state_->metadata.variant == archive_variant::tes3) {
+    return formats::bsa::tes3_bsa_entries(state_->entries);
+  }
   return formats::bsa::tes4_bsa_entries(state_->entries);
 }
 
@@ -165,12 +169,18 @@ result<std::optional<entry_metadata>> archive_reader::find(std::string_view path
   if (!state_) {
     return error{error_code::unsupported, "archive reader is not open"};
   }
+  if (state_->metadata.variant == archive_variant::tes3) {
+    return formats::bsa::find_tes3_bsa_entry(state_->entries, path);
+  }
   return formats::bsa::find_tes4_bsa_entry(state_->entries, path);
 }
 
 result<bool> archive_reader::contains(std::string_view path) const {
   if (!state_) {
     return error{error_code::unsupported, "archive reader is not open"};
+  }
+  if (state_->metadata.variant == archive_variant::tes3) {
+    return formats::bsa::contains_tes3_bsa_entry(state_->entries, path);
   }
   return formats::bsa::contains_tes4_bsa_entry(state_->entries, path);
 }
