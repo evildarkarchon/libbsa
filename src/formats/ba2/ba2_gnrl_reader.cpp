@@ -150,6 +150,8 @@ result<void> extract_compressed_payload(std::string_view host_path, const entry_
   if (!method) {
     return method.error();
   }
+  // Corrupt BA2 compressed payloads are malformed archive bytes, so preserve the
+  // codec's stable format_error result instead of attempting partial extraction.
   auto decoded = detail::decompress_payload_exact(method.value(), stored.value(), expected_size.value());
   if (!decoded) {
     return decoded.error();
