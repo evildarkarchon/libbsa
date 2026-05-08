@@ -5,6 +5,8 @@
 #include "formats/bsa/bsa_format_detector.hpp"
 #include "formats/bsa/tes3_bsa_reader.hpp"
 
+#include <detail/bethesda_hash.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -82,6 +84,33 @@ std::vector<std::byte> read_binary_file_span(const std::filesystem::path& path, 
   std::vector<std::byte> bytes(static_cast<std::size_t>(count));
   input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
   return bytes;
+}
+
+std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
+  std::ifstream input{path, std::ios::binary};
+  std::vector<std::byte> bytes;
+  for (char ch = 0; input.get(ch);) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+  return bytes;
+}
+
+std::uint32_t read_u32_le(const std::vector<std::byte>& bytes, std::size_t offset) {
+  return static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.at(offset))) |
+         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.at(offset + 1U))) << 8U) |
+         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.at(offset + 2U))) << 16U) |
+         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.at(offset + 3U))) << 24U);
+}
+
+void overwrite_u64_le(std::vector<std::byte>& bytes, std::size_t offset, std::uint64_t value) {
+  for (std::uint32_t index = 0; index < 8U; ++index) {
+    bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
+  }
+}
+
+void write_binary_file(const std::filesystem::path& path, const std::vector<std::byte>& bytes) {
+  std::ofstream output{path, std::ios::binary};
+  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
 }
 
 class collecting_sink final : public libbsa::payload_sink {
@@ -315,4 +344,34 @@ TEST_CASE("tes3_bsa_malformed rejects generated malformed TES3 cases with stable
     REQUIRE_FALSE(opened.has_value());
     REQUIRE(opened.error().code == expected);
   }
+}
+
+TEST_CASE("tes3_bsa_malformed maps invalid archive names to format_error", "[unit][fixture][malformed][tes3_bsa_malformed]") {
+  auto bytes = read_binary_file(generated_archive_path("tes3_success.bsa"));
+  const auto file_count = read_u32_le(bytes, 8U);
+  const auto name_section_start = 12U + file_count * 8U + file_count * 4U;
+  const auto first_name_offset = read_u32_le(bytes, 12U + file_count * 8U);
+  const auto first_name_start = name_section_start + first_name_offset;
+
+  std::string original;
+  for (auto offset = first_name_start; offset < bytes.size() && bytes.at(offset) != std::byte{0}; ++offset) {
+    original.push_back(static_cast<char>(std::to_integer<unsigned char>(bytes.at(offset))));
+  }
+  REQUIRE_FALSE(original.empty());
+  auto mutated_name = original;
+  mutated_name.front() = '/';
+
+  std::transform(mutated_name.begin(), mutated_name.end(), bytes.begin() + static_cast<std::ptrdiff_t>(first_name_start), [](char value) {
+    return static_cast<std::byte>(static_cast<unsigned char>(value));
+  });
+
+  const auto hash_table_start = 12U + read_u32_le(bytes, 4U);
+  overwrite_u64_le(bytes, hash_table_start, libbsa::detail::hash_tes3(mutated_name));
+  const auto mutated = std::filesystem::temp_directory_path() / "libbsa_tes3_invalid_archive_name.bsa";
+  write_binary_file(mutated, bytes);
+
+  auto opened = libbsa::archive_reader::open(mutated.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
