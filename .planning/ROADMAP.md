@@ -179,7 +179,7 @@ Plans:
 - [x] 05-05-PLAN.md — Close malformed/unsupported BA2 validation and final cross-format regression gates.
 
 **Wave 6** *(gap closure; blocked on Wave 5 verification findings)*
-- [ ] 05-06-PLAN.md — Close bounded BA2 GNRL open/list filename-table read gap.
+- [x] 05-06-PLAN.md — Close bounded BA2 GNRL open/list filename-table read gap.
 
 ### Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction
 **Goal**: Consumers can inspect BA2 DX10/DDS texture metadata and extract entries as valid DDS files while DirectXTex remains an internal validation/analyzer dependency.
