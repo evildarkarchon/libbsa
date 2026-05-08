@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 04 context gathered
-last_updated: "2026-05-08T11:48:16.827Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-05-08T12:06:18.851Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 20
-  completed_plans: 17
-  percent: 85
+  completed_plans: 18
+  percent: 90
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 2 of 4
 Status: Ready to execute
 Last activity: 2026-05-08
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [█████████░] 85%
 | Phase 03 P05 | 8min | 2 tasks | 7 files |
 | Phase 03 P06 | 24min | 3 tasks | 5 files |
 | Phase 04 P01 | 4 min | 3 tasks | 18 files |
+| Phase 04 P02 | 3 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 03]: TES4-family reader state stores host path plus metadata, not whole archive bytes. — Verification required bounded open/extract behavior before completing the phase.
 - [Phase 04]: TES3 fixture manifests record both raw_tes3_data_offset and archive-absolute payload_offset so later parser work can prove D-01 through D-03 without expanding public metadata. — Keeps raw TES3 offset proof in fixtures while preserving public archive-absolute payload offsets.
 - [Phase 04]: TES3 RED tests compare manifest archive_hash values through the current public hash field until the planned Phase 04-02 neutral public rename lands. — Plan 04-01 must compile before the public metadata rename planned for 04-02.
+- [Phase 04]: entry_metadata now exposes archive_hash instead of tes4_hash so TES3 and TES4-family entries share format-neutral public metadata. — Phase 04 is the first point where the TES4-specific public field name becomes inaccurate, and this is a pre-v1 API cleanup.
+- [Phase 04]: TES3 detection is limited to byte classification of little-endian 0x00000100 and deliberately defers parser/open routing to Plan 04-03. — Plan 04-02 only prepares detector scaffolding; full TES3 parser and open dispatch are scoped to Plan 04-03.
 
 ### Pending Todos
 
@@ -111,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T11:48:07.659Z
-Stopped at: Phase 04 context gathered
+Last session: 2026-05-08T12:06:18.846Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None

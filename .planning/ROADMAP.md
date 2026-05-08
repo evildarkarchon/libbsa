@@ -139,7 +139,7 @@ Plans:
 - [x] 04-01-PLAN.md — Create TES3 generated fixtures and RED public reader tests.
 
 **Wave 2** *(blocked on Wave 1 fixture/test contracts)*
-- [ ] 04-02-PLAN.md — Rename hash metadata, document absolute offsets, and add TES3 byte detection/dispatch scaffolding.
+- [x] 04-02-PLAN.md — Rename hash metadata, document absolute offsets, and add TES3 byte detection/dispatch scaffolding.
 
 **Wave 3** *(blocked on Wave 2 public model and detector dispatch)*
 - [ ] 04-03-PLAN.md — Implement TES3 parsing, strict hash/name validation, listing, and lookup.
@@ -247,7 +247,7 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 1. Foundation, API Boundary, and Test Harness | 5/5 | Complete | 2026-05-08 |
 | 2. Binary I/O, Paths, Hashes, and Compression Services | 5/5 | Complete | 2026-05-08 |
 | 3. Format Detection and TES4-Family BSA Read/Extract | 6/6 | Complete | 2026-05-08 |
-| 4. TES3 BSA Read/Extract | 0/TBD | Not started | - |
+| 4. TES3 BSA Read/Extract | 2/4 | In Progress|  |
 | 5. BA2 GNRL Read/Extract | 0/TBD | Not started | - |
 | 6. DDS Boundary and BA2 DX10 Read/Reconstruction | 0/TBD | Not started | - |
 | 7. TES4-Family BSA Write-New Support | 0/TBD | Not started | - |
