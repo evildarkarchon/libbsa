@@ -1,0 +1,84 @@
+{
+  "variant": "tes3",
+  "version": 256,
+  "file_count": 4,
+  "data_section_start": 176,
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_tes3_bsa_fixtures.cpp",
+    "source": "synthetic strings generated for libbsa tests; no game or TES5Edit bytes copied"
+  },
+  "entries": [
+    {
+      "path": "icons/emptymarker.txt",
+      "original_path": "Icons/EmptyMarker.txt",
+      "lookup_variants": ["icons/emptymarker.txt", "Icons/EmptyMarker.txt", "icons/emptymarker.txt"],
+      "archive_hash": "0x030a386ac2e19931",
+      "hash_low32": "0xc2e19931",
+      "hash_high32": "0x030a386a",
+      "raw_size": 0,
+      "stored_size": 0,
+      "raw_tes3_data_offset": 62,
+      "payload_offset": 238,
+      "compression": "raw",
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "expected": {
+        "bytes_hex": ""
+      }
+    },
+    {
+      "path": "meshes/tiny/probe.nif",
+      "original_path": "Meshes/Tiny/Probe.nif",
+      "lookup_variants": ["meshes/tiny/probe.nif", "Meshes/Tiny/Probe.nif", "meshes/tiny/probe.nif"],
+      "archive_hash": "0x1c5c78611a5e4fee",
+      "hash_low32": "0x1a5e4fee",
+      "hash_high32": "0x1c5c7861",
+      "raw_size": 21,
+      "stored_size": 21,
+      "raw_tes3_data_offset": 0,
+      "payload_offset": 176,
+      "compression": "raw",
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "expected": {
+        "bytes_hex": "746573332070726f6265206e69662062797465730a"
+      }
+    },
+    {
+      "path": "sound/fx/ping.wav",
+      "original_path": "Sound\\Fx\\Ping.wav",
+      "lookup_variants": ["sound/fx/ping.wav", "Sound\\Fx\\Ping.wav", "sound/fx/ping.wav"],
+      "archive_hash": "0x16133317aff274be",
+      "hash_low32": "0xaff274be",
+      "hash_high32": "0x16133317",
+      "raw_size": 21,
+      "stored_size": 21,
+      "raw_tes3_data_offset": 41,
+      "payload_offset": 217,
+      "compression": "raw",
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "expected": {
+        "bytes_hex": "746573332070696e6720776176652062797465730a"
+      }
+    },
+    {
+      "path": "textures/tx_probe.dds",
+      "original_path": "textures/tx_probe.dds",
+      "lookup_variants": ["textures/tx_probe.dds", "textures/tx_probe.dds", "textures/tx_probe.dds"],
+      "archive_hash": "0x071d632e4678dc68",
+      "hash_low32": "0x4678dc68",
+      "hash_high32": "0x071d632e",
+      "raw_size": 20,
+      "stored_size": 20,
+      "raw_tes3_data_offset": 21,
+      "payload_offset": 197,
+      "compression": "raw",
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "expected": {
+        "bytes_hex": "746573332074696e79206464732062797465730a"
+      }
+    }
+  ]
+}
