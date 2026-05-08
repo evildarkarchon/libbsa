@@ -339,6 +339,13 @@ TEST_CASE("tes3_bsa_malformed rejects generated malformed TES3 cases with stable
     const auto archive = test_case.at("archive").get<std::string>();
     const auto expected = error_code_from_manifest(test_case.at("expected_error").get<std::string>());
 
+    if (test_case.at("id").get<std::string>() == "tes3_stored_hash_mismatch") {
+      REQUIRE(test_case.at("structural_issue").get<std::string>() == "stored_hash_mismatch");
+    }
+    if (test_case.at("id").get<std::string>() == "tes3_hash_collision") {
+      REQUIRE(test_case.at("structural_issue").get<std::string>() == "duplicate_stored_hash");
+    }
+
     auto opened = libbsa::archive_reader::open(generated_archive_path(archive).string());
 
     REQUIRE_FALSE(opened.has_value());
