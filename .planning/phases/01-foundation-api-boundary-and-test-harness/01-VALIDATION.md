@@ -1,10 +1,11 @@
 ---
 phase: 01
 slug: foundation-api-boundary-and-test-harness
-status: draft
+status: validated
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-05-07
+updated: 2026-05-08
 ---
 
 # Phase 01 — Validation Strategy
@@ -38,12 +39,12 @@ created: 2026-05-07
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 01-01-01 | 01 | 1 | FND-01/FND-02 | T-01-01 | Build does not compile `TES5Edit/` | build | `cmake --preset windows-msvc-debug-static && cmake --build --preset windows-msvc-debug-static` | ✅ | ⬜ pending |
-| 01-01-02 | 01 | 1 | FND-01/FND-02 | T-01-01 | Package export uses public headers only | build | `cmake --preset windows-msvc-debug-shared && cmake --build --preset windows-msvc-debug-shared` | ✅ | ⬜ pending |
-| 01-02-01 | 02 | 2 | FND-03/FND-04/FND-05 | T-01-02 | Public API returns typed errors without dependency leakage | unit | `ctest --preset windows-msvc-debug-static -L unit --output-on-failure` | ✅ | ⬜ pending |
-| 01-03-01 | 03 | 3 | FND-06 | T-01-03 | Local game fixture tests are skipped by default | unit | `ctest --preset windows-msvc-debug-static -L unit --output-on-failure` | ✅ | ⬜ pending |
-| 01-04-01 | 04 | 1 | FND-07 | T-01-04 | Local fixtures are ignored and `TES5Edit/` is prohibited | docs/grep | `git check-ignore tests/fixtures/local/.keep` | ✅ | ⬜ pending |
-| 01-05-01 | 05 | 4 | DOC-04 | T-01-05 | CI builds static/shared without touching `TES5Edit/` | ci/grep | `grep -n "windows-msvc-debug-static\|windows-msvc-debug-shared" .github/workflows/ci.yml` | ✅ | ⬜ pending |
+| 01-01-01 | 01 | 1 | FND-01/FND-02 | T-01-01 | Build does not compile `TES5Edit/` | build | `cmake --preset windows-msvc-debug-static && cmake --build --preset windows-msvc-debug-static` | ✅ | ✅ green |
+| 01-01-02 | 01 | 1 | FND-01/FND-02 | T-01-01 | Package export uses public headers only | build | `cmake --preset windows-msvc-debug-shared && cmake --build --preset windows-msvc-debug-shared` | ✅ | ✅ green |
+| 01-02-01 | 02 | 2 | FND-03/FND-04/FND-05 | T-01-02 | Public API returns typed errors without dependency leakage | unit | `ctest --preset windows-msvc-debug-static -L unit --output-on-failure` | ✅ | ✅ green |
+| 01-03-01 | 03 | 3 | FND-06 | T-01-03 | Required CTest label taxonomy is documented and selectable | unit/policy | `ctest --preset windows-msvc-debug-static -L "fixture\|roundtrip\|compat\|malformed\|slow\|requires-game-fixture" --output-on-failure` | ✅ | ✅ green |
+| 01-04-01 | 04 | 1 | FND-07 | T-01-04 | Local fixtures are ignored and `TES5Edit/` is prohibited | unit/policy | `ctest --preset windows-msvc-debug-static -R "local fixture policy" --output-on-failure` | ✅ | ✅ green |
+| 01-05-01 | 05 | 4 | DOC-04 | T-01-05 | CI builds static/shared without touching `TES5Edit/` | unit/policy | `ctest --preset windows-msvc-debug-static -R "CI and presets" --output-on-failure` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -58,6 +59,18 @@ Existing infrastructure does not yet cover phase requirements. Plans create the 
 ## Manual-Only Verifications
 
 All Phase 1 behaviors have automated verification through CMake, CTest, grep, or CI workflow file inspection.
+
+---
+
+## Validation Audit 2026-05-08
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 4 |
+| Resolved | 4 |
+| Escalated | 0 |
+
+Added `tests/unit/validation_policy_tests.cpp` and wired it into `libbsa_tests` so Phase 1 policy assertions are executable through CTest. The new coverage verifies required label taxonomy, local fixture ignore/provenance rules, CI static/shared preset coverage, and the `TES5Edit/` guard.
 
 ---
 
