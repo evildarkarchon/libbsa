@@ -6,6 +6,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 find_package(libdeflate CONFIG REQUIRED)
+find_package(lz4 CONFIG REQUIRED)
 
 option(LIBBSA_BUILD_TESTS "Build libbsa tests" ON)
 
@@ -35,6 +36,7 @@ target_compile_options(libbsa
 target_link_libraries(libbsa
   PRIVATE
     $<IF:$<TARGET_EXISTS:libdeflate::libdeflate_static>,libdeflate::libdeflate_static,libdeflate::libdeflate_shared>
+    lz4::lz4
 )
 
 target_sources(libbsa
@@ -51,6 +53,8 @@ target_sources(libbsa
     src/detail/archive_path.cpp
     src/detail/binary_io.cpp
     src/detail/deflate_codec.cpp
+    src/detail/lz4_block_codec.cpp
+    src/detail/lz4_frame_codec.cpp
     src/detail/payload_stream.cpp
     src/libbsa.cpp
 )
