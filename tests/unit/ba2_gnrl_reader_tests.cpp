@@ -115,23 +115,27 @@ std::vector<ba2_success_fixture> ba2_success_fixtures() {
   };
 }
 
+/// Appends a little-endian UInt16 value to a synthetic binary fixture buffer.
 void append_u16_le(std::vector<std::byte>& bytes, std::uint16_t value) {
   bytes.push_back(static_cast<std::byte>(value & 0xFFU));
   bytes.push_back(static_cast<std::byte>((value >> 8U) & 0xFFU));
 }
 
+/// Appends a little-endian UInt32 value to a synthetic binary fixture buffer.
 void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
   for (unsigned shift = 0; shift < 32U; shift += 8U) {
     bytes.push_back(static_cast<std::byte>((value >> shift) & 0xFFU));
   }
 }
 
+/// Appends a little-endian UInt64 value to a synthetic binary fixture buffer.
 void append_u64_le(std::vector<std::byte>& bytes, std::uint64_t value) {
   for (unsigned shift = 0; shift < 64U; shift += 8U) {
     bytes.push_back(static_cast<std::byte>((value >> shift) & 0xFFU));
   }
 }
 
+/// Appends raw ASCII bytes, including embedded NULs when present in the view.
 void append_ascii(std::vector<std::byte>& bytes, std::string_view value) {
   for (const char ch : value) {
     bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
@@ -140,8 +144,10 @@ void append_ascii(std::vector<std::byte>& bytes, std::string_view value) {
 
 class temp_file_cleanup final {
  public:
+  /// Owns cleanup for a temporary fixture path created by a test case.
   explicit temp_file_cleanup(std::filesystem::path path) : path_{std::move(path)} {}
 
+  /// Best-effort removal keeps failed assertions from leaving sparse files behind.
   ~temp_file_cleanup() {
     std::error_code ignored;
     std::filesystem::remove(path_, ignored);
@@ -246,7 +252,7 @@ TEST_CASE("ba2_gnrl_bounded_open opens sparse large-payload archives without rea
   append_u64_le(bytes, 60U);
 
   append_u32_le(bytes, 0x12345678U);
-  append_ascii(bytes, "BIN\0");
+  append_ascii(bytes, std::string_view{"BIN\0", 4U});
   append_u32_le(bytes, 0U);
   append_u32_le(bytes, 0x0000002AU);
   append_u64_le(bytes, payload_offset);
