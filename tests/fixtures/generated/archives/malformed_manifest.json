@@ -1,0 +1,78 @@
+{
+  "manifest_kind": "malformed_tes4_bsa_cases",
+  "requirements": ["FMT-01", "FMT-06", "BSA-07"],
+  "threat_references": ["T-03-01", "T-03-02", "T-03-03", "T-03-04"],
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp",
+    "source": "synthetic malformed bytes generated for libbsa tests; no game or TES5Edit bytes copied"
+  },
+  "cases": [
+    {
+      "id": "unsupported_version",
+      "archive": "malformed_unsupported_version.bsa",
+      "requirements": ["FMT-01", "FMT-06"],
+      "threat_references": ["T-03-01"],
+      "expected_error": "unsupported",
+      "phase": "open",
+      "description": "BSA magic with a future unsupported header version"
+    },
+    {
+      "id": "truncated_header",
+      "archive": "malformed_truncated_header.bsa",
+      "requirements": ["FMT-01"],
+      "threat_references": ["T-03-01", "T-03-02"],
+      "expected_error": "format_error",
+      "phase": "open",
+      "description": "BSA magic plus a partial version field, shorter than the fixed TES4-family header"
+    },
+    {
+      "id": "truncated_table",
+      "archive": "malformed_truncated_table.bsa",
+      "requirements": ["FMT-01"],
+      "threat_references": ["T-03-01", "T-03-02"],
+      "expected_error": "format_error",
+      "phase": "open",
+      "description": "Valid-looking header with table bytes truncated before folder/file records complete"
+    },
+    {
+      "id": "duplicate_canonical_path",
+      "archive": "malformed_duplicate_canonical_path.bsa",
+      "requirements": ["FMT-03", "FMT-04"],
+      "threat_references": ["T-03-03"],
+      "expected_error": "format_error",
+      "phase": "open",
+      "canonical_path": "meshes/dupe/same.txt",
+      "original_paths": ["Meshes\\Dupe\\Same.txt", "Meshes\\Dupe\\same.TXT"],
+      "description": "Two archive records differ by case but normalize to the same public key"
+    },
+    {
+      "id": "corrupt_compressed_payload",
+      "archive": "malformed_corrupt_compressed_payload.bsa",
+      "requirements": ["BSA-07"],
+      "threat_references": ["T-03-04"],
+      "expected_error": "format_error",
+      "phase": "extraction",
+      "target_path": "meshes/tiny/packedmesh.nif",
+      "description": "Compressed bytes are intentionally flipped after the exact-size prefix"
+    },
+    {
+      "id": "size_mismatch",
+      "archive": "malformed_size_mismatch.bsa",
+      "requirements": ["BSA-07"],
+      "threat_references": ["T-03-02", "T-03-04"],
+      "expected_error": "format_error",
+      "phase": "extraction",
+      "target_path": "meshes/tiny/packedmesh.nif",
+      "description": "Compressed payload is valid but the stored exact-size prefix is deliberately wrong"
+    },
+    {
+      "id": "non_bsa_bytes",
+      "archive": "malformed_non_bsa_bytes.bsa",
+      "requirements": ["FMT-01"],
+      "threat_references": ["T-03-01"],
+      "expected_error": "unsupported",
+      "phase": "open",
+      "description": "Non-BSA bytes with a misleading .bsa host filename"
+    }
+  ]
+}

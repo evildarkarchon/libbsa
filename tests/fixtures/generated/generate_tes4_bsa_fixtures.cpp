@@ -286,6 +286,27 @@ void write_file(const std::filesystem::path& path, std::span<const std::byte> by
   out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
 }
 
+std::vector<std::byte> read_file(const std::filesystem::path& path) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in) {
+    throw std::runtime_error("failed to open " + path.string());
+  }
+  std::vector<std::byte> bytes;
+  for (char ch = 0; in.get(ch);) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+  return bytes;
+}
+
+void overwrite_u32(std::vector<std::byte>& bytes, std::size_t offset, std::uint32_t value) {
+  if (offset + 4 > bytes.size()) {
+    throw std::runtime_error("fixture mutation offset is out of range");
+  }
+  for (std::uint32_t index = 0; index < 4; ++index) {
+    bytes[offset + index] = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
+  }
+}
+
 void write_text(const std::filesystem::path& path, const std::string& text) {
   std::filesystem::create_directories(path.parent_path());
   std::ofstream out(path, std::ios::binary);
@@ -418,13 +439,155 @@ void generate_success(const std::filesystem::path& output_dir) {
   }
 }
 
+archive_spec make_duplicate_canonical_path() {
+  archive_spec archive;
+  archive.stem = "malformed_duplicate_canonical_path";
+  archive.variant = "malformed_duplicate_canonical_path";
+  archive.version = 0x67;
+  archive.folder = "Meshes\\Dupe";
+  archive.file_flags = 0x0001U;
+  archive.entries = {
+      {.path = "Meshes\\Dupe\\Same.txt",
+       .folder = archive.folder,
+       .file = "Same.txt",
+       .expected_bytes = bytes_from_string("first duplicate canonical path\n")},
+      {.path = "Meshes\\Dupe\\same.TXT",
+       .folder = archive.folder,
+       .file = "same.TXT",
+       .expected_bytes = bytes_from_string("second duplicate canonical path\n")},
+  };
+  return archive;
+}
+
+std::string malformed_manifest() {
+  return R"json({
+  "manifest_kind": "malformed_tes4_bsa_cases",
+  "requirements": ["FMT-01", "FMT-06", "BSA-07"],
+  "threat_references": ["T-03-01", "T-03-02", "T-03-03", "T-03-04"],
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp",
+    "source": "synthetic malformed bytes generated for libbsa tests; no game or TES5Edit bytes copied"
+  },
+  "cases": [
+    {
+      "id": "unsupported_version",
+      "archive": "malformed_unsupported_version.bsa",
+      "requirements": ["FMT-01", "FMT-06"],
+      "threat_references": ["T-03-01"],
+      "expected_error": "unsupported",
+      "phase": "open",
+      "description": "BSA magic with a future unsupported header version"
+    },
+    {
+      "id": "truncated_header",
+      "archive": "malformed_truncated_header.bsa",
+      "requirements": ["FMT-01"],
+      "threat_references": ["T-03-01", "T-03-02"],
+      "expected_error": "format_error",
+      "phase": "open",
+      "description": "BSA magic plus a partial version field, shorter than the fixed TES4-family header"
+    },
+    {
+      "id": "truncated_table",
+      "archive": "malformed_truncated_table.bsa",
+      "requirements": ["FMT-01"],
+      "threat_references": ["T-03-01", "T-03-02"],
+      "expected_error": "format_error",
+      "phase": "open",
+      "description": "Valid-looking header with table bytes truncated before folder/file records complete"
+    },
+    {
+      "id": "duplicate_canonical_path",
+      "archive": "malformed_duplicate_canonical_path.bsa",
+      "requirements": ["FMT-03", "FMT-04"],
+      "threat_references": ["T-03-03"],
+      "expected_error": "format_error",
+      "phase": "open",
+      "canonical_path": "meshes/dupe/same.txt",
+      "original_paths": ["Meshes\\Dupe\\Same.txt", "Meshes\\Dupe\\same.TXT"],
+      "description": "Two archive records differ by case but normalize to the same public key"
+    },
+    {
+      "id": "corrupt_compressed_payload",
+      "archive": "malformed_corrupt_compressed_payload.bsa",
+      "requirements": ["BSA-07"],
+      "threat_references": ["T-03-04"],
+      "expected_error": "format_error",
+      "phase": "extraction",
+      "target_path": "meshes/tiny/packedmesh.nif",
+      "description": "Compressed bytes are intentionally flipped after the exact-size prefix"
+    },
+    {
+      "id": "size_mismatch",
+      "archive": "malformed_size_mismatch.bsa",
+      "requirements": ["BSA-07"],
+      "threat_references": ["T-03-02", "T-03-04"],
+      "expected_error": "format_error",
+      "phase": "extraction",
+      "target_path": "meshes/tiny/packedmesh.nif",
+      "description": "Compressed payload is valid but the stored exact-size prefix is deliberately wrong"
+    },
+    {
+      "id": "non_bsa_bytes",
+      "archive": "malformed_non_bsa_bytes.bsa",
+      "requirements": ["FMT-01"],
+      "threat_references": ["T-03-01"],
+      "expected_error": "unsupported",
+      "phase": "open",
+      "description": "Non-BSA bytes with a misleading .bsa host filename"
+    }
+  ]
+}
+)json";
+}
+
 void generate_malformed(const std::filesystem::path& output_dir) {
   std::filesystem::create_directories(output_dir);
-  // Plan 03-03 extends this mode with the committed malformed set; keeping it callable now
-  // prevents a second generator entry point from drifting away from success fixture layout.
-  const std::array<std::byte, 8> unsupported_version{std::byte{'B'}, std::byte{'S'}, std::byte{'A'}, std::byte{0},
-                                                     std::byte{0xFF}, std::byte{0}, std::byte{0}, std::byte{0}};
-  write_file(output_dir / "malformed_unsupported_version.bsa", unsupported_version);
+
+  auto unsupported = make_v103();
+  unsupported.stem = "malformed_unsupported_version";
+  unsupported.version = 0x6AU;
+  write_archive(unsupported, output_dir);
+
+  const std::array<std::byte, 6> truncated_header{std::byte{'B'}, std::byte{'S'}, std::byte{'A'},
+                                                 std::byte{0}, std::byte{0x67}, std::byte{0}};
+  write_file(output_dir / "malformed_truncated_header.bsa", truncated_header);
+
+  auto truncated_table = make_v103();
+  truncated_table.stem = "malformed_truncated_table";
+  write_archive(truncated_table, output_dir);
+  auto truncated_table_bytes = read_file(output_dir / "malformed_truncated_table.bsa");
+  truncated_table_bytes.resize(48);
+  write_file(output_dir / "malformed_truncated_table.bsa", truncated_table_bytes);
+
+  auto duplicate = make_duplicate_canonical_path();
+  write_archive(duplicate, output_dir);
+
+  auto corrupt = make_v103();
+  corrupt.stem = "malformed_corrupt_compressed_payload";
+  write_archive(corrupt, output_dir);
+  auto corrupt_bytes = read_file(output_dir / "malformed_corrupt_compressed_payload.bsa");
+  if (corrupt.entries.size() < 2 || corrupt.entries[1].stored_size < 6) {
+    throw std::runtime_error("corrupt compressed fixture lacks a compressed entry");
+  }
+  // Leave the 4-byte exact-size prefix intact so later extraction exercises codec failure.
+  corrupt_bytes.at(corrupt.entries[1].offset + 5) ^= std::byte{0xFF};
+  write_file(output_dir / "malformed_corrupt_compressed_payload.bsa", corrupt_bytes);
+
+  auto size_mismatch = make_v103();
+  size_mismatch.stem = "malformed_size_mismatch";
+  write_archive(size_mismatch, output_dir);
+  auto size_mismatch_bytes = read_file(output_dir / "malformed_size_mismatch.bsa");
+  if (size_mismatch.entries.size() < 2) {
+    throw std::runtime_error("size mismatch fixture lacks a compressed entry");
+  }
+  overwrite_u32(size_mismatch_bytes, size_mismatch.entries[1].offset, size_mismatch.entries[1].raw_size + 3U);
+  write_file(output_dir / "malformed_size_mismatch.bsa", size_mismatch_bytes);
+
+  const auto non_bsa_bytes = bytes_from_string("not a BSA archive despite the host extension\n");
+  write_file(output_dir / "malformed_non_bsa_bytes.bsa", non_bsa_bytes);
+
+  write_text(output_dir / "malformed_manifest.json", malformed_manifest());
 }
 
 std::filesystem::path parse_output_dir(int argc, char** argv) {
