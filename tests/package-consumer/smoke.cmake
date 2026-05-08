@@ -14,8 +14,16 @@ endif()
 
 file(REMOVE_RECURSE "${CONSUMER_BUILD_DIR}")
 
+set(consumer_prefix_path "${LIBBSA_INSTALL_PREFIX}")
+file(GLOB vcpkg_triplet_prefixes LIST_DIRECTORIES true "${LIBBSA_BUILD_DIR}/vcpkg_installed/*")
+foreach(vcpkg_triplet_prefix IN LISTS vcpkg_triplet_prefixes)
+  if(IS_DIRECTORY "${vcpkg_triplet_prefix}")
+    list(APPEND consumer_prefix_path "${vcpkg_triplet_prefix}")
+  endif()
+endforeach()
+
 execute_process(
-  COMMAND ${CMAKE_COMMAND} -S "${CONSUMER_SOURCE_DIR}" -B "${CONSUMER_BUILD_DIR}" "-DCMAKE_PREFIX_PATH=${LIBBSA_INSTALL_PREFIX}"
+  COMMAND ${CMAKE_COMMAND} -S "${CONSUMER_SOURCE_DIR}" -B "${CONSUMER_BUILD_DIR}" "-DCMAKE_PREFIX_PATH=${consumer_prefix_path}"
   RESULT_VARIABLE configure_result
 )
 if(NOT configure_result EQUAL 0)
