@@ -15,7 +15,7 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 - [ ] **FND-04**: Consumer can receive structured C++20-compatible result/error values for I/O and format failures.
 - [ ] **FND-05**: Consumer can use libbsa objects without process-wide mutable global state or singleton behavior.
 - [ ] **FND-06**: Maintainer can run Catch2/CTest test suites for unit, fixture, round-trip, compatibility, and slow tests.
-- [ ] **FND-07**: Maintainer can add small legal archive fixtures without mutating the `TES5Edit/` submodule or relying on copyrighted game archives in the repo.
+- [x] **FND-07**: Maintainer can add small legal archive fixtures without mutating the `TES5Edit/` submodule or relying on copyrighted game archives in the repo.
 
 ### Format Detection and Metadata
 
@@ -162,7 +162,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-04 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
 | FND-05 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
 | FND-06 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
-| FND-07 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
+| FND-07 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
 | FMT-01 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
 | FMT-02 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
 | FMT-03 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
