@@ -9,6 +9,7 @@ add_executable(libbsa_tests
   unit/binary_io_tests.cpp
   unit/archive_path_tests.cpp
   unit/payload_stream_tests.cpp
+  unit/deflate_codec_tests.cpp
 )
 
 target_link_libraries(libbsa_tests
