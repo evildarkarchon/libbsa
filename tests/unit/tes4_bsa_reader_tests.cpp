@@ -3,6 +3,7 @@
 #include <libbsa/libbsa.hpp>
 
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -53,6 +54,26 @@ libbsa::error_code error_code_from_manifest(std::string_view value) {
   return libbsa::error_code::invalid_argument;
 }
 
+std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
+  std::ifstream input{path, std::ios::binary};
+  std::vector<std::byte> bytes;
+  for (char ch = 0; input.get(ch);) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+  return bytes;
+}
+
+void write_binary_file(const std::filesystem::path& path, const std::vector<std::byte>& bytes) {
+  std::ofstream output{path, std::ios::binary};
+  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+}
+
+void overwrite_u32_le(std::vector<std::byte>& bytes, std::size_t offset, std::uint32_t value) {
+  for (std::uint32_t index = 0; index < 4U; ++index) {
+    bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
+  }
+}
+
 } // namespace
 
 TEST_CASE("tes4_bsa_detection opens byte-driven TES4-family BSA variants", "[unit][fixture][tes4_bsa_detection]") {
@@ -96,17 +117,35 @@ TEST_CASE("unsupported_future_bsa reports unsupported for recognized future BSA 
 
 TEST_CASE("tes4_bsa_malformed_open rejects malformed open-phase fixtures with stable error codes",
           "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
-  const std::vector<std::pair<std::string, libbsa::error_code>> cases{
-      {"malformed_unsupported_version.bsa", libbsa::error_code::unsupported},
-      {"malformed_non_bsa_bytes.bsa", libbsa::error_code::unsupported},
-      {"malformed_truncated_header.bsa", libbsa::error_code::format_error},
-      {"malformed_truncated_table.bsa", libbsa::error_code::format_error},
-  };
+  std::ifstream manifest_stream{generated_archive_path("malformed_manifest.json")};
+  const auto manifest = nlohmann::json::parse(manifest_stream);
 
-  for (const auto& [archive, expected] : cases) {
+  for (const auto& test_case : manifest.at("cases")) {
+    if (test_case.at("phase").get<std::string>() != "open") {
+      continue;
+    }
+    if (test_case.at("id").get<std::string>() == "duplicate_canonical_path") {
+      continue;
+    }
+    const auto archive = test_case.at("archive").get<std::string>();
+    const auto expected = error_code_from_manifest(test_case.at("expected_error").get<std::string>());
     auto opened = libbsa::archive_reader::open(generated_archive_path(archive).string());
 
     REQUIRE_FALSE(opened.has_value());
     REQUIRE(opened.error().code == expected);
   }
+}
+
+TEST_CASE("tes4_bsa_malformed_open rejects count-derived table spans before allocation",
+          "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
+  auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+  overwrite_u32_le(bytes, 24U, 0xFFFF'FFFFU);
+
+  const auto mutated = std::filesystem::temp_directory_path() / "libbsa_oversized_folder_names.bsa";
+  write_binary_file(mutated, bytes);
+
+  auto opened = libbsa::archive_reader::open(mutated.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
