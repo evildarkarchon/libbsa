@@ -1,0 +1,20 @@
+{
+  "manifest_kind": "malformed_ba2_gnrl_cases",
+  "requirements": ["GNRL-01", "GNRL-02", "GNRL-05", "GNRL-07"],
+  "threat_references": ["T-05-01", "T-05-02"],
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_ba2_gnrl_fixtures.cpp",
+    "source": "synthetic malformed bytes generated for libbsa tests; no game or TES5Edit bytes copied"
+  },
+  "cases": [
+    {"id": "ba2_dx10_unsupported", "archive": "ba2_dx10_unsupported.ba2", "expected_error": "unsupported", "phase": "open"},
+    {"id": "ba2_truncated_header", "archive": "ba2_truncated_header.ba2", "expected_error": "format_error", "phase": "open"},
+    {"id": "ba2_truncated_records", "archive": "ba2_truncated_records.ba2", "expected_error": "format_error", "phase": "open"},
+    {"id": "ba2_truncated_name_table", "archive": "ba2_truncated_name_table.ba2", "expected_error": "format_error", "phase": "open"},
+    {"id": "ba2_invalid_payload_span", "archive": "ba2_invalid_payload_span.ba2", "expected_error": "format_error", "phase": "open"},
+    {"id": "ba2_duplicate_canonical_path", "archive": "ba2_duplicate_canonical_path.ba2", "expected_error": "format_error", "phase": "open"},
+    {"id": "ba2_corrupt_compressed_payload", "archive": "ba2_corrupt_compressed_payload.ba2", "expected_error": "format_error", "phase": "extraction", "target_path": "textures/nested/packed.dds"},
+    {"id": "ba2_exact_size_mismatch", "archive": "ba2_exact_size_mismatch.ba2", "expected_error": "format_error", "phase": "extraction", "target_path": "textures/nested/packed.dds"},
+    {"id": "ba2_unsupported_v3_compression_method", "archive": "ba2_unsupported_v3_compression_method.ba2", "expected_error": "unsupported", "phase": "open"}
+  ]
+}

@@ -120,6 +120,30 @@ add_custom_target(generate_tes3_bsa_fixtures
   VERBATIM
 )
 
+add_custom_target(generate_ba2_gnrl_fixtures
+  COMMAND generate_ba2_gnrl_fixtures_tool --output ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives
+  DEPENDS generate_ba2_gnrl_fixtures_tool
+  BYPRODUCTS
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_fo4.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_fo4_manifest.json
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv2.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv2_manifest.json
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv3.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv3_manifest.json
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_malformed_manifest.json
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_unsupported.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_truncated_header.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_truncated_records.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_truncated_name_table.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_invalid_payload_span.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_duplicate_canonical_path.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_corrupt_compressed_payload.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_exact_size_mismatch.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_unsupported_v3_compression_method.ba2
+  COMMENT "Generating BA2 GNRL success and malformed fixtures"
+  VERBATIM
+)
+
 include(Catch)
 catch_discover_tests(libbsa_tests
   ADD_TAGS_AS_LABELS

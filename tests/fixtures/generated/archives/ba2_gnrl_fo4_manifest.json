@@ -1,0 +1,71 @@
+{
+  "variant": "fallout4",
+  "version": 1,
+  "magic": "BTDX",
+  "type": "GNRL",
+  "file_count": 3,
+  "file_table_offset": 132,
+  "starfield_unknown1": 0,
+  "starfield_unknown2": 0,
+  "compression_method": 0,
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_ba2_gnrl_fixtures.cpp",
+    "source": "synthetic strings generated for libbsa tests; no game or TES5Edit bytes copied"
+  },
+  "entries": [
+    {
+      "path": "meshes/mixedcase/probe.nif",
+      "original_path": "Meshes/MixedCase/Probe.NIF",
+      "lookup_variants": ["meshes/mixedcase/probe.nif", "Meshes/MixedCase/Probe.NIF", "meshes/mixedcase/probe.nif"],
+      "archive_hash": "0xff4b51f6",
+      "record_flags": 0,
+      "compression": "raw",
+      "raw_size": 19,
+      "stored_size": 19,
+      "packed_size": 0,
+      "payload_offset": 215,
+      "starfield_unknown1": 0,
+      "starfield_unknown2": 0,
+      "compression_method": 0,
+      "expected": {
+        "bytes_hex": "666f3420726177206d6573682062797465730a"
+      }
+    },
+    {
+      "path": "textures/nested/packed.dds",
+      "original_path": "textures\\nested\\packed.dds",
+      "lookup_variants": ["textures/nested/packed.dds", "textures\\nested\\packed.dds", "textures/nested/packed.dds"],
+      "archive_hash": "0x904092de",
+      "record_flags": 0,
+      "compression": "deflate",
+      "raw_size": 26,
+      "stored_size": 31,
+      "packed_size": 31,
+      "payload_offset": 234,
+      "starfield_unknown1": 0,
+      "starfield_unknown2": 0,
+      "compression_method": 0,
+      "expected": {
+        "bytes_hex": "666f34206465666c61746520746578747572652062797465730a"
+      }
+    },
+    {
+      "path": "interface/emptymarker.txt",
+      "original_path": "Interface/EmptyMarker.txt",
+      "lookup_variants": ["interface/emptymarker.txt", "Interface/EmptyMarker.txt", "interface/emptymarker.txt"],
+      "archive_hash": "0x2be138ac",
+      "record_flags": 0,
+      "compression": "raw",
+      "raw_size": 0,
+      "stored_size": 0,
+      "packed_size": 0,
+      "payload_offset": 265,
+      "starfield_unknown1": 0,
+      "starfield_unknown2": 0,
+      "compression_method": 0,
+      "expected": {
+        "bytes_hex": ""
+      }
+    }
+  ]
+}

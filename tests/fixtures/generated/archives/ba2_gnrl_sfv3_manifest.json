@@ -1,0 +1,53 @@
+{
+  "variant": "starfield_v3",
+  "version": 3,
+  "magic": "BTDX",
+  "type": "GNRL",
+  "file_count": 2,
+  "file_table_offset": 108,
+  "starfield_unknown1": 286335522,
+  "starfield_unknown2": 858997828,
+  "compression_method": 3,
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_ba2_gnrl_fixtures.cpp",
+    "source": "synthetic strings generated for libbsa tests; no game or TES5Edit bytes copied"
+  },
+  "entries": [
+    {
+      "path": "geometries/raw/marker.mesh",
+      "original_path": "geometries/Raw/Marker.mesh",
+      "lookup_variants": ["geometries/raw/marker.mesh", "geometries/Raw/Marker.mesh", "geometries/raw/marker.mesh"],
+      "archive_hash": "0x2f65b4f3",
+      "record_flags": 0,
+      "compression": "raw",
+      "raw_size": 22,
+      "stored_size": 22,
+      "packed_size": 0,
+      "payload_offset": 166,
+      "starfield_unknown1": 286335522,
+      "starfield_unknown2": 858997828,
+      "compression_method": 3,
+      "expected": {
+        "bytes_hex": "7366763320726177206d61726b65722062797465730a"
+      }
+    },
+    {
+      "path": "geometries/packed/block.mesh",
+      "original_path": "geometries\\Packed\\Block.mesh",
+      "lookup_variants": ["geometries/packed/block.mesh", "geometries\\Packed\\Block.mesh", "geometries/packed/block.mesh"],
+      "archive_hash": "0xa525398a",
+      "record_flags": 0,
+      "compression": "lz4_block",
+      "raw_size": 25,
+      "stored_size": 27,
+      "packed_size": 27,
+      "payload_offset": 188,
+      "starfield_unknown1": 286335522,
+      "starfield_unknown2": 858997828,
+      "compression_method": 3,
+      "expected": {
+        "bytes_hex": "7366763320726177206c7a3420626c6f636b2062797465730a"
+      }
+    }
+  ]
+}

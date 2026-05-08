@@ -1,0 +1,53 @@
+{
+  "variant": "starfield_v2",
+  "version": 2,
+  "magic": "BTDX",
+  "type": "GNRL",
+  "file_count": 2,
+  "file_table_offset": 104,
+  "starfield_unknown1": 270544960,
+  "starfield_unknown2": 1348497536,
+  "compression_method": 0,
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_ba2_gnrl_fixtures.cpp",
+    "source": "synthetic strings generated for libbsa tests; no game or TES5Edit bytes copied"
+  },
+  "entries": [
+    {
+      "path": "data/scripts/rawscript.pex",
+      "original_path": "Data/Scripts/RawScript.pex",
+      "lookup_variants": ["data/scripts/rawscript.pex", "Data/Scripts/RawScript.pex", "data/scripts/rawscript.pex"],
+      "archive_hash": "0xcd3604b5",
+      "record_flags": 0,
+      "compression": "raw",
+      "raw_size": 22,
+      "stored_size": 22,
+      "packed_size": 0,
+      "payload_offset": 161,
+      "starfield_unknown1": 270544960,
+      "starfield_unknown2": 1348497536,
+      "compression_method": 0,
+      "expected": {
+        "bytes_hex": "7366763220726177207363726970742062797465730a"
+      }
+    },
+    {
+      "path": "data/meshes/packedmodel.nif",
+      "original_path": "Data\\Meshes\\PackedModel.nif",
+      "lookup_variants": ["data/meshes/packedmodel.nif", "Data\\Meshes\\PackedModel.nif", "data/meshes/packedmodel.nif"],
+      "archive_hash": "0xe8a6bc07",
+      "record_flags": 0,
+      "compression": "deflate",
+      "raw_size": 25,
+      "stored_size": 30,
+      "packed_size": 30,
+      "payload_offset": 183,
+      "starfield_unknown1": 270544960,
+      "starfield_unknown2": 1348497536,
+      "compression_method": 0,
+      "expected": {
+        "bytes_hex": "73667632206465666c617465206d6f64656c2062797465730a"
+      }
+    }
+  ]
+}
