@@ -159,7 +159,24 @@ Plans:
   2. Consumer can list BA2 names parsed from the length-prefixed filename table at `FileTableOffset`.
   3. Consumer can inspect raw/compressed status, sizes, offsets, compression method, and Starfield v2/v3 header fields in entry/archive metadata.
   4. Consumer can extract BA2 GNRL entries stored raw, deflate-compressed, or Starfield raw-LZ4-block-compressed when `CompressionMethod == 3`.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 05-01-PLAN.md — Generate legal BA2 GNRL success and malformed fixtures with rich manifests.
+
+**Wave 2** *(blocked on Wave 1 fixture generation)*
+- [ ] 05-02-PLAN.md — Add public BA2 metadata optionals plus byte-driven BA2 detector/open skeleton.
+
+**Wave 3** *(blocked on Wave 2 detector and metadata contracts)*
+- [ ] 05-03-PLAN.md — Implement BA2 GNRL record/name parsing, deterministic listing, and normalized lookup.
+
+**Wave 4** *(blocked on Wave 3 parsed metadata and lookup)*
+- [ ] 05-04-PLAN.md — Implement BA2 GNRL raw, deflate, and Starfield raw-LZ4-block extraction.
+
+**Wave 5** *(blocked on Wave 4 extraction behavior)*
+- [ ] 05-05-PLAN.md — Close malformed/unsupported BA2 validation and final cross-format regression gates.
 
 ### Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction
 **Goal**: Consumers can inspect BA2 DX10/DDS texture metadata and extract entries as valid DDS files while DirectXTex remains an internal validation/analyzer dependency.
@@ -251,7 +268,7 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 2. Binary I/O, Paths, Hashes, and Compression Services | 5/5 | Complete | 2026-05-08 |
 | 3. Format Detection and TES4-Family BSA Read/Extract | 6/6 | Complete | 2026-05-08 |
 | 4. TES3 BSA Read/Extract | 2/4 | In Progress|  |
-| 5. BA2 GNRL Read/Extract | 0/TBD | Not started | - |
+| 5. BA2 GNRL Read/Extract | 0/5 | Not started | - |
 | 6. DDS Boundary and BA2 DX10 Read/Reconstruction | 0/TBD | Not started | - |
 | 7. TES4-Family BSA Write-New Support | 0/TBD | Not started | - |
 | 8. BA2 GNRL Write-New Support | 0/TBD | Not started | - |
