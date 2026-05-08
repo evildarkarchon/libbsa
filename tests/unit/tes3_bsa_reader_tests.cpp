@@ -2,7 +2,10 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include "formats/bsa/bsa_format_detector.hpp"
+
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -94,6 +97,30 @@ class collecting_sink final : public libbsa::payload_sink {
 };
 
 } // namespace
+
+TEST_CASE("tes3_bsa_detector classifies Morrowind magic bytes before parser dispatch",
+          "[unit][fixture][tes3_bsa_detector]") {
+  const auto manifest = read_json_file(generated_archive_path("tes3_success_manifest.json"));
+  const auto prefix = read_binary_file_span(generated_archive_path("tes3_success.bsa"), 0U, 12U);
+
+  auto detected = libbsa::formats::bsa::detect_bsa_format(prefix);
+
+  REQUIRE(detected.has_value());
+  REQUIRE(detected.value().variant == libbsa::archive_variant::tes3);
+  REQUIRE(detected.value().version == manifest.at("version").get<std::uint32_t>());
+  REQUIRE(detected.value().version == 0x00000100U);
+  REQUIRE(detected.value().default_compression == libbsa::entry_compression::none);
+}
+
+TEST_CASE("tes3_bsa_detector leaves unrelated bytes unsupported", "[unit][tes3_bsa_detector]") {
+  constexpr std::array unrelated{std::byte{'N'}, std::byte{'O'}, std::byte{'P'}, std::byte{'E'},
+                                 std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
+
+  auto detected = libbsa::formats::bsa::detect_bsa_format(unrelated);
+
+  REQUIRE_FALSE(detected.has_value());
+  REQUIRE(detected.error().code == libbsa::error_code::unsupported);
+}
 
 TEST_CASE("tes3_bsa_metadata opens generated Morrowind archives", "[unit][fixture][tes3_bsa_metadata]") {
   const auto manifest = read_json_file(generated_archive_path("tes3_success_manifest.json"));
