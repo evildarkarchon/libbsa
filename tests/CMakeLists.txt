@@ -19,6 +19,7 @@ include(Catch)
 catch_discover_tests(libbsa_tests
   ADD_TAGS_AS_LABELS
   DISCOVERY_MODE PRE_TEST
+  DL_PATHS $<TARGET_FILE_DIR:libbsa>
 )
 
 add_test(

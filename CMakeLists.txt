@@ -10,6 +10,8 @@ option(LIBBSA_BUILD_TESTS "Build libbsa tests" ON)
 add_library(libbsa)
 add_library(libbsa::libbsa ALIAS libbsa)
 
+set_target_properties(libbsa PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 target_compile_features(libbsa PUBLIC cxx_std_20)
 
 target_include_directories(libbsa
