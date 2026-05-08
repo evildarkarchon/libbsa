@@ -1,6 +1,7 @@
 #include <libbsa/archive.hpp>
 
 #include "formats/bsa/bsa_format_detector.hpp"
+#include "formats/bsa/tes3_bsa_parser.hpp"
 #include "formats/bsa/tes4_bsa_parser.hpp"
 #include "formats/bsa/tes4_bsa_reader.hpp"
 
@@ -123,14 +124,26 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
   if (!archive_size) {
     return archive_size.error();
   }
-  auto archive = formats::bsa::parse_tes4_bsa_archive_file(host_path, archive_size.value(), detected.value());
-  if (!archive) {
-    return archive.error();
+  if (detected.value().variant == archive_variant::tes3) {
+    auto tes3_archive = formats::bsa::parse_tes3_bsa_archive_file(host_path, archive_size.value(), detected.value());
+    if (!tes3_archive) {
+      return tes3_archive.error();
+    }
+
+    archive_reader reader{tes3_archive.value().metadata};
+    reader.state_ = std::make_shared<state>(
+        state{tes3_archive.value().metadata, std::move(tes3_archive.value().entries), std::string{host_path}});
+    return reader;
   }
 
-  archive_reader reader{archive.value().metadata};
+  auto tes4_archive = formats::bsa::parse_tes4_bsa_archive_file(host_path, archive_size.value(), detected.value());
+  if (!tes4_archive) {
+    return tes4_archive.error();
+  }
+
+  archive_reader reader{tes4_archive.value().metadata};
   reader.state_ = std::make_shared<state>(
-      state{archive.value().metadata, std::move(archive.value().entries), std::string{host_path}});
+      state{tes4_archive.value().metadata, std::move(tes4_archive.value().entries), std::string{host_path}});
   return reader;
 }
 

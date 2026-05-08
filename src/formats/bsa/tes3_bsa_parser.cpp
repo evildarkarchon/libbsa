@@ -1,0 +1,344 @@
+#include "formats/bsa/tes3_bsa_parser.hpp"
+
+#include <detail/archive_path.hpp>
+#include <detail/bethesda_hash.hpp>
+#include <detail/binary_io.hpp>
+
+#include <algorithm>
+#include <fstream>
+#include <limits>
+#include <string>
+#include <string_view>
+#include <unordered_set>
+#include <vector>
+
+namespace libbsa::formats::bsa {
+namespace {
+
+constexpr std::uint32_t tes3_magic_version = 0x00000100U;
+constexpr std::size_t fixed_header_size = 12U;
+constexpr std::size_t file_record_size = 8U;
+constexpr std::size_t name_offset_size = 4U;
+constexpr std::size_t hash_record_size = 8U;
+
+struct header_fields {
+  std::uint32_t version;
+  std::uint32_t hash_offset_minus_header;
+  std::uint32_t file_count;
+};
+
+struct file_record {
+  std::uint32_t size;
+  std::uint32_t raw_offset;
+};
+
+bool multiply_fits(std::uint32_t count, std::size_t width, std::size_t& total) noexcept {
+  if (width != 0U && count > std::numeric_limits<std::size_t>::max() / width) {
+    return false;
+  }
+  total = static_cast<std::size_t>(count) * width;
+  return true;
+}
+
+bool add_fits(std::size_t lhs, std::size_t rhs, std::size_t& total) noexcept {
+  if (lhs > std::numeric_limits<std::size_t>::max() - rhs) {
+    return false;
+  }
+  total = lhs + rhs;
+  return true;
+}
+
+bool span_fits(std::size_t start, std::size_t length, std::size_t total) noexcept {
+  return start <= total && length <= total - start;
+}
+
+result<std::vector<std::byte>> read_file_bytes_at(std::ifstream& input, std::uint64_t offset, std::size_t count,
+                                                  std::string_view description) {
+  if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
+    return error{error_code::format_error, std::string{description} + " offset exceeds stream limits"};
+  }
+  if (count > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max())) {
+    return error{error_code::format_error, std::string{description} + " size exceeds stream limits"};
+  }
+
+  std::vector<std::byte> bytes(count);
+  input.clear();
+  input.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
+  if (!input) {
+    return error{error_code::io_error, std::string{"failed to seek while reading "} + std::string{description}};
+  }
+  input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  if (input.bad()) {
+    return error{error_code::io_error, std::string{"failed while reading "} + std::string{description}};
+  }
+  if (static_cast<std::size_t>(input.gcount()) != bytes.size()) {
+    return error{error_code::format_error, std::string{description} + " is truncated"};
+  }
+  return bytes;
+}
+
+result<header_fields> read_header(detail::binary_reader& reader) {
+  const auto version = reader.read_u32_le();
+  const auto hash_offset_minus_header = reader.read_u32_le();
+  const auto file_count = reader.read_u32_le();
+  if (!version || !hash_offset_minus_header || !file_count) {
+    return error{error_code::format_error, "TES3 BSA fixed header is truncated"};
+  }
+  return header_fields{version.value(), hash_offset_minus_header.value(), file_count.value()};
+}
+
+result<std::size_t> table_size_for(const header_fields& header, std::size_t archive_size) {
+  std::size_t records_size = 0;
+  std::size_t name_offsets_size = 0;
+  std::size_t hash_records_size = 0;
+  if (!multiply_fits(header.file_count, file_record_size, records_size) ||
+      !multiply_fits(header.file_count, name_offset_size, name_offsets_size) ||
+      !multiply_fits(header.file_count, hash_record_size, hash_records_size)) {
+    return error{error_code::format_error, "TES3 BSA metadata table is too large"};
+  }
+
+  std::size_t hash_table_start = 0;
+  if (!add_fits(fixed_header_size, header.hash_offset_minus_header, hash_table_start)) {
+    return error{error_code::format_error, "TES3 BSA hash table offset is too large"};
+  }
+
+  std::size_t prefix_without_names = fixed_header_size;
+  if (!add_fits(prefix_without_names, records_size, prefix_without_names) ||
+      !add_fits(prefix_without_names, name_offsets_size, prefix_without_names)) {
+    return error{error_code::format_error, "TES3 BSA metadata table is too large"};
+  }
+  if (hash_table_start < prefix_without_names) {
+    return error{error_code::format_error, "TES3 BSA hash table overlaps fixed metadata"};
+  }
+
+  std::size_t data_section_start = 0;
+  if (!add_fits(hash_table_start, hash_records_size, data_section_start) ||
+      !span_fits(0U, data_section_start, archive_size)) {
+    return error{error_code::format_error, "TES3 BSA metadata table extends beyond archive bytes"};
+  }
+  return data_section_start;
+}
+
+std::string bytes_to_string(std::span<const std::byte> bytes) {
+  std::string result;
+  result.reserve(bytes.size());
+  for (const auto value : bytes) {
+    result.push_back(static_cast<char>(std::to_integer<unsigned char>(value)));
+  }
+  return result;
+}
+
+void normalize_original_separators(std::string& value) {
+  std::replace(value.begin(), value.end(), '\\', '/');
+}
+
+result<std::vector<file_record>> read_file_records(detail::binary_reader& reader, std::uint32_t file_count) {
+  std::vector<file_record> records;
+  records.reserve(file_count);
+  for (std::uint32_t index = 0; index < file_count; ++index) {
+    const auto size = reader.read_u32_le();
+    const auto raw_offset = reader.read_u32_le();
+    if (!size || !raw_offset) {
+      return error{error_code::format_error, "TES3 BSA file record table is truncated"};
+    }
+    records.push_back(file_record{size.value(), raw_offset.value()});
+  }
+  return records;
+}
+
+result<std::vector<std::uint32_t>> read_name_offsets(detail::binary_reader& reader, std::uint32_t file_count) {
+  std::vector<std::uint32_t> offsets;
+  offsets.reserve(file_count);
+  for (std::uint32_t index = 0; index < file_count; ++index) {
+    const auto offset = reader.read_u32_le();
+    if (!offset) {
+      return error{error_code::format_error, "TES3 BSA name offset table is truncated"};
+    }
+    offsets.push_back(offset.value());
+  }
+  return offsets;
+}
+
+result<std::vector<std::string>> read_names(std::span<const std::byte> table_bytes, std::size_t name_section_start,
+                                            std::size_t hash_table_start,
+                                            std::span<const std::uint32_t> name_offsets) {
+  if (!span_fits(name_section_start, hash_table_start - name_section_start, table_bytes.size())) {
+    return error{error_code::format_error, "TES3 BSA name table span is invalid"};
+  }
+
+  const auto name_section_size = hash_table_start - name_section_start;
+  std::vector<std::string> names;
+  names.reserve(name_offsets.size());
+  for (const auto offset : name_offsets) {
+    if (offset >= name_section_size) {
+      return error{error_code::format_error, "TES3 BSA name offset is outside the name table"};
+    }
+    const auto start = name_section_start + static_cast<std::size_t>(offset);
+    std::size_t end = start;
+    while (end < hash_table_start && table_bytes[end] != std::byte{0}) {
+      ++end;
+    }
+    if (end == hash_table_start || end == start) {
+      return error{error_code::format_error, "TES3 BSA name table lacks a usable null-terminated name"};
+    }
+    names.push_back(bytes_to_string(table_bytes.subspan(start, end - start)));
+  }
+  return names;
+}
+
+result<std::vector<std::uint64_t>> read_hashes(detail::binary_reader& reader, std::uint32_t file_count) {
+  std::vector<std::uint64_t> hashes;
+  hashes.reserve(file_count);
+  for (std::uint32_t index = 0; index < file_count; ++index) {
+    const auto hash = reader.read_u64_le();
+    if (!hash) {
+      return error{error_code::format_error, "TES3 BSA hash table is truncated"};
+    }
+    hashes.push_back(hash.value());
+  }
+  return hashes;
+}
+
+result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size, std::size_t data_section_start,
+                                                        std::span<const file_record> records,
+                                                        std::span<const std::string> names,
+                                                        std::span<const std::uint64_t> hashes) {
+  std::vector<entry_metadata> entries;
+  entries.reserve(records.size());
+  std::unordered_set<std::string> canonical_paths;
+
+  for (std::size_t index = 0; index < records.size(); ++index) {
+    auto original_path = names[index];
+    normalize_original_separators(original_path);
+    auto canonical = detail::normalize_archive_path(original_path);
+    if (!canonical) {
+      return canonical.error();
+    }
+    if (!canonical_paths.insert(canonical.value().value).second) {
+      return error{error_code::format_error, "TES3 BSA contains duplicate canonical archive paths"};
+    }
+
+    std::size_t absolute_payload_offset = 0;
+    if (!add_fits(data_section_start, records[index].raw_offset, absolute_payload_offset)) {
+      return error{error_code::format_error, "TES3 BSA entry payload offset is too large"};
+    }
+    // TES5Edit/Core/wbBSArchive.pas:1128-1129,2114-2118 and UESP document TES3 payload offsets as
+    // data-section-relative; libbsa stores only archive-absolute offsets in runtime metadata.
+    if (!span_fits(absolute_payload_offset, records[index].size, archive_size)) {
+      return error{error_code::format_error, "TES3 BSA entry payload span is outside the archive"};
+    }
+
+    entries.push_back(entry_metadata{canonical.value().value,
+                                     std::move(original_path),
+                                     records[index].size,
+                                     records[index].size,
+                                     static_cast<std::uint64_t>(absolute_payload_offset),
+                                     hashes[index],
+                                     entry_compression::none,
+                                     0U,
+                                     false,
+                                     0U});
+  }
+
+  std::sort(entries.begin(), entries.end(), [](const entry_metadata& lhs, const entry_metadata& rhs) {
+    return lhs.path < rhs.path;
+  });
+  return entries;
+}
+
+result<tes3_bsa_archive> parse_tes3_bsa_archive_impl(std::span<const std::byte> table_bytes, std::size_t archive_size,
+                                                     detected_bsa_format detected) {
+  if (table_bytes.size() < fixed_header_size) {
+    return error{error_code::format_error, "TES3 BSA header is truncated"};
+  }
+  if (detected.variant != archive_variant::tes3 || detected.version != tes3_magic_version) {
+    return error{error_code::unsupported, "detected BSA format is not TES3"};
+  }
+
+  detail::binary_reader reader{table_bytes};
+  auto header = read_header(reader);
+  if (!header) {
+    return header.error();
+  }
+  if (header.value().version != detected.version) {
+    return error{error_code::format_error, "TES3 BSA detected version does not match parsed header"};
+  }
+
+  auto data_section_start = table_size_for(header.value(), archive_size);
+  if (!data_section_start) {
+    return data_section_start.error();
+  }
+  const auto hash_table_start = fixed_header_size + static_cast<std::size_t>(header.value().hash_offset_minus_header);
+
+  auto records = read_file_records(reader, header.value().file_count);
+  if (!records) {
+    return records.error();
+  }
+  auto name_offsets = read_name_offsets(reader, header.value().file_count);
+  if (!name_offsets) {
+    return name_offsets.error();
+  }
+  auto names = read_names(table_bytes, reader.position(), hash_table_start, name_offsets.value());
+  if (!names) {
+    return names.error();
+  }
+  detail::binary_reader hash_reader{table_bytes};
+  auto skipped_to_hashes = hash_reader.skip(hash_table_start);
+  if (!skipped_to_hashes) {
+    return error{error_code::format_error, "TES3 BSA hash table is outside the archive"};
+  }
+  auto hashes = read_hashes(hash_reader, header.value().file_count);
+  if (!hashes) {
+    return hashes.error();
+  }
+  auto entries = materialize_entries(archive_size, data_section_start.value(), records.value(), names.value(), hashes.value());
+  if (!entries) {
+    return entries.error();
+  }
+
+  return tes3_bsa_archive{archive_metadata{archive_type::bsa,
+                                           archive_variant::tes3,
+                                           header.value().version,
+                                           0U,
+                                           header.value().file_count,
+                                           detected.default_compression},
+                          std::move(entries.value())};
+}
+
+} // namespace
+
+result<tes3_bsa_archive> parse_tes3_bsa_archive(std::span<const std::byte> bytes, detected_bsa_format detected) {
+  return parse_tes3_bsa_archive_impl(bytes, bytes.size(), detected);
+}
+
+result<tes3_bsa_archive> parse_tes3_bsa_archive_file(std::string_view host_path, std::uint64_t archive_size,
+                                                     detected_bsa_format detected) {
+  if (archive_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+    return error{error_code::format_error, "TES3 BSA archive exceeds platform limits"};
+  }
+
+  std::ifstream input{std::string{host_path}, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "failed to open archive host path"};
+  }
+  auto header_bytes = read_file_bytes_at(input, 0U, fixed_header_size, "TES3 BSA fixed header");
+  if (!header_bytes) {
+    return header_bytes.error();
+  }
+  detail::binary_reader header_reader{header_bytes.value()};
+  auto header = read_header(header_reader);
+  if (!header) {
+    return header.error();
+  }
+  auto table_size = table_size_for(header.value(), static_cast<std::size_t>(archive_size));
+  if (!table_size) {
+    return table_size.error();
+  }
+  auto table_bytes = read_file_bytes_at(input, 0U, table_size.value(), "TES3 BSA metadata table");
+  if (!table_bytes) {
+    return table_bytes.error();
+  }
+  return parse_tes3_bsa_archive_impl(table_bytes.value(), static_cast<std::size_t>(archive_size), detected);
+}
+
+} // namespace libbsa::formats::bsa
