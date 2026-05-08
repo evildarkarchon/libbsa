@@ -118,7 +118,7 @@ Plans:
 - [x] 03-04-PLAN.md — Implement byte-driven detector/open state and parser skeleton.
 
 **Wave 4** *(blocked on Wave 3 open-state skeleton; separated because it extends the same parser/open files)*
-- [ ] 03-05-PLAN.md — Implement TES4-family table parsing, entry metadata, deterministic listing, and normalized lookup.
+- [x] 03-05-PLAN.md — Implement TES4-family table parsing, entry metadata, deterministic listing, and normalized lookup.
 
 **Wave 5** *(blocked on parser metadata and lookup semantics)*
 - [ ] 03-06-PLAN.md — Implement sink-first raw, deflate, LZ4-frame, embedded-name, bounded byte extraction, and final verification.
