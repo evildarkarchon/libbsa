@@ -10,6 +10,7 @@ add_executable(libbsa_tests
   unit/archive_path_tests.cpp
   unit/payload_stream_tests.cpp
   unit/deflate_codec_tests.cpp
+  unit/lz4_codec_tests.cpp
 )
 
 target_link_libraries(libbsa_tests
