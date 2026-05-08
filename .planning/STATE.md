@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 05 context gathered
-last_updated: "2026-05-08T23:04:58.588Z"
+status: verifying
+stopped_at: Completed 05-05-PLAN.md
+last_updated: "2026-05-08T23:09:02.453Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 12
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 26
-  completed_plans: 25
-  percent: 96
+  completed_plans: 26
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 Phase: 05 (ba2-gnrl-read-extract) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-08
 
-Progress: [██████████] 96%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [██████████] 96%
 | Phase 05 P02 | 5min | 2 tasks | 8 files |
 | Phase 05 P03 | 3min | 2 tasks | 7 files |
 | Phase 05 P04 | 2min | 2 tasks | 4 files |
+| Phase 05 P05 | 7min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 05]: BA2 GNRL lookup uses canonical archive path normalization and lower_bound semantics established by prior BSA readers. — Keeps find and contains behavior deterministic and consistent across archive families.
 - [Phase 05]: BA2 GNRL extraction routes by parsed entry_metadata::compression — Keeps BA2 raw, deflate, and raw LZ4 block extraction metadata-driven and prevents filename/extension inference.
 - [Phase 05]: archive_reader::extract dispatches BA2 entries to extract_ba2_gnrl_payload — Preserves sink-first BA2 extraction before generic TES4-family stored-payload buffering.
+- [Phase 05]: Malformed BA2 tests assert only stable error_code values from manifest, never diagnostic message text. — Preserves D-11 while validating fail-closed malformed and unsupported BA2 behavior.
+- [Phase 05]: Task 2 malformed hardening was already present from prior Phase 5 parser/extraction work; closeout documented existing fail-closed codec behavior. — Focused verification showed no remaining detector/parser/extractor gaps after adding the malformed manifest tests.
 
 ### Pending Todos
 
@@ -136,6 +139,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T23:04:50.810Z
-Stopped at: Phase 05 context gathered
+Last session: 2026-05-08T23:09:02.447Z
+Stopped at: Completed 05-05-PLAN.md
 Resume file: None
