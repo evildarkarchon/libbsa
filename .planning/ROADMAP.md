@@ -115,7 +115,7 @@ Plans:
 - [x] 03-03-PLAN.md — Generate malformed fixture set and manifest validation tests.
 
 **Wave 3** *(blocked on Wave 1 contracts and Wave 2 malformed fixtures)*
-- [ ] 03-04-PLAN.md — Implement byte-driven detector/open state and parser skeleton.
+- [x] 03-04-PLAN.md — Implement byte-driven detector/open state and parser skeleton.
 
 **Wave 4** *(blocked on Wave 3 open-state skeleton; separated because it extends the same parser/open files)*
 - [ ] 03-05-PLAN.md — Implement TES4-family table parsing, entry metadata, deterministic listing, and normalized lookup.

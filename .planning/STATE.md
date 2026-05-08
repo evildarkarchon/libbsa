@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-05-08T07:39:48.219Z"
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-05-08T07:46:54.337Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 16
-  completed_plans: 13
-  percent: 81
+  completed_plans: 14
+  percent: 88
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 ## Current Position
 
 Phase: 03 (format-detection-and-tes4-family-bsa-read-extract) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-05-08
 
-Progress: [████████░░] 81%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [████████░░] 81%
 | Phase 03 P01 | 3min | 2 tasks | 7 files |
 | Phase 03 P02 | 8min | 2 tasks | 9 files |
 | Phase 03 P03 | 10min | 2 tasks | 10 files |
+| Phase 03 P04 | 35min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 03]: Success manifests store both canonical paths and original archive spelling so later tests can verify lookup normalization without trusting host filenames.
 - [Phase 03]: Malformed fixture generation remains in the C++ fixture generator so success and malformed archives share hash/compression helper behavior.
 - [Phase 03]: Manifest validation is parser-free and uses Python standard json to validate fixture expectations before parser implementation.
+- [Phase 03]: TES4-family BSA open metadata reports archive_variant::tes4 for v103/v104/v105 while version/default_compression distinguish subtype behavior. — Avoid speculative public enum expansion before full variant model is needed.
+- [Phase 03]: Duplicate canonical path validation remains deferred to Plan 03-05 full entry parsing. — Plan 03-04 intentionally exposes metadata-only open state and does not parse entry names yet.
 
 ### Pending Todos
 
@@ -98,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T07:39:48.214Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-05-08T07:46:54.330Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
