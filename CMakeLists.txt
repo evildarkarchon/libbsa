@@ -5,6 +5,8 @@ project(libbsa VERSION 0.1.0 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+find_package(libdeflate CONFIG REQUIRED)
+
 option(LIBBSA_BUILD_TESTS "Build libbsa tests" ON)
 
 add_library(libbsa)
@@ -30,6 +32,11 @@ target_compile_options(libbsa
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
 )
 
+target_link_libraries(libbsa
+  PRIVATE
+    $<IF:$<TARGET_EXISTS:libdeflate::libdeflate_static>,libdeflate::libdeflate_static,libdeflate::libdeflate_shared>
+)
+
 target_sources(libbsa
   PUBLIC
     FILE_SET HEADERS
@@ -43,6 +50,7 @@ target_sources(libbsa
     src/archive.cpp
     src/detail/archive_path.cpp
     src/detail/binary_io.cpp
+    src/detail/deflate_codec.cpp
     src/detail/payload_stream.cpp
     src/libbsa.cpp
 )
