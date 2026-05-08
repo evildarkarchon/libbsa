@@ -59,6 +59,8 @@ target_sources(libbsa
     src/detail/lz4_frame_codec.cpp
     src/detail/payload_stream.cpp
     src/formats/ba2/ba2_format_detector.cpp
+    src/formats/ba2/ba2_gnrl_parser.cpp
+    src/formats/ba2/ba2_gnrl_reader.cpp
     src/formats/bsa/bsa_format_detector.cpp
     src/formats/bsa/tes3_bsa_parser.cpp
     src/formats/bsa/tes3_bsa_reader.cpp
