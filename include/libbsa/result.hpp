@@ -7,13 +7,14 @@
 
 namespace libbsa {
 
-/// Stable error categories returned by the Phase 1 public API.
+/// Stable error categories returned by libbsa public APIs.
 ///
-/// The enum intentionally starts small; later parser and compression phases can
-/// add more specific categories once real archive behavior exists.
+/// The enum intentionally stays small and format-neutral so callers can branch
+/// on durable categories without depending on parser implementation details.
 enum class error_code {
   unsupported,
   invalid_argument,
+  not_found,
   io_error,
   format_error,
 };
