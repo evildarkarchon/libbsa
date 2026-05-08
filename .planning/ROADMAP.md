@@ -170,7 +170,7 @@ Plans:
 - [x] 05-02-PLAN.md — Add public BA2 metadata optionals plus byte-driven BA2 detector/open skeleton.
 
 **Wave 3** *(blocked on Wave 2 detector and metadata contracts)*
-- [ ] 05-03-PLAN.md — Implement BA2 GNRL record/name parsing, deterministic listing, and normalized lookup.
+- [x] 05-03-PLAN.md — Implement BA2 GNRL record/name parsing, deterministic listing, and normalized lookup.
 
 **Wave 4** *(blocked on Wave 3 parsed metadata and lookup)*
 - [ ] 05-04-PLAN.md — Implement BA2 GNRL raw, deflate, and Starfield raw-LZ4-block extraction.

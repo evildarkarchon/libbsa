@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 05 context gathered
-last_updated: "2026-05-08T22:56:36.073Z"
+last_updated: "2026-05-08T23:01:33.162Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 12
   completed_phases: 4
   total_plans: 26
-  completed_plans: 23
-  percent: 88
+  completed_plans: 24
+  percent: 92
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 05 (ba2-gnrl-read-extract) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-05-08
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [█████████░] 88%
 | Phase 04 P05 | 3min | 3 tasks | 7 files |
 | Phase 05 P01 | 3min | 2 tasks | 18 files |
 | Phase 05 P02 | 5min | 2 tasks | 8 files |
+| Phase 05 P03 | 3min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 05]: [Phase 05]: Starfield v3 LZ4 fixture coverage uses compression_method 3 with explicit lz4_block routing rather than extension inference. — Phase 5 decisions require explicit metadata-driven compression routing.
 - [Phase 05]: BA2 detection runs before BSA fallback for BTDX bytes, preserving byte-driven routing and clean unsupported errors for DX10. — BA2 detection runs before BSA fallback for BTDX bytes, preserving byte-driven routing and clean unsupported errors for DX10.
 - [Phase 05]: Starfield BA2 v2/v3 raw header fields are exposed as version-gated std::optional values. — Starfield BA2 v2/v3 raw header fields are exposed as version-gated std::optional values.
+- [Phase 05]: BA2 GNRL parser internals remain private and materialize public archive_metadata/entry_metadata only. — Preserves public C++20 API boundaries while adding parser-specific behavior.
+- [Phase 05]: BA2 GNRL lookup uses canonical archive path normalization and lower_bound semantics established by prior BSA readers. — Keeps find and contains behavior deterministic and consistent across archive families.
 
 ### Pending Todos
 
@@ -130,6 +133,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T22:56:17.778Z
+Last session: 2026-05-08T23:01:25.373Z
 Stopped at: Phase 05 context gathered
 Resume file: None
