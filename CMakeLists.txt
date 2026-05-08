@@ -19,6 +19,8 @@ target_include_directories(libbsa
 )
 
 target_compile_options(libbsa
+  PUBLIC
+    $<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus>
   PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W4>
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>

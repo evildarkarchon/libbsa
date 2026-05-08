@@ -3,6 +3,7 @@ find_package(Catch2 CONFIG REQUIRED)
 add_executable(libbsa_tests
   unit/result_tests.cpp
   unit/archive_reader_tests.cpp
+  unit/public_include_boundary_tests.cpp
 )
 
 target_link_libraries(libbsa_tests
