@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-05-08T12:06:18.851Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-05-08T12:17:06.596Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 20
-  completed_plans: 18
-  percent: 90
+  completed_plans: 19
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 04 (tes3-bsa-read-extract) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-05-08
 
-Progress: [█████████░] 90%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [█████████░] 90%
 | Phase 03 P06 | 24min | 3 tasks | 5 files |
 | Phase 04 P01 | 4 min | 3 tasks | 18 files |
 | Phase 04 P02 | 3 min | 2 tasks | 5 files |
+| Phase 04 P03 | 6 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 04]: TES3 RED tests compare manifest archive_hash values through the current public hash field until the planned Phase 04-02 neutral public rename lands. — Plan 04-01 must compile before the public metadata rename planned for 04-02.
 - [Phase 04]: entry_metadata now exposes archive_hash instead of tes4_hash so TES3 and TES4-family entries share format-neutral public metadata. — Phase 04 is the first point where the TES4-specific public field name becomes inaccurate, and this is a pre-v1 API cleanup.
 - [Phase 04]: TES3 detection is limited to byte classification of little-endian 0x00000100 and deliberately defers parser/open routing to Plan 04-03. — Plan 04-02 only prepares detector scaffolding; full TES3 parser and open dispatch are scoped to Plan 04-03.
+- [Phase 04]: TES3 parser stores archive-absolute payload offsets only; raw TES3 data-section offsets are converted and validated during parse. — Keeps public metadata consistent across archive variants while preserving TES3 compatibility.
+- [Phase 04]: TES3 hash ordering is represented with explicit low32/high32 helper functions to avoid comparator ambiguity. — Matches TES3 sorted hash records and makes validation testable.
+- [Phase 04]: TES3 listing and lookup use dedicated private helper names while preserving the established archive_reader public facade. — Minimizes TES4-family regression risk while adding variant-aware dispatch.
 
 ### Pending Todos
 
@@ -114,6 +118,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T12:06:18.846Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-05-08T12:17:06.590Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None

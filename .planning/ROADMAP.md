@@ -142,7 +142,7 @@ Plans:
 - [x] 04-02-PLAN.md — Rename hash metadata, document absolute offsets, and add TES3 byte detection/dispatch scaffolding.
 
 **Wave 3** *(blocked on Wave 2 public model and detector dispatch)*
-- [ ] 04-03-PLAN.md — Implement TES3 parsing, strict hash/name validation, listing, and lookup.
+- [x] 04-03-PLAN.md — Implement TES3 parsing, strict hash/name validation, listing, and lookup.
 
 **Wave 4** *(blocked on Wave 3 parser metadata and lookup)*
 - [ ] 04-04-PLAN.md — Implement TES3 raw extraction, malformed fail-closed validation, and final regression gates.
