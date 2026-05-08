@@ -3,6 +3,8 @@
 #include <libbsa/libbsa.hpp>
 
 #include <algorithm>
+#include <cctype>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -91,6 +93,37 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
   }
   return bytes;
 }
+
+std::vector<std::byte> bytes_from_hex(std::string_view hex) {
+  REQUIRE(hex.size() % 2U == 0U);
+  std::vector<std::byte> bytes;
+  bytes.reserve(hex.size() / 2U);
+  for (std::size_t offset = 0; offset < hex.size(); offset += 2U) {
+    const auto pair = std::string{hex.substr(offset, 2U)};
+    bytes.push_back(static_cast<std::byte>(std::stoul(pair, nullptr, 16)));
+  }
+  return bytes;
+}
+
+class collecting_sink final : public libbsa::payload_sink {
+ public:
+  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
+    bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
+    return bytes.size();
+  }
+
+  [[nodiscard]] const std::vector<std::byte>& bytes() const noexcept { return bytes_; }
+
+ private:
+  std::vector<std::byte> bytes_;
+};
+
+class partial_sink final : public libbsa::payload_sink {
+ public:
+  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
+    return bytes.empty() ? 0U : bytes.size() - 1U;
+  }
+};
 
 void write_binary_file(const std::filesystem::path& path, const std::vector<std::byte>& bytes) {
   std::ofstream output{path, std::ios::binary};
@@ -263,5 +296,97 @@ TEST_CASE("tes4_bsa_lookup normalizes variants and distinguishes missing from in
       REQUIRE_FALSE(invalid_contains.has_value());
       REQUIRE(invalid_contains.error().code == libbsa::error_code::invalid_argument);
     }
+  }
+}
+
+TEST_CASE("tes4_bsa_v103_extract streams raw and deflate entries by archive path",
+          "[unit][fixture][tes4_bsa_v103_extract][tes4_bsa_compression_routing]") {
+  const auto manifest = read_json_file(generated_archive_path("tes4_v103_manifest.json"));
+  auto opened = libbsa::archive_reader::open(generated_archive_path("tes4_v103.bsa").string());
+  REQUIRE(opened.has_value());
+
+  for (const auto& expected : manifest.at("entries")) {
+    collecting_sink sink;
+
+    auto extracted = opened.value().extract(expected.at("path").get<std::string>(), sink);
+
+    REQUIRE(extracted.has_value());
+    REQUIRE(sink.bytes() == bytes_from_hex(expected.at("expected").at("bytes_hex").get<std::string>()));
+  }
+}
+
+TEST_CASE("tes4_bsa_v104_extract skips embedded names before raw and deflate payloads",
+          "[unit][fixture][tes4_bsa_v104_extract][tes4_bsa_embedded_name][tes4_bsa_compression_routing]") {
+  const auto manifest = read_json_file(generated_archive_path("tes4_v104_manifest.json"));
+  auto opened = libbsa::archive_reader::open(generated_archive_path("tes4_v104.bsa").string());
+  REQUIRE(opened.has_value());
+
+  for (const auto& expected : manifest.at("entries")) {
+    collecting_sink sink;
+
+    auto extracted = opened.value().extract(expected.at("path").get<std::string>(), sink);
+
+    REQUIRE(extracted.has_value());
+    REQUIRE(sink.bytes() == bytes_from_hex(expected.at("expected").at("bytes_hex").get<std::string>()));
+  }
+}
+
+TEST_CASE("tes4_bsa_v105_extract routes compressed entries through LZ4 frame decoding",
+          "[unit][fixture][tes4_bsa_v105_extract][tes4_bsa_embedded_name][tes4_bsa_compression_routing]") {
+  const auto manifest = read_json_file(generated_archive_path("tes4_v105_manifest.json"));
+  auto opened = libbsa::archive_reader::open(generated_archive_path("tes4_v105.bsa").string());
+  REQUIRE(opened.has_value());
+
+  for (const auto& expected : manifest.at("entries")) {
+    collecting_sink sink;
+
+    auto extracted = opened.value().extract(expected.at("path").get<std::string>(), sink);
+
+    REQUIRE(extracted.has_value());
+    REQUIRE(sink.bytes() == bytes_from_hex(expected.at("expected").at("bytes_hex").get<std::string>()));
+  }
+}
+
+TEST_CASE("tes4_bsa_sink_errors reports partial sink writes as io_error",
+          "[unit][fixture][tes4_bsa_sink_errors]") {
+  auto opened = libbsa::archive_reader::open(generated_archive_path("tes4_v103.bsa").string());
+  REQUIRE(opened.has_value());
+  partial_sink sink;
+
+  auto extracted = opened.value().extract("meshes/tiny/rawmesh.nif", sink);
+
+  REQUIRE_FALSE(extracted.has_value());
+  REQUIRE(extracted.error().code == libbsa::error_code::io_error);
+}
+
+TEST_CASE("tes4_bsa_extract maps invalid and missing paths to stable errors", "[unit][fixture][tes4_bsa_v103_extract]") {
+  auto opened = libbsa::archive_reader::open(generated_archive_path("tes4_v103.bsa").string());
+  REQUIRE(opened.has_value());
+  collecting_sink sink;
+
+  auto invalid = opened.value().extract("/rooted/file.txt", sink);
+  REQUIRE_FALSE(invalid.has_value());
+  REQUIRE(invalid.error().code == libbsa::error_code::invalid_argument);
+
+  auto missing = opened.value().extract("valid/missing/path.txt", sink);
+  REQUIRE_FALSE(missing.has_value());
+  REQUIRE(missing.error().code == libbsa::error_code::not_found);
+}
+
+TEST_CASE("tes4_bsa_compression_routing rejects corrupt compressed payloads and size mismatches",
+          "[unit][fixture][malformed][tes4_bsa_compression_routing]") {
+  const auto manifest = read_json_file(generated_archive_path("malformed_manifest.json"));
+  for (const auto& test_case : manifest.at("cases")) {
+    if (test_case.at("phase").get<std::string>() != "extraction") {
+      continue;
+    }
+    auto opened = libbsa::archive_reader::open(generated_archive_path(test_case.at("archive").get<std::string>()).string());
+    REQUIRE(opened.has_value());
+    collecting_sink sink;
+
+    auto extracted = opened.value().extract(test_case.at("target_path").get<std::string>(), sink);
+
+    REQUIRE_FALSE(extracted.has_value());
+    REQUIRE(extracted.error().code == error_code_from_manifest(test_case.at("expected_error").get<std::string>()));
   }
 }
