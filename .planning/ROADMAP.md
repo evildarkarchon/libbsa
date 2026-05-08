@@ -164,7 +164,7 @@ Plans:
 Plans:
 
 **Wave 1**
-- [ ] 05-01-PLAN.md — Generate legal BA2 GNRL success and malformed fixtures with rich manifests.
+- [x] 05-01-PLAN.md — Generate legal BA2 GNRL success and malformed fixtures with rich manifests.
 
 **Wave 2** *(blocked on Wave 1 fixture generation)*
 - [ ] 05-02-PLAN.md — Add public BA2 metadata optionals plus byte-driven BA2 detector/open skeleton.

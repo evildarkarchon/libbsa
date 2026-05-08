@@ -50,14 +50,14 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 
 ### BA2 General Read Support
 
-- [ ] **GNRL-01**: Consumer can read and extract files from Fallout 4 BA2 GNRL archives.
-- [ ] **GNRL-02**: Consumer can read and extract files from Starfield BA2 v2 GNRL archives.
-- [ ] **GNRL-03**: Consumer can read and extract structurally valid Starfield BA2 v3 GNRL archives.
-- [ ] **GNRL-04**: Consumer can parse BA2 filename tables located at `FileTableOffset` with length-prefixed names.
-- [ ] **GNRL-05**: Consumer can distinguish raw BA2 entries from compressed entries using `PackedSize` and format metadata.
-- [ ] **GNRL-06**: Consumer can extract BA2 GNRL entries compressed with deflate.
-- [ ] **GNRL-07**: Consumer can extract Starfield BA2 v3 GNRL entries compressed with raw LZ4 block when `CompressionMethod == 3`.
-- [ ] **GNRL-08**: Consumer can inspect and preserve Starfield BA2 v2/v3 version-specific header fields in metadata.
+- [x] **GNRL-01**: Consumer can read and extract files from Fallout 4 BA2 GNRL archives.
+- [x] **GNRL-02**: Consumer can read and extract files from Starfield BA2 v2 GNRL archives.
+- [x] **GNRL-03**: Consumer can read and extract structurally valid Starfield BA2 v3 GNRL archives.
+- [x] **GNRL-04**: Consumer can parse BA2 filename tables located at `FileTableOffset` with length-prefixed names.
+- [x] **GNRL-05**: Consumer can distinguish raw BA2 entries from compressed entries using `PackedSize` and format metadata.
+- [x] **GNRL-06**: Consumer can extract BA2 GNRL entries compressed with deflate.
+- [x] **GNRL-07**: Consumer can extract Starfield BA2 v3 GNRL entries compressed with raw LZ4 block when `CompressionMethod == 3`.
+- [x] **GNRL-08**: Consumer can inspect and preserve Starfield BA2 v2/v3 version-specific header fields in metadata.
 
 ### BA2 DDS Read Support
 
@@ -185,14 +185,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BSA-06 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
 | BSA-07 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
 | BSA-08 | Phase 4: TES3 BSA Read/Extract | Complete |
-| GNRL-01 | Phase 5: BA2 GNRL Read/Extract | Pending |
-| GNRL-02 | Phase 5: BA2 GNRL Read/Extract | Pending |
-| GNRL-03 | Phase 5: BA2 GNRL Read/Extract | Pending |
-| GNRL-04 | Phase 5: BA2 GNRL Read/Extract | Pending |
-| GNRL-05 | Phase 5: BA2 GNRL Read/Extract | Pending |
-| GNRL-06 | Phase 5: BA2 GNRL Read/Extract | Pending |
-| GNRL-07 | Phase 5: BA2 GNRL Read/Extract | Pending |
-| GNRL-08 | Phase 5: BA2 GNRL Read/Extract | Pending |
+| GNRL-01 | Phase 5: BA2 GNRL Read/Extract | Complete |
+| GNRL-02 | Phase 5: BA2 GNRL Read/Extract | Complete |
+| GNRL-03 | Phase 5: BA2 GNRL Read/Extract | Complete |
+| GNRL-04 | Phase 5: BA2 GNRL Read/Extract | Complete |
+| GNRL-05 | Phase 5: BA2 GNRL Read/Extract | Complete |
+| GNRL-06 | Phase 5: BA2 GNRL Read/Extract | Complete |
+| GNRL-07 | Phase 5: BA2 GNRL Read/Extract | Complete |
+| GNRL-08 | Phase 5: BA2 GNRL Read/Extract | Complete |
 | DDS-01 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
 | DDS-02 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
 | DDS-03 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
