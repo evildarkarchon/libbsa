@@ -113,6 +113,7 @@ result<std::vector<folder_record>> read_folder_records(detail::binary_reader& re
 result<void> validate_tables(detail::binary_reader& reader, const header_fields& header,
                              std::span<const folder_record> folders, std::size_t archive_size) {
   std::size_t file_records_seen = 0;
+  std::size_t folder_name_bytes_seen = 0;
   for (const auto& folder : folders) {
     if (folder.offset > archive_size) {
       return error{error_code::format_error, "TES4 BSA folder block offset is outside the archive"};
@@ -125,6 +126,7 @@ result<void> validate_tables(detail::binary_reader& reader, const header_fields&
     if (!skipped_name) {
       return skipped_name.error();
     }
+    folder_name_bytes_seen += 1U + name_size.value();
 
     std::size_t file_record_bytes = 0;
     if (!multiply_fits(folder.file_count, file_record_size, file_record_bytes)) {
@@ -135,6 +137,10 @@ result<void> validate_tables(detail::binary_reader& reader, const header_fields&
       return skipped_records.error();
     }
     file_records_seen += folder.file_count;
+  }
+
+  if (folder_name_bytes_seen != header.total_folder_name_length) {
+    return error{error_code::format_error, "TES4 BSA folder name lengths do not match header total"};
   }
 
   if (file_records_seen != header.file_count) {
