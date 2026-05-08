@@ -19,8 +19,7 @@ result<std::optional<entry_metadata>> find_tes3_bsa_entry(std::span<const entry_
 /// Reports TES3 entry presence using the same normalization and errors as find.
 result<bool> contains_tes3_bsa_entry(std::span<const entry_metadata> entries, std::string_view path);
 
-/// Streams one validated TES3 raw payload to the caller sink.
-result<void> extract_tes3_bsa_payload(std::span<const std::byte> stored_payload, const entry_metadata& entry,
-                                      payload_sink& sink);
+/// Streams one validated TES3 raw payload from the host archive to the caller sink.
+result<void> extract_tes3_bsa_payload(std::string_view host_path, const entry_metadata& entry, payload_sink& sink);
 
 } // namespace libbsa::formats::bsa

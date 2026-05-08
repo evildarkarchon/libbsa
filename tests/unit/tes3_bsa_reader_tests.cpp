@@ -133,6 +133,16 @@ class partial_sink final : public libbsa::payload_sink {
   }
 };
 
+class recording_sink final : public libbsa::payload_sink {
+ public:
+  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
+    write_sizes.push_back(bytes.size());
+    return bytes.size();
+  }
+
+  std::vector<std::size_t> write_sizes;
+};
+
 } // namespace
 
 TEST_CASE("tes3_bsa_detector classifies Morrowind magic bytes before parser dispatch",
@@ -304,6 +314,22 @@ TEST_CASE("tes3_bsa_extract helper is raw-only and enforces sink writes", "[unit
   auto partial_result = libbsa::formats::bsa::extract_tes3_bsa_payload(host_path.string(), raw_entry, partial);
   REQUIRE_FALSE(partial_result.has_value());
   REQUIRE(partial_result.error().code == libbsa::error_code::io_error);
+
+  constexpr std::size_t expected_chunk_ceiling = 64U * 1024U;
+  std::vector<std::byte> large_payload(expected_chunk_ceiling + 17U, std::byte{'x'});
+  const auto large_host_path = std::filesystem::temp_directory_path() / "libbsa_tes3_large_payload_source.bsa";
+  write_binary_file(large_host_path, large_payload);
+  const libbsa::entry_metadata large_entry{"large/path.bin", "Large/Path.bin", large_payload.size(), large_payload.size(),
+                                            0U, 0U, libbsa::entry_compression::none, 0U, false, 0U};
+  recording_sink recording;
+
+  auto large_result = libbsa::formats::bsa::extract_tes3_bsa_payload(large_host_path.string(), large_entry, recording);
+
+  REQUIRE(large_result.has_value());
+  REQUIRE(recording.write_sizes.size() > 1U);
+  REQUIRE(std::all_of(recording.write_sizes.begin(), recording.write_sizes.end(), [](std::size_t size) {
+    return size <= expected_chunk_ceiling;
+  }));
 
   const libbsa::entry_metadata compressed_entry{"raw/path.txt", "Raw/Path.txt", 3U, 3U, 0U, 0U,
                                                  libbsa::entry_compression::deflate, 0U, false, 0U};

@@ -198,12 +198,12 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
   if (!found.value()) {
     return error{error_code::not_found, "archive path was not found"};
   }
+  if (state_->metadata.variant == archive_variant::tes3) {
+    return formats::bsa::extract_tes3_bsa_payload(state_->host_path, *found.value(), sink);
+  }
   auto payload = read_stored_payload(state_->host_path, *found.value());
   if (!payload) {
     return payload.error();
-  }
-  if (state_->metadata.variant == archive_variant::tes3) {
-    return formats::bsa::extract_tes3_bsa_payload(payload.value(), *found.value(), sink);
   }
   return formats::bsa::extract_tes4_bsa_payload(payload.value(), *found.value(), sink);
 }
