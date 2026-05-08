@@ -5,8 +5,10 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <algorithm>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -41,6 +43,41 @@ libbsa::error_code error_code_from_manifest(std::string_view value) {
     return libbsa::error_code::unsupported;
   }
   return libbsa::error_code::invalid_argument;
+}
+
+std::uint64_t hex_u64_from_manifest(const nlohmann::json& value) {
+  return std::stoull(value.get<std::string>(), nullptr, 16);
+}
+
+libbsa::entry_compression entry_compression_from_manifest(std::string_view value) {
+  if (value == "raw") {
+    return libbsa::entry_compression::none;
+  }
+  if (value == "deflate") {
+    return libbsa::entry_compression::deflate;
+  }
+  if (value == "lz4_frame") {
+    return libbsa::entry_compression::lz4_frame;
+  }
+  return libbsa::entry_compression::lz4_block;
+}
+
+std::string archive_original_path_from_manifest(std::string value) {
+  std::replace(value.begin(), value.end(), '\\', '/');
+  return value;
+}
+
+struct ba2_success_fixture {
+  std::string archive;
+  std::string manifest;
+};
+
+std::vector<ba2_success_fixture> ba2_success_fixtures() {
+  return {
+      {"ba2_gnrl_fo4.ba2", "ba2_gnrl_fo4_manifest.json"},
+      {"ba2_gnrl_sfv2.ba2", "ba2_gnrl_sfv2_manifest.json"},
+      {"ba2_gnrl_sfv3.ba2", "ba2_gnrl_sfv3_manifest.json"},
+  };
 }
 
 void require_common_ba2_metadata(const nlohmann::json& manifest,
@@ -116,5 +153,98 @@ TEST_CASE("ba2_gnrl_detector rejects Phase 5 unsupported BA2 profiles with stabl
 
     REQUIRE_FALSE(opened.has_value());
     REQUIRE(opened.error().code == error_code_from_manifest(test_case.at("expected_error").get<std::string>()));
+  }
+}
+
+TEST_CASE("ba2_gnrl_metadata lists manifest-backed records from filename tables",
+          "[unit][fixture][ba2_gnrl_metadata]") {
+  bool saw_raw = false;
+  bool saw_deflate = false;
+  bool saw_lz4_block = false;
+
+  for (const auto& fixture : ba2_success_fixtures()) {
+    const auto manifest = read_json_file(generated_archive_path(fixture.manifest));
+    auto opened = libbsa::archive_reader::open(generated_archive_path(fixture.archive).string());
+    REQUIRE(opened.has_value());
+
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == manifest.at("entries").size());
+
+    std::vector<std::string> sorted_paths;
+    for (const auto& expected : manifest.at("entries")) {
+      sorted_paths.push_back(expected.at("path").get<std::string>());
+    }
+    std::sort(sorted_paths.begin(), sorted_paths.end());
+
+    for (std::size_t index = 0; index < entries.value().size(); ++index) {
+      const auto& actual = entries.value().at(index);
+      const auto& expected = *std::find_if(manifest.at("entries").begin(), manifest.at("entries").end(), [&](const auto& candidate) {
+        return candidate.at("path").get<std::string>() == sorted_paths.at(index);
+      });
+
+      const auto compression = expected.at("compression").get<std::string>();
+      saw_raw = saw_raw || compression == "raw";
+      saw_deflate = saw_deflate || compression == "deflate";
+      saw_lz4_block = saw_lz4_block || compression == "lz4_block";
+
+      REQUIRE(actual.path == expected.at("path").get<std::string>());
+      REQUIRE(actual.original_path == archive_original_path_from_manifest(expected.at("original_path").get<std::string>()));
+      REQUIRE(actual.raw_size == expected.at("raw_size").get<std::uint64_t>());
+      REQUIRE(actual.stored_size == expected.at("stored_size").get<std::uint64_t>());
+      REQUIRE(actual.payload_offset == expected.at("payload_offset").get<std::uint64_t>());
+      REQUIRE(actual.archive_hash == hex_u64_from_manifest(expected.at("archive_hash")));
+      REQUIRE(actual.record_flags == expected.at("record_flags").get<std::uint32_t>());
+      REQUIRE(actual.compression == entry_compression_from_manifest(compression));
+      REQUIRE_FALSE(actual.has_embedded_name);
+      REQUIRE(actual.embedded_name_prefix_size == 0U);
+    }
+  }
+
+  REQUIRE(saw_raw);
+  REQUIRE(saw_deflate);
+  REQUIRE(saw_lz4_block);
+}
+
+TEST_CASE("ba2_gnrl_lookup normalizes variants and reports stable missing-path behavior",
+          "[unit][fixture][ba2_gnrl_lookup]") {
+  for (const auto& fixture : ba2_success_fixtures()) {
+    const auto manifest = read_json_file(generated_archive_path(fixture.manifest));
+    auto opened = libbsa::archive_reader::open(generated_archive_path(fixture.archive).string());
+    REQUIRE(opened.has_value());
+
+    for (const auto& expected : manifest.at("entries")) {
+      for (const auto& variant : expected.at("lookup_variants")) {
+        auto found = opened.value().find(variant.get<std::string>());
+        REQUIRE(found.has_value());
+        REQUIRE(found.value().has_value());
+        REQUIRE(found.value()->path == expected.at("path").get<std::string>());
+        REQUIRE(found.value()->archive_hash == hex_u64_from_manifest(expected.at("archive_hash")));
+        REQUIRE(found.value()->payload_offset == expected.at("payload_offset").get<std::uint64_t>());
+        REQUIRE(found.value()->record_flags == expected.at("record_flags").get<std::uint32_t>());
+
+        auto contains = opened.value().contains(variant.get<std::string>());
+        REQUIRE(contains.has_value());
+        REQUIRE(contains.value());
+      }
+    }
+
+    auto missing = opened.value().find("valid/missing/path.txt");
+    REQUIRE(missing.has_value());
+    REQUIRE_FALSE(missing.value().has_value());
+
+    auto missing_contains = opened.value().contains("valid/missing/path.txt");
+    REQUIRE(missing_contains.has_value());
+    REQUIRE_FALSE(missing_contains.value());
+
+    for (const std::string invalid : {"", "/rooted/file.txt", "..\\escape.txt", "folder//file.txt"}) {
+      auto invalid_find = opened.value().find(invalid);
+      REQUIRE_FALSE(invalid_find.has_value());
+      REQUIRE(invalid_find.error().code == libbsa::error_code::invalid_argument);
+
+      auto invalid_contains = opened.value().contains(invalid);
+      REQUIRE_FALSE(invalid_contains.has_value());
+      REQUIRE(invalid_contains.error().code == libbsa::error_code::invalid_argument);
+    }
   }
 }
