@@ -13,8 +13,8 @@
     {"id": "tes3_invalid_payload_span", "archive": "tes3_invalid_payload_span.bsa", "expected_error": "format_error", "phase": "open"},
     {"id": "tes3_duplicate_canonical_path", "archive": "tes3_duplicate_canonical_path.bsa", "expected_error": "format_error", "phase": "open"},
     {"id": "tes3_inconsistent_counts_offsets", "archive": "tes3_inconsistent_counts_offsets.bsa", "expected_error": "format_error", "phase": "open"},
-    {"id": "tes3_stored_hash_mismatch", "archive": "tes3_stored_hash_mismatch.bsa", "expected_error": "format_error", "phase": "open"},
-    {"id": "tes3_hash_collision", "archive": "tes3_hash_collision.bsa", "expected_error": "format_error", "phase": "open"},
+    {"id": "tes3_stored_hash_mismatch", "archive": "tes3_stored_hash_mismatch.bsa", "expected_error": "format_error", "phase": "open", "structural_issue": "stored_hash_mismatch"},
+    {"id": "tes3_hash_collision", "archive": "tes3_hash_collision.bsa", "expected_error": "format_error", "phase": "open", "structural_issue": "duplicate_stored_hash"},
     {"id": "tes3_unsorted_hash_records", "archive": "tes3_unsorted_hash_records.bsa", "expected_error": "format_error", "phase": "open"},
     {"id": "tes3_raw_offset_absolute_regression", "archive": "tes3_raw_offset_absolute_regression.bsa", "expected_error": "format_error", "phase": "open"}
   ]

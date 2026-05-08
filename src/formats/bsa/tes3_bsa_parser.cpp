@@ -214,17 +214,19 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
 
   for (std::size_t index = 0; index < records.size(); ++index) {
     const auto stored_hash = hashes[index];
-    const auto computed_hash = detail::hash_tes3(names[index]);
-    if (stored_hash != computed_hash) {
-      return error{error_code::format_error, "TES3 BSA stored hash does not match parsed name"};
-    }
     const auto sort_key = detail::tes3_hash_sort_key(stored_hash);
     if (previous_hash_sort_key && sort_key < previous_hash_sort_key.value()) {
       return error{error_code::format_error, "TES3 BSA hash records are not sorted"};
     }
     previous_hash_sort_key = sort_key;
+    // Duplicate stored hashes are malformed even when one name would also fail recomputation; check them first so
+    // collision fixtures exercise the TES3 collision branch rather than being hidden by mismatch validation.
     if (!stored_hashes.insert(stored_hash).second) {
       return error{error_code::format_error, "TES3 BSA contains duplicate stored hash records"};
+    }
+    const auto computed_hash = detail::hash_tes3(names[index]);
+    if (stored_hash != computed_hash) {
+      return error{error_code::format_error, "TES3 BSA stored hash does not match parsed name"};
     }
 
     auto original_path = names[index];
