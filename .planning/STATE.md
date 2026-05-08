@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 04 context gathered
-last_updated: "2026-05-08T11:39:33.035Z"
-last_activity: 2026-05-08 -- Phase 04 planning complete
+last_updated: "2026-05-08T11:40:56.004Z"
+last_activity: 2026-05-08 -- Phase 04 execution started
 progress:
   total_phases: 12
   completed_phases: 3
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 04 — tes3-bsa-read/extract
+**Current focus:** Phase 04 — tes3-bsa-read-extract
 
 ## Current Position
 
-Phase: 4 (tes3-bsa-read/extract)
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-05-08 -- Phase 04 planning complete
+Phase: 04 (tes3-bsa-read-extract) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 04
+Last activity: 2026-05-08 -- Phase 04 execution started
 
 Progress: [████████████████████] 16/16 plans (100%)
 
