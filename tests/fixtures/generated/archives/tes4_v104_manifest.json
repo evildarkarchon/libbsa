@@ -1,0 +1,58 @@
+{
+  "variant": "tes4_v104",
+  "version": 104,
+  "flags": 259,
+  "file_count": 2,
+  "folder": {
+    "path": "textures/mixedcase",
+    "original_path": "Textures\\MixedCase",
+    "hash": "0xf86aa64974127365",
+    "record_offset": 85
+  },
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp",
+    "source": "synthetic strings generated for libbsa tests; no game or TES5Edit bytes copied"
+  },
+  "entries": [
+    {
+      "path": "textures/mixedcase/rawtexture.dds",
+      "original_path": "Textures\\MixedCase\\RawTexture.dds",
+      "lookup_variants": ["textures/mixedcase/rawtexture.dds", "Textures\\MixedCase\\RawTexture.dds", "textures/mixedcase/rawtexture.dds"],
+      "folder": "Textures\\MixedCase",
+      "file": "RawTexture.dds",
+      "hash": "0x60980637720af2e5",
+      "record_flags": 0,
+      "compression": "raw",
+      "raw_size": 23,
+      "stored_size": 57,
+      "offset": 137,
+      "has_embedded_name": true,
+      "embedded_name_prefix_size": 34,
+      "embedded_name": "textures\\mixedcase\\rawtexture.dds",
+      "expected": {
+        "bytes_hex": "763130342072617720746578747572652062797465730a",
+        "fnv1a32": "0x162cc6ec"
+      }
+    },
+    {
+      "path": "textures/mixedcase/packedtexture.dds",
+      "original_path": "Textures\\MixedCase\\PackedTexture.dds",
+      "lookup_variants": ["textures/mixedcase/packedtexture.dds", "Textures\\MixedCase\\PackedTexture.dds", "textures/mixedcase/packedtexture.dds"],
+      "folder": "Textures\\MixedCase",
+      "file": "PackedTexture.dds",
+      "hash": "0x1131e7a5700df2e5",
+      "record_flags": 1073741824,
+      "compression": "deflate",
+      "raw_size": 27,
+      "stored_size": 73,
+      "offset": 194,
+      "has_embedded_name": true,
+      "embedded_name_prefix_size": 37,
+      "embedded_name": "textures\\mixedcase\\packedtexture.dds",
+      "expected": {
+        "bytes_hex": "76313034206465666c61746520746578747572652062797465730a",
+        "fnv1a32": "0x9153d5e7"
+      }
+    }
+  ]
+}

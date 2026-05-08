@@ -1,0 +1,58 @@
+{
+  "variant": "tes4_v103",
+  "version": 103,
+  "flags": 3,
+  "file_count": 2,
+  "folder": {
+    "path": "meshes/tiny",
+    "original_path": "Meshes\\Tiny",
+    "hash": "0x6ddeb6696d0b6e79",
+    "record_offset": 79
+  },
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp",
+    "source": "synthetic strings generated for libbsa tests; no game or TES5Edit bytes copied"
+  },
+  "entries": [
+    {
+      "path": "meshes/tiny/rawmesh.nif",
+      "original_path": "Meshes\\Tiny\\RawMesh.nif",
+      "lookup_variants": ["meshes/tiny/rawmesh.nif", "Meshes\\Tiny\\RawMesh.nif", "meshes/tiny/rawmesh.nif"],
+      "folder": "Meshes\\Tiny",
+      "file": "RawMesh.nif",
+      "hash": "0x6ee8ae8b7207f368",
+      "record_flags": 0,
+      "compression": "raw",
+      "raw_size": 20,
+      "stored_size": 20,
+      "offset": 124,
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "embedded_name": "",
+      "expected": {
+        "bytes_hex": "7631303320726177206d6573682062797465730a",
+        "fnv1a32": "0x5d8d65f3"
+      }
+    },
+    {
+      "path": "meshes/tiny/packedmesh.nif",
+      "original_path": "Meshes\\Tiny\\PackedMesh.nif",
+      "lookup_variants": ["meshes/tiny/packedmesh.nif", "Meshes\\Tiny\\PackedMesh.nif", "meshes/tiny/packedmesh.nif"],
+      "folder": "Meshes\\Tiny",
+      "file": "PackedMesh.nif",
+      "hash": "0x3ce27a9d700af368",
+      "record_flags": 1073741824,
+      "compression": "deflate",
+      "raw_size": 24,
+      "stored_size": 33,
+      "offset": 144,
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "embedded_name": "",
+      "expected": {
+        "bytes_hex": "76313033206465666c617465206d6573682062797465730a",
+        "fnv1a32": "0x41986a9e"
+      }
+    }
+  ]
+}

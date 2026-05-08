@@ -1,0 +1,58 @@
+{
+  "variant": "tes4_v105",
+  "version": 105,
+  "flags": 259,
+  "file_count": 2,
+  "folder": {
+    "path": "scripts/sse",
+    "original_path": "Scripts\\SSE",
+    "hash": "0x8ca70a2c730b7365",
+    "record_offset": 91
+  },
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp",
+    "source": "synthetic strings generated for libbsa tests; no game or TES5Edit bytes copied"
+  },
+  "entries": [
+    {
+      "path": "scripts/sse/rawscript.pex",
+      "original_path": "Scripts\\SSE\\RawScript.pex",
+      "lookup_variants": ["scripts/sse/rawscript.pex", "Scripts\\SSE\\RawScript.pex", "scripts/sse/rawscript.pex"],
+      "folder": "Scripts\\SSE",
+      "file": "RawScript.pex",
+      "hash": "0xa538479272097074",
+      "record_flags": 0,
+      "compression": "raw",
+      "raw_size": 22,
+      "stored_size": 48,
+      "offset": 136,
+      "has_embedded_name": true,
+      "embedded_name_prefix_size": 26,
+      "embedded_name": "scripts\\sse\\rawscript.pex",
+      "expected": {
+        "bytes_hex": "7631303520726177207363726970742062797465730a",
+        "fnv1a32": "0xf40f21bf"
+      }
+    },
+    {
+      "path": "scripts/sse/packedscript.pex",
+      "original_path": "Scripts\\SSE\\PackedScript.pex",
+      "lookup_variants": ["scripts/sse/packedscript.pex", "Scripts\\SSE\\PackedScript.pex", "scripts/sse/packedscript.pex"],
+      "folder": "Scripts\\SSE",
+      "file": "PackedScript.pex",
+      "hash": "0x83e92aa4700c7074",
+      "record_flags": 1073741824,
+      "compression": "lz4_frame",
+      "raw_size": 28,
+      "stored_size": 76,
+      "offset": 184,
+      "has_embedded_name": true,
+      "embedded_name_prefix_size": 29,
+      "embedded_name": "scripts\\sse\\packedscript.pex",
+      "expected": {
+        "bytes_hex": "76313035206c7a345f6672616d65207363726970742062797465730a",
+        "fnv1a32": "0x7db75275"
+      }
+    }
+  ]
+}
