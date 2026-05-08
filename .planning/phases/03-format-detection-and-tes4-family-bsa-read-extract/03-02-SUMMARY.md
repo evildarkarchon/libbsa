@@ -72,7 +72,7 @@ Each task was committed atomically:
 1. **Task 1: Create concrete generator target for success archives** - `588c7db` (feat)
 2. **Task 2: Generate and verify v103/v104/v105 success manifests** - `c77939a` (feat)
 
-**Plan metadata:** Pending final docs commit.
+**Plan metadata:** `869b595` (docs)
 
 ## Files Created/Modified
 
