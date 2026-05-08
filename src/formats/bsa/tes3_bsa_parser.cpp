@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <fstream>
 #include <limits>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -206,8 +207,26 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
   std::vector<entry_metadata> entries;
   entries.reserve(records.size());
   std::unordered_set<std::string> canonical_paths;
+  std::unordered_set<std::uint64_t> stored_hashes;
+  std::vector<std::pair<std::size_t, std::size_t>> payload_spans;
+  payload_spans.reserve(records.size());
+  std::optional<std::uint64_t> previous_hash_sort_key;
 
   for (std::size_t index = 0; index < records.size(); ++index) {
+    const auto stored_hash = hashes[index];
+    const auto computed_hash = detail::hash_tes3(names[index]);
+    if (stored_hash != computed_hash) {
+      return error{error_code::format_error, "TES3 BSA stored hash does not match parsed name"};
+    }
+    const auto sort_key = detail::tes3_hash_sort_key(stored_hash);
+    if (previous_hash_sort_key && sort_key < previous_hash_sort_key.value()) {
+      return error{error_code::format_error, "TES3 BSA hash records are not sorted"};
+    }
+    previous_hash_sort_key = sort_key;
+    if (!stored_hashes.insert(stored_hash).second) {
+      return error{error_code::format_error, "TES3 BSA contains duplicate stored hash records"};
+    }
+
     auto original_path = names[index];
     normalize_original_separators(original_path);
     auto canonical = detail::normalize_archive_path(original_path);
@@ -227,13 +246,21 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     if (!span_fits(absolute_payload_offset, records[index].size, archive_size)) {
       return error{error_code::format_error, "TES3 BSA entry payload span is outside the archive"};
     }
+    const auto payload_end = absolute_payload_offset + static_cast<std::size_t>(records[index].size);
+    for (const auto& span : payload_spans) {
+      const auto overlaps = absolute_payload_offset < span.second && span.first < payload_end;
+      if (records[index].size != 0U && overlaps) {
+        return error{error_code::format_error, "TES3 BSA entry payload spans overlap"};
+      }
+    }
+    payload_spans.push_back({absolute_payload_offset, payload_end});
 
     entries.push_back(entry_metadata{canonical.value().value,
                                      std::move(original_path),
                                      records[index].size,
                                      records[index].size,
                                      static_cast<std::uint64_t>(absolute_payload_offset),
-                                     hashes[index],
+                                     stored_hash,
                                      entry_compression::none,
                                      0U,
                                      false,

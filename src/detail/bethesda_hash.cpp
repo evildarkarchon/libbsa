@@ -76,6 +76,14 @@ std::uint64_t hash_tes3(std::string_view archive_path) {
   return result | sum;
 }
 
+std::uint32_t tes3_hash_low32(std::uint64_t hash) noexcept { return static_cast<std::uint32_t>(hash & 0xFFFF'FFFFULL); }
+
+std::uint32_t tes3_hash_high32(std::uint64_t hash) noexcept { return static_cast<std::uint32_t>(hash >> 32U); }
+
+std::uint64_t tes3_hash_sort_key(std::uint64_t hash) noexcept {
+  return (static_cast<std::uint64_t>(tes3_hash_low32(hash)) << 32U) | tes3_hash_high32(hash);
+}
+
 std::uint64_t hash_tes4(std::string_view name_or_path) {
   const auto dot = name_or_path.find_last_of('.');
   if (dot == std::string_view::npos) {
