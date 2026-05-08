@@ -29,8 +29,12 @@ target_sources(libbsa
     FILE_SET HEADERS
       BASE_DIRS include
       FILES
+        include/libbsa/archive.hpp
+        include/libbsa/libbsa.hpp
+        include/libbsa/result.hpp
         include/libbsa/version.hpp
   PRIVATE
+    src/archive.cpp
     src/libbsa.cpp
 )
 
