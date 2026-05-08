@@ -35,6 +35,36 @@ target_compile_definitions(libbsa_tests
     LIBBSA_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
 )
 
+add_executable(generate_tes4_bsa_fixtures_tool
+  fixtures/generated/generate_tes4_bsa_fixtures.cpp
+)
+
+target_link_libraries(generate_tes4_bsa_fixtures_tool
+  PRIVATE
+    libbsa::libbsa
+)
+
+target_compile_features(generate_tes4_bsa_fixtures_tool PRIVATE cxx_std_20)
+
+target_include_directories(generate_tes4_bsa_fixtures_tool
+  PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+add_custom_target(generate_tes4_bsa_fixtures
+  COMMAND generate_tes4_bsa_fixtures_tool --success --output ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives
+  DEPENDS generate_tes4_bsa_fixtures_tool
+  BYPRODUCTS
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v103.bsa
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v103_manifest.json
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v104.bsa
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v104_manifest.json
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v105.bsa
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v105_manifest.json
+  COMMENT "Generating TES4-family BSA success fixtures"
+  VERBATIM
+)
+
 include(Catch)
 catch_discover_tests(libbsa_tests
   ADD_TAGS_AS_LABELS
