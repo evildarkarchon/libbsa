@@ -4,6 +4,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 add_executable(libbsa_tests
   unit/result_tests.cpp
   unit/archive_reader_tests.cpp
+  unit/tes4_bsa_reader_tests.cpp
   unit/public_include_boundary_tests.cpp
   unit/local_game_fixture_tests.cpp
   unit/validation_policy_tests.cpp

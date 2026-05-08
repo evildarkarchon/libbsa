@@ -42,11 +42,11 @@ static_assert(std::is_same_v<decltype(std::declval<const libbsa::archive_reader&
                                  "meshes/example.nif")),
                              libbsa::result<std::vector<std::byte>>>);
 
-TEST_CASE("archive_reader open reports unsupported archives in phase one", "[unit][public-api]") {
-  auto result = libbsa::archive_reader::open("example.bsa");
+TEST_CASE("archive_reader open reports I/O errors for missing host files", "[unit][public-api]") {
+  auto result = libbsa::archive_reader::open("missing/example.bsa");
 
   REQUIRE_FALSE(result.has_value());
-  REQUIRE(result.error().code == libbsa::error_code::unsupported);
+  REQUIRE(result.error().code == libbsa::error_code::io_error);
 }
 
 TEST_CASE("archive_reader open rejects empty host paths", "[unit][public-api]") {
