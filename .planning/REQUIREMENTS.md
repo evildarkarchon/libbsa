@@ -9,8 +9,8 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 
 ### Foundation
 
-- [ ] **FND-01**: Consumer can build libbsa as a reusable C++20 library with CMake and vcpkg.
-- [ ] **FND-02**: Consumer can choose static or shared library builds without changing public headers.
+- [x] **FND-01**: Consumer can build libbsa as a reusable C++20 library with CMake and vcpkg.
+- [x] **FND-02**: Consumer can choose static or shared library builds without changing public headers.
 - [ ] **FND-03**: Consumer can include public libbsa headers without transitively depending on libdeflate, lz4, DirectXTex, or TES5Edit headers.
 - [ ] **FND-04**: Consumer can receive structured C++20-compatible result/error values for I/O and format failures.
 - [ ] **FND-05**: Consumer can use libbsa objects without process-wide mutable global state or singleton behavior.
@@ -119,7 +119,7 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 - [ ] **DOC-01**: Consumer can read Doxygen-generated public API documentation for supported archive operations.
 - [ ] **DOC-02**: Consumer can follow integration examples for opening archives, listing files, extracting files, creating archives, and handling errors.
 - [ ] **DOC-03**: Consumer can read target-format guidance that explains supported variants, compression methods, and known compatibility warnings.
-- [ ] **DOC-04**: Maintainer can run CI for build and test validation on MSVC and optionally Clang/GCC.
+- [x] **DOC-04**: Maintainer can run CI for build and test validation on MSVC and optionally Clang/GCC.
 
 ## v2 Requirements
 
@@ -156,8 +156,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
-| FND-02 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
+| FND-01 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
+| FND-02 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
 | FND-03 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
 | FND-04 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
 | FND-05 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
@@ -236,7 +236,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOC-01 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
 | DOC-02 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
 | DOC-03 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
-| DOC-04 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
+| DOC-04 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
 
 **Coverage:**
 - v1 requirements: 81 total

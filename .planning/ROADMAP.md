@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 
 **Wave 1**
-- [ ] 01-01-PLAN.md — Create the CMake/vcpkg build and package foundation for static/shared C++20 libbsa builds.
+- [x] 01-01-PLAN.md — Create the CMake/vcpkg build and package foundation for static/shared C++20 libbsa builds.
 - [ ] 01-04-PLAN.md — Establish legal generated and local-only fixture layout, policy, and ignore boundaries.
 
 **Wave 2** *(blocked on Wave 1 build foundation completion)*
