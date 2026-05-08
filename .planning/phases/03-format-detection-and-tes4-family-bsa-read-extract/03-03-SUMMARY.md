@@ -74,7 +74,7 @@ Each task was committed atomically:
 2. **Task 2 RED: Add manifest validation script failing gate** - `086cdf2` (test)
 3. **Task 2 GREEN: Add manifest validation script for success and malformed fixtures** - `9ad82ca` (feat)
 
-**Plan metadata:** pending final docs commit
+**Plan metadata:** `871e2af` (docs)
 
 _Note: Task 2 followed the TDD flow with a RED script commit followed by the passing GREEN commit._
 
