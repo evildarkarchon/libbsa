@@ -41,7 +41,9 @@ target_sources(libbsa
         include/libbsa/version.hpp
   PRIVATE
     src/archive.cpp
+    src/detail/archive_path.cpp
     src/detail/binary_io.cpp
+    src/detail/payload_stream.cpp
     src/libbsa.cpp
 )
 
