@@ -37,7 +37,27 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Consumer can call library APIs that return structured C++20-compatible result/error values without relying on mutable global state.
   4. Maintainer can run labeled Catch2/CTest suites and CI build/test validation without touching the read-only `TES5Edit/` submodule.
   5. Maintainer can add legal tiny archive fixtures in the project fixture layout without relying on copyrighted game archives in the repo.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 01-01-PLAN.md — Create the CMake/vcpkg build and package foundation for static/shared C++20 libbsa builds.
+- [ ] 01-04-PLAN.md — Establish legal generated and local-only fixture layout, policy, and ignore boundaries.
+
+**Wave 2** *(blocked on Wave 1 build foundation completion)*
+- [ ] 01-02-PLAN.md — Define and test the public result/error model and `archive_reader` open facade stub.
+
+**Wave 3** *(blocked on Wave 2 public API completion)*
+- [ ] 01-03-PLAN.md — Wire Catch2/CTest labels and local fixture skip behavior around the public boundary tests.
+
+**Wave 4** *(blocked on Wave 3 test harness and Wave 1 fixture policy completion)*
+- [ ] 01-05-PLAN.md — Add installed-package smoke validation and Windows/MSVC static/shared CI workflow.
+
+Cross-cutting constraints:
+- Public headers must not leak libdeflate, lz4, DirectXTex, Windows SDK, `std::expected`, or `TES5Edit/` references.
+- `TES5Edit/` remains read-only: no editing, formatting, compiling, staging, or fixture workspace use.
+- Phase 1 exposes read/open stubs only; writer shells, stream abstractions, archive parsing, binary I/O services, hashes, compression adapters, and DDS behavior remain out of scope.
 
 ### Phase 2: Binary I/O, Paths, Hashes, and Compression Services
 **Goal**: Parsers and writers have reusable safe primitives for binary reads/writes, archive virtual paths, format hashes, streaming payloads, and exact-size compression routing.
@@ -170,7 +190,7 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation, API Boundary, and Test Harness | 0/TBD | Not started | - |
+| 1. Foundation, API Boundary, and Test Harness | 0/5 | Planned | - |
 | 2. Binary I/O, Paths, Hashes, and Compression Services | 0/TBD | Not started | - |
 | 3. Format Detection and TES4-Family BSA Read/Extract | 0/TBD | Not started | - |
 | 4. TES3 BSA Read/Extract | 0/TBD | Not started | - |
