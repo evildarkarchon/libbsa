@@ -173,7 +173,7 @@ Plans:
 - [x] 05-03-PLAN.md — Implement BA2 GNRL record/name parsing, deterministic listing, and normalized lookup.
 
 **Wave 4** *(blocked on Wave 3 parsed metadata and lookup)*
-- [ ] 05-04-PLAN.md — Implement BA2 GNRL raw, deflate, and Starfield raw-LZ4-block extraction.
+- [x] 05-04-PLAN.md — Implement BA2 GNRL raw, deflate, and Starfield raw-LZ4-block extraction.
 
 **Wave 5** *(blocked on Wave 4 extraction behavior)*
 - [ ] 05-05-PLAN.md — Close malformed/unsupported BA2 validation and final cross-format regression gates.
