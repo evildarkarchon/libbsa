@@ -19,7 +19,7 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 
 ### Format Detection and Metadata
 
-- [ ] **FMT-01**: Consumer can open an archive and have libbsa detect its format from magic bytes, archive type fields, and version fields rather than file extension.
+- [x] **FMT-01**: Consumer can open an archive and have libbsa detect its format from magic bytes, archive type fields, and version fields rather than file extension.
 - [x] **FMT-02**: Consumer can inspect archive type, variant, version, flags, file count, and supported compression behavior.
 - [x] **FMT-03**: Consumer can list archive file paths in a stable library-owned path representation.
 - [x] **FMT-04**: Consumer can check whether a path exists in an archive using normalized archive virtual path semantics.
@@ -39,9 +39,9 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 
 ### BSA Read Support
 
-- [ ] **BSA-01**: Consumer can read and extract files from TES4/Oblivion BSA v103 archives.
-- [ ] **BSA-02**: Consumer can read and extract files from FO3/FNV/Skyrim LE BSA v104 archives.
-- [ ] **BSA-03**: Consumer can read and extract files from Skyrim SE/AE BSA v105 archives.
+- [x] **BSA-01**: Consumer can read and extract files from TES4/Oblivion BSA v103 archives.
+- [x] **BSA-02**: Consumer can read and extract files from FO3/FNV/Skyrim LE BSA v104 archives.
+- [x] **BSA-03**: Consumer can read and extract files from Skyrim SE/AE BSA v105 archives.
 - [ ] **BSA-04**: Consumer can read and extract files from TES3/Morrowind BSA archives.
 - [x] **BSA-05**: Consumer can locate TES4-family BSA entries by path using hash-based lookup behavior compatible with BSArchPro.
 - [x] **BSA-06**: Consumer can extract embedded-name BSA entries while preserving payload bytes compatible with BSArchPro output.
@@ -163,7 +163,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-05 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
 | FND-06 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
 | FND-07 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
-| FMT-01 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| FMT-01 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
 | FMT-02 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
 | FMT-03 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
 | FMT-04 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
@@ -177,9 +177,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BIN-06 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Complete |
 | BIN-07 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Complete |
 | BIN-08 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Complete |
-| BSA-01 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
-| BSA-02 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
-| BSA-03 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
+| BSA-01 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
+| BSA-02 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
+| BSA-03 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
 | BSA-04 | Phase 4: TES3 BSA Read/Extract | Pending |
 | BSA-05 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |
 | BSA-06 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Complete |

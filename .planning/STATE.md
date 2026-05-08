@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-05-08T07:26:33.530Z"
+last_updated: "2026-05-08T07:32:45.560Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 16
-  completed_plans: 11
-  percent: 69
+  completed_plans: 12
+  percent: 75
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 ## Current Position
 
 Phase: 03 (format-detection-and-tes4-family-bsa-read-extract) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-05-08
 
-Progress: [███████░░░] 69%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [███████░░░] 69%
 | Phase 01 P05 | 35 min | 3 tasks | 6 files |
 | Phase 02 P01-05 | 85min | 13 tasks | 34 files |
 | Phase 03 P01 | 3min | 2 tasks | 7 files |
+| Phase 03 P02 | 8min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 02]: Bethesda hash compatibility follows TES5Edit LowerByte/CreateHash behavior while keeping TES5Edit read-only.
 - [Phase 03]: Expose Phase 3 reader contracts on archive_reader rather than adding separate public reader/view/extractor objects. — Plan 03-01 follows D-01 and gives later parser/extractor tasks a stable public surface.
 - [Phase 03]: Keep nlohmann-json test-only via PRIVATE libbsa_tests linkage and out of libbsa runtime/public linkage. — D-29 permits JSON manifests for tests while public/runtime dependency boundaries remain clean.
+- [Phase 03]: Fixture generation uses a C++ test tool linked to libbsa internals so archive hashes and compression payloads are produced by the same helpers later parser tests will validate.
+- [Phase 03]: Success manifests store both canonical paths and original archive spelling so later tests can verify lookup normalization without trusting host filenames.
 
 ### Pending Todos
 
@@ -92,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T07:26:33.524Z
+Last session: 2026-05-08T07:31:58.796Z
 Stopped at: Completed 03-01-PLAN.md
 Resume file: None

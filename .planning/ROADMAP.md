@@ -109,7 +109,7 @@ Plans:
 
 **Wave 1**
 - [x] 03-01-PLAN.md — Define public reader API contracts and test-only JSON dependency wiring.
-- [ ] 03-02-PLAN.md — Generate legal v103/v104/v105 success BSA fixtures and manifests.
+- [x] 03-02-PLAN.md — Generate legal v103/v104/v105 success BSA fixtures and manifests.
 
 **Wave 2** *(blocked on 03-02 success fixture generation)*
 - [ ] 03-03-PLAN.md — Generate malformed fixture set and manifest validation tests.
