@@ -9,7 +9,6 @@
     {
       "name": "windows-msvc-debug-static",
       "displayName": "Windows MSVC Debug Static",
-      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
@@ -23,7 +22,6 @@
     {
       "name": "windows-msvc-debug-shared",
       "displayName": "Windows MSVC Debug Shared",
-      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
@@ -38,17 +36,20 @@
   "buildPresets": [
     {
       "name": "windows-msvc-debug-static",
-      "configurePreset": "windows-msvc-debug-static"
+      "configurePreset": "windows-msvc-debug-static",
+      "configuration": "Debug"
     },
     {
       "name": "windows-msvc-debug-shared",
-      "configurePreset": "windows-msvc-debug-shared"
+      "configurePreset": "windows-msvc-debug-shared",
+      "configuration": "Debug"
     }
   ],
   "testPresets": [
     {
       "name": "windows-msvc-debug-static",
       "configurePreset": "windows-msvc-debug-static",
+      "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       }
@@ -56,6 +57,7 @@
     {
       "name": "windows-msvc-debug-shared",
       "configurePreset": "windows-msvc-debug-shared",
+      "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       }
