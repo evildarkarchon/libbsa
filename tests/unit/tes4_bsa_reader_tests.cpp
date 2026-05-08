@@ -390,3 +390,39 @@ TEST_CASE("tes4_bsa_compression_routing rejects corrupt compressed payloads and 
     REQUIRE(extracted.error().code == error_code_from_manifest(test_case.at("expected_error").get<std::string>()));
   }
 }
+
+TEST_CASE("tes4_bsa_extract_bytes returns bounded consumer-visible bytes through extraction path",
+          "[unit][fixture][tes4_bsa_embedded_name][tes4_bsa_entry_metadata][tes4_bsa_v104_extract][tes4_bsa_v105_extract]") {
+  for (const auto& fixture : {std::string{"tes4_v104"}, std::string{"tes4_v105"}}) {
+    const auto manifest = read_json_file(generated_archive_path(fixture + "_manifest.json"));
+    auto opened = libbsa::archive_reader::open(generated_archive_path(fixture + ".bsa").string());
+    REQUIRE(opened.has_value());
+
+    for (const auto& expected : manifest.at("entries")) {
+      auto found = opened.value().find(expected.at("path").get<std::string>());
+      REQUIRE(found.has_value());
+      REQUIRE(found.value().has_value());
+      REQUIRE(found.value()->has_embedded_name);
+      REQUIRE(found.value()->embedded_name_prefix_size == expected.at("embedded_name_prefix_size").get<std::uint32_t>());
+
+      auto bytes = opened.value().extract_bytes(expected.at("path").get<std::string>());
+
+      REQUIRE(bytes.has_value());
+      REQUIRE(bytes.value() == bytes_from_hex(expected.at("expected").at("bytes_hex").get<std::string>()));
+    }
+  }
+}
+
+TEST_CASE("tes4_bsa_extract_bytes matches extract path errors for invalid and missing paths",
+          "[unit][fixture][tes4_bsa_lookup]") {
+  auto opened = libbsa::archive_reader::open(generated_archive_path("tes4_v103.bsa").string());
+  REQUIRE(opened.has_value());
+
+  auto invalid = opened.value().extract_bytes("folder//file.txt");
+  REQUIRE_FALSE(invalid.has_value());
+  REQUIRE(invalid.error().code == libbsa::error_code::invalid_argument);
+
+  auto missing = opened.value().extract_bytes("valid/missing/path.txt");
+  REQUIRE_FALSE(missing.has_value());
+  REQUIRE(missing.error().code == libbsa::error_code::not_found);
+}
