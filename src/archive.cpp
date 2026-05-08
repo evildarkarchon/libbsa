@@ -226,8 +226,10 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
     return error{error_code::unsupported, "archive reader is not open"};
   }
   auto found = state_->metadata.variant == archive_variant::tes3
-                   ? formats::bsa::find_tes3_bsa_entry(state_->entries, path)
-                   : formats::bsa::find_tes4_bsa_entry(state_->entries, path);
+                    ? formats::bsa::find_tes3_bsa_entry(state_->entries, path)
+                    : state_->metadata.type == archive_type::ba2
+                          ? formats::ba2::find_ba2_gnrl_entry(state_->entries, path)
+                          : formats::bsa::find_tes4_bsa_entry(state_->entries, path);
   if (!found) {
     return found.error();
   }
@@ -236,6 +238,9 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
   }
   if (state_->metadata.variant == archive_variant::tes3) {
     return formats::bsa::extract_tes3_bsa_payload(state_->host_path, *found.value(), sink);
+  }
+  if (state_->metadata.type == archive_type::ba2) {
+    return formats::ba2::extract_ba2_gnrl_payload(state_->host_path, *found.value(), sink);
   }
   auto payload = read_stored_payload(state_->host_path, *found.value());
   if (!payload) {
