@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <algorithm>
+#include <array>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -353,4 +354,45 @@ TEST_CASE("ba2_gnrl_extract helper routes by metadata and detects partial_sink w
     return entry.at("compression").get<std::string>() == "lz4_block";
   });
   REQUIRE(lz4_sink.bytes() == bytes_from_hex(expected_lz4.at("expected").at("bytes_hex").get<std::string>()));
+}
+
+TEST_CASE("ba2_gnrl_malformed manifest cases fail with stable error codes", "[unit][fixture][ba2_gnrl_malformed]") {
+  const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_malformed_manifest.json"));
+  constexpr auto required_cases = std::to_array<std::string_view>({"ba2_dx10_unsupported",
+                                                                  "ba2_unsupported_v3_compression_method",
+                                                                  "ba2_duplicate_canonical_path",
+                                                                  "ba2_corrupt_compressed_payload",
+                                                                  "ba2_exact_size_mismatch"});
+  std::vector<std::string> observed_cases;
+
+  for (const auto& test_case : manifest.at("cases")) {
+    const auto id = test_case.at("id").get<std::string>();
+    observed_cases.push_back(id);
+    const auto archive = generated_archive_path(test_case.at("archive").get<std::string>()).string();
+    const auto expected_error = error_code_from_manifest(test_case.at("expected_error").get<std::string>());
+    const auto phase = test_case.at("phase").get<std::string>();
+
+    if (phase == "open") {
+      auto opened = libbsa::archive_reader::open(archive);
+
+      REQUIRE_FALSE(opened.has_value());
+      REQUIRE(opened.error().code == expected_error);
+      continue;
+    }
+
+    REQUIRE(phase == "extraction");
+    auto opened = libbsa::archive_reader::open(archive);
+    REQUIRE(opened.has_value());
+    collecting_sink sink;
+
+    auto extracted = opened.value().extract(test_case.at("target_path").get<std::string>(), sink);
+
+    REQUIRE_FALSE(extracted.has_value());
+    REQUIRE(extracted.error().code == expected_error);
+  }
+
+  for (const auto required : required_cases) {
+    INFO("required malformed BA2 case: " << required);
+    REQUIRE(std::find(observed_cases.begin(), observed_cases.end(), required) != observed_cases.end());
+  }
 }
