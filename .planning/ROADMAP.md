@@ -69,7 +69,29 @@ Cross-cutting constraints:
   3. Compression service can decompress deflate, LZ4 frame, and raw LZ4 block payloads only when the exact expected output size is produced.
   4. Writer support can compress deflate, LZ4 frame, and raw LZ4 block payloads by explicit target-format routing rather than extension guesses.
   5. Maintainer can verify TES3, TES4-family, and FO4/BA2 hash outputs against fixture-backed expected values.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 02-01-PLAN.md — Build checked little-endian binary reader/writer primitives for BIN-01 and BIN-02.
+
+**Wave 2** *(blocked on Wave 1 binary primitive foundation)*
+- [ ] 02-02-PLAN.md — Add internal archive path normalization and bounded synchronous payload streaming for BIN-03.
+
+**Wave 3** *(blocked on Wave 2 internal primitive layout)*
+- [ ] 02-03-PLAN.md — Add private libdeflate raw deflate compression/decompression with exact-size validation.
+
+**Wave 4** *(blocked on Wave 3 deflate adapter)*
+- [ ] 02-04-PLAN.md — Add private LZ4 frame/raw-block adapters and explicit compression routing.
+
+**Wave 5** *(blocked on Wave 4 compression services)*
+- [ ] 02-05-PLAN.md — Add TES3, TES4-family, and FO4/BA2 hash functions plus final public-boundary verification.
+
+Cross-cutting constraints:
+- Binary I/O, path, streaming, hash, codec, and routing primitives remain internal under `libbsa::detail` and do not alter `archive_reader::open`.
+- Compression adapters validate exact decompressed output size and keep libdeflate/lz4 types out of installed public headers.
+- `TES5Edit/` remains read-only reference material and must have empty git status after execution.
 
 ### Phase 3: Format Detection and TES4-Family BSA Read/Extract
 **Goal**: Consumers can open, detect, inspect, query, and extract TES4/Oblivion, FO3/FNV/Skyrim LE, and Skyrim SE/AE BSA archives with BSArchPro-compatible behavior.
