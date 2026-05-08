@@ -1,4 +1,5 @@
 find_package(Catch2 CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 add_executable(libbsa_tests
   unit/result_tests.cpp
@@ -19,6 +20,7 @@ target_link_libraries(libbsa_tests
   PRIVATE
     libbsa::libbsa
     Catch2::Catch2WithMain
+    nlohmann_json::nlohmann_json
 )
 
 target_compile_features(libbsa_tests PRIVATE cxx_std_20)

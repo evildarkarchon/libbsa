@@ -2,9 +2,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <libbsa/result.hpp>
 
@@ -97,6 +99,28 @@ class archive_reader {
   /// because real format detection begins in later phases. Empty paths are
   /// rejected as `error_code::invalid_argument`.
   static result<archive_reader> open(std::string_view host_path);
+
+  /// Returns archive-level metadata for a successfully opened archive.
+  [[nodiscard]] result<archive_metadata> metadata() const;
+
+  /// Returns deterministic entry metadata sorted by canonical archive path.
+  [[nodiscard]] result<std::vector<entry_metadata>> entries() const;
+
+  /// Finds metadata for a normalized archive path if it exists.
+  ///
+  /// Invalid archive path syntax is reported as `error_code::invalid_argument`;
+  /// valid missing paths return an empty optional so lookup can distinguish
+  /// absence from malformed caller input.
+  [[nodiscard]] result<std::optional<entry_metadata>> find(std::string_view path) const;
+
+  /// Returns whether a valid archive path exists in the opened archive.
+  [[nodiscard]] result<bool> contains(std::string_view path) const;
+
+  /// Extracts an entry by archive path into a synchronous caller-owned sink.
+  [[nodiscard]] result<void> extract(std::string_view path, payload_sink& sink) const;
+
+  /// Extracts an entry into a bounded in-memory byte vector convenience result.
+  [[nodiscard]] result<std::vector<std::byte>> extract_bytes(std::string_view path) const;
 };
 
 } // namespace libbsa
