@@ -20,3 +20,14 @@ catch_discover_tests(libbsa_tests
   ADD_TAGS_AS_LABELS
   DISCOVERY_MODE PRE_TEST
 )
+
+add_test(
+  NAME package_consumer_smoke
+  COMMAND ${CMAKE_COMMAND}
+    -DLIBBSA_BUILD_DIR=${CMAKE_BINARY_DIR}
+    -DLIBBSA_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/package-consumer-prefix
+    -DCONSUMER_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/package-consumer
+    -DCONSUMER_BUILD_DIR=${CMAKE_BINARY_DIR}/package-consumer-build
+    -DCONFIG=$<CONFIG>
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/package-consumer/smoke.cmake
+)
