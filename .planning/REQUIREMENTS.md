@@ -11,9 +11,9 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 
 - [x] **FND-01**: Consumer can build libbsa as a reusable C++20 library with CMake and vcpkg.
 - [x] **FND-02**: Consumer can choose static or shared library builds without changing public headers.
-- [ ] **FND-03**: Consumer can include public libbsa headers without transitively depending on libdeflate, lz4, DirectXTex, or TES5Edit headers.
-- [ ] **FND-04**: Consumer can receive structured C++20-compatible result/error values for I/O and format failures.
-- [ ] **FND-05**: Consumer can use libbsa objects without process-wide mutable global state or singleton behavior.
+- [x] **FND-03**: Consumer can include public libbsa headers without transitively depending on libdeflate, lz4, DirectXTex, or TES5Edit headers.
+- [x] **FND-04**: Consumer can receive structured C++20-compatible result/error values for I/O and format failures.
+- [x] **FND-05**: Consumer can use libbsa objects without process-wide mutable global state or singleton behavior.
 - [ ] **FND-06**: Maintainer can run Catch2/CTest test suites for unit, fixture, round-trip, compatibility, and slow tests.
 - [x] **FND-07**: Maintainer can add small legal archive fixtures without mutating the `TES5Edit/` submodule or relying on copyrighted game archives in the repo.
 
@@ -158,9 +158,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | FND-01 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
 | FND-02 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
-| FND-03 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
-| FND-04 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
-| FND-05 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
+| FND-03 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
+| FND-04 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
+| FND-05 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
 | FND-06 | Phase 1: Foundation, API Boundary, and Test Harness | Pending |
 | FND-07 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |
 | FMT-01 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
