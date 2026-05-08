@@ -11,6 +11,7 @@
 #include <array>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -114,6 +115,42 @@ std::vector<ba2_success_fixture> ba2_success_fixtures() {
   };
 }
 
+void append_u16_le(std::vector<std::byte>& bytes, std::uint16_t value) {
+  bytes.push_back(static_cast<std::byte>(value & 0xFFU));
+  bytes.push_back(static_cast<std::byte>((value >> 8U) & 0xFFU));
+}
+
+void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
+  for (unsigned shift = 0; shift < 32U; shift += 8U) {
+    bytes.push_back(static_cast<std::byte>((value >> shift) & 0xFFU));
+  }
+}
+
+void append_u64_le(std::vector<std::byte>& bytes, std::uint64_t value) {
+  for (unsigned shift = 0; shift < 64U; shift += 8U) {
+    bytes.push_back(static_cast<std::byte>((value >> shift) & 0xFFU));
+  }
+}
+
+void append_ascii(std::vector<std::byte>& bytes, std::string_view value) {
+  for (const char ch : value) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+}
+
+class temp_file_cleanup final {
+ public:
+  explicit temp_file_cleanup(std::filesystem::path path) : path_{std::move(path)} {}
+
+  ~temp_file_cleanup() {
+    std::error_code ignored;
+    std::filesystem::remove(path_, ignored);
+  }
+
+ private:
+  std::filesystem::path path_;
+};
+
 void require_common_ba2_metadata(const nlohmann::json& manifest,
                                  const libbsa::archive_metadata& metadata,
                                  libbsa::archive_variant expected_variant) {
@@ -188,6 +225,65 @@ TEST_CASE("ba2_gnrl_detector rejects Phase 5 unsupported BA2 profiles with stabl
     REQUIRE_FALSE(opened.has_value());
     REQUIRE(opened.error().code == error_code_from_manifest(test_case.at("expected_error").get<std::string>()));
   }
+}
+
+TEST_CASE("ba2_gnrl_bounded_open opens sparse large-payload archives without reading payload bytes",
+          "[unit][fixture][ba2_gnrl_bounded_open]") {
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-bounded-open.ba2";
+  temp_file_cleanup cleanup{temp_path};
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  constexpr std::uint64_t payload_offset = 0x0000000200000000ULL;
+  constexpr std::uint64_t archive_size = payload_offset + 1U;
+  const std::string archive_path = "meshes/sparse_payload.bin";
+
+  std::vector<std::byte> bytes;
+  append_ascii(bytes, "BTDX");
+  append_u32_le(bytes, 1U);
+  append_ascii(bytes, "GNRL");
+  append_u32_le(bytes, 1U);
+  append_u64_le(bytes, 60U);
+
+  append_u32_le(bytes, 0x12345678U);
+  append_ascii(bytes, "BIN\0");
+  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, 0x0000002AU);
+  append_u64_le(bytes, payload_offset);
+  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, 1U);
+  append_u32_le(bytes, 0xBAADF00DU);
+
+  append_u16_le(bytes, static_cast<std::uint16_t>(archive_path.size()));
+  append_ascii(bytes, archive_path);
+
+  {
+    std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
+    REQUIRE(output.good());
+    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(output.good());
+  }
+
+  std::error_code resize_error;
+  std::filesystem::resize_file(temp_path, archive_size, resize_error);
+  if (resize_error) {
+    SKIP("filesystem does not support sparse BA2 bounded-open fixture");
+  }
+
+  auto opened = libbsa::archive_reader::open(temp_path.string());
+
+  REQUIRE(opened.has_value());
+  auto entries = opened.value().entries();
+  REQUIRE(entries.has_value());
+  REQUIRE(entries.value().size() == 1U);
+
+  const auto& entry = entries.value().front();
+  REQUIRE(entry.path == archive_path);
+  REQUIRE(entry.original_path == archive_path);
+  REQUIRE(entry.payload_offset == payload_offset);
+  REQUIRE(entry.raw_size == 1U);
+  REQUIRE(entry.stored_size == 1U);
+  REQUIRE(entry.compression == libbsa::entry_compression::none);
 }
 
 TEST_CASE("ba2_gnrl_metadata lists manifest-backed records from filename tables",
