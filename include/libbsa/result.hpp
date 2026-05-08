@@ -31,8 +31,9 @@ struct error {
 /// C++20-compatible result type used by libbsa public APIs.
 ///
 /// This is a deliberately small expected-like type. I/O and format failures are
-/// represented as `error` values; calling `value()` on an error result is a
-/// programmer mistake and throws `std::logic_error`.
+/// represented as `error` values. Calling `value()` on an error result or
+/// `error()` on a successful result is a programmer mistake and throws
+/// `std::logic_error`.
 template <typename T>
 class result {
  public:
@@ -74,8 +75,11 @@ class result {
     return std::move(std::get<T>(storage_));
   }
 
-  /// Returns the contained error.
-  [[nodiscard]] const libbsa::error& error() const noexcept {
+  /// Returns the contained error, or throws if this result contains a value.
+  [[nodiscard]] const libbsa::error& error() const {
+    if (has_value()) {
+      throw std::logic_error("libbsa::result has no error");
+    }
     return std::get<libbsa::error>(storage_);
   }
 
@@ -106,8 +110,13 @@ class result<void> {
     }
   }
 
-  /// Returns the contained error.
-  [[nodiscard]] const libbsa::error& error() const noexcept { return error_; }
+  /// Returns the contained error, or throws if this result represents success.
+  [[nodiscard]] const libbsa::error& error() const {
+    if (has_value()) {
+      throw std::logic_error("libbsa::result<void> has no error");
+    }
+    return error_;
+  }
 
  private:
   libbsa::error error_{error_code::unsupported, {}};

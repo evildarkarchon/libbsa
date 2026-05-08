@@ -212,6 +212,64 @@ TEST_CASE("tes4_bsa_malformed_open rejects count-derived table spans before allo
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
 
+TEST_CASE("tes4_bsa_malformed_open rejects folder record counts before allocation",
+          "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
+  auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+  overwrite_u32_le(bytes, 44U, 0xFFFF'FFFFU);
+
+  const auto mutated = std::filesystem::temp_directory_path() / "libbsa_oversized_folder_file_count.bsa";
+  write_binary_file(mutated, bytes);
+
+  auto opened = libbsa::archive_reader::open(mutated.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("tes4_bsa_malformed_open rejects matched oversized file counts before allocation",
+          "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
+  auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+  overwrite_u32_le(bytes, 20U, 0xFFFF'FFFFU);
+  overwrite_u32_le(bytes, 44U, 0xFFFF'FFFFU);
+
+  const auto mutated = std::filesystem::temp_directory_path() / "libbsa_matched_oversized_file_counts.bsa";
+  write_binary_file(mutated, bytes);
+
+  auto opened = libbsa::archive_reader::open(mutated.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("tes4_bsa_malformed_open rejects inconsistent table offsets",
+          "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
+  SECTION("header folder offset") {
+    auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+    overwrite_u32_le(bytes, 8U, 40U);
+
+    const auto mutated = std::filesystem::temp_directory_path() / "libbsa_bad_header_folder_offset.bsa";
+    write_binary_file(mutated, bytes);
+
+    auto opened = libbsa::archive_reader::open(mutated.string());
+
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+  }
+
+  SECTION("folder record offset") {
+    auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+    overwrite_u32_le(bytes, 48U, 52U);
+
+    const auto mutated = std::filesystem::temp_directory_path() / "libbsa_bad_folder_record_offset.bsa";
+    write_binary_file(mutated, bytes);
+
+    auto opened = libbsa::archive_reader::open(mutated.string());
+
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+  }
+}
+
 TEST_CASE("tes4_bsa_entry_metadata materializes table paths, hashes, sizes, and embedded names",
           "[unit][fixture][tes4_bsa_entry_metadata][tes4_bsa_listing][tes4_bsa_embedded_name]") {
   for (const auto& fixture : success_fixtures()) {
@@ -371,6 +429,21 @@ TEST_CASE("tes4_bsa_extract maps invalid and missing paths to stable errors", "[
   auto missing = opened.value().extract("valid/missing/path.txt", sink);
   REQUIRE_FALSE(missing.has_value());
   REQUIRE(missing.error().code == libbsa::error_code::not_found);
+}
+
+TEST_CASE("tes4_bsa_extract reads selected payloads from the host archive on demand",
+          "[unit][fixture][tes4_bsa_v103_extract]") {
+  const auto temp_archive = std::filesystem::temp_directory_path() / "libbsa_on_demand_extract.bsa";
+  write_binary_file(temp_archive, read_binary_file(generated_archive_path("tes4_v103.bsa")));
+  auto opened = libbsa::archive_reader::open(temp_archive.string());
+  REQUIRE(opened.has_value());
+  std::filesystem::remove(temp_archive);
+  collecting_sink sink;
+
+  auto extracted = opened.value().extract("meshes/tiny/rawmesh.nif", sink);
+
+  REQUIRE_FALSE(extracted.has_value());
+  REQUIRE(extracted.error().code == libbsa::error_code::io_error);
 }
 
 TEST_CASE("tes4_bsa_compression_routing rejects corrupt compressed payloads and size mismatches",

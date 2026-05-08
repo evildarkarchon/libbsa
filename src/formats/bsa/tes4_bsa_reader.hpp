@@ -19,8 +19,8 @@ result<std::optional<entry_metadata>> find_tes4_bsa_entry(std::span<const entry_
 /// Reports TES4-family entry presence using the same normalization and errors as find.
 result<bool> contains_tes4_bsa_entry(std::span<const entry_metadata> entries, std::string_view path);
 
-/// Extracts one TES4-family entry selected by archive path into a caller-owned sink.
-result<void> extract_tes4_bsa_entry(std::span<const std::byte> archive_bytes, std::span<const entry_metadata> entries,
-                                    std::string_view path, payload_sink& sink);
+/// Extracts one already-selected TES4-family stored payload into a caller-owned sink.
+result<void> extract_tes4_bsa_payload(std::span<const std::byte> stored_payload, const entry_metadata& entry,
+                                      payload_sink& sink);
 
 } // namespace libbsa::formats::bsa

@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-05-08T08:10:34.830Z"
+status: ready_to_plan
+stopped_at: Phase 03 complete, ready to plan Phase 04
+last_updated: "2026-05-08T01:55:10.131Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 12
@@ -18,25 +18,25 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-07)
+See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 03 — format-detection-and-tes4-family-bsa-read-extract
+**Current focus:** Phase 04 — tes3-bsa-read/extract
 
 ## Current Position
 
-Phase: 03 (format-detection-and-tes4-family-bsa-read-extract) — EXECUTING
-Plan: 6 of 6
-Status: Phase complete — ready for verification
+Phase: 4 (tes3-bsa-read/extract)
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-05-08
 
-Progress: [██████████] 100%
+Progress: [████████████████████] 16/16 plans (100%)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 6
+- Total plans completed: 16
 - Average duration: 13.7 min
 - Total execution time: 1.5 hours
 
@@ -44,7 +44,7 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 03 | 6 | - | - |
 
 | Phase 01 P01 | 8 min | 2 tasks | 7 files |
 | Phase 01 P04 | 5 min | 2 tasks | 5 files |
@@ -86,6 +86,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 03]: TES4-family lookup is canonical-path based and rejects duplicate normalized keys during open. — Ensures deterministic find/contains semantics for archive consumers.
 - [Phase 03]: TES4-family extraction remains path-first on archive_reader and returns not_found for valid missing paths while preserving invalid_argument for malformed archive paths. — Plan 03-06 preserves D-14/D-20 caller semantics.
 - [Phase 03]: extract_bytes is a convenience adapter over extract(path, sink), not a separate decoding path. — Keeps embedded-name and compression behavior identical across APIs.
+- [Phase 03]: TES4-family reader state stores host path plus metadata, not whole archive bytes. — Verification required bounded open/extract behavior before completing the phase.
 
 ### Pending Todos
 
@@ -107,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T08:10:34.825Z
-Stopped at: Completed 03-06-PLAN.md
+Last session: 2026-05-08T01:55:10.131Z
+Stopped at: Phase 03 complete, ready to plan Phase 04
 Resume file: None

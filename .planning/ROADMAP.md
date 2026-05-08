@@ -13,8 +13,8 @@ libbsa will be built as a compatibility-driven C++20 archive library: establish 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation, API Boundary, and Test Harness** - Consumers and maintainers can build, include, test, and evolve libbsa without dependency or TES5Edit leakage.
-- [ ] **Phase 2: Binary I/O, Paths, Hashes, and Compression Services** - Parsers and writers share safe binary, virtual path, hash, streaming, and compression primitives.
-- [ ] **Phase 3: Format Detection and TES4-Family BSA Read/Extract** - Consumers can detect, inspect, query, and extract TES4/FO3/FNV/Skyrim LE/SSE BSA archives.
+- [x] **Phase 2: Binary I/O, Paths, Hashes, and Compression Services** - Parsers and writers share safe binary, virtual path, hash, streaming, and compression primitives.
+- [x] **Phase 3: Format Detection and TES4-Family BSA Read/Extract** - Consumers can detect, inspect, query, and extract TES4/FO3/FNV/Skyrim LE/SSE BSA archives.
 - [ ] **Phase 4: TES3 BSA Read/Extract** - Consumers can read and extract Morrowind BSA archives with TES3-specific offset semantics.
 - [ ] **Phase 5: BA2 GNRL Read/Extract** - Consumers can read and extract Fallout 4 and Starfield general BA2 archives.
 - [ ] **Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction** - Consumers can inspect and extract BA2 texture archives as valid DDS files.
@@ -231,8 +231,8 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation, API Boundary, and Test Harness | 5/5 | Complete | 2026-05-08 |
-| 2. Binary I/O, Paths, Hashes, and Compression Services | 0/TBD | Not started | - |
-| 3. Format Detection and TES4-Family BSA Read/Extract | 3/6 | In Progress | - |
+| 2. Binary I/O, Paths, Hashes, and Compression Services | 5/5 | Complete | 2026-05-08 |
+| 3. Format Detection and TES4-Family BSA Read/Extract | 6/6 | Complete | 2026-05-08 |
 | 4. TES3 BSA Read/Extract | 0/TBD | Not started | - |
 | 5. BA2 GNRL Read/Extract | 0/TBD | Not started | - |
 | 6. DDS Boundary and BA2 DX10 Read/Reconstruction | 0/TBD | Not started | - |

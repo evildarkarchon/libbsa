@@ -67,37 +67,18 @@ result<void> write_in_chunks(payload_sink& sink, std::span<const std::byte> byte
   return {};
 }
 
-result<std::span<const std::byte>> payload_span_for(std::span<const std::byte> archive_bytes,
-                                                    const entry_metadata& entry) {
-  auto offset = checked_size(entry.payload_offset, "TES4 BSA payload offset");
-  if (!offset) {
-    return offset.error();
-  }
-  auto stored_size = checked_size(entry.stored_size, "TES4 BSA stored payload size");
-  if (!stored_size) {
-    return stored_size.error();
-  }
-  if (!span_fits(offset.value(), stored_size.value(), archive_bytes.size())) {
-    return error{error_code::format_error, "TES4 BSA entry payload span is outside the archive"};
-  }
-  return archive_bytes.subspan(offset.value(), stored_size.value());
-}
-
-result<std::span<const std::byte>> consumer_payload_span(std::span<const std::byte> archive_bytes,
+result<std::span<const std::byte>> consumer_payload_span(std::span<const std::byte> stored_payload,
                                                          const entry_metadata& entry) {
-  auto payload = payload_span_for(archive_bytes, entry);
-  if (!payload) {
-    return payload.error();
-  }
-  if (entry.embedded_name_prefix_size > payload.value().size()) {
+  if (entry.embedded_name_prefix_size > stored_payload.size()) {
     return error{error_code::format_error, "TES4 BSA embedded-name prefix exceeds stored payload"};
   }
   // Embedded names are part of the on-disk payload but not the consumer-visible file bytes.
-  return payload.value().subspan(entry.embedded_name_prefix_size);
+  return stored_payload.subspan(entry.embedded_name_prefix_size);
 }
 
-result<void> extract_payload(std::span<const std::byte> archive_bytes, const entry_metadata& entry, payload_sink& sink) {
-  auto payload = consumer_payload_span(archive_bytes, entry);
+result<void> extract_stored_payload(std::span<const std::byte> stored_payload, const entry_metadata& entry,
+                                    payload_sink& sink) {
+  auto payload = consumer_payload_span(stored_payload, entry);
   if (!payload) {
     return payload.error();
   }
@@ -150,16 +131,9 @@ result<bool> contains_tes4_bsa_entry(std::span<const entry_metadata> entries, st
   return found.value().has_value();
 }
 
-result<void> extract_tes4_bsa_entry(std::span<const std::byte> archive_bytes, std::span<const entry_metadata> entries,
-                                    std::string_view path, payload_sink& sink) {
-  auto found = find_tes4_bsa_entry(entries, path);
-  if (!found) {
-    return found.error();
-  }
-  if (!found.value()) {
-    return error{error_code::not_found, "archive path was not found"};
-  }
-  return extract_payload(archive_bytes, *found.value(), sink);
+result<void> extract_tes4_bsa_payload(std::span<const std::byte> stored_payload, const entry_metadata& entry,
+                                      payload_sink& sink) {
+  return extract_stored_payload(stored_payload, entry, sink);
 }
 
 } // namespace libbsa::formats::bsa

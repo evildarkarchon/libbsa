@@ -82,6 +82,8 @@ Testing must prove byte-level and metadata-level compatibility. Expected coverag
 | Use DirectXTex only behind an internal texture-analysis boundary | DDS metadata work needs robust DXGI handling without leaking DirectXTex into public headers | - Pending |
 | Avoid `std::expected` in the C++20 public API | It is C++23; a local result type or explicit error-code API preserves C++20 portability | - Pending |
 | Sequence implementation read-first, then write, then performance/hardening | Correct parsing and extraction are prerequisites for reliable round-trip and compatibility validation | - Pending |
+| TES4-family reader state stores host path plus metadata, not whole archive bytes | Phase 03 verification required bounded open/extract behavior for large archives | Implemented in Phase 03 |
+| `libbsa::result::error()` reports success-result misuse with `std::logic_error` | Public API precondition mistakes should not terminate the process or return a misleading default error | Implemented in Phase 03 |
 
 ## Evolution
 
@@ -101,4 +103,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-07 after initialization*
+*Last updated: 2026-05-08 after Phase 03*

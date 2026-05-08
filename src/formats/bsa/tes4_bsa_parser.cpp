@@ -5,8 +5,10 @@
 #include <detail/binary_io.hpp>
 
 #include <algorithm>
+#include <fstream>
 #include <limits>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
@@ -67,8 +69,41 @@ bool multiply_fits(std::uint32_t count, std::size_t width, std::size_t& total) n
   return true;
 }
 
+bool add_fits(std::size_t lhs, std::size_t rhs, std::size_t& total) noexcept {
+  if (lhs > std::numeric_limits<std::size_t>::max() - rhs) {
+    return false;
+  }
+  total = lhs + rhs;
+  return true;
+}
+
 bool span_fits(std::size_t start, std::size_t length, std::size_t total) noexcept {
   return start <= total && length <= total - start;
+}
+
+result<std::vector<std::byte>> read_file_bytes_at(std::ifstream& input, std::uint64_t offset, std::size_t count,
+                                                  std::string_view description) {
+  if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
+    return error{error_code::format_error, std::string{description} + " offset exceeds stream limits"};
+  }
+  if (count > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max())) {
+    return error{error_code::format_error, std::string{description} + " size exceeds stream limits"};
+  }
+
+  std::vector<std::byte> bytes(count);
+  input.clear();
+  input.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
+  if (!input) {
+    return error{error_code::io_error, std::string{"failed to seek while reading "} + std::string{description}};
+  }
+  input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  if (input.bad()) {
+    return error{error_code::io_error, std::string{"failed while reading "} + std::string{description}};
+  }
+  if (static_cast<std::size_t>(input.gcount()) != bytes.size()) {
+    return error{error_code::format_error, std::string{description} + " is truncated"};
+  }
+  return bytes;
 }
 
 result<header_fields> read_header(detail::binary_reader& reader) {
@@ -103,7 +138,29 @@ result<header_fields> read_header(detail::binary_reader& reader) {
                        file_count.value(),
                        total_folder_name_length.value(),
                        total_file_name_length.value(),
-                       file_flags.value()};
+                        file_flags.value()};
+}
+
+result<std::size_t> metadata_table_size(const header_fields& header, std::size_t folder_record_size,
+                                        std::size_t archive_size) {
+  std::size_t folder_records_size = 0;
+  std::size_t file_records_size = 0;
+  if (!multiply_fits(header.folder_count, folder_record_size, folder_records_size) ||
+      !multiply_fits(header.file_count, file_record_size, file_records_size)) {
+    return error{error_code::format_error, "TES4 BSA metadata table is too large"};
+  }
+
+  std::size_t total = fixed_header_size;
+  if (!add_fits(total, folder_records_size, total) ||
+      !add_fits(total, static_cast<std::size_t>(header.total_folder_name_length), total) ||
+      !add_fits(total, file_records_size, total) ||
+      !add_fits(total, static_cast<std::size_t>(header.total_file_name_length), total)) {
+    return error{error_code::format_error, "TES4 BSA metadata table is too large"};
+  }
+  if (!span_fits(0U, total, archive_size)) {
+    return error{error_code::format_error, "TES4 BSA metadata table extends beyond archive bytes"};
+  }
+  return total;
 }
 
 std::string bytes_to_string(std::span<const std::byte> bytes) {
@@ -134,6 +191,21 @@ result<std::string> read_bsa_name(detail::binary_reader& reader, std::uint8_t en
   return bytes_to_string(bytes.value().first(bytes.value().size() - 1U));
 }
 
+result<void> validate_folder_file_counts(const header_fields& header, std::span<const folder_record> folders) {
+  std::size_t file_records_seen = 0;
+  const auto expected_records = static_cast<std::size_t>(header.file_count);
+  for (const auto& folder : folders) {
+    if (folder.file_count > expected_records - file_records_seen) {
+      return error{error_code::format_error, "TES4 BSA folder file counts exceed header file count"};
+    }
+    file_records_seen += folder.file_count;
+  }
+  if (file_records_seen != expected_records) {
+    return error{error_code::format_error, "TES4 BSA folder file counts do not match header file count"};
+  }
+  return {};
+}
+
 result<std::vector<folder_block>> read_folder_blocks(detail::binary_reader& reader, const header_fields& header,
                                                      std::span<const folder_record> folders) {
   std::vector<folder_block> blocks;
@@ -141,6 +213,12 @@ result<std::vector<folder_block>> read_folder_blocks(detail::binary_reader& read
   std::size_t file_records_seen = 0;
   std::size_t folder_name_bytes_seen = 0;
   for (const auto& folder : folders) {
+    // TES5Edit-compatible folder offsets include the later file-name table length,
+    // even though this parser consumes folder blocks sequentially from the stream.
+    if (folder.offset != static_cast<std::uint64_t>(reader.position()) + header.total_file_name_length) {
+      return error{error_code::format_error, "TES4 BSA folder block offset does not match parsed table layout"};
+    }
+
     const auto name_size = reader.read_u8();
     if (!name_size) {
       return error{error_code::format_error, "TES4 BSA folder name table is truncated"};
@@ -215,22 +293,28 @@ entry_compression compression_for(const header_fields& header, std::uint32_t siz
   return header.version == sse_version ? entry_compression::lz4_frame : entry_compression::deflate;
 }
 
-result<std::uint32_t> embedded_prefix_size(std::span<const std::byte> bytes, const file_record& record,
-                                           std::uint32_t stored_size) {
-  if (!span_fits(record.offset, 1U, bytes.size())) {
+template <typename PayloadReader>
+result<std::uint32_t> embedded_prefix_size(std::size_t archive_size, const file_record& record,
+                                           std::uint32_t stored_size, PayloadReader& read_payload_bytes) {
+  if (!span_fits(record.offset, 1U, archive_size)) {
     return error{error_code::format_error, "TES4 BSA embedded-name prefix is outside the archive"};
   }
-  const auto length = static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[record.offset]));
+  auto bytes = read_payload_bytes(record.offset, 1U);
+  if (!bytes) {
+    return bytes.error();
+  }
+  const auto length = static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.value()[0]));
   const auto prefix_size = length + 1U;
-  if (prefix_size > stored_size || !span_fits(record.offset, prefix_size, bytes.size())) {
+  if (prefix_size > stored_size || !span_fits(record.offset, prefix_size, archive_size)) {
     return error{error_code::format_error, "TES4 BSA embedded-name prefix exceeds stored payload"};
   }
   return prefix_size;
 }
 
-result<std::uint32_t> raw_size_for(std::span<const std::byte> bytes, const file_record& record,
-                                   entry_compression compression, std::uint32_t stored_size,
-                                   std::uint32_t embedded_prefix) {
+template <typename PayloadReader>
+result<std::uint32_t> raw_size_for(std::size_t archive_size, const file_record& record, entry_compression compression,
+                                   std::uint32_t stored_size, std::uint32_t embedded_prefix,
+                                   PayloadReader& read_payload_bytes) {
   if (embedded_prefix > stored_size) {
     return error{error_code::format_error, "TES4 BSA embedded-name prefix exceeds stored payload"};
   }
@@ -239,18 +323,24 @@ result<std::uint32_t> raw_size_for(std::span<const std::byte> bytes, const file_
   if (compression == entry_compression::none) {
     return remaining;
   }
-  if (remaining < 4U || !span_fits(cursor, 4U, bytes.size())) {
+  if (remaining < 4U || !span_fits(cursor, 4U, archive_size)) {
     return error{error_code::format_error, "TES4 BSA compressed payload size prefix is truncated"};
   }
-  return static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[cursor])) |
-         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[cursor + 1U])) << 8U) |
-         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[cursor + 2U])) << 16U) |
-         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[cursor + 3U])) << 24U);
+  auto bytes = read_payload_bytes(cursor, 4U);
+  if (!bytes) {
+    return bytes.error();
+  }
+  return static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.value()[0])) |
+         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.value()[1U])) << 8U) |
+         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.value()[2U])) << 16U) |
+         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.value()[3U])) << 24U);
 }
 
-result<std::vector<entry_metadata>> materialize_entries(std::span<const std::byte> bytes, const header_fields& header,
+template <typename PayloadReader>
+result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size, const header_fields& header,
                                                         std::span<const folder_block> folders,
-                                                        std::span<const std::string> file_names) {
+                                                        std::span<const std::string> file_names,
+                                                        PayloadReader& read_payload_bytes) {
   std::vector<entry_metadata> entries;
   entries.reserve(header.file_count);
   std::unordered_set<std::string> canonical_paths;
@@ -273,19 +363,19 @@ result<std::vector<entry_metadata>> materialize_entries(std::span<const std::byt
       }
 
       const auto stored_size = record.size_flags & ~file_size_compression_toggle;
-      if (!span_fits(record.offset, stored_size, bytes.size())) {
+      if (!span_fits(record.offset, stored_size, archive_size)) {
         return error{error_code::format_error, "TES4 BSA entry payload span is outside the archive"};
       }
       const auto compression = compression_for(header, record.size_flags);
       std::uint32_t prefix_size = 0;
       if (has_embedded_names) {
-        auto prefix = embedded_prefix_size(bytes, record, stored_size);
+        auto prefix = embedded_prefix_size(archive_size, record, stored_size, read_payload_bytes);
         if (!prefix) {
           return prefix.error();
         }
         prefix_size = prefix.value();
       }
-      auto raw_size = raw_size_for(bytes, record, compression, stored_size, prefix_size);
+      auto raw_size = raw_size_for(archive_size, record, compression, stored_size, prefix_size, read_payload_bytes);
       if (!raw_size) {
         return raw_size.error();
       }
@@ -389,20 +479,23 @@ result<void> validate_tables(detail::binary_reader& reader, const header_fields&
   return {};
 }
 
-} // namespace
-
-result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes, detected_bsa_format detected) {
-  if (bytes.size() < fixed_header_size) {
+template <typename PayloadReader>
+result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> table_bytes, std::size_t archive_size,
+                                                     detected_bsa_format detected, PayloadReader& read_payload_bytes) {
+  if (table_bytes.size() < fixed_header_size) {
     return error{error_code::format_error, "TES4 BSA header is truncated"};
   }
 
-  detail::binary_reader reader{bytes};
+  detail::binary_reader reader{table_bytes};
   auto header = read_header(reader);
   if (!header) {
     return header.error();
   }
   if (header.value().version != detected.version) {
     return error{error_code::format_error, "TES4 BSA detected version does not match parsed header"};
+  }
+  if (header.value().folder_offset != fixed_header_size) {
+    return error{error_code::format_error, "TES4 BSA folder record offset does not match supported table layout"};
   }
   if ((header.value().archive_flags & archive_include_directory_names) == 0U ||
       (header.value().archive_flags & archive_include_file_names) == 0U || header.value().total_folder_name_length == 0U ||
@@ -411,9 +504,13 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes
   }
 
   const auto folder_record_size = detected.version == sse_version ? sse_folder_record_size : legacy_folder_record_size;
+  auto table_size = metadata_table_size(header.value(), folder_record_size, archive_size);
+  if (!table_size) {
+    return table_size.error();
+  }
   std::size_t folder_records_size = 0;
   if (!multiply_fits(header.value().folder_count, folder_record_size, folder_records_size) ||
-      !span_fits(fixed_header_size, folder_records_size, bytes.size())) {
+      !span_fits(fixed_header_size, folder_records_size, table_bytes.size()) || table_bytes.size() < table_size.value()) {
     return error{error_code::format_error, "TES4 BSA folder record span is outside the archive"};
   }
 
@@ -421,24 +518,36 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes
   if (!folder_records) {
     return folder_records.error();
   }
+  auto folder_counts = validate_folder_file_counts(header.value(), folder_records.value());
+  if (!folder_counts) {
+    return folder_counts.error();
+  }
+  detail::binary_reader table_validator{table_bytes};
+  auto skipped_header_and_records = table_validator.skip(fixed_header_size + folder_records_size);
+  if (!skipped_header_and_records) {
+    return skipped_header_and_records.error();
+  }
+  auto tables = validate_tables(table_validator, header.value(), folder_records.value(), table_bytes.size());
+  if (!tables) {
+    return tables.error();
+  }
   auto folder_blocks = read_folder_blocks(reader, header.value(), folder_records.value());
   if (!folder_blocks) {
     return folder_blocks.error();
   }
   const auto file_names_start = reader.position();
-  if (!span_fits(file_names_start, header.value().total_file_name_length, bytes.size())) {
+  if (!span_fits(file_names_start, header.value().total_file_name_length, table_bytes.size())) {
     return error{error_code::format_error, "TES4 BSA file name table extends beyond archive bytes"};
   }
   auto file_names = read_file_names(reader, header.value().file_count, header.value().total_file_name_length);
   if (!file_names) {
     return file_names.error();
   }
-  auto entries = materialize_entries(bytes, header.value(), folder_blocks.value(), file_names.value());
+  auto entries = materialize_entries(archive_size, header.value(), folder_blocks.value(), file_names.value(),
+                                     read_payload_bytes);
   if (!entries) {
     return entries.error();
   }
-
-  (void)header.value().folder_offset;
   (void)header.value().file_flags;
   return tes4_bsa_archive{archive_metadata{archive_type::bsa,
                                            detected.variant,
@@ -446,7 +555,61 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes
                                            header.value().archive_flags,
                                            header.value().file_count,
                                            detected.default_compression},
-                          std::move(entries.value())};
+                           std::move(entries.value())};
+}
+
+} // namespace
+
+result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes, detected_bsa_format detected) {
+  auto read_payload_bytes = [bytes](std::uint64_t offset, std::size_t count) -> result<std::vector<std::byte>> {
+    if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+      return error{error_code::format_error, "TES4 BSA payload offset exceeds platform limits"};
+    }
+    const auto start = static_cast<std::size_t>(offset);
+    if (!span_fits(start, count, bytes.size())) {
+      return error{error_code::format_error, "TES4 BSA payload prefix is truncated"};
+    }
+    const auto payload = bytes.subspan(start, count);
+    return std::vector<std::byte>{payload.begin(), payload.end()};
+  };
+  return parse_tes4_bsa_archive_impl(bytes, bytes.size(), detected, read_payload_bytes);
+}
+
+result<tes4_bsa_archive> parse_tes4_bsa_archive_file(std::string_view host_path, std::uint64_t archive_size,
+                                                     detected_bsa_format detected) {
+  if (archive_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+    return error{error_code::format_error, "TES4 BSA archive exceeds platform limits"};
+  }
+
+  std::ifstream input{std::string{host_path}, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "failed to open archive host path"};
+  }
+  auto header_bytes = read_file_bytes_at(input, 0U, fixed_header_size, "TES4 BSA fixed header");
+  if (!header_bytes) {
+    return header_bytes.error();
+  }
+  detail::binary_reader header_reader{header_bytes.value()};
+  auto header = read_header(header_reader);
+  if (!header) {
+    return header.error();
+  }
+
+  const auto folder_record_size = detected.version == sse_version ? sse_folder_record_size : legacy_folder_record_size;
+  auto table_size = metadata_table_size(header.value(), folder_record_size, static_cast<std::size_t>(archive_size));
+  if (!table_size) {
+    return table_size.error();
+  }
+  auto table_bytes = read_file_bytes_at(input, 0U, table_size.value(), "TES4 BSA metadata table");
+  if (!table_bytes) {
+    return table_bytes.error();
+  }
+
+  auto read_payload_bytes = [&input](std::uint64_t offset, std::size_t count) -> result<std::vector<std::byte>> {
+    return read_file_bytes_at(input, offset, count, "TES4 BSA payload prefix");
+  };
+  return parse_tes4_bsa_archive_impl(table_bytes.value(), static_cast<std::size_t>(archive_size), detected,
+                                     read_payload_bytes);
 }
 
 result<archive_metadata> parse_tes4_bsa_metadata(std::span<const std::byte> bytes, detected_bsa_format detected) {

@@ -6,7 +6,8 @@
 
 #include <cstddef>
 #include <fstream>
-#include <iterator>
+#include <limits>
+#include <string>
 #include <vector>
 
 namespace libbsa {
@@ -14,7 +15,7 @@ namespace libbsa {
 struct archive_reader::state {
   archive_metadata metadata;
   std::vector<entry_metadata> entries;
-  std::vector<std::byte> archive_bytes;
+  std::string host_path;
 };
 
 archive_reader::archive_reader(archive_metadata metadata)
@@ -44,20 +45,61 @@ class vector_payload_sink final : public payload_sink {
   std::vector<std::byte> bytes_;
 };
 
-result<std::vector<std::byte>> read_archive_bytes(std::string_view host_path) {
+result<std::vector<std::byte>> read_detection_prefix(std::string_view host_path) {
   std::ifstream input{std::string{host_path}, std::ios::binary};
   if (!input) {
     return error{error_code::io_error, "failed to open archive host path"};
   }
 
-  std::vector<std::byte> bytes;
-  for (char ch = 0; input.get(ch);) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
-  }
+  std::vector<std::byte> bytes(8U);
+  input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
   if (input.bad()) {
     return error{error_code::io_error, "failed while reading archive host path"};
   }
+  bytes.resize(static_cast<std::size_t>(input.gcount()));
   return bytes;
+}
+
+result<std::uint64_t> archive_file_size(std::string_view host_path) {
+  std::ifstream input{std::string{host_path}, std::ios::binary | std::ios::ate};
+  if (!input) {
+    return error{error_code::io_error, "failed to open archive host path"};
+  }
+  const auto size = input.tellg();
+  if (size < std::streampos{0}) {
+    return error{error_code::io_error, "failed to determine archive host path size"};
+  }
+  return static_cast<std::uint64_t>(size);
+}
+
+result<std::vector<std::byte>> read_stored_payload(std::string_view host_path, const entry_metadata& entry) {
+  std::ifstream input{std::string{host_path}, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "failed to open archive host path for extraction"};
+  }
+  if (entry.payload_offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
+    return error{error_code::format_error, "TES4 BSA payload offset exceeds stream limits"};
+  }
+  if (entry.stored_size > static_cast<std::uint64_t>(std::vector<std::byte>{}.max_size())) {
+    return error{error_code::format_error, "TES4 BSA stored payload exceeds platform vector limits"};
+  }
+  if (entry.stored_size > static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max())) {
+    return error{error_code::format_error, "TES4 BSA stored payload exceeds stream limits"};
+  }
+
+  std::vector<std::byte> payload(static_cast<std::size_t>(entry.stored_size));
+  input.seekg(static_cast<std::streamoff>(entry.payload_offset), std::ios::beg);
+  if (!input) {
+    return error{error_code::io_error, "failed to seek to archive payload"};
+  }
+  input.read(reinterpret_cast<char*>(payload.data()), static_cast<std::streamsize>(payload.size()));
+  if (input.bad()) {
+    return error{error_code::io_error, "failed while reading archive payload"};
+  }
+  if (static_cast<std::size_t>(input.gcount()) != payload.size()) {
+    return error{error_code::format_error, "TES4 BSA entry payload span is outside the archive"};
+  }
+  return payload;
 }
 
 } // namespace
@@ -67,23 +109,28 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     return error{error_code::invalid_argument, "archive path must not be empty"};
   }
 
-  auto bytes = read_archive_bytes(host_path);
-  if (!bytes) {
-    return bytes.error();
+  auto prefix = read_detection_prefix(host_path);
+  if (!prefix) {
+    return prefix.error();
   }
 
-  auto detected = formats::bsa::detect_bsa_format(bytes.value());
+  auto detected = formats::bsa::detect_bsa_format(prefix.value());
   if (!detected) {
     return detected.error();
   }
 
-  auto archive = formats::bsa::parse_tes4_bsa_archive(bytes.value(), detected.value());
+  auto archive_size = archive_file_size(host_path);
+  if (!archive_size) {
+    return archive_size.error();
+  }
+  auto archive = formats::bsa::parse_tes4_bsa_archive_file(host_path, archive_size.value(), detected.value());
   if (!archive) {
     return archive.error();
   }
 
   archive_reader reader{archive.value().metadata};
-  reader.state_ = std::make_shared<state>(state{archive.value().metadata, std::move(archive.value().entries), std::move(bytes.value())});
+  reader.state_ = std::make_shared<state>(
+      state{archive.value().metadata, std::move(archive.value().entries), std::string{host_path}});
   return reader;
 }
 
@@ -119,7 +166,18 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
   if (!state_) {
     return error{error_code::unsupported, "archive reader is not open"};
   }
-  return formats::bsa::extract_tes4_bsa_entry(state_->archive_bytes, state_->entries, path, sink);
+  auto found = formats::bsa::find_tes4_bsa_entry(state_->entries, path);
+  if (!found) {
+    return found.error();
+  }
+  if (!found.value()) {
+    return error{error_code::not_found, "archive path was not found"};
+  }
+  auto payload = read_stored_payload(state_->host_path, *found.value());
+  if (!payload) {
+    return payload.error();
+  }
+  return formats::bsa::extract_tes4_bsa_payload(payload.value(), *found.value(), sink);
 }
 
 result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view path) const {

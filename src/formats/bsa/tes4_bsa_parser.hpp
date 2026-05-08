@@ -6,7 +6,9 @@
 #include <libbsa/result.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace libbsa::formats::bsa {
@@ -19,6 +21,10 @@ struct tes4_bsa_archive {
 
 /// Parses checked TES4-family BSA header, table, name, and entry metadata state.
 result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes, detected_bsa_format detected);
+
+/// Parses checked TES4-family BSA state from bounded host-file metadata and payload-prefix reads.
+result<tes4_bsa_archive> parse_tes4_bsa_archive_file(std::string_view host_path, std::uint64_t archive_size,
+                                                     detected_bsa_format detected);
 
 /// Parses enough checked TES4-family BSA header state to expose public metadata.
 result<archive_metadata> parse_tes4_bsa_metadata(std::span<const std::byte> bytes, detected_bsa_format detected);

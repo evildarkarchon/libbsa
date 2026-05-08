@@ -75,9 +75,9 @@ struct entry_metadata {
 
 /// Synchronous sink used by archive extraction APIs.
 ///
-/// Implementations must return the number of bytes accepted from `bytes`. A
-/// future extractor treats partial acceptance as `error_code::io_error` so
-/// callers never observe ambiguous partial-success extraction.
+/// Implementations must return the number of bytes accepted from `bytes`. The
+/// extractor treats partial acceptance as `error_code::io_error` so callers
+/// never observe ambiguous partial-success extraction.
 class payload_sink {
  public:
   virtual ~payload_sink() = default;
@@ -86,19 +86,19 @@ class payload_sink {
   virtual result<std::size_t> write(std::span<const std::byte> bytes) = 0;
 };
 
-/// Minimal public archive reader facade for Phase 1.
+/// Public archive reader for supported Bethesda archive files.
 ///
-/// The class establishes the future read/open API shape without implementing
-/// archive detection or parsing yet. Use `open()` for fallible construction;
-/// default construction exists only so successful future opens can return a
-/// value object.
+/// Use `open()` for fallible construction. A successfully opened reader exposes
+/// archive metadata, deterministic entry listings, canonical path lookup, and
+/// synchronous extraction for the archive variants implemented by libbsa.
 class archive_reader {
  public:
   /// Attempts to open an archive from a host path string.
   ///
-  /// Phase 1 deliberately returns `error_code::unsupported` for non-empty paths
-  /// because real format detection begins in later phases. Empty paths are
-  /// rejected as `error_code::invalid_argument`.
+  /// Empty host paths return `error_code::invalid_argument`, missing or
+  /// unreadable files return `error_code::io_error`, unsupported archive bytes
+  /// return `error_code::unsupported`, and malformed supported archives return
+  /// `error_code::format_error`.
   static result<archive_reader> open(std::string_view host_path);
 
   /// Returns archive-level metadata for a successfully opened archive.
