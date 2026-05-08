@@ -22,6 +22,28 @@ archive_reader::archive_reader(archive_metadata metadata)
 
 namespace {
 
+class vector_payload_sink final : public payload_sink {
+ public:
+  explicit vector_payload_sink(std::uint64_t expected_size) {
+    if (expected_size <= static_cast<std::uint64_t>(std::vector<std::byte>{}.max_size())) {
+      bytes_.reserve(static_cast<std::size_t>(expected_size));
+    }
+  }
+
+  result<std::size_t> write(std::span<const std::byte> bytes) override {
+    if (bytes.size() > bytes_.max_size() - bytes_.size()) {
+      return error{error_code::format_error, "extracted payload exceeds platform vector limits"};
+    }
+    bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
+    return bytes.size();
+  }
+
+  [[nodiscard]] std::vector<std::byte> finish() && { return std::move(bytes_); }
+
+ private:
+  std::vector<std::byte> bytes_;
+};
+
 result<std::vector<std::byte>> read_archive_bytes(std::string_view host_path) {
   std::ifstream input{std::string{host_path}, std::ios::binary};
   if (!input) {
@@ -101,11 +123,25 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
 }
 
 result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view path) const {
-  if (path.empty()) {
-    return error{error_code::invalid_argument, "archive path must not be empty"};
+  if (!state_) {
+    return error{error_code::unsupported, "archive reader is not open"};
   }
 
-  return error{error_code::unsupported, "archive byte extraction is not implemented until Phase 3 reader state exists"};
+  auto found = find(path);
+  if (!found) {
+    return found.error();
+  }
+  if (!found.value()) {
+    return error{error_code::not_found, "archive path was not found"};
+  }
+
+  // Keep the convenience API bounded by the parser-derived size for exactly one entry.
+  vector_payload_sink sink{found.value()->raw_size};
+  auto extracted = extract(path, sink);
+  if (!extracted) {
+    return extracted.error();
+  }
+  return std::move(sink).finish();
 }
 
 } // namespace libbsa
