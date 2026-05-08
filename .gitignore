@@ -429,3 +429,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Local game-derived fixtures are not committed
+/tests/fixtures/local/*
+!/tests/fixtures/local/.gitkeep
