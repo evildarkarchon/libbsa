@@ -15,18 +15,21 @@ static_assert(__cplusplus >= 202002L, "libbsa public headers require C++20 or ne
 static_assert(std::is_enum_v<libbsa::archive_type>);
 static_assert(std::is_enum_v<libbsa::archive_variant>);
 static_assert(std::is_enum_v<libbsa::entry_compression>);
+static_assert(std::is_default_constructible_v<libbsa::ba2_archive_metadata>);
 static_assert(std::is_abstract_v<libbsa::payload_sink>);
 
 TEST_CASE("public_include_boundary umbrella header exposes public boundary types", "[unit][public-api]") {
   [[maybe_unused]] libbsa::result<int> result{1};
   [[maybe_unused]] auto code = libbsa::error_code::unsupported;
   [[maybe_unused]] auto missing = libbsa::error_code::not_found;
+  [[maybe_unused]] libbsa::ba2_archive_metadata ba2_metadata{123U, 456U, 3U};
   [[maybe_unused]] libbsa::archive_metadata archive{libbsa::archive_type::bsa,
-                                                   libbsa::archive_variant::tes4,
-                                                   103,
-                                                   0,
-                                                   1,
-                                                   libbsa::entry_compression::deflate};
+                                                    libbsa::archive_variant::tes4,
+                                                    103,
+                                                    0,
+                                                    1,
+                                                    libbsa::entry_compression::deflate,
+                                                    std::nullopt};
   [[maybe_unused]] libbsa::entry_metadata entry{"meshes/example.nif",
                                                "Meshes/Example.nif",
                                                10,

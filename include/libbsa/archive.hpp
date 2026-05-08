@@ -41,11 +41,28 @@ enum class entry_compression {
   lz4_block,
 };
 
+/// BA2-specific archive-level metadata exposed when `archive_metadata::type` is `archive_type::ba2`.
+///
+/// Starfield BA2 revisions append raw header fields after the common `BTDX`/subtype header.
+/// These fields are intentionally version-gated optionals so Fallout 4 archives can distinguish
+/// "field absent" from a Starfield field that is present with a zero value.
+struct ba2_archive_metadata {
+  /// Raw Starfield v2+ header field conventionally named `Unknown1` in current references.
+  std::optional<std::uint32_t> starfield_unknown1;
+
+  /// Raw Starfield v2+ header field conventionally named `Unknown2` in current references.
+  std::optional<std::uint32_t> starfield_unknown2;
+
+  /// Raw Starfield v3 compression method field; method `3` selects raw LZ4 block payloads.
+  std::optional<std::uint32_t> compression_method;
+};
+
 /// Archive-level metadata exposed by an opened reader.
 ///
 /// The structure is intentionally limited to stable Phase 3 fields: container
-/// type, archive variant/version, raw archive flags, file count, and the default
-/// compression behavior advertised by the archive family.
+/// type, archive variant/version, raw archive flags, file count, the default
+/// compression behavior advertised by the archive family, and optional
+/// format-family metadata that remains dependency-light.
 struct archive_metadata {
   archive_type type;
   archive_variant variant;
@@ -53,6 +70,7 @@ struct archive_metadata {
   std::uint32_t archive_flags;
   std::uint32_t file_count;
   entry_compression default_compression;
+  std::optional<ba2_archive_metadata> ba2;
 };
 
 /// Entry-level metadata exposed for lookup, listing, and extraction.
