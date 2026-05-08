@@ -11,7 +11,7 @@
 using libbsa::detail::binary_reader;
 using libbsa::detail::binary_writer;
 
-TEST_CASE("binary_reader reads checked little-endian fields", "[unit][binary-io]") {
+TEST_CASE("binary_io reader reads checked little-endian fields", "[unit][binary-io]") {
   const auto bytes = std::to_array<std::byte>({
       std::byte{0x01},
       std::byte{0x34},
@@ -30,7 +30,7 @@ TEST_CASE("binary_reader reads checked little-endian fields", "[unit][binary-io]
   REQUIRE(reader.remaining() == 0);
 }
 
-TEST_CASE("binary_writer writes little-endian fields", "[unit][binary-io]") {
+TEST_CASE("binary_io writer writes little-endian fields", "[unit][binary-io]") {
   binary_writer writer;
 
   REQUIRE(writer.write_u16_le(0x1234));
@@ -47,7 +47,7 @@ TEST_CASE("binary_writer writes little-endian fields", "[unit][binary-io]") {
   REQUIRE(std::ranges::equal(writer.bytes(), expected));
 }
 
-TEST_CASE("binary_reader reports malformed truncation without overread", "[unit][malformed][binary-io]") {
+TEST_CASE("binary_io reader reports malformed truncation without overread", "[unit][malformed][binary-io]") {
   const auto bytes = std::to_array<std::byte>({std::byte{0x01}, std::byte{0x02}});
   binary_reader reader{bytes};
 
@@ -62,7 +62,7 @@ TEST_CASE("binary_reader reports malformed truncation without overread", "[unit]
   REQUIRE(reader.position() == 0);
 }
 
-TEST_CASE("binary_reader read_bytes advances only on success", "[unit][malformed][binary-io]") {
+TEST_CASE("binary_io reader read_bytes advances only on success", "[unit][malformed][binary-io]") {
   const auto bytes = std::to_array<std::byte>({std::byte{0x01}, std::byte{0x02}, std::byte{0x03}});
   binary_reader reader{bytes};
 

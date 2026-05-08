@@ -18,6 +18,8 @@ target_include_directories(libbsa
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_compile_options(libbsa
@@ -39,6 +41,7 @@ target_sources(libbsa
         include/libbsa/version.hpp
   PRIVATE
     src/archive.cpp
+    src/detail/binary_io.cpp
     src/libbsa.cpp
 )
 
