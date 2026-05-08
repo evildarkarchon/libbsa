@@ -51,6 +51,7 @@ target_sources(libbsa
   PRIVATE
     src/archive.cpp
     src/detail/archive_path.cpp
+    src/detail/bethesda_hash.cpp
     src/detail/binary_io.cpp
     src/detail/compression_router.cpp
     src/detail/deflate_codec.cpp
