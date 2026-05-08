@@ -78,6 +78,11 @@ nlohmann::json read_json_file(const std::filesystem::path& path) {
   return nlohmann::json::parse(stream);
 }
 
+std::string archive_original_path_from_manifest(std::string value) {
+  std::replace(value.begin(), value.end(), '\\', '/');
+  return value;
+}
+
 std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
   std::ifstream input{path, std::ios::binary};
   std::vector<std::byte> bytes;
@@ -198,7 +203,7 @@ TEST_CASE("tes4_bsa_entry_metadata materializes table paths, hashes, sizes, and 
       });
 
       REQUIRE(actual.path == expected.at("path").get<std::string>());
-      REQUIRE(actual.original_path == expected.at("original_path").get<std::string>());
+      REQUIRE(actual.original_path == archive_original_path_from_manifest(expected.at("original_path").get<std::string>()));
       REQUIRE(actual.raw_size == expected.at("raw_size").get<std::uint64_t>());
       REQUIRE(actual.stored_size == expected.at("stored_size").get<std::uint64_t>());
       REQUIRE(actual.payload_offset == expected.at("offset").get<std::uint64_t>());

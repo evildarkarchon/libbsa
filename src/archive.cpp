@@ -2,6 +2,7 @@
 
 #include "formats/bsa/bsa_format_detector.hpp"
 #include "formats/bsa/tes4_bsa_parser.hpp"
+#include "formats/bsa/tes4_bsa_reader.hpp"
 
 #include <cstddef>
 #include <fstream>
@@ -12,10 +13,11 @@ namespace libbsa {
 
 struct archive_reader::state {
   archive_metadata metadata;
+  std::vector<entry_metadata> entries;
 };
 
 archive_reader::archive_reader(archive_metadata metadata)
-    : state_(std::make_shared<state>(state{metadata})) {}
+    : state_(std::make_shared<state>(state{metadata, {}})) {}
 
 namespace {
 
@@ -52,12 +54,14 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     return detected.error();
   }
 
-  auto metadata = formats::bsa::parse_tes4_bsa_metadata(bytes.value(), detected.value());
-  if (!metadata) {
-    return metadata.error();
+  auto archive = formats::bsa::parse_tes4_bsa_archive(bytes.value(), detected.value());
+  if (!archive) {
+    return archive.error();
   }
 
-  return archive_reader{metadata.value()};
+  archive_reader reader{archive.value().metadata};
+  reader.state_ = std::make_shared<state>(state{archive.value().metadata, std::move(archive.value().entries)});
+  return reader;
 }
 
 result<archive_metadata> archive_reader::metadata() const {
@@ -68,23 +72,24 @@ result<archive_metadata> archive_reader::metadata() const {
 }
 
 result<std::vector<entry_metadata>> archive_reader::entries() const {
-  return error{error_code::unsupported, "archive entries are not implemented until Phase 3 reader state exists"};
+  if (!state_) {
+    return error{error_code::unsupported, "archive reader is not open"};
+  }
+  return formats::bsa::tes4_bsa_entries(state_->entries);
 }
 
 result<std::optional<entry_metadata>> archive_reader::find(std::string_view path) const {
-  if (path.empty()) {
-    return error{error_code::invalid_argument, "archive path must not be empty"};
+  if (!state_) {
+    return error{error_code::unsupported, "archive reader is not open"};
   }
-
-  return error{error_code::unsupported, "archive lookup is not implemented until Phase 3 reader state exists"};
+  return formats::bsa::find_tes4_bsa_entry(state_->entries, path);
 }
 
 result<bool> archive_reader::contains(std::string_view path) const {
-  if (path.empty()) {
-    return error{error_code::invalid_argument, "archive path must not be empty"};
+  if (!state_) {
+    return error{error_code::unsupported, "archive reader is not open"};
   }
-
-  return error{error_code::unsupported, "archive contains lookup is not implemented until Phase 3 reader state exists"};
+  return formats::bsa::contains_tes4_bsa_entry(state_->entries, path);
 }
 
 result<void> archive_reader::extract(std::string_view path, payload_sink& sink) const {

@@ -7,8 +7,18 @@
 
 #include <cstddef>
 #include <span>
+#include <vector>
 
 namespace libbsa::formats::bsa {
+
+/// Parsed TES4-family archive metadata and deterministic public entry values.
+struct tes4_bsa_archive {
+  archive_metadata metadata;
+  std::vector<entry_metadata> entries;
+};
+
+/// Parses checked TES4-family BSA header, table, name, and entry metadata state.
+result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes, detected_bsa_format detected);
 
 /// Parses enough checked TES4-family BSA header state to expose public metadata.
 result<archive_metadata> parse_tes4_bsa_metadata(std::span<const std::byte> bytes, detected_bsa_format detected);
