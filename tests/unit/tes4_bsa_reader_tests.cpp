@@ -223,3 +223,45 @@ TEST_CASE("tes4_bsa_malformed_open rejects duplicate canonical paths during entr
   REQUIRE_FALSE(opened.has_value());
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
+
+TEST_CASE("tes4_bsa_lookup normalizes variants and distinguishes missing from invalid paths",
+          "[unit][fixture][tes4_bsa_lookup][tes4_bsa_hash_lookup]") {
+  for (const auto& fixture : success_fixtures()) {
+    const auto stem = fixture.archive_filename.substr(0, fixture.archive_filename.size() - 4);
+    const auto manifest = read_json_file(generated_archive_path(stem + "_manifest.json"));
+    auto opened = libbsa::archive_reader::open(generated_archive_path(fixture.archive_filename).string());
+    REQUIRE(opened.has_value());
+
+    for (const auto& expected : manifest.at("entries")) {
+      for (const auto& variant : expected.at("lookup_variants")) {
+        auto found = opened.value().find(variant.get<std::string>());
+        REQUIRE(found.has_value());
+        REQUIRE(found.value().has_value());
+        REQUIRE(found.value()->path == expected.at("path").get<std::string>());
+        REQUIRE(found.value()->tes4_hash == hex_u64_from_manifest(expected.at("hash")));
+
+        auto contains = opened.value().contains(variant.get<std::string>());
+        REQUIRE(contains.has_value());
+        REQUIRE(contains.value());
+      }
+    }
+
+    auto missing = opened.value().find("valid/missing/path.txt");
+    REQUIRE(missing.has_value());
+    REQUIRE_FALSE(missing.value().has_value());
+
+    auto missing_contains = opened.value().contains("valid/missing/path.txt");
+    REQUIRE(missing_contains.has_value());
+    REQUIRE_FALSE(missing_contains.value());
+
+    for (const std::string invalid : {"", "/rooted/file.txt", "..\\escape.txt", "folder//file.txt"}) {
+      auto invalid_find = opened.value().find(invalid);
+      REQUIRE_FALSE(invalid_find.has_value());
+      REQUIRE(invalid_find.error().code == libbsa::error_code::invalid_argument);
+
+      auto invalid_contains = opened.value().contains(invalid);
+      REQUIRE_FALSE(invalid_contains.has_value());
+      REQUIRE(invalid_contains.error().code == libbsa::error_code::invalid_argument);
+    }
+  }
+}
