@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include "formats/ba2/ba2_gnrl_reader.hpp"
+
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -66,6 +68,37 @@ std::string archive_original_path_from_manifest(std::string value) {
   std::replace(value.begin(), value.end(), '\\', '/');
   return value;
 }
+
+std::vector<std::byte> bytes_from_hex(std::string_view hex) {
+  REQUIRE(hex.size() % 2U == 0U);
+  std::vector<std::byte> bytes;
+  bytes.reserve(hex.size() / 2U);
+  for (std::size_t offset = 0; offset < hex.size(); offset += 2U) {
+    const auto pair = std::string{hex.substr(offset, 2U)};
+    bytes.push_back(static_cast<std::byte>(std::stoul(pair, nullptr, 16)));
+  }
+  return bytes;
+}
+
+class collecting_sink final : public libbsa::payload_sink {
+ public:
+  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
+    bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
+    return bytes.size();
+  }
+
+  [[nodiscard]] const std::vector<std::byte>& bytes() const noexcept { return bytes_; }
+
+ private:
+  std::vector<std::byte> bytes_;
+};
+
+class partial_sink final : public libbsa::payload_sink {
+ public:
+  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
+    return bytes.empty() ? 0U : bytes.size() - 1U;
+  }
+};
 
 struct ba2_success_fixture {
   std::string archive;
@@ -247,4 +280,77 @@ TEST_CASE("ba2_gnrl_lookup normalizes variants and reports stable missing-path b
       REQUIRE(invalid_contains.error().code == libbsa::error_code::invalid_argument);
     }
   }
+}
+
+TEST_CASE("ba2_gnrl_extract streams manifest bytes and extract_bytes matches", "[unit][fixture][ba2_gnrl_extract]") {
+  bool saw_raw = false;
+  bool saw_zero_byte_raw = false;
+  bool saw_deflate = false;
+  bool saw_lz4_block = false;
+
+  for (const auto& fixture : ba2_success_fixtures()) {
+    const auto manifest = read_json_file(generated_archive_path(fixture.manifest));
+    auto opened = libbsa::archive_reader::open(generated_archive_path(fixture.archive).string());
+    REQUIRE(opened.has_value());
+
+    for (const auto& expected : manifest.at("entries")) {
+      const auto compression = expected.at("compression").get<std::string>();
+      saw_raw = saw_raw || compression == "raw";
+      saw_zero_byte_raw = saw_zero_byte_raw || (compression == "raw" && expected.at("raw_size").get<std::uint64_t>() == 0U);
+      saw_deflate = saw_deflate || compression == "deflate";
+      saw_lz4_block = saw_lz4_block || compression == "lz4_block";
+
+      const auto expected_bytes = bytes_from_hex(expected.at("expected").at("bytes_hex").get<std::string>());
+      collecting_sink sink;
+
+      auto extracted = opened.value().extract(expected.at("path").get<std::string>(), sink);
+
+      REQUIRE(extracted.has_value());
+      REQUIRE(sink.bytes() == expected_bytes);
+
+      auto bytes = opened.value().extract_bytes(expected.at("path").get<std::string>());
+      REQUIRE(bytes.has_value());
+      REQUIRE(bytes.value() == expected_bytes);
+    }
+  }
+
+  REQUIRE(saw_raw);
+  REQUIRE(saw_zero_byte_raw);
+  REQUIRE(saw_deflate);
+  REQUIRE(saw_lz4_block);
+}
+
+TEST_CASE("ba2_gnrl_extract helper routes by metadata and detects partial_sink writes",
+          "[unit][fixture][ba2_gnrl_extract]") {
+  auto fo4 = libbsa::archive_reader::open(generated_archive_path("ba2_gnrl_fo4.ba2").string());
+  REQUIRE(fo4.has_value());
+  auto raw_entry = fo4.value().find("meshes/mixedcase/probe.nif");
+  REQUIRE(raw_entry.has_value());
+  REQUIRE(raw_entry.value().has_value());
+  REQUIRE(raw_entry.value()->compression == libbsa::entry_compression::none);
+  partial_sink partial;
+
+  auto partial_result = libbsa::formats::ba2::extract_ba2_gnrl_payload(
+      generated_archive_path("ba2_gnrl_fo4.ba2").string(), *raw_entry.value(), partial);
+
+  REQUIRE_FALSE(partial_result.has_value());
+  REQUIRE(partial_result.error().code == libbsa::error_code::io_error);
+
+  const auto sfv3_manifest = read_json_file(generated_archive_path("ba2_gnrl_sfv3_manifest.json"));
+  auto sfv3 = libbsa::archive_reader::open(generated_archive_path("ba2_gnrl_sfv3.ba2").string());
+  REQUIRE(sfv3.has_value());
+  auto lz4_entry = sfv3.value().find("geometries/packed/block.mesh");
+  REQUIRE(lz4_entry.has_value());
+  REQUIRE(lz4_entry.value().has_value());
+  REQUIRE(lz4_entry.value()->compression == libbsa::entry_compression::lz4_block);
+  collecting_sink lz4_sink;
+
+  auto lz4_result = libbsa::formats::ba2::extract_ba2_gnrl_payload(
+      generated_archive_path("ba2_gnrl_sfv3.ba2").string(), *lz4_entry.value(), lz4_sink);
+
+  REQUIRE(lz4_result.has_value());
+  const auto& expected_lz4 = *std::find_if(sfv3_manifest.at("entries").begin(), sfv3_manifest.at("entries").end(), [](const auto& entry) {
+    return entry.at("compression").get<std::string>() == "lz4_block";
+  });
+  REQUIRE(lz4_sink.bytes() == bytes_from_hex(expected_lz4.at("expected").at("bytes_hex").get<std::string>()));
 }
