@@ -290,24 +290,26 @@ TEST_CASE("tes3_bsa_extract streams and returns bytes from data-section-relative
 TEST_CASE("tes3_bsa_extract helper is raw-only and enforces sink writes", "[unit][tes3_bsa_extract]") {
   const std::array payload{std::byte{'r'}, std::byte{'a'}, std::byte{'w'}};
   const libbsa::entry_metadata raw_entry{"raw/path.txt", "Raw/Path.txt", 3U, 3U, 0U, 0U,
-                                         libbsa::entry_compression::none, 0U, false, 0U};
+                                          libbsa::entry_compression::none, 0U, false, 0U};
+  const auto host_path = std::filesystem::temp_directory_path() / "libbsa_tes3_raw_payload_source.bsa";
+  write_binary_file(host_path, std::vector<std::byte>{payload.begin(), payload.end()});
   collecting_sink sink;
 
-  auto extracted = libbsa::formats::bsa::extract_tes3_bsa_payload(payload, raw_entry, sink);
+  auto extracted = libbsa::formats::bsa::extract_tes3_bsa_payload(host_path.string(), raw_entry, sink);
 
   REQUIRE(extracted.has_value());
   REQUIRE(sink.bytes() == std::vector<std::byte>{payload.begin(), payload.end()});
 
   partial_sink partial;
-  auto partial_result = libbsa::formats::bsa::extract_tes3_bsa_payload(payload, raw_entry, partial);
+  auto partial_result = libbsa::formats::bsa::extract_tes3_bsa_payload(host_path.string(), raw_entry, partial);
   REQUIRE_FALSE(partial_result.has_value());
   REQUIRE(partial_result.error().code == libbsa::error_code::io_error);
 
   const libbsa::entry_metadata compressed_entry{"raw/path.txt", "Raw/Path.txt", 3U, 3U, 0U, 0U,
-                                                libbsa::entry_compression::deflate, 0U, false, 0U};
+                                                 libbsa::entry_compression::deflate, 0U, false, 0U};
   collecting_sink compressed_sink;
   auto compressed_result =
-      libbsa::formats::bsa::extract_tes3_bsa_payload(payload, compressed_entry, compressed_sink);
+      libbsa::formats::bsa::extract_tes3_bsa_payload(host_path.string(), compressed_entry, compressed_sink);
   REQUIRE_FALSE(compressed_result.has_value());
   REQUIRE(compressed_result.error().code == libbsa::error_code::format_error);
   REQUIRE(compressed_sink.bytes().empty());
