@@ -11,7 +11,6 @@ from typing import Any
 
 SUCCESS_MANIFESTS = ("tes4_v103", "tes4_v104", "tes4_v105")
 SUCCESS_REQUIRED_TOP_LEVEL = {
-    "manifest_kind",
     "variant",
     "version",
     "flags",
