@@ -69,6 +69,22 @@ target_include_directories(generate_tes3_bsa_fixtures_tool
     ${CMAKE_SOURCE_DIR}/src
 )
 
+add_executable(generate_ba2_gnrl_fixtures_tool
+  fixtures/generated/generate_ba2_gnrl_fixtures.cpp
+)
+
+target_link_libraries(generate_ba2_gnrl_fixtures_tool
+  PRIVATE
+    libbsa::libbsa
+)
+
+target_compile_features(generate_ba2_gnrl_fixtures_tool PRIVATE cxx_std_20)
+
+target_include_directories(generate_ba2_gnrl_fixtures_tool
+  PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
 add_custom_target(generate_tes4_bsa_fixtures
   COMMAND generate_tes4_bsa_fixtures_tool --success --output ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives
   DEPENDS generate_tes4_bsa_fixtures_tool
