@@ -108,7 +108,7 @@ Cross-cutting constraints:
 Plans:
 
 **Wave 1**
-- [ ] 03-01-PLAN.md — Define public reader API contracts and test-only JSON dependency wiring.
+- [x] 03-01-PLAN.md — Define public reader API contracts and test-only JSON dependency wiring.
 - [ ] 03-02-PLAN.md — Generate legal v103/v104/v105 success BSA fixtures and manifests.
 
 **Wave 2** *(blocked on 03-02 success fixture generation)*
