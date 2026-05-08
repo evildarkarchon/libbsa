@@ -74,19 +74,19 @@ Cross-cutting constraints:
 Plans:
 
 **Wave 1**
-- [ ] 02-01-PLAN.md — Build checked little-endian binary reader/writer primitives for BIN-01 and BIN-02.
+- [x] 02-01-PLAN.md — Build checked little-endian binary reader/writer primitives for BIN-01 and BIN-02.
 
 **Wave 2** *(blocked on Wave 1 binary primitive foundation)*
-- [ ] 02-02-PLAN.md — Add internal archive path normalization and bounded synchronous payload streaming for BIN-03.
+- [x] 02-02-PLAN.md — Add internal archive path normalization and bounded synchronous payload streaming for BIN-03.
 
 **Wave 3** *(blocked on Wave 2 internal primitive layout)*
-- [ ] 02-03-PLAN.md — Add private libdeflate raw deflate compression/decompression with exact-size validation.
+- [x] 02-03-PLAN.md — Add private libdeflate raw deflate compression/decompression with exact-size validation.
 
 **Wave 4** *(blocked on Wave 3 deflate adapter)*
-- [ ] 02-04-PLAN.md — Add private LZ4 frame/raw-block adapters and explicit compression routing.
+- [x] 02-04-PLAN.md — Add private LZ4 frame/raw-block adapters and explicit compression routing.
 
 **Wave 5** *(blocked on Wave 4 compression services)*
-- [ ] 02-05-PLAN.md — Add TES3, TES4-family, and FO4/BA2 hash functions plus final public-boundary verification.
+- [x] 02-05-PLAN.md — Add TES3, TES4-family, and FO4/BA2 hash functions plus final public-boundary verification.
 
 Cross-cutting constraints:
 - Binary I/O, path, streaming, hash, codec, and routing primitives remain internal under `libbsa::detail` and do not alter `archive_reader::open`.

@@ -28,14 +28,14 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 
 ### Shared Binary and Compression Services
 
-- [ ] **BIN-01**: Parser can read little-endian integer fields with checked offset, count, and size arithmetic.
-- [ ] **BIN-02**: Parser rejects truncated or malformed archives with structured errors instead of out-of-bounds reads or undefined behavior.
-- [ ] **BIN-03**: Extraction can stream payloads to caller-provided sinks without loading whole archives into memory.
-- [ ] **BIN-04**: Compression service can decompress deflate payloads with exact expected output size validation.
-- [ ] **BIN-05**: Compression service can decompress Skyrim SE/AE BSA LZ4 frame payloads through the LZ4 frame API.
-- [ ] **BIN-06**: Compression service can decompress Starfield BA2 v3 raw LZ4 block payloads through the LZ4 block API.
-- [ ] **BIN-07**: Compression service can compress deflate, LZ4 frame, and raw LZ4 block payloads for writer phases using explicit target-format routing.
-- [ ] **BIN-08**: Hash service can compute TES3, TES4-family, and FO4/BA2 hashes with fixture-backed expected values.
+- [x] **BIN-01**: Parser can read little-endian integer fields with checked offset, count, and size arithmetic.
+- [x] **BIN-02**: Parser rejects truncated or malformed archives with structured errors instead of out-of-bounds reads or undefined behavior.
+- [x] **BIN-03**: Extraction can stream payloads to caller-provided sinks without loading whole archives into memory.
+- [x] **BIN-04**: Compression service can decompress deflate payloads with exact expected output size validation.
+- [x] **BIN-05**: Compression service can decompress Skyrim SE/AE BSA LZ4 frame payloads through the LZ4 frame API.
+- [x] **BIN-06**: Compression service can decompress Starfield BA2 v3 raw LZ4 block payloads through the LZ4 block API.
+- [x] **BIN-07**: Compression service can compress deflate, LZ4 frame, and raw LZ4 block payloads for writer phases using explicit target-format routing.
+- [x] **BIN-08**: Hash service can compute TES3, TES4-family, and FO4/BA2 hashes with fixture-backed expected values.
 
 ### BSA Read Support
 
@@ -169,14 +169,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FMT-04 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
 | FMT-05 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
 | FMT-06 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
-| BIN-01 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
-| BIN-02 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
-| BIN-03 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
-| BIN-04 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
-| BIN-05 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
-| BIN-06 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
-| BIN-07 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
-| BIN-08 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Pending |
+| BIN-01 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Complete |
+| BIN-02 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Complete |
+| BIN-03 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Complete |
+| BIN-04 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Complete |
+| BIN-05 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Complete |
+| BIN-06 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Complete |
+| BIN-07 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Complete |
+| BIN-08 | Phase 2: Binary I/O, Paths, Hashes, and Compression Services | Complete |
 | BSA-01 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
 | BSA-02 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
 | BSA-03 | Phase 3: Format Detection and TES4-Family BSA Read/Extract | Pending |
