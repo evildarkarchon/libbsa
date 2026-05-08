@@ -231,7 +231,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     normalize_original_separators(original_path);
     auto canonical = detail::normalize_archive_path(original_path);
     if (!canonical) {
-      return canonical.error();
+      return error{error_code::format_error, "TES3 BSA contains an invalid archive path"};
     }
     if (!canonical_paths.insert(canonical.value().value).second) {
       return error{error_code::format_error, "TES3 BSA contains duplicate canonical archive paths"};
