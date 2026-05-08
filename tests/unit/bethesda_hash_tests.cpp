@@ -27,3 +27,11 @@ TEST_CASE("bethesda_hash supports split TES4 overload constants", "[unit][hash][
   REQUIRE(libbsa::detail::hash_tes4("meshes/foo", "") == 0xA0E6BEDF6D0A6F6FULL);
   REQUIRE(libbsa::detail::hash_tes4("bar", ".nif") == 0x92CD45FD6203E172ULL);
 }
+
+TEST_CASE("bethesda_hash exposes TES3 sort halves", "[unit][hash][bethesda_hash]") {
+  const auto hash = libbsa::detail::hash_tes3("meshes/foo/bar.nif");
+
+  REQUIRE(libbsa::detail::tes3_hash_low32(hash) == 0x258ACAD8U);
+  REQUIRE(libbsa::detail::tes3_hash_high32(hash) == 0x0E5C1667U);
+  REQUIRE(libbsa::detail::tes3_hash_sort_key(hash) == 0x258ACAD80E5C1667ULL);
+}
