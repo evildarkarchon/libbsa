@@ -112,7 +112,7 @@ Plans:
 - [x] 03-02-PLAN.md — Generate legal v103/v104/v105 success BSA fixtures and manifests.
 
 **Wave 2** *(blocked on 03-02 success fixture generation)*
-- [ ] 03-03-PLAN.md — Generate malformed fixture set and manifest validation tests.
+- [x] 03-03-PLAN.md — Generate malformed fixture set and manifest validation tests.
 
 **Wave 3** *(blocked on Wave 1 contracts and Wave 2 malformed fixtures)*
 - [ ] 03-04-PLAN.md — Implement byte-driven detector/open state and parser skeleton.
@@ -232,7 +232,7 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 |-------|----------------|--------|-----------|
 | 1. Foundation, API Boundary, and Test Harness | 5/5 | Complete | 2026-05-08 |
 | 2. Binary I/O, Paths, Hashes, and Compression Services | 0/TBD | Not started | - |
-| 3. Format Detection and TES4-Family BSA Read/Extract | 0/TBD | Not started | - |
+| 3. Format Detection and TES4-Family BSA Read/Extract | 3/6 | In Progress | - |
 | 4. TES3 BSA Read/Extract | 0/TBD | Not started | - |
 | 5. BA2 GNRL Read/Extract | 0/TBD | Not started | - |
 | 6. DDS Boundary and BA2 DX10 Read/Reconstruction | 0/TBD | Not started | - |
