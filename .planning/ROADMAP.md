@@ -167,7 +167,7 @@ Plans:
 - [x] 05-01-PLAN.md — Generate legal BA2 GNRL success and malformed fixtures with rich manifests.
 
 **Wave 2** *(blocked on Wave 1 fixture generation)*
-- [ ] 05-02-PLAN.md — Add public BA2 metadata optionals plus byte-driven BA2 detector/open skeleton.
+- [x] 05-02-PLAN.md — Add public BA2 metadata optionals plus byte-driven BA2 detector/open skeleton.
 
 **Wave 3** *(blocked on Wave 2 detector and metadata contracts)*
 - [ ] 05-03-PLAN.md — Implement BA2 GNRL record/name parsing, deterministic listing, and normalized lookup.
