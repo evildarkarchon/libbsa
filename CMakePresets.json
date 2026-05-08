@@ -1,0 +1,64 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-msvc-debug-static",
+      "displayName": "Windows MSVC Debug Static",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_STANDARD": "20",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "LIBBSA_BUILD_TESTS": "ON",
+        "BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "windows-msvc-debug-shared",
+      "displayName": "Windows MSVC Debug Shared",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_STANDARD": "20",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "LIBBSA_BUILD_TESTS": "ON",
+        "BUILD_SHARED_LIBS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-msvc-debug-static",
+      "configurePreset": "windows-msvc-debug-static"
+    },
+    {
+      "name": "windows-msvc-debug-shared",
+      "configurePreset": "windows-msvc-debug-shared"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "windows-msvc-debug-static",
+      "configurePreset": "windows-msvc-debug-static",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-msvc-debug-shared",
+      "configurePreset": "windows-msvc-debug-shared",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}
