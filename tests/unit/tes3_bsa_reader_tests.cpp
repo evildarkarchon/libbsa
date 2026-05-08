@@ -139,7 +139,7 @@ TEST_CASE("tes3_bsa_entries exposes manifest-backed metadata and offsets", "[uni
     REQUIRE(actual.payload_offset == expected.at("payload_offset").get<std::uint64_t>());
     REQUIRE(actual.payload_offset == manifest.at("data_section_start").get<std::uint64_t>() +
                                          expected.at("raw_tes3_data_offset").get<std::uint64_t>());
-    REQUIRE(actual.tes4_hash == hex_u64_from_manifest(expected.at("archive_hash")));
+    REQUIRE(actual.archive_hash == hex_u64_from_manifest(expected.at("archive_hash")));
     REQUIRE(actual.record_flags == 0U);
     REQUIRE(actual.compression == entry_compression_from_manifest(expected.at("compression").get<std::string>()));
     REQUIRE(actual.has_embedded_name == expected.at("has_embedded_name").get<bool>());
@@ -158,7 +158,7 @@ TEST_CASE("tes3_bsa_lookup normalizes variants and stable missing-path behavior"
       REQUIRE(found.has_value());
       REQUIRE(found.value().has_value());
       REQUIRE(found.value()->path == expected.at("path").get<std::string>());
-      REQUIRE(found.value()->tes4_hash == hex_u64_from_manifest(expected.at("archive_hash")));
+      REQUIRE(found.value()->archive_hash == hex_u64_from_manifest(expected.at("archive_hash")));
 
       auto contains = opened.value().contains(variant.get<std::string>());
       REQUIRE(contains.has_value());

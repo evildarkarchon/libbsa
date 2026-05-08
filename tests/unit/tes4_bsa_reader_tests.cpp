@@ -298,7 +298,7 @@ TEST_CASE("tes4_bsa_entry_metadata materializes table paths, hashes, sizes, and 
       REQUIRE(actual.raw_size == expected.at("raw_size").get<std::uint64_t>());
       REQUIRE(actual.stored_size == expected.at("stored_size").get<std::uint64_t>());
       REQUIRE(actual.payload_offset == expected.at("offset").get<std::uint64_t>());
-      REQUIRE(actual.tes4_hash == hex_u64_from_manifest(expected.at("hash")));
+      REQUIRE(actual.archive_hash == hex_u64_from_manifest(expected.at("hash")));
       REQUIRE(actual.record_flags == expected.at("record_flags").get<std::uint32_t>());
       REQUIRE(actual.compression == entry_compression_from_manifest(expected.at("compression").get<std::string>()));
       REQUIRE(actual.has_embedded_name == expected.at("has_embedded_name").get<bool>());
@@ -329,7 +329,7 @@ TEST_CASE("tes4_bsa_lookup normalizes variants and distinguishes missing from in
         REQUIRE(found.has_value());
         REQUIRE(found.value().has_value());
         REQUIRE(found.value()->path == expected.at("path").get<std::string>());
-        REQUIRE(found.value()->tes4_hash == hex_u64_from_manifest(expected.at("hash")));
+        REQUIRE(found.value()->archive_hash == hex_u64_from_manifest(expected.at("hash")));
 
         auto contains = opened.value().contains(variant.get<std::string>());
         REQUIRE(contains.has_value());
