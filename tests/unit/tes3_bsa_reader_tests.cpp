@@ -46,6 +46,16 @@ libbsa::entry_compression entry_compression_from_manifest(std::string_view value
   return libbsa::entry_compression::lz4_block;
 }
 
+libbsa::error_code error_code_from_manifest(std::string_view value) {
+  if (value == "format_error") {
+    return libbsa::error_code::format_error;
+  }
+  if (value == "unsupported") {
+    return libbsa::error_code::unsupported;
+  }
+  return libbsa::error_code::invalid_argument;
+}
+
 std::string archive_original_path_from_manifest(std::string value) {
   std::replace(value.begin(), value.end(), '\\', '/');
   return value;
@@ -197,5 +207,38 @@ TEST_CASE("tes3_bsa_extract streams and returns bytes from data-section-relative
                                                      expected.at("payload_offset").get<std::uint64_t>(),
                                                      expected.at("stored_size").get<std::uint64_t>());
     REQUIRE(archive_bytes == expected_bytes);
+  }
+}
+
+TEST_CASE("tes3_bsa_malformed rejects generated malformed TES3 cases with stable error codes",
+          "[unit][fixture][malformed][tes3_bsa_malformed]") {
+  const auto manifest = read_json_file(generated_archive_path("tes3_malformed_manifest.json"));
+  const std::vector<std::string> required_case_ids{
+      "tes3_truncated_header",
+      "tes3_truncated_records",
+      "tes3_invalid_name_span",
+      "tes3_invalid_payload_span",
+      "tes3_duplicate_canonical_path",
+      "tes3_inconsistent_counts_offsets",
+      "tes3_stored_hash_mismatch",
+      "tes3_hash_collision",
+      "tes3_unsorted_hash_records",
+      "tes3_raw_offset_absolute_regression",
+  };
+
+  for (const auto& required_id : required_case_ids) {
+    REQUIRE(std::any_of(manifest.at("cases").begin(), manifest.at("cases").end(), [&](const auto& test_case) {
+      return test_case.at("id").get<std::string>() == required_id;
+    }));
+  }
+
+  for (const auto& test_case : manifest.at("cases")) {
+    const auto archive = test_case.at("archive").get<std::string>();
+    const auto expected = error_code_from_manifest(test_case.at("expected_error").get<std::string>());
+
+    auto opened = libbsa::archive_reader::open(generated_archive_path(archive).string());
+
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == expected);
   }
 }
