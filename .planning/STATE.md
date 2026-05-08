@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-05-08T12:17:06.596Z"
+last_updated: "2026-05-08T12:25:26.870Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 12
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 20
-  completed_plans: 19
-  percent: 95
+  completed_plans: 20
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 04 (tes3-bsa-read-extract) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-05-08
 
-Progress: [██████████] 95%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██████████] 95%
 | Phase 04 P01 | 4 min | 3 tasks | 18 files |
 | Phase 04 P02 | 3 min | 2 tasks | 5 files |
 | Phase 04 P03 | 6 min | 3 tasks | 10 files |
+| Phase 04 P04 | 5 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 04]: TES3 parser stores archive-absolute payload offsets only; raw TES3 data-section offsets are converted and validated during parse. — Keeps public metadata consistent across archive variants while preserving TES3 compatibility.
 - [Phase 04]: TES3 hash ordering is represented with explicit low32/high32 helper functions to avoid comparator ambiguity. — Matches TES3 sorted hash records and makes validation testable.
 - [Phase 04]: TES3 listing and lookup use dedicated private helper names while preserving the established archive_reader public facade. — Minimizes TES4-family regression risk while adding variant-aware dispatch.
+- [Phase 04]: TES3 extraction uses a dedicated raw-only helper instead of reusing TES4-family compression routing, so malformed non-raw TES3 metadata fails with format_error. — Keeps TES3 read scope raw/uncompressed and prevents accidental codec routing.
+- [Phase 04]: Invalid archive-owned TES3 paths map to format_error during open. — Caller path errors remain invalid_argument, but malformed archive bytes should fail closed as format errors.
 
 ### Pending Todos
 
@@ -118,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T12:17:06.590Z
+Last session: 2026-05-08T12:25:14.889Z
 Stopped at: Completed 04-03-PLAN.md
 Resume file: None

@@ -145,7 +145,7 @@ Plans:
 - [x] 04-03-PLAN.md — Implement TES3 parsing, strict hash/name validation, listing, and lookup.
 
 **Wave 4** *(blocked on Wave 3 parser metadata and lookup)*
-- [ ] 04-04-PLAN.md — Implement TES3 raw extraction, malformed fail-closed validation, and final regression gates.
+- [x] 04-04-PLAN.md — Implement TES3 raw extraction, malformed fail-closed validation, and final regression gates.
 
 ### Phase 5: BA2 GNRL Read/Extract
 **Goal**: Consumers can read, inspect, and extract Fallout 4 and Starfield BA2 GNRL archives, including Starfield version-specific metadata and compression routing.
