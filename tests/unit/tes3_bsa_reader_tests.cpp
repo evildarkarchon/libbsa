@@ -3,6 +3,7 @@
 #include <libbsa/libbsa.hpp>
 
 #include "formats/bsa/bsa_format_detector.hpp"
+#include "formats/bsa/tes3_bsa_reader.hpp"
 
 #include <algorithm>
 #include <array>
@@ -210,6 +211,19 @@ TEST_CASE("tes3_bsa_lookup normalizes variants and stable missing-path behavior"
     REQUIRE_FALSE(invalid_contains.has_value());
     REQUIRE(invalid_contains.error().code == libbsa::error_code::invalid_argument);
   }
+}
+
+TEST_CASE("tes3_bsa_lookup helper normalizes variants over parsed entries", "[unit][fixture][tes3_bsa_lookup]") {
+  auto opened = libbsa::archive_reader::open(generated_archive_path("tes3_success.bsa").string());
+  REQUIRE(opened.has_value());
+  auto entries = opened.value().entries();
+  REQUIRE(entries.has_value());
+
+  auto found = libbsa::formats::bsa::find_tes3_bsa_entry(entries.value(), "MESHES\\TINY\\PROBE.NIF");
+
+  REQUIRE(found.has_value());
+  REQUIRE(found.value().has_value());
+  REQUIRE(found.value()->path == "meshes/tiny/probe.nif");
 }
 
 TEST_CASE("tes3_bsa_extract streams and returns bytes from data-section-relative offsets", "[unit][fixture][tes3_bsa_extract]") {
