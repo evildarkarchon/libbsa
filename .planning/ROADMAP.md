@@ -103,7 +103,25 @@ Cross-cutting constraints:
   3. Consumer can extract TES4/Oblivion, FO3/FNV/Skyrim LE, and Skyrim SE/AE entries whether stored raw, deflate-compressed, or LZ4-frame-compressed.
   4. Consumer can extract embedded-name entries while preserving payload bytes compatible with BSArchPro output.
   5. Maintainer can add a future archive version by extending detection/record handling without rewriting unrelated format families.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 03-01-PLAN.md — Define public reader API contracts and test-only JSON dependency wiring.
+- [ ] 03-02-PLAN.md — Generate legal v103/v104/v105 success BSA fixtures and manifests.
+
+**Wave 2** *(blocked on 03-02 success fixture generation)*
+- [ ] 03-03-PLAN.md — Generate malformed fixture set and manifest validation tests.
+
+**Wave 3** *(blocked on Wave 1 contracts and Wave 2 malformed fixtures)*
+- [ ] 03-04-PLAN.md — Implement byte-driven detector/open state and parser skeleton.
+
+**Wave 4** *(blocked on Wave 3 open-state skeleton; separated because it extends the same parser/open files)*
+- [ ] 03-05-PLAN.md — Implement TES4-family table parsing, entry metadata, deterministic listing, and normalized lookup.
+
+**Wave 5** *(blocked on parser metadata and lookup semantics)*
+- [ ] 03-06-PLAN.md — Implement sink-first raw, deflate, LZ4-frame, embedded-name, bounded byte extraction, and final verification.
 
 ### Phase 4: TES3 BSA Read/Extract
 **Goal**: Consumers can read, list, query, and extract TES3/Morrowind BSA archives while preserving TES3-specific data-section-relative offset behavior.

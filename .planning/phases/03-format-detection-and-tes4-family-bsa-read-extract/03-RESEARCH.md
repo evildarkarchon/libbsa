@@ -399,20 +399,17 @@ Source: Context7 nlohmann/json file parse examples. [CITED: Context7 `/nlohmann/
 | A4 | Warning signs for LZ4 frame/block confusion are inferred from codec behavior. | Common Pitfalls | Low; existing exact-size adapter should fail closed. |
 | A5 | Warning signs for duplicate canonical paths are inferred from D-06. | Common Pitfalls | Low; parser can explicitly test duplicates. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should Phase 3 add a `not_found` enumerator to `error_code`, or encode missing extract path another way?**
    - What we know: D-20 says add `error_code::not_found` or equivalent for valid missing extraction paths. [VERIFIED: `03-CONTEXT.md` lines 67-70]
-   - What's unclear: The exact public enum name is discretionary. [VERIFIED: `03-CONTEXT.md` lines 81-85]
-   - Recommendation: Add `error_code::not_found` because tests can assert a stable category and callers can distinguish valid missing entries from invalid input. [VERIFIED: `03-CONTEXT.md` lines 67-70]
+   - Resolution: Add `error_code::not_found`. Tests should assert this stable category for valid-but-absent archive entries, while invalid path syntax remains `error_code::invalid_argument`. [VERIFIED: `03-CONTEXT.md` lines 67-70]
 2. **What exact fixture generator language should be used?**
    - What we know: Generator code must be committed outside `TES5Edit/`; Python 3.14.4 and Node v25.9.0 are available locally. [VERIFIED: `03-CONTEXT.md` lines 72-80; environment probe 2026-05-07]
-   - What's unclear: Project has no established fixture generator language yet. [VERIFIED: `tests/fixtures/README.md` lines 7-33]
-   - Recommendation: Use a small C++ or Python generator; C++ maximizes reuse of Phase 2 compression/hash helpers, while Python is faster for byte-layout scripting but would duplicate compression/hash behavior unless it shells to generated data from tests. [ASSUMED]
+   - Resolution: Use a small C++ fixture generator/test tool under test fixture tooling. This keeps fixture bytes reproducible without adding a Python runtime requirement to CI and allows reuse of libbsa compression/hash helpers where appropriate. [VERIFIED: `03-CONTEXT.md` lines 72-80; `CMakeLists.txt` lines 8-40]
 3. **How strict should parser validation be for inconsistent folder/file name length fields beyond needed bounds checks?**
    - What we know: Acceptance requires truncated and internally inconsistent archives to fail without out-of-bounds reads. [VERIFIED: `03-SPEC.md` lines 99-112]
-   - What's unclear: No prior project policy defines every inconsistency category for TES4-family tables. [VERIFIED: `.planning/STATE.md` lines 76-80]
-   - Recommendation: Validate all offsets/count-derived spans against file size, verify parsed names count equals `FileCount`, and reject missing names for Phase 3 path-listing requirements. [VERIFIED: `03-CONTEXT.md` lines 50-58; `03-SPEC.md` lines 99-112]
+   - Resolution: Validate all offsets/count-derived spans against file size, verify parsed names count equals `FileCount`, fail malformed/truncated/internally inconsistent bytes as `error_code::format_error`, and fail structurally valid hash-only or missing-usable-name archives as `error_code::unsupported` per D-08. [VERIFIED: `03-CONTEXT.md` lines 50-58; `03-SPEC.md` lines 99-112]
 
 ## Environment Availability
 
