@@ -148,7 +148,7 @@ Plans:
 - [x] 04-04-PLAN.md — Implement TES3 raw extraction, malformed fail-closed validation, and final regression gates.
 
 **Wave 5** *(gap closure; blocked on Wave 4 verification findings)*
-- [ ] 04-05-PLAN.md — Close TES3 hash-collision fixture isolation and sink-first bounded extraction gaps.
+- [x] 04-05-PLAN.md — Close TES3 hash-collision fixture isolation and sink-first bounded extraction gaps.
 
 ### Phase 5: BA2 GNRL Read/Extract
 **Goal**: Consumers can read, inspect, and extract Fallout 4 and Starfield BA2 GNRL archives, including Starfield version-specific metadata and compression routing.
