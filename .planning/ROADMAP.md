@@ -49,7 +49,7 @@ Plans:
 - [x] 01-02-PLAN.md — Define and test the public result/error model and `archive_reader` open facade stub.
 
 **Wave 3** *(blocked on Wave 2 public API completion)*
-- [ ] 01-03-PLAN.md — Wire Catch2/CTest labels and local fixture skip behavior around the public boundary tests.
+- [x] 01-03-PLAN.md — Wire Catch2/CTest labels and local fixture skip behavior around the public boundary tests.
 
 **Wave 4** *(blocked on Wave 3 test harness and Wave 1 fixture policy completion)*
 - [ ] 01-05-PLAN.md — Add installed-package smoke validation and Windows/MSVC static/shared CI workflow.
