@@ -6,5 +6,5 @@ int main() {
     return 1;
   }
 
-  return result.error().code == libbsa::error_code::unsupported ? 0 : 1;
+  return result.error().code == libbsa::error_code::io_error ? 0 : 1;
 }
