@@ -1,5 +1,6 @@
 #include <libbsa/archive.hpp>
 
+#include "formats/ba2/ba2_format_detector.hpp"
 #include "formats/bsa/bsa_format_detector.hpp"
 #include "formats/bsa/tes3_bsa_parser.hpp"
 #include "formats/bsa/tes3_bsa_reader.hpp"
@@ -53,7 +54,7 @@ result<std::vector<std::byte>> read_detection_prefix(std::string_view host_path)
     return error{error_code::io_error, "failed to open archive host path"};
   }
 
-  std::vector<std::byte> bytes(8U);
+  std::vector<std::byte> bytes(36U);
   input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
   if (input.bad()) {
     return error{error_code::io_error, "failed while reading archive host path"};
@@ -114,6 +115,27 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
   auto prefix = read_detection_prefix(host_path);
   if (!prefix) {
     return prefix.error();
+  }
+
+  if (prefix.value().size() >= 4U && prefix.value()[0] == static_cast<std::byte>(static_cast<unsigned char>('B')) &&
+      prefix.value()[1] == static_cast<std::byte>(static_cast<unsigned char>('T')) &&
+      prefix.value()[2] == static_cast<std::byte>(static_cast<unsigned char>('D')) &&
+      prefix.value()[3] == static_cast<std::byte>(static_cast<unsigned char>('X'))) {
+    auto detected_ba2 = formats::ba2::detect_ba2_format(prefix.value());
+    if (!detected_ba2) {
+      return detected_ba2.error();
+    }
+
+    archive_metadata metadata{archive_type::ba2,
+                              detected_ba2.value().variant,
+                              detected_ba2.value().version,
+                              0U,
+                              detected_ba2.value().file_count,
+                              detected_ba2.value().default_compression,
+                              detected_ba2.value().ba2};
+    archive_reader reader{metadata};
+    reader.state_ = std::make_shared<state>(state{metadata, {}, std::string{host_path}});
+    return reader;
   }
 
   auto detected = formats::bsa::detect_bsa_format(prefix.value());

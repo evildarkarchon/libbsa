@@ -33,6 +33,16 @@ libbsa::entry_compression expected_default_compression(const nlohmann::json& man
   return libbsa::entry_compression::deflate;
 }
 
+libbsa::error_code error_code_from_manifest(std::string_view value) {
+  if (value == "format_error") {
+    return libbsa::error_code::format_error;
+  }
+  if (value == "unsupported") {
+    return libbsa::error_code::unsupported;
+  }
+  return libbsa::error_code::invalid_argument;
+}
+
 void require_common_ba2_metadata(const nlohmann::json& manifest,
                                  const libbsa::archive_metadata& metadata,
                                  libbsa::archive_variant expected_variant) {
@@ -90,4 +100,21 @@ TEST_CASE("ba2_gnrl_detector opens Starfield v3 GNRL metadata with compression m
   REQUIRE(metadata.value().ba2->starfield_unknown1 == manifest.at("starfield_unknown1").get<std::uint32_t>());
   REQUIRE(metadata.value().ba2->starfield_unknown2 == manifest.at("starfield_unknown2").get<std::uint32_t>());
   REQUIRE(metadata.value().ba2->compression_method == manifest.at("compression_method").get<std::uint32_t>());
+}
+
+TEST_CASE("ba2_gnrl_detector rejects Phase 5 unsupported BA2 profiles with stable errors",
+          "[unit][fixture][ba2_gnrl_detector]") {
+  const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_malformed_manifest.json"));
+
+  for (const auto& test_case : manifest.at("cases")) {
+    const auto id = test_case.at("id").get<std::string>();
+    if (id != "ba2_dx10_unsupported" && id != "ba2_unsupported_v3_compression_method") {
+      continue;
+    }
+
+    auto opened = libbsa::archive_reader::open(generated_archive_path(test_case.at("archive").get<std::string>()).string());
+
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == error_code_from_manifest(test_case.at("expected_error").get<std::string>()));
+  }
 }
