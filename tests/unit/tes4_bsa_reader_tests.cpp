@@ -2,8 +2,10 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -52,6 +54,28 @@ libbsa::error_code error_code_from_manifest(std::string_view value) {
     return libbsa::error_code::unsupported;
   }
   return libbsa::error_code::invalid_argument;
+}
+
+libbsa::entry_compression entry_compression_from_manifest(std::string_view value) {
+  if (value == "raw") {
+    return libbsa::entry_compression::none;
+  }
+  if (value == "deflate") {
+    return libbsa::entry_compression::deflate;
+  }
+  if (value == "lz4_frame") {
+    return libbsa::entry_compression::lz4_frame;
+  }
+  return libbsa::entry_compression::lz4_block;
+}
+
+std::uint64_t hex_u64_from_manifest(const nlohmann::json& value) {
+  return std::stoull(value.get<std::string>(), nullptr, 16);
+}
+
+nlohmann::json read_json_file(const std::filesystem::path& path) {
+  std::ifstream stream{path};
+  return nlohmann::json::parse(stream);
 }
 
 std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
@@ -145,6 +169,51 @@ TEST_CASE("tes4_bsa_malformed_open rejects count-derived table spans before allo
   write_binary_file(mutated, bytes);
 
   auto opened = libbsa::archive_reader::open(mutated.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("tes4_bsa_entry_metadata materializes table paths, hashes, sizes, and embedded names",
+          "[unit][fixture][tes4_bsa_entry_metadata][tes4_bsa_listing][tes4_bsa_embedded_name]") {
+  for (const auto& fixture : success_fixtures()) {
+    const auto manifest = read_json_file(generated_archive_path(fixture.archive_filename.substr(0, fixture.archive_filename.size() - 4) + "_manifest.json"));
+    auto opened = libbsa::archive_reader::open(generated_archive_path(fixture.archive_filename).string());
+    REQUIRE(opened.has_value());
+
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == manifest.at("entries").size());
+
+    std::vector<std::string> sorted_paths;
+    for (const auto& expected : manifest.at("entries")) {
+      sorted_paths.push_back(expected.at("path").get<std::string>());
+    }
+    std::sort(sorted_paths.begin(), sorted_paths.end());
+
+    for (std::size_t index = 0; index < entries.value().size(); ++index) {
+      const auto& actual = entries.value().at(index);
+      const auto& expected = *std::find_if(manifest.at("entries").begin(), manifest.at("entries").end(), [&](const auto& candidate) {
+        return candidate.at("path").get<std::string>() == sorted_paths.at(index);
+      });
+
+      REQUIRE(actual.path == expected.at("path").get<std::string>());
+      REQUIRE(actual.original_path == expected.at("original_path").get<std::string>());
+      REQUIRE(actual.raw_size == expected.at("raw_size").get<std::uint64_t>());
+      REQUIRE(actual.stored_size == expected.at("stored_size").get<std::uint64_t>());
+      REQUIRE(actual.payload_offset == expected.at("offset").get<std::uint64_t>());
+      REQUIRE(actual.tes4_hash == hex_u64_from_manifest(expected.at("hash")));
+      REQUIRE(actual.record_flags == expected.at("record_flags").get<std::uint32_t>());
+      REQUIRE(actual.compression == entry_compression_from_manifest(expected.at("compression").get<std::string>()));
+      REQUIRE(actual.has_embedded_name == expected.at("has_embedded_name").get<bool>());
+      REQUIRE(actual.embedded_name_prefix_size == expected.at("embedded_name_prefix_size").get<std::uint32_t>());
+    }
+  }
+}
+
+TEST_CASE("tes4_bsa_malformed_open rejects duplicate canonical paths during entry parsing",
+          "[unit][fixture][malformed][tes4_bsa_malformed_open][tes4_bsa_listing]") {
+  auto opened = libbsa::archive_reader::open(generated_archive_path("malformed_duplicate_canonical_path.bsa").string());
 
   REQUIRE_FALSE(opened.has_value());
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
