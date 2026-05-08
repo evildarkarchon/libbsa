@@ -131,7 +131,21 @@ Plans:
   1. Consumer can open a TES3/Morrowind BSA and list/query entries through the same library-owned path and metadata API shape used by later formats.
   2. Consumer can extract TES3 entries using data-section-relative offsets rather than TES4-family offset semantics.
   3. Maintainer can validate TES3 listing and extraction behavior with focused fixtures that isolate TES3 hash and offset rules.
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 04-01-PLAN.md — Create TES3 generated fixtures and RED public reader tests.
+
+**Wave 2** *(blocked on Wave 1 fixture/test contracts)*
+- [ ] 04-02-PLAN.md — Rename hash metadata, document absolute offsets, and add TES3 byte detection/dispatch scaffolding.
+
+**Wave 3** *(blocked on Wave 2 public model and detector dispatch)*
+- [ ] 04-03-PLAN.md — Implement TES3 parsing, strict hash/name validation, listing, and lookup.
+
+**Wave 4** *(blocked on Wave 3 parser metadata and lookup)*
+- [ ] 04-04-PLAN.md — Implement TES3 raw extraction, malformed fail-closed validation, and final regression gates.
 
 ### Phase 5: BA2 GNRL Read/Extract
 **Goal**: Consumers can read, inspect, and extract Fallout 4 and Starfield BA2 GNRL archives, including Starfield version-specific metadata and compression routing.

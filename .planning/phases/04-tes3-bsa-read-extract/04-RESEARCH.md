@@ -366,20 +366,20 @@ This shape follows the locked requirement to keep raw TES3 offsets in manifests/
 
 **If this table is empty:** All claims in this research were verified or cited — no user confirmation needed.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Exact TES3 hash sort comparator representation**
+1. **Exact TES3 hash sort comparator representation — RESOLVED**
    - What we know: UESP says hashes sort first by lower four bytes, then higher four bytes; TES5Edit writes high 32 bits then low 32 bits from its `UInt64` representation; docs.rs `bsa3_hash` returns a `(u32, u32)` pair with known Morrowind examples. [CITED: https://en.uesp.net/wiki/Morrowind_Mod:BSA_File_Format; VERIFIED: `TES5Edit/Core/wbBSArchive.pas:1612-1616`; CITED: https://docs.rs/bsa3-hash/latest/bsa3_hash/]
    - What's unclear: Whether the implementation should encode the comparator in terms of serialized table order or `detail::hash_tes3`'s current high/low packing to minimize mistakes. [VERIFIED: `src/detail/bethesda_hash.cpp`]
-   - Recommendation: Add named helper functions for `tes3_hash_low32`, `tes3_hash_high32`, and `tes3_hash_sort_key` with fixture assertions for at least one docs.rs known vector and the generated fixture names. [CITED: https://docs.rs/bsa3-hash/latest/bsa3_hash/]
-2. **Whether to fully neutralize TES4 reader helper names now**
+   - Resolution: Planner should include named helper functions for `tes3_hash_low32`, `tes3_hash_high32`, and `tes3_hash_sort_key` with fixture assertions for at least one docs.rs known vector and the generated fixture names. [CITED: https://docs.rs/bsa3-hash/latest/bsa3_hash/]
+2. **Whether to fully neutralize TES4 reader helper names now — RESOLVED**
    - What we know: `archive_reader` currently calls `tes4_bsa_entries`, `find_tes4_bsa_entry`, `contains_tes4_bsa_entry`, and `extract_tes4_bsa_payload` directly. [VERIFIED: `src/archive.cpp`]
    - What's unclear: Exact naming/refactor size belongs to planner discretion. [VERIFIED: `.planning/phases/04-tes3-bsa-read-extract/04-CONTEXT.md`]
-   - Recommendation: Prefer small neutral helpers for entry copy/find/contains/raw sink transfer if they reduce duplicate code without changing Phase 3 behavior. [VERIFIED: `src/formats/bsa/tes4_bsa_reader.hpp`; VERIFIED: `.planning/phases/04-tes3-bsa-read-extract/04-CONTEXT.md`]
-3. **Exact malformed fixture file organization**
+   - Resolution: Planner should prefer small neutral helpers for entry copy/find/contains/raw sink transfer if they reduce duplicate code without changing Phase 3 behavior; avoid a broad helper rename if a TES3-specific helper is smaller. [VERIFIED: `src/formats/bsa/tes4_bsa_reader.hpp`; VERIFIED: `.planning/phases/04-tes3-bsa-read-extract/04-CONTEXT.md`]
+3. **Exact malformed fixture file organization — RESOLVED**
    - What we know: Phase 4 requires malformed coverage for truncated structures, invalid name spans, invalid payload spans, duplicate canonical paths, inconsistent counts/offsets, stored hash mismatch, hash collision, unsorted records, and raw-offset regression. [VERIFIED: `.planning/phases/04-tes3-bsa-read-extract/04-CONTEXT.md`; VERIFIED: `.planning/phases/04-tes3-bsa-read-extract/04-SPEC.md`]
    - What's unclear: Whether all malformed outputs should live in one `tes3_malformed_manifest.json` or share the existing `malformed_manifest.json`. [VERIFIED: `tests/fixtures/generated/archives/malformed_manifest.json`]
-   - Recommendation: Use a TES3-specific malformed manifest to avoid mixing TES4 and TES3 case metadata during test iteration. [VERIFIED: `.planning/phases/04-tes3-bsa-read-extract/04-CONTEXT.md`]
+   - Resolution: Use a TES3-specific malformed manifest to avoid mixing TES4 and TES3 case metadata during test iteration. [VERIFIED: `.planning/phases/04-tes3-bsa-read-extract/04-CONTEXT.md`]
 
 ## Environment Availability
 
