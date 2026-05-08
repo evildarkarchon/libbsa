@@ -12,7 +12,7 @@ libbsa will be built as a compatibility-driven C++20 archive library: establish 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation, API Boundary, and Test Harness** - Consumers and maintainers can build, include, test, and evolve libbsa without dependency or TES5Edit leakage.
+- [x] **Phase 1: Foundation, API Boundary, and Test Harness** - Consumers and maintainers can build, include, test, and evolve libbsa without dependency or TES5Edit leakage.
 - [ ] **Phase 2: Binary I/O, Paths, Hashes, and Compression Services** - Parsers and writers share safe binary, virtual path, hash, streaming, and compression primitives.
 - [ ] **Phase 3: Format Detection and TES4-Family BSA Read/Extract** - Consumers can detect, inspect, query, and extract TES4/FO3/FNV/Skyrim LE/SSE BSA archives.
 - [ ] **Phase 4: TES3 BSA Read/Extract** - Consumers can read and extract Morrowind BSA archives with TES3-specific offset semantics.
@@ -52,7 +52,7 @@ Plans:
 - [x] 01-03-PLAN.md — Wire Catch2/CTest labels and local fixture skip behavior around the public boundary tests.
 
 **Wave 4** *(blocked on Wave 3 test harness and Wave 1 fixture policy completion)*
-- [ ] 01-05-PLAN.md — Add installed-package smoke validation and Windows/MSVC static/shared CI workflow.
+- [x] 01-05-PLAN.md — Add installed-package smoke validation and Windows/MSVC static/shared CI workflow.
 
 Cross-cutting constraints:
 - Public headers must not leak libdeflate, lz4, DirectXTex, Windows SDK, `std::expected`, or `TES5Edit/` references.
@@ -190,7 +190,7 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation, API Boundary, and Test Harness | 0/5 | Planned | - |
+| 1. Foundation, API Boundary, and Test Harness | 5/5 | Complete | 2026-05-08 |
 | 2. Binary I/O, Paths, Hashes, and Compression Services | 0/TBD | Not started | - |
 | 3. Format Detection and TES4-Family BSA Read/Extract | 0/TBD | Not started | - |
 | 4. TES3 BSA Read/Extract | 0/TBD | Not started | - |
