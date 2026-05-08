@@ -80,13 +80,13 @@ result<std::vector<std::byte>> read_stored_payload(std::string_view host_path, c
     return error{error_code::io_error, "failed to open archive host path for extraction"};
   }
   if (entry.payload_offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
-    return error{error_code::format_error, "TES4 BSA payload offset exceeds stream limits"};
+    return error{error_code::format_error, "BSA payload offset exceeds stream limits"};
   }
   if (entry.stored_size > static_cast<std::uint64_t>(std::vector<std::byte>{}.max_size())) {
-    return error{error_code::format_error, "TES4 BSA stored payload exceeds platform vector limits"};
+    return error{error_code::format_error, "BSA stored payload exceeds platform vector limits"};
   }
   if (entry.stored_size > static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max())) {
-    return error{error_code::format_error, "TES4 BSA stored payload exceeds stream limits"};
+    return error{error_code::format_error, "BSA stored payload exceeds stream limits"};
   }
 
   std::vector<std::byte> payload(static_cast<std::size_t>(entry.stored_size));
@@ -99,7 +99,7 @@ result<std::vector<std::byte>> read_stored_payload(std::string_view host_path, c
     return error{error_code::io_error, "failed while reading archive payload"};
   }
   if (static_cast<std::size_t>(input.gcount()) != payload.size()) {
-    return error{error_code::format_error, "TES4 BSA entry payload span is outside the archive"};
+    return error{error_code::format_error, "BSA entry payload span is outside the archive"};
   }
   return payload;
 }
@@ -189,7 +189,9 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
   if (!state_) {
     return error{error_code::unsupported, "archive reader is not open"};
   }
-  auto found = formats::bsa::find_tes4_bsa_entry(state_->entries, path);
+  auto found = state_->metadata.variant == archive_variant::tes3
+                   ? formats::bsa::find_tes3_bsa_entry(state_->entries, path)
+                   : formats::bsa::find_tes4_bsa_entry(state_->entries, path);
   if (!found) {
     return found.error();
   }
@@ -199,6 +201,9 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
   auto payload = read_stored_payload(state_->host_path, *found.value());
   if (!payload) {
     return payload.error();
+  }
+  if (state_->metadata.variant == archive_variant::tes3) {
+    return formats::bsa::extract_tes3_bsa_payload(payload.value(), *found.value(), sink);
   }
   return formats::bsa::extract_tes4_bsa_payload(payload.value(), *found.value(), sink);
 }
