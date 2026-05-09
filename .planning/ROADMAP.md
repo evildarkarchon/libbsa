@@ -318,7 +318,24 @@ Plans:
   1. Consumer can create a TES3/Morrowind BSA archive from disk files or memory buffers.
   2. Writer can serialize TES3 file indexes and payload offsets using data-section-relative semantics.
   3. Maintainer can pack, reopen, extract, and byte-compare TES3 writer output against source files.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 10-01-PLAN.md — Define the dependency-light public TES3 writer contract and private bridge.
+
+**Wave 2** *(blocked on Wave 1 public TES3 writer contract)*
+- [ ] 10-02-PLAN.md — Implement source ownership, validation, and safe publish behavior.
+
+**Wave 3** *(blocked on Wave 2 finalization validation and publish behavior)*
+- [ ] 10-03-PLAN.md — Serialize byte-accurate TES3 header, table, hash, offset, and payload layout.
+
+**Wave 4** *(blocked on Wave 3 byte-level serializer)*
+- [ ] 10-04-PLAN.md — Prove writer output through archive_reader round-trip, lookup, and extraction APIs.
+
+**Wave 5** *(blocked on Wave 4 reader-backed writer output)*
+- [ ] 10-05-PLAN.md — Add public-writer fixture evidence and final BSA completeness regression gates.
 
 ### Phase 11: Compatibility Warnings, Validation API, and Hardening
 **Goal**: Consumers and maintainers can validate archives and compatibility quirks with structured warnings/errors while malformed inputs are rejected safely.

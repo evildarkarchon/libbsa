@@ -455,22 +455,25 @@ CHECK(opened.value().extract_bytes("textures/memory/probe.dds").value() == memor
 
 **If this table is empty:** All claims in this research were verified or cited — no user confirmation needed.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should the committed writer fixture generator be a new executable or an extension of `generate_tes3_bsa_fixtures.cpp`?**
    - What we know: The committed writer-output fixture must be generated through the public TES3 writer API, not solely through the current private/test-only TES3 serializer. [VERIFIED: 10-CONTEXT.md]
    - What's unclear: The exact generator file layout is delegated to planner discretion. [VERIFIED: 10-CONTEXT.md]
    - Recommendation: Use a dedicated `generate_tes3_bsa_writer_fixtures.cpp` if it keeps public-writer provenance obvious; otherwise add a clearly separated writer-output mode to the existing generator. [VERIFIED: tests/CMakeLists.txt; VERIFIED: 10-CONTEXT.md]
+   - RESOLVED: Plans use a dedicated `tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp` public-writer generator and register `generate_tes3_bsa_writer_fixtures_tool` / `generate_tes3_bsa_writer_fixtures`. [VERIFIED: 10-05-PLAN.md]
 
 2. **Should payload bytes be serialized in hash order or alphabetical order?**
    - What we know: UESP and TES5Edit comment that vanilla TES3 raw file data appears/stores alphabetically, but Phase 4 reader allows any non-overlapping bounded payload order. [CITED: UESP TES3 BSA format; VERIFIED: TES5Edit/Core/wbBSArchive.pas; VERIFIED: 04-CONTEXT.md]
    - What's unclear: Phase 10 does not lock payload physical order except raw offsets and round-trip bytes. [VERIFIED: 10-SPEC.md]
    - Recommendation: Serialize payloads in the same order as prepared hash-sorted records for simpler file-record/name/hash alignment unless planner wants closer vanilla evidence; either choice is acceptable if raw offsets match payload positions and tests document the chosen rule. [VERIFIED: 04-CONTEXT.md; VERIFIED: 10-SPEC.md]
+   - RESOLVED: Plans require expected serialized order by `detail::tes3_hash_sort_key(detail::hash_tes3(preserved_name))`, with raw offsets and payload bytes asserted against that order. [VERIFIED: 10-03-PLAN.md]
 
 3. **Should safe publish be upgraded beyond TES4 writer's older `.tmp` behavior during Phase 10?**
    - What we know: Phase 8/9 state records hardened unique temp directory and overwrite backup/rollback decisions; Phase 10 requires clean failure without published partial output. [VERIFIED: STATE.md; VERIFIED: 10-CONTEXT.md]
    - What's unclear: Existing TES4 writer still shows an older `.tmp` remove/rename pattern. [VERIFIED: src/formats/bsa/tes4_bsa_writer.cpp]
    - Recommendation: Plan Phase 10 with Phase 8/9-style safe publish helpers or a small shared internal publish helper if one already exists; do not regress to delete-before-success replacement for new code. [VERIFIED: STATE.md]
+   - RESOLVED: Plans require a unique sibling temp directory, preservation of caller-owned `<output>.tmp`, overwrite backup/rollback, and no published partial archive on finalization failure. [VERIFIED: 10-02-PLAN.md]
 
 ## Environment Availability
 
