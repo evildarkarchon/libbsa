@@ -16,7 +16,7 @@
     {
       "path": "textures/generated/fo4raw.dds",
       "original_path": "Textures/Generated/Fo4Raw.dds",
-      "name_hash": "0x43a8697a",
+      "name_hash": "0x5f74616a",
       "extension": "dds\u0000",
       "directory_hash": "0x873f049b",
       "unknown_tex": 0,
@@ -39,7 +39,7 @@
     {
       "path": "textures/generated/fo4deflate.dds",
       "original_path": "Textures/Generated/Fo4Deflate.dds",
-      "name_hash": "0x2cc4d106",
+      "name_hash": "0x2178d3be",
       "extension": "dds\u0000",
       "directory_hash": "0x873f049b",
       "unknown_tex": 0,
@@ -63,7 +63,7 @@
     {
       "path": "textures/generated/fo4cube.dds",
       "original_path": "Textures/Generated/Fo4Cube.dds",
-      "name_hash": "0xd70d5f1a",
+      "name_hash": "0x54dfb4b2",
       "extension": "dds\u0000",
       "directory_hash": "0x873f049b",
       "unknown_tex": 0,

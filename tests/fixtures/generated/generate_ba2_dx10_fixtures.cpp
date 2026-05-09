@@ -395,6 +395,22 @@ std::string extension_fourcc(std::string canonical_path) {
   return ext.substr(0U, 4U);
 }
 
+std::pair<std::string_view, std::string_view> split_directory_file(std::string_view canonical_path) noexcept {
+  const auto slash = canonical_path.find_last_of('/');
+  if (slash == std::string_view::npos) {
+    return {{}, canonical_path};
+  }
+  return {canonical_path.substr(0U, slash), canonical_path.substr(slash + 1U)};
+}
+
+std::string_view filename_stem(std::string_view file_name) {
+  const auto dot = file_name.find_last_of('.');
+  if (dot == std::string_view::npos || dot == 0U || dot + 1U == file_name.size()) {
+    throw std::runtime_error("BA2 DX10 fixture path must include a filename stem and extension");
+  }
+  return file_name.substr(0U, dot);
+}
+
 std::uint32_t hash_folder(std::string_view canonical_path) {
   const auto slash = canonical_path.find_last_of('/');
   return slash == std::string_view::npos ? 0U : libbsa::detail::hash_fo4(canonical_path.substr(0U, slash));
@@ -403,7 +419,9 @@ std::uint32_t hash_folder(std::string_view canonical_path) {
 void prepare_texture(texture_spec& texture) {
   texture.path = canonicalize(texture.original_path);
   texture.ext = extension_fourcc(texture.path);
-  texture.name_hash = libbsa::detail::hash_fo4(texture.path);
+  const auto [directory, file_name] = split_directory_file(texture.path);
+  (void)directory;
+  texture.name_hash = libbsa::detail::hash_fo4(filename_stem(file_name));
   texture.directory_hash = hash_folder(texture.path);
   for (auto& chunk : texture.chunks) {
     chunk.raw_size = checked_u32(chunk.decoded_payload.size(), "BA2 DX10 decoded chunk");

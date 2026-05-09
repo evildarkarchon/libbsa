@@ -1,11 +1,14 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <detail/bethesda_hash.hpp>
+
 #include <libbsa/libbsa.hpp>
 
 #include "texture/directxtex_analyzer.hpp"
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cstdlib>
 #include <cstddef>
 #include <cstdint>
@@ -72,6 +75,13 @@ struct writer_proof_case {
   libbsa::ba2_dx10_target target;
 };
 
+struct ba2_dx10_record_metadata {
+  std::string filename_table_path;
+  std::uint32_t name_hash{};
+  std::array<char, 4> extension{};
+  std::uint32_t directory_hash{};
+};
+
 constexpr auto writer_proof_matrix = std::to_array<writer_proof_case>({
     {"bc1_unorm", "BC1_UNORM", libbsa::ba2_dx10_target::fallout4},
     {"bc1_unorm_srgb", "BC1_UNORM_SRGB", libbsa::ba2_dx10_target::fallout4},
@@ -100,6 +110,120 @@ void write_binary_file(const std::filesystem::path& path, std::span<const std::b
   REQUIRE(output.is_open());
   output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
   REQUIRE(output.good());
+}
+
+std::uint16_t read_u16_le(std::span<const std::byte> bytes, std::size_t offset) {
+  REQUIRE(offset + 2U <= bytes.size());
+  return static_cast<std::uint16_t>(static_cast<unsigned char>(bytes[offset])) |
+         static_cast<std::uint16_t>(static_cast<unsigned char>(bytes[offset + 1U]) << 8U);
+}
+
+std::uint32_t read_u32_le(std::span<const std::byte> bytes, std::size_t offset) {
+  REQUIRE(offset + 4U <= bytes.size());
+  std::uint32_t value = 0;
+  for (std::uint32_t index = 0; index < 4U; ++index) {
+    value |= static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[offset + index])) << (index * 8U);
+  }
+  return value;
+}
+
+std::uint64_t read_u64_le(std::span<const std::byte> bytes, std::size_t offset) {
+  REQUIRE(offset + 8U <= bytes.size());
+  std::uint64_t value = 0;
+  for (std::uint32_t index = 0; index < 8U; ++index) {
+    value |= static_cast<std::uint64_t>(static_cast<unsigned char>(bytes[offset + index])) << (index * 8U);
+  }
+  return value;
+}
+
+std::array<char, 4> read_ascii4(std::span<const std::byte> bytes, std::size_t offset) {
+  REQUIRE(offset + 4U <= bytes.size());
+  return {static_cast<char>(bytes[offset]), static_cast<char>(bytes[offset + 1U]), static_cast<char>(bytes[offset + 2U]),
+          static_cast<char>(bytes[offset + 3U])};
+}
+
+std::string canonicalize_archive_path(std::string value) {
+  std::replace(value.begin(), value.end(), '\\', '/');
+  std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+    return static_cast<char>(std::tolower(ch));
+  });
+  return value;
+}
+
+std::pair<std::string_view, std::string_view> split_directory_file(std::string_view archive_path) noexcept {
+  const auto slash = archive_path.find_last_of('/');
+  if (slash == std::string_view::npos) {
+    return {{}, archive_path};
+  }
+  return {archive_path.substr(0U, slash), archive_path.substr(slash + 1U)};
+}
+
+std::pair<std::string_view, std::string_view> split_stem_extension(std::string_view file_name) {
+  const auto dot = file_name.find_last_of('.');
+  REQUIRE(dot != std::string_view::npos);
+  REQUIRE(dot != 0U);
+  REQUIRE(dot + 1U != file_name.size());
+  return {file_name.substr(0U, dot), file_name.substr(dot + 1U)};
+}
+
+std::array<char, 4> expected_extension_fourcc(std::string_view extension) {
+  REQUIRE(extension.size() <= 4U);
+  std::array<char, 4> value{};
+  std::copy(extension.begin(), extension.end(), value.begin());
+  return value;
+}
+
+ba2_dx10_record_metadata expected_record_metadata_for(std::string_view archive_path) {
+  const auto canonical = canonicalize_archive_path(std::string{archive_path});
+  const auto [directory, file_name] = split_directory_file(canonical);
+  const auto [stem, extension] = split_stem_extension(file_name);
+  return {std::string{archive_path}, libbsa::detail::hash_fo4(stem), expected_extension_fourcc(extension),
+          libbsa::detail::hash_fo4(directory)};
+}
+
+std::vector<ba2_dx10_record_metadata> read_ba2_dx10_record_metadata(const std::filesystem::path& archive_path) {
+  const auto bytes = read_binary_file(archive_path);
+  REQUIRE(read_u32_le(bytes, 0U) == 0x5844'5442U);
+  const auto version = read_u32_le(bytes, 4U);
+  REQUIRE(read_u32_le(bytes, 8U) == 0x3031'5844U);
+  const auto file_count = read_u32_le(bytes, 12U);
+  const auto file_table_offset = read_u64_le(bytes, 16U);
+
+  std::vector<ba2_dx10_record_metadata> records;
+  records.reserve(file_count);
+  std::size_t record_cursor = version >= 3U ? 36U : 24U;
+  for (std::uint32_t index = 0; index < file_count; ++index) {
+    const auto chunk_count = static_cast<unsigned char>(bytes[record_cursor + 13U]);
+    records.push_back({{}, read_u32_le(bytes, record_cursor), read_ascii4(bytes, record_cursor + 4U),
+                       read_u32_le(bytes, record_cursor + 8U)});
+    record_cursor += 24U + static_cast<std::size_t>(chunk_count) * 24U;
+  }
+
+  std::size_t name_cursor = static_cast<std::size_t>(file_table_offset);
+  for (auto& record : records) {
+    const auto name_size = read_u16_le(bytes, name_cursor);
+    name_cursor += 2U;
+    REQUIRE(name_cursor + name_size <= bytes.size());
+    record.filename_table_path.assign(reinterpret_cast<const char*>(bytes.data() + name_cursor), name_size);
+    name_cursor += name_size;
+  }
+  return records;
+}
+
+void require_writer_record_metadata_matches_reference(const std::filesystem::path& archive_path,
+                                                      std::span<const std::string_view> added_archive_paths) {
+  const auto records = read_ba2_dx10_record_metadata(archive_path);
+  REQUIRE(records.size() == added_archive_paths.size());
+  for (const auto archive_path_text : added_archive_paths) {
+    const auto expected = expected_record_metadata_for(archive_path_text);
+    const auto found = std::ranges::find_if(records, [&](const ba2_dx10_record_metadata& record) {
+      return record.filename_table_path == expected.filename_table_path;
+    });
+    REQUIRE(found != records.end());
+    CHECK(found->name_hash == expected.name_hash);
+    CHECK(found->directory_hash == expected.directory_hash);
+    CHECK(found->extension == expected.extension);
+  }
 }
 
 void set_publish_after_backup_failure_hook(const std::filesystem::path& output_path) {
@@ -280,9 +404,13 @@ void require_writer_round_trip(libbsa::ba2_dx10_target target,
   auto entries = opened.value().entries();
   REQUIRE(entries.has_value());
   CHECK(entries.value().size() == added_cases.size());
+  std::vector<std::string_view> added_archive_paths;
+  added_archive_paths.reserve(added_cases.size());
   for (const auto* source_case : added_cases) {
+    added_archive_paths.push_back(source_case->at("archive_path").get_ref<const std::string&>());
     require_reader_backed_entry(opened.value(), *source_case, expected_compression);
   }
+  require_writer_record_metadata_matches_reference(output_path, added_archive_paths);
 
   std::filesystem::remove(output_path);
 }
@@ -427,6 +555,28 @@ TEST_CASE("ba2_dx10_writer::add_file accepts a valid DDS source", "[unit][ba2_dx
                                (generated_source_dir() / source_case.at("file").get<std::string>()).string());
 
   REQUIRE(added.has_value());
+}
+
+TEST_CASE("BA2 DX10 writer records use canonical stem hash and extension metadata",
+          "[unit][ba2_dx10_writer][metadata]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  constexpr std::string_view mixed_case_archive_path = "Textures/HashCase/MixedName.DDS";
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+  REQUIRE(writer.add_file(mixed_case_archive_path, (generated_source_dir() / source_case.at("file").get<std::string>()).string())
+              .has_value());
+
+  const auto output_path = unique_output_path("dx10-record-metadata");
+  REQUIRE(writer.write_to(output_path.string()).has_value());
+
+  constexpr auto added_paths = std::to_array<std::string_view>({mixed_case_archive_path});
+  require_writer_record_metadata_matches_reference(output_path, added_paths);
+  auto opened = libbsa::archive_reader::open(output_path.string());
+  REQUIRE(opened.has_value());
+  auto found = opened.value().find("textures/hashcase/mixedname.dds");
+  REQUIRE(found.has_value());
+  CHECK(found.value().has_value());
+  std::filesystem::remove(output_path);
 }
 
 TEST_CASE("ba2_dx10_writer::add_file rejects an empty DDS host path", "[unit][ba2_dx10_writer][add]") {
