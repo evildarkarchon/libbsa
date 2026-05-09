@@ -46,7 +46,8 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
 }
 
 TEST_CASE("public_include_boundary excludes private Phase 2 implementation names", "[unit][public-api]") {
-  constexpr auto forbidden_tokens = std::to_array<std::string_view>({"libdeflate", "lz4::", "DirectXTex", "Windows.h",
+  constexpr auto forbidden_tokens = std::to_array<std::string_view>({"libdeflate", "lz4::", "DirectXTex", "DirectX::",
+                                                                     "DXGI", "Windows.h", "DDS_HEADER_DXT10",
                                                                      "TES5Edit", "std::expected", "bethesda_hash",
                                                                      "compression_router", "archive_path_key"});
   const auto include_dir = std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa";
