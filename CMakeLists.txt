@@ -7,6 +7,7 @@ include(CMakePackageConfigHelpers)
 
 find_package(libdeflate CONFIG REQUIRED)
 find_package(lz4 CONFIG REQUIRED)
+find_package(directxtex CONFIG REQUIRED)
 
 option(LIBBSA_BUILD_TESTS "Build libbsa tests" ON)
 
@@ -37,6 +38,7 @@ target_link_libraries(libbsa
   PRIVATE
     $<IF:$<TARGET_EXISTS:libdeflate::libdeflate_static>,libdeflate::libdeflate_static,libdeflate::libdeflate_shared>
     lz4::lz4
+    Microsoft::DirectXTex
 )
 
 target_sources(libbsa
@@ -66,6 +68,7 @@ target_sources(libbsa
     src/formats/bsa/tes3_bsa_reader.cpp
     src/formats/bsa/tes4_bsa_parser.cpp
     src/formats/bsa/tes4_bsa_reader.cpp
+    src/texture/directxtex_analyzer.cpp
     src/libbsa.cpp
 )
 

@@ -57,6 +57,66 @@ struct ba2_archive_metadata {
   std::optional<std::uint32_t> compression_method;
 };
 
+/// Per-chunk BA2 texture payload metadata exposed for dependency-light inspection.
+///
+/// Offsets are archive-absolute and sizes describe the stored chunk bytes plus the decoded
+/// payload bytes. The compression route is a libbsa-owned value so callers never depend on
+/// private codec or texture-analysis libraries.
+struct texture_chunk_metadata {
+  /// Archive-absolute byte offset of this chunk's stored payload.
+  std::uint64_t payload_offset;
+
+  /// Stored byte count in the archive; zero-sized stored metadata is represented as raw chunks by parsers.
+  std::uint32_t stored_size;
+
+  /// Decoded chunk byte count before DDS header reconstruction.
+  std::uint32_t raw_size;
+
+  /// First mip level covered by this chunk, inclusive.
+  std::uint16_t start_mip;
+
+  /// Last mip level covered by this chunk, inclusive.
+  std::uint16_t end_mip;
+
+  /// Compression route selected from archive metadata for this chunk.
+  entry_compression compression;
+};
+
+/// Dependency-light BA2 texture metadata attached only to texture archive entries.
+///
+/// The format field stores the raw numeric graphics format identifier used by DDS DXT10
+/// metadata, preserving the value without exposing platform or analyzer types. For texture
+/// entries, `entry_metadata::raw_size` is the consumer-visible reconstructed DDS size including
+/// its header; archive payload sizes remain on the per-chunk metadata below.
+struct texture_metadata {
+  /// Texture width in pixels.
+  std::uint32_t width;
+
+  /// Texture height in pixels.
+  std::uint32_t height;
+
+  /// Number of mip levels described by the texture record.
+  std::uint32_t mip_count;
+
+  /// Raw numeric DDS DXT10 graphics format identifier.
+  std::uint32_t dxgi_format;
+
+  /// Texture array element count represented independently from cubemap state.
+  std::uint32_t array_size;
+
+  /// True when the BA2 record represents cubemap texture data.
+  bool is_cubemap;
+
+  /// Raw BA2 texture record byte with currently unknown Bethesda-specific semantics.
+  std::uint8_t unknown_tex;
+
+  /// Raw BA2 cubemap/array field preserved for compatibility evidence.
+  std::uint16_t cube_maps_raw;
+
+  /// Chunk layout and compression metadata in archive order unless a later parser documents otherwise.
+  std::vector<texture_chunk_metadata> chunks;
+};
+
 /// Archive-level metadata exposed by an opened reader.
 ///
 /// The structure is intentionally limited to stable Phase 3 fields: container
@@ -91,6 +151,8 @@ struct entry_metadata {
   std::uint32_t record_flags;
   bool has_embedded_name;
   std::uint32_t embedded_name_prefix_size;
+  /// Optional texture metadata populated only for BA2 DX10 texture entries.
+  std::optional<texture_metadata> texture;
 };
 
 /// Synchronous sink used by archive extraction APIs.
