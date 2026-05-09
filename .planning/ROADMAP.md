@@ -295,7 +295,7 @@ Plans:
 
 **Wave 1**
 - [x] 09-01-PLAN.md — Define the dependency-light public BA2 DX10 writer contract and boundary tests.
-- [ ] 09-02-PLAN.md — Add generated DDS source fixture matrix and private DirectXTex source analysis.
+- [x] 09-02-PLAN.md — Add generated DDS source fixture matrix and private DirectXTex source analysis.
 - [ ] 09-03-PLAN.md — Add locked-format DDS sizing and archive-wide DX10 chunk planning.
 
 **Wave 2** *(blocked on Wave 1 public contract and DDS source analysis)*
