@@ -571,8 +571,12 @@ void generate_malformed(const std::filesystem::path& output_dir) {
   bad_compressed.at(static_cast<std::size_t>(fo4.textures[1].chunks[0].payload_offset)) ^= std::byte{0xFF};
   write_file(output_dir / "ba2_dx10_bad_compressed_chunk.ba2", bad_compressed);
 
-  auto decoded_size_mismatch = valid_fo4;
-  overwrite_u32(decoded_size_mismatch, static_cast<std::size_t>(first_second_chunk_offset + 12ULL), fo4.textures[1].chunks[0].raw_size + 4U);
+  auto decoded_size_mismatch_archive = make_fo4();
+  decoded_size_mismatch_archive.textures[1].chunks[0].decoded_payload = repeated_bytes(0xF0, 4);
+  auto decoded_size_mismatch = build_archive(decoded_size_mismatch_archive);
+  // Keep the metadata layout-valid while the compressed stream decodes to a shorter byte count so
+  // exact-size decompression, not open-time layout validation, rejects this malformed archive.
+  overwrite_u32(decoded_size_mismatch, static_cast<std::size_t>(first_second_chunk_offset + 12ULL), fo4.textures[1].chunks[0].raw_size);
   write_file(output_dir / "ba2_dx10_decoded_size_mismatch.ba2", decoded_size_mismatch);
 
   auto mip_gap = valid_fo4;
