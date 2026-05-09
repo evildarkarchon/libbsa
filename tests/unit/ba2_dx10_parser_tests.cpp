@@ -3,11 +3,14 @@
 #include <libbsa/libbsa.hpp>
 
 #include <algorithm>
+#include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -77,6 +80,82 @@ const nlohmann::json& manifest_entry_for_path(const nlohmann::json& manifest, st
   });
   REQUIRE(found != manifest.at("entries").end());
   return *found;
+}
+
+void write_u8(std::ofstream& out, std::uint8_t value) {
+  const auto byte = static_cast<char>(value);
+  out.write(&byte, 1);
+}
+
+void write_u16(std::ofstream& out, std::uint16_t value) {
+  write_u8(out, static_cast<std::uint8_t>(value & 0xFFU));
+  write_u8(out, static_cast<std::uint8_t>((value >> 8U) & 0xFFU));
+}
+
+void write_u32(std::ofstream& out, std::uint32_t value) {
+  for (std::uint32_t index = 0; index < 4U; ++index) {
+    write_u8(out, static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+  }
+}
+
+void write_u64(std::ofstream& out, std::uint64_t value) {
+  for (std::uint32_t index = 0; index < 8U; ++index) {
+    write_u8(out, static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+  }
+}
+
+void write_ascii4(std::ofstream& out, std::string_view value) {
+  REQUIRE(value.size() == 4U);
+  out.write(value.data(), static_cast<std::streamsize>(value.size()));
+}
+
+void write_ascii4(std::ofstream& out, const std::array<char, 4U>& value) {
+  out.write(value.data(), static_cast<std::streamsize>(value.size()));
+}
+
+void write_sparse_dx10_archive(const std::filesystem::path& path) {
+  constexpr std::uint64_t sparse_payload_offset = 4ULL * 1024ULL * 1024ULL * 1024ULL;
+  constexpr std::uint32_t ba2_record_sentinel = 0xBAAD'F00DU;
+  constexpr std::uint16_t chunk_header_size = 24U;
+  const std::string original_path = "Textures/Generated/Sparse.dds";
+  const auto name_hash = std::uint32_t{0x4C75B3A1U};
+  const auto directory_hash = std::uint32_t{0x2A84D5E3U};
+  const auto file_table_offset = std::uint64_t{72U};
+
+  std::filesystem::create_directories(path.parent_path());
+  std::ofstream out{path, std::ios::binary | std::ios::trunc};
+  REQUIRE(out);
+
+  write_ascii4(out, "BTDX");
+  write_u32(out, 1U);
+  write_ascii4(out, "DX10");
+  write_u32(out, 1U);
+  write_u64(out, file_table_offset);
+
+  write_u32(out, name_hash);
+  write_ascii4(out, std::array<char, 4U>{'d', 'd', 's', '\0'});
+  write_u32(out, directory_hash);
+  write_u8(out, 0U);
+  write_u8(out, 1U);
+  write_u16(out, chunk_header_size);
+  write_u16(out, 1U);
+  write_u16(out, 1U);
+  write_u8(out, 1U);
+  write_u8(out, 28U);
+  write_u16(out, 0U);
+  write_u64(out, sparse_payload_offset);
+  write_u32(out, 0U);
+  write_u32(out, 4U);
+  write_u16(out, 0U);
+  write_u16(out, 0U);
+  write_u32(out, ba2_record_sentinel);
+
+  write_u16(out, static_cast<std::uint16_t>(original_path.size()));
+  out.write(original_path.data(), static_cast<std::streamsize>(original_path.size()));
+  out.seekp(static_cast<std::streamoff>(sparse_payload_offset), std::ios::beg);
+  const std::array<char, 4U> payload{static_cast<char>(0x10), static_cast<char>(0x20), static_cast<char>(0x30), static_cast<char>(0x40)};
+  out.write(payload.data(), static_cast<std::streamsize>(payload.size()));
+  REQUIRE(out);
 }
 
 void require_common_dx10_metadata(const nlohmann::json& manifest,
@@ -215,6 +294,28 @@ TEST_CASE("ba2_dx10_lookup preserves canonical lowercase paths and original spel
   auto missing = opened.value().find("textures/generated/missing.dds");
   REQUIRE(missing.has_value());
   REQUIRE_FALSE(missing.value().has_value());
+}
+
+TEST_CASE("ba2_dx10_detector opens sparse archive without reading the payload gap", "[unit][fixture][ba2_dx10_detector][sparse]") {
+  const auto sparse_path = std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_sparse_gap.ba2";
+  write_sparse_dx10_archive(sparse_path);
+
+  const auto start = std::chrono::steady_clock::now();
+  auto opened = libbsa::archive_reader::open(sparse_path.string());
+  const auto open_duration = std::chrono::steady_clock::now() - start;
+
+  REQUIRE(opened.has_value());
+  REQUIRE(open_duration < std::chrono::seconds{2});
+  auto entries = opened.value().entries();
+  REQUIRE(entries.has_value());
+  REQUIRE(entries.value().size() == 1U);
+  auto found = opened.value().find("Textures/Generated/Sparse.dds");
+  REQUIRE(found.has_value());
+  REQUIRE(found.value().has_value());
+  REQUIRE(found.value()->path == "textures/generated/sparse.dds");
+  auto contains = opened.value().contains("textures/generated/sparse.dds");
+  REQUIRE(contains.has_value());
+  REQUIRE(contains.value());
 }
 
 TEST_CASE("ba2_dx10_layout exposes validated order and rejects contradictory format-defined order",
