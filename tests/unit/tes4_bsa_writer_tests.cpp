@@ -79,6 +79,17 @@ std::uint32_t expected_version(libbsa::tes4_bsa_target target) {
   return 0;
 }
 
+libbsa::entry_compression expected_target_default_compression(libbsa::tes4_bsa_target target) {
+  switch (target) {
+  case libbsa::tes4_bsa_target::oblivion:
+  case libbsa::tes4_bsa_target::fallout3:
+    return libbsa::entry_compression::deflate;
+  case libbsa::tes4_bsa_target::skyrim_se:
+    return libbsa::entry_compression::lz4_frame;
+  }
+  return libbsa::entry_compression::none;
+}
+
 std::string target_name(libbsa::tes4_bsa_target target) {
   switch (target) {
   case libbsa::tes4_bsa_target::oblivion:
@@ -147,7 +158,7 @@ TEST_CASE("TES4 BSA writer raw output reopens for every target profile", "[unit]
     CHECK(metadata.value().variant == libbsa::archive_variant::tes4);
     CHECK(metadata.value().version == expected_version(target));
     CHECK(metadata.value().file_count == expected_entries.size() + 1U);
-    CHECK(metadata.value().default_compression == libbsa::entry_compression::none);
+    CHECK(metadata.value().default_compression == expected_target_default_compression(target));
     CHECK((metadata.value().archive_flags & include_directory_names) != 0U);
     CHECK((metadata.value().archive_flags & include_file_names) != 0U);
     CHECK((metadata.value().archive_flags & archive_compress_by_default) == 0U);
