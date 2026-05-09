@@ -187,6 +187,10 @@ add_custom_target(generate_ba2_dx10_fixtures
     ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_decoded_size_mismatch.ba2
     ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_mip_gap.ba2
     ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_duplicate_mip_face.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_writer_sources_manifest.json
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_multi_mip_bc7_unorm.dds
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_array_bc5_unorm_2slice.dds
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_cubemap_bc1_unorm_6face.dds
   COMMENT "Generating BA2 DX10 texture success and malformed fixtures"
   VERBATIM
 )

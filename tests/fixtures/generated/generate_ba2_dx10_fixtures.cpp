@@ -26,6 +26,13 @@ constexpr std::uint32_t ba2_record_sentinel = 0xBAAD'F00DU;
 constexpr std::uint16_t ba2_dx10_chunk_header_size = 24U;
 constexpr std::uint16_t ba2_dx10_cubemap_raw = 2049U;
 constexpr std::uint32_t dxgi_format_r8g8b8a8_unorm = 28U;
+constexpr std::uint32_t dds_dxt10_header_size = 148U;
+constexpr std::uint32_t dds_fourcc_dx10 = 0x30315844U;
+constexpr std::uint32_t dds_caps_texture = 0x00001000U;
+constexpr std::uint32_t dds_caps_complex = 0x00000008U;
+constexpr std::uint32_t dds_caps_mipmap = 0x00400000U;
+constexpr std::uint32_t dds_caps2_cubemap = 0x00000200U;
+constexpr std::uint32_t dds_caps2_cubemap_all_faces = 0x0000FC00U;
 
 struct byte_buffer {
   std::vector<std::byte> bytes;
@@ -119,6 +126,20 @@ struct archive_spec {
   std::vector<texture_spec> textures;
 };
 
+struct source_dds_spec {
+  std::string id;
+  std::string file;
+  std::uint32_t format_id{0};
+  std::string format_name;
+  std::uint32_t width{1};
+  std::uint32_t height{1};
+  std::uint32_t mip_count{1};
+  std::uint32_t array_size{1};
+  bool is_cubemap{false};
+  std::string archive_path;
+  std::string structural_case{"format"};
+};
+
 std::vector<std::byte> bytes(std::initializer_list<unsigned int> values) {
   std::vector<std::byte> result;
   result.reserve(values.size());
@@ -184,6 +205,169 @@ std::uint32_t checked_u32(std::size_t value, std::string_view what) {
     throw std::runtime_error(std::string{what} + " does not fit in uint32");
   }
   return static_cast<std::uint32_t>(value);
+}
+
+std::uint32_t mip_dimension(std::uint32_t dimension, std::uint32_t mip) noexcept {
+  const auto shifted = mip >= 31U ? 0U : dimension >> mip;
+  return std::max(1U, shifted);
+}
+
+std::uint32_t bytes_per_block(std::uint32_t format) {
+  switch (format) {
+  case 71U:
+  case 72U:
+  case 80U:
+    return 8U;
+  case 77U:
+  case 83U:
+  case 84U:
+  case 95U:
+  case 98U:
+    return 16U;
+  case 29U:
+  case 31U:
+  case 87U:
+    return 4U;
+  case 61U:
+    return 1U;
+  case 2U:
+    return 16U;
+  default:
+    throw std::runtime_error("unsupported DDS source fixture format size");
+  }
+}
+
+bool is_block_compressed(std::uint32_t format) noexcept {
+  switch (format) {
+  case 71U:
+  case 72U:
+  case 77U:
+  case 80U:
+  case 83U:
+  case 84U:
+  case 95U:
+  case 98U:
+    return true;
+  default:
+    return false;
+  }
+}
+
+std::size_t dds_mip_size(std::uint32_t format, std::uint32_t width, std::uint32_t height) {
+  const auto block_bytes = bytes_per_block(format);
+  if (is_block_compressed(format)) {
+    return static_cast<std::size_t>(std::max(1U, (width + 3U) / 4U)) * std::max(1U, (height + 3U) / 4U) * block_bytes;
+  }
+  return static_cast<std::size_t>(width) * height * block_bytes;
+}
+
+std::vector<source_dds_spec> source_dds_valid_specs() {
+  return {{"bc1_unorm", "ba2_dx10_bc1_unorm.dds", 71U, "BC1_UNORM", 16U, 16U, 1U, 1U, false,
+           "textures/formats/bc1_unorm.dds", "format"},
+          {"bc1_unorm_srgb", "ba2_dx10_bc1_unorm_srgb.dds", 72U, "BC1_UNORM_SRGB", 16U, 16U, 1U, 1U, false,
+           "textures/formats/bc1_unorm_srgb.dds", "format"},
+          {"bc3_unorm", "ba2_dx10_bc3_unorm.dds", 77U, "BC3_UNORM", 16U, 16U, 1U, 1U, false,
+           "textures/formats/bc3_unorm.dds", "format"},
+          {"bc4_unorm", "ba2_dx10_bc4_unorm.dds", 80U, "BC4_UNORM", 16U, 16U, 1U, 1U, false,
+           "textures/formats/bc4_unorm.dds", "format"},
+          {"bc5_unorm", "ba2_dx10_bc5_unorm.dds", 83U, "BC5_UNORM", 16U, 16U, 1U, 1U, false,
+           "textures/formats/bc5_unorm.dds", "format"},
+          {"bc5_snorm", "ba2_dx10_bc5_snorm.dds", 84U, "BC5_SNORM", 16U, 16U, 1U, 1U, false,
+           "textures/formats/bc5_snorm.dds", "format"},
+          {"bc6h_uf16", "ba2_dx10_bc6h_uf16.dds", 95U, "BC6H_UF16", 16U, 16U, 1U, 1U, false,
+           "textures/formats/bc6h_uf16.dds", "format"},
+          {"bc7_unorm", "ba2_dx10_bc7_unorm.dds", 98U, "BC7_UNORM", 16U, 16U, 1U, 1U, false,
+           "textures/formats/bc7_unorm.dds", "format"},
+          {"r8g8b8a8_unorm_srgb", "ba2_dx10_r8g8b8a8_unorm_srgb.dds", 29U, "R8G8B8A8_UNORM_SRGB", 8U, 8U, 1U, 1U,
+           false, "textures/formats/r8g8b8a8_unorm_srgb.dds", "format"},
+          {"b8g8r8a8_unorm", "ba2_dx10_b8g8r8a8_unorm.dds", 87U, "B8G8R8A8_UNORM", 8U, 8U, 1U, 1U, false,
+           "textures/formats/b8g8r8a8_unorm.dds", "format"},
+          {"r8_unorm", "ba2_dx10_r8_unorm.dds", 61U, "R8_UNORM", 8U, 8U, 1U, 1U, false,
+           "textures/formats/r8_unorm.dds", "format"},
+          {"r8g8b8a8_snorm", "ba2_dx10_r8g8b8a8_snorm.dds", 31U, "R8G8B8A8_SNORM", 8U, 8U, 1U, 1U, false,
+           "textures/formats/r8g8b8a8_snorm.dds", "format"},
+          {"multi_mip_bc7_unorm", "ba2_dx10_multi_mip_bc7_unorm.dds", 98U, "BC7_UNORM", 128U, 128U, 5U, 1U, false,
+           "textures/structural/multi_mip_bc7_unorm.dds", "multi_mip"},
+          {"array_bc5_unorm_2slice", "ba2_dx10_array_bc5_unorm_2slice.dds", 83U, "BC5_UNORM", 64U, 64U, 1U, 2U, false,
+           "textures/structural/array_bc5_unorm_2slice.dds", "array"},
+          {"cubemap_bc1_unorm_6face", "ba2_dx10_cubemap_bc1_unorm_6face.dds", 71U, "BC1_UNORM", 32U, 32U, 1U, 1U, true,
+           "textures/structural/cubemap_bc1_unorm_6face.dds", "cubemap"}};
+}
+
+std::vector<std::byte> build_source_dds(const source_dds_spec& spec) {
+  byte_buffer writer;
+  writer.ascii4("DDS ");
+  const auto caps = dds_caps_texture | (spec.mip_count > 1U ? dds_caps_complex | dds_caps_mipmap : 0U) |
+                    (spec.is_cubemap ? dds_caps_complex : 0U);
+  const auto caps2 = spec.is_cubemap ? dds_caps2_cubemap | dds_caps2_cubemap_all_faces : 0U;
+  for (const auto value : {124U, 0x0002100FU, spec.height, spec.width, 0U, 0U, spec.mip_count}) {
+    writer.u32(value);
+  }
+  for (std::uint32_t index = 0; index < 11U; ++index) {
+    writer.u32(0U);
+  }
+  for (const auto value : {32U, 0x00000004U, dds_fourcc_dx10, 0U, 0U, 0U, 0U, 0U, caps, caps2, 0U, 0U, 0U}) {
+    writer.u32(value);
+  }
+  for (const auto value : {spec.format_id, 3U, spec.is_cubemap ? 4U : 0U, spec.array_size, 0U}) {
+    writer.u32(value);
+  }
+  if (writer.bytes.size() != dds_dxt10_header_size) {
+    throw std::runtime_error("internal DDS DXT10 header size mismatch");
+  }
+
+  const auto faces = spec.is_cubemap ? 6U : 1U;
+  for (std::uint32_t array = 0; array < spec.array_size; ++array) {
+    for (std::uint32_t face = 0; face < faces; ++face) {
+      for (std::uint32_t mip = 0; mip < spec.mip_count; ++mip) {
+        const auto width = mip_dimension(spec.width, mip);
+        const auto height = mip_dimension(spec.height, mip);
+        const auto size = dds_mip_size(spec.format_id, width, height);
+        writer.raw(repeated_bytes(static_cast<std::uint8_t>(0x11U + spec.format_id + array + face + mip), size));
+      }
+    }
+  }
+  return writer.bytes;
+}
+
+void write_source_case_json(std::ostringstream& out, const source_dds_spec& spec, std::string_view indent) {
+  out << indent << "{\"id\": \"" << json_escape(spec.id) << "\", \"file\": \"" << json_escape(spec.file)
+      << "\", \"format_id\": " << spec.format_id << ", \"format_name\": \"" << json_escape(spec.format_name)
+      << "\", \"width\": " << spec.width << ", \"height\": " << spec.height << ", \"mip_count\": " << spec.mip_count
+      << ", \"array_size\": " << spec.array_size << ", \"is_cubemap\": " << (spec.is_cubemap ? "true" : "false")
+      << ", \"archive_path\": \"" << json_escape(spec.archive_path) << "\", \"structural_case\": \""
+      << json_escape(spec.structural_case) << "\"}";
+}
+
+std::string writer_sources_manifest(const std::vector<source_dds_spec>& specs) {
+  std::ostringstream out;
+  out << "{\n";
+  out << "  \"manifest_kind\": \"ba2_dx10_writer_source_dds_cases\",\n";
+  out << "  \"provenance\": {\"generator\": \"tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp\", "
+         "\"source\": \"repository-owned synthetic DDS bytes generated for libbsa tests; no game or TES5Edit bytes copied\"},\n";
+  out << "  \"valid_cases\": [\n";
+  for (std::size_t index = 0; index < specs.size(); ++index) {
+    write_source_case_json(out, specs[index], "    ");
+    out << (index + 1U == specs.size() ? "\n" : ",\n");
+  }
+  out << "  ],\n";
+  out << "  \"structural_cases\": {\n";
+  for (const auto key : {"multi_mip_bc7_unorm", "array_bc5_unorm_2slice", "cubemap_bc1_unorm_6face"}) {
+    const auto found = std::find_if(specs.begin(), specs.end(), [&](const source_dds_spec& spec) { return spec.id == key; });
+    if (found == specs.end()) {
+      throw std::runtime_error("missing structural DDS source case");
+    }
+    out << "    \"" << key << "\": ";
+    write_source_case_json(out, *found, "");
+    out << (std::string_view{key} == "cubemap_bc1_unorm_6face" ? "\n" : ",\n");
+  }
+  out << "  },\n";
+  out << "  \"invalid_cases\": [\n";
+  out << "    {\"id\": \"malformed_truncated_dds\", \"file\": \"ba2_dx10_malformed_truncated.dds\", \"expected_error\": \"format_error\"},\n";
+  out << "    {\"id\": \"unsupported_r32g32b32a32_float\", \"file\": \"ba2_dx10_unsupported_r32g32b32a32_float.dds\", \"expected_error\": \"format_error\"}\n";
+  out << "  ]\n";
+  out << "}\n";
+  return out.str();
 }
 
 std::string compression_route_name(libbsa::detail::compression_method method) {
@@ -539,6 +723,28 @@ void generate_success(const std::filesystem::path& output_dir) {
   }
 }
 
+void generate_writer_sources(const std::filesystem::path& source_dir) {
+  const auto specs = source_dds_valid_specs();
+  for (const auto& spec : specs) {
+    write_file(source_dir / spec.file, build_source_dds(spec));
+  }
+
+  write_file(source_dir / "ba2_dx10_malformed_truncated.dds", bytes({0x44, 0x44, 0x53, 0x20, 0x7C}));
+  const source_dds_spec unsupported{"unsupported_r32g32b32a32_float",
+                                    "ba2_dx10_unsupported_r32g32b32a32_float.dds",
+                                    2U,
+                                    "R32G32B32A32_FLOAT",
+                                    4U,
+                                    4U,
+                                    1U,
+                                    1U,
+                                    false,
+                                    "textures/unsupported/r32g32b32a32_float.dds",
+                                    "unsupported"};
+  write_file(source_dir / unsupported.file, build_source_dds(unsupported));
+  write_text(source_dir / "ba2_dx10_writer_sources_manifest.json", writer_sources_manifest(specs));
+}
+
 std::string malformed_manifest() {
   return R"json({
   "manifest_kind": "malformed_ba2_dx10_cases",
@@ -640,6 +846,7 @@ int main(int argc, char** argv) {
     const auto output_dir = parse_output_dir(argc, argv);
     generate_success(output_dir);
     generate_malformed(output_dir);
+    generate_writer_sources(output_dir.parent_path() / "source");
   } catch (const std::exception& exception) {
     std::cerr << "generate_ba2_dx10_fixtures: " << exception.what() << '\n';
     return 1;

@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <vector>
 
 namespace libbsa::texture {
 namespace {
@@ -19,6 +20,57 @@ result<std::uint32_t> checked_u32(std::size_t value, const char* field_name) {
     return error{error_code::format_error, std::string{field_name} + " exceeds public metadata limits"};
   }
   return static_cast<std::uint32_t>(value);
+}
+
+bool is_supported_writer_source_format(DXGI_FORMAT format) noexcept {
+  switch (static_cast<std::uint32_t>(format)) {
+  case 71U: // BC1_UNORM
+  case 72U: // BC1_UNORM_SRGB
+  case 77U: // BC3_UNORM
+  case 80U: // BC4_UNORM
+  case 83U: // BC5_UNORM
+  case 84U: // BC5_SNORM
+  case 95U: // BC6H_UF16
+  case 98U: // BC7_UNORM
+  case 29U: // R8G8B8A8_UNORM_SRGB
+  case 87U: // B8G8R8A8_UNORM
+  case 61U: // R8_UNORM
+  case 31U: // R8G8B8A8_SNORM
+    return true;
+  default:
+    return false;
+  }
+}
+
+result<texture_metadata> translate_source_metadata(const DirectX::TexMetadata& metadata) {
+  auto width = checked_u32(metadata.width, "DDS width");
+  if (!width) {
+    return width.error();
+  }
+  auto height = checked_u32(metadata.height, "DDS height");
+  if (!height) {
+    return height.error();
+  }
+  auto mip_count = checked_u32(metadata.mipLevels, "DDS mip count");
+  if (!mip_count) {
+    return mip_count.error();
+  }
+  const auto logical_array_size = metadata.IsCubemap() ? metadata.arraySize / 6U : metadata.arraySize;
+  auto array_size = checked_u32(logical_array_size, "DDS array size");
+  if (!array_size) {
+    return array_size.error();
+  }
+
+  texture_metadata translated{};
+  translated.width = width.value();
+  translated.height = height.value();
+  translated.mip_count = mip_count.value();
+  translated.dxgi_format = static_cast<std::uint32_t>(metadata.format);
+  translated.array_size = array_size.value();
+  translated.is_cubemap = metadata.IsCubemap();
+  translated.unknown_tex = 0U;
+  translated.cube_maps_raw = 0U;
+  return translated;
 }
 
 } // namespace
@@ -57,6 +109,53 @@ result<texture_metadata> analyze_dds_metadata(std::span<const std::byte> dds_byt
   translated.unknown_tex = 0U;
   translated.cube_maps_raw = 0U;
   return translated;
+}
+
+result<dds_source_analysis> analyze_dds_source(std::span<const std::byte> dds_bytes) {
+  DirectX::TexMetadata metadata{};
+  DirectX::ScratchImage image{};
+  const HRESULT hr = DirectX::LoadFromDDSMemory(dds_bytes.data(), dds_bytes.size(), DirectX::DDS_FLAGS_NONE, &metadata, image);
+  if (hr < 0) {
+    return error{error_code::format_error, "DDS source could not be loaded by the texture analyzer"};
+  }
+  if (!is_supported_writer_source_format(metadata.format)) {
+    return error{error_code::format_error, "DDS source format is unsupported by the BA2 DX10 writer"};
+  }
+
+  auto translated = translate_source_metadata(metadata);
+  if (!translated) {
+    return translated.error();
+  }
+
+  dds_source_analysis analysis{};
+  analysis.metadata = translated.value();
+  analysis.dds_bytes.assign(dds_bytes.begin(), dds_bytes.end());
+
+  const DirectX::Image* images = image.GetImages();
+  const auto image_count = image.GetImageCount();
+  if (images == nullptr || image_count == 0U) {
+    return error{error_code::format_error, "DDS source has no image payloads"};
+  }
+
+  const std::uint32_t faces_per_array = metadata.IsCubemap() ? 6U : 1U;
+  for (std::size_t index = 0; index < image_count; ++index) {
+    const auto& source = images[index];
+    if (source.pixels == nullptr || source.slicePitch == 0U) {
+      return error{error_code::format_error, "DDS source image payload is empty"};
+    }
+    const auto array_face = static_cast<std::uint32_t>(index / metadata.mipLevels);
+    const auto mip = static_cast<std::uint32_t>(index % metadata.mipLevels);
+    const auto array_index = metadata.IsCubemap() ? array_face / faces_per_array : array_face;
+    const auto face_index = metadata.IsCubemap() ? array_face % faces_per_array : 0U;
+    std::vector<std::byte> copied;
+    copied.reserve(source.slicePitch);
+    const auto* begin = reinterpret_cast<const std::byte*>(source.pixels);
+    copied.insert(copied.end(), begin, begin + source.slicePitch);
+    analysis.image_payload_bytes.insert(analysis.image_payload_bytes.end(), copied.begin(), copied.end());
+    analysis.subresources.push_back(dds_source_subresource{array_index, face_index, mip, std::move(copied)});
+  }
+
+  return analysis;
 }
 
 } // namespace libbsa::texture

@@ -1,0 +1,30 @@
+{
+  "manifest_kind": "ba2_dx10_writer_source_dds_cases",
+  "provenance": {"generator": "tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp", "source": "repository-owned synthetic DDS bytes generated for libbsa tests; no game or TES5Edit bytes copied"},
+  "valid_cases": [
+    {"id": "bc1_unorm", "file": "ba2_dx10_bc1_unorm.dds", "format_id": 71, "format_name": "BC1_UNORM", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc1_unorm.dds", "structural_case": "format"},
+    {"id": "bc1_unorm_srgb", "file": "ba2_dx10_bc1_unorm_srgb.dds", "format_id": 72, "format_name": "BC1_UNORM_SRGB", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc1_unorm_srgb.dds", "structural_case": "format"},
+    {"id": "bc3_unorm", "file": "ba2_dx10_bc3_unorm.dds", "format_id": 77, "format_name": "BC3_UNORM", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc3_unorm.dds", "structural_case": "format"},
+    {"id": "bc4_unorm", "file": "ba2_dx10_bc4_unorm.dds", "format_id": 80, "format_name": "BC4_UNORM", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc4_unorm.dds", "structural_case": "format"},
+    {"id": "bc5_unorm", "file": "ba2_dx10_bc5_unorm.dds", "format_id": 83, "format_name": "BC5_UNORM", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc5_unorm.dds", "structural_case": "format"},
+    {"id": "bc5_snorm", "file": "ba2_dx10_bc5_snorm.dds", "format_id": 84, "format_name": "BC5_SNORM", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc5_snorm.dds", "structural_case": "format"},
+    {"id": "bc6h_uf16", "file": "ba2_dx10_bc6h_uf16.dds", "format_id": 95, "format_name": "BC6H_UF16", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc6h_uf16.dds", "structural_case": "format"},
+    {"id": "bc7_unorm", "file": "ba2_dx10_bc7_unorm.dds", "format_id": 98, "format_name": "BC7_UNORM", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc7_unorm.dds", "structural_case": "format"},
+    {"id": "r8g8b8a8_unorm_srgb", "file": "ba2_dx10_r8g8b8a8_unorm_srgb.dds", "format_id": 29, "format_name": "R8G8B8A8_UNORM_SRGB", "width": 8, "height": 8, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/r8g8b8a8_unorm_srgb.dds", "structural_case": "format"},
+    {"id": "b8g8r8a8_unorm", "file": "ba2_dx10_b8g8r8a8_unorm.dds", "format_id": 87, "format_name": "B8G8R8A8_UNORM", "width": 8, "height": 8, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/b8g8r8a8_unorm.dds", "structural_case": "format"},
+    {"id": "r8_unorm", "file": "ba2_dx10_r8_unorm.dds", "format_id": 61, "format_name": "R8_UNORM", "width": 8, "height": 8, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/r8_unorm.dds", "structural_case": "format"},
+    {"id": "r8g8b8a8_snorm", "file": "ba2_dx10_r8g8b8a8_snorm.dds", "format_id": 31, "format_name": "R8G8B8A8_SNORM", "width": 8, "height": 8, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/r8g8b8a8_snorm.dds", "structural_case": "format"},
+    {"id": "multi_mip_bc7_unorm", "file": "ba2_dx10_multi_mip_bc7_unorm.dds", "format_id": 98, "format_name": "BC7_UNORM", "width": 128, "height": 128, "mip_count": 5, "array_size": 1, "is_cubemap": false, "archive_path": "textures/structural/multi_mip_bc7_unorm.dds", "structural_case": "multi_mip"},
+    {"id": "array_bc5_unorm_2slice", "file": "ba2_dx10_array_bc5_unorm_2slice.dds", "format_id": 83, "format_name": "BC5_UNORM", "width": 64, "height": 64, "mip_count": 1, "array_size": 2, "is_cubemap": false, "archive_path": "textures/structural/array_bc5_unorm_2slice.dds", "structural_case": "array"},
+    {"id": "cubemap_bc1_unorm_6face", "file": "ba2_dx10_cubemap_bc1_unorm_6face.dds", "format_id": 71, "format_name": "BC1_UNORM", "width": 32, "height": 32, "mip_count": 1, "array_size": 1, "is_cubemap": true, "archive_path": "textures/structural/cubemap_bc1_unorm_6face.dds", "structural_case": "cubemap"}
+  ],
+  "structural_cases": {
+    "multi_mip_bc7_unorm": {"id": "multi_mip_bc7_unorm", "file": "ba2_dx10_multi_mip_bc7_unorm.dds", "format_id": 98, "format_name": "BC7_UNORM", "width": 128, "height": 128, "mip_count": 5, "array_size": 1, "is_cubemap": false, "archive_path": "textures/structural/multi_mip_bc7_unorm.dds", "structural_case": "multi_mip"},
+    "array_bc5_unorm_2slice": {"id": "array_bc5_unorm_2slice", "file": "ba2_dx10_array_bc5_unorm_2slice.dds", "format_id": 83, "format_name": "BC5_UNORM", "width": 64, "height": 64, "mip_count": 1, "array_size": 2, "is_cubemap": false, "archive_path": "textures/structural/array_bc5_unorm_2slice.dds", "structural_case": "array"},
+    "cubemap_bc1_unorm_6face": {"id": "cubemap_bc1_unorm_6face", "file": "ba2_dx10_cubemap_bc1_unorm_6face.dds", "format_id": 71, "format_name": "BC1_UNORM", "width": 32, "height": 32, "mip_count": 1, "array_size": 1, "is_cubemap": true, "archive_path": "textures/structural/cubemap_bc1_unorm_6face.dds", "structural_case": "cubemap"}
+  },
+  "invalid_cases": [
+    {"id": "malformed_truncated_dds", "file": "ba2_dx10_malformed_truncated.dds", "expected_error": "format_error"},
+    {"id": "unsupported_r32g32b32a32_float", "file": "ba2_dx10_unsupported_r32g32b32a32_float.dds", "expected_error": "format_error"}
+  ]
+}

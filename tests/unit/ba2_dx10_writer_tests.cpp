@@ -39,7 +39,7 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
   std::vector<std::byte> bytes(static_cast<std::size_t>(size));
   stream.seekg(0, std::ios::beg);
   stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-  REQUIRE(stream.good() || stream.eof());
+  REQUIRE((stream.good() || stream.eof()));
   return bytes;
 }
 
