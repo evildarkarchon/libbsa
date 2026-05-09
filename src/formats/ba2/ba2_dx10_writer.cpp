@@ -616,6 +616,7 @@ void cleanup_publish_directory(const std::filesystem::path& temp_dir) noexcept {
 }
 
 bool should_fail_after_backup_for_test(const std::filesystem::path& output_path) {
+#ifdef LIBBSA_ENABLE_TEST_FAULT_INJECTION
   // Tests use this path-scoped hook to exercise the rollback branch that normally requires
   // a narrow filesystem race after the original archive has already been moved aside.
 #ifdef _WIN32
@@ -631,6 +632,10 @@ bool should_fail_after_backup_for_test(const std::filesystem::path& output_path)
 #else
   const char* requested_path = std::getenv("LIBBSA_TEST_FAIL_BA2_DX10_PUBLISH_AFTER_BACKUP");
   return requested_path != nullptr && output_path == std::filesystem::path{requested_path};
+#endif
+#else
+  (void)output_path;
+  return false;
 #endif
 }
 

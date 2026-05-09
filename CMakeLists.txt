@@ -110,6 +110,7 @@ install(FILES
 if(LIBBSA_BUILD_TESTS)
   include(CTest)
   enable_testing()
+  target_compile_definitions(libbsa PRIVATE LIBBSA_ENABLE_TEST_FAULT_INJECTION)
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
     add_subdirectory(tests)
   endif()
