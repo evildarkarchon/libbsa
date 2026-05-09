@@ -24,6 +24,7 @@ result<std::uint32_t> checked_u32(std::size_t value, const char* field_name) {
 
 bool is_supported_writer_source_format(DXGI_FORMAT format) noexcept {
   switch (static_cast<std::uint32_t>(format)) {
+  case 28U: // R8G8B8A8_UNORM
   case 71U: // BC1_UNORM
   case 72U: // BC1_UNORM_SRGB
   case 77U: // BC3_UNORM

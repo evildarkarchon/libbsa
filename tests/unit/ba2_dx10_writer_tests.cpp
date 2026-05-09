@@ -80,6 +80,7 @@ constexpr auto writer_proof_matrix = std::to_array<writer_proof_case>({
     {"bc5_snorm", "BC5_SNORM", libbsa::ba2_dx10_target::fallout4},
     {"bc6h_uf16", "BC6H_UF16", libbsa::ba2_dx10_target::starfield_v3},
     {"bc7_unorm", "BC7_UNORM", libbsa::ba2_dx10_target::starfield_v3},
+    {"r8g8b8a8_unorm", "R8G8B8A8_UNORM", libbsa::ba2_dx10_target::starfield_v3},
     {"r8g8b8a8_unorm_srgb", "R8G8B8A8_UNORM_SRGB", libbsa::ba2_dx10_target::starfield_v3},
     {"b8g8r8a8_unorm", "B8G8R8A8_UNORM", libbsa::ba2_dx10_target::starfield_v3},
     {"r8_unorm", "R8_UNORM", libbsa::ba2_dx10_target::fallout4},
@@ -331,7 +332,7 @@ void add_duplicate_dds_pair(libbsa::ba2_dx10_writer& writer, const nlohmann::jso
 
 TEST_CASE("BA2 DX10 writer DDS source manifest covers locked formats", "[unit][fixture][ba2_dx10_writer][dds]") {
   const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
-  constexpr auto locked_formats = std::to_array<std::uint32_t>({71U, 72U, 77U, 80U, 83U, 84U, 95U, 98U, 29U, 87U, 61U, 31U});
+  constexpr auto locked_formats = std::to_array<std::uint32_t>({28U, 71U, 72U, 77U, 80U, 83U, 84U, 95U, 98U, 29U, 87U, 61U, 31U});
 
   std::set<std::uint32_t> present_formats;
   for (const auto& source_case : manifest.at("valid_cases")) {

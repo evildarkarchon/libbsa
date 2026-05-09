@@ -224,6 +224,7 @@ std::uint32_t bytes_per_block(std::uint32_t format) {
   case 95U:
   case 98U:
     return 16U;
+  case 28U:
   case 29U:
   case 31U:
   case 87U:
@@ -274,12 +275,14 @@ std::vector<source_dds_spec> source_dds_valid_specs() {
            "textures/formats/bc5_unorm.dds", "format"},
           {"bc5_snorm", "ba2_dx10_bc5_snorm.dds", 84U, "BC5_SNORM", 16U, 16U, 1U, 1U, false,
            "textures/formats/bc5_snorm.dds", "format"},
-          {"bc6h_uf16", "ba2_dx10_bc6h_uf16.dds", 95U, "BC6H_UF16", 16U, 16U, 1U, 1U, false,
-           "textures/formats/bc6h_uf16.dds", "format"},
-          {"bc7_unorm", "ba2_dx10_bc7_unorm.dds", 98U, "BC7_UNORM", 16U, 16U, 1U, 1U, false,
-           "textures/formats/bc7_unorm.dds", "format"},
-          {"r8g8b8a8_unorm_srgb", "ba2_dx10_r8g8b8a8_unorm_srgb.dds", 29U, "R8G8B8A8_UNORM_SRGB", 8U, 8U, 1U, 1U,
-           false, "textures/formats/r8g8b8a8_unorm_srgb.dds", "format"},
+           {"bc6h_uf16", "ba2_dx10_bc6h_uf16.dds", 95U, "BC6H_UF16", 16U, 16U, 1U, 1U, false,
+            "textures/formats/bc6h_uf16.dds", "format"},
+           {"bc7_unorm", "ba2_dx10_bc7_unorm.dds", 98U, "BC7_UNORM", 16U, 16U, 1U, 1U, false,
+            "textures/formats/bc7_unorm.dds", "format"},
+           {"r8g8b8a8_unorm", "ba2_dx10_r8g8b8a8_unorm.dds", 28U, "R8G8B8A8_UNORM", 8U, 8U, 1U, 1U, false,
+            "textures/formats/r8g8b8a8_unorm.dds", "format"},
+           {"r8g8b8a8_unorm_srgb", "ba2_dx10_r8g8b8a8_unorm_srgb.dds", 29U, "R8G8B8A8_UNORM_SRGB", 8U, 8U, 1U, 1U,
+            false, "textures/formats/r8g8b8a8_unorm_srgb.dds", "format"},
           {"b8g8r8a8_unorm", "ba2_dx10_b8g8r8a8_unorm.dds", 87U, "B8G8R8A8_UNORM", 8U, 8U, 1U, 1U, false,
            "textures/formats/b8g8r8a8_unorm.dds", "format"},
           {"r8_unorm", "ba2_dx10_r8_unorm.dds", 61U, "R8_UNORM", 8U, 8U, 1U, 1U, false,
