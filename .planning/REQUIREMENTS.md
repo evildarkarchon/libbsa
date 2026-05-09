@@ -71,16 +71,16 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 
 ### BSA Write Support
 
-- [ ] **WBSA-01**: Consumer can create new TES4/Oblivion BSA v103 archives from disk files or memory buffers.
-- [ ] **WBSA-02**: Consumer can create new FO3/FNV/Skyrim LE BSA v104 archives from disk files or memory buffers.
-- [ ] **WBSA-03**: Consumer can create new Skyrim SE/AE BSA v105 archives from disk files or memory buffers.
+- [x] **WBSA-01**: Consumer can create new TES4/Oblivion BSA v103 archives from disk files or memory buffers.
+- [x] **WBSA-02**: Consumer can create new FO3/FNV/Skyrim LE BSA v104 archives from disk files or memory buffers.
+- [x] **WBSA-03**: Consumer can create new Skyrim SE/AE BSA v105 archives from disk files or memory buffers.
 - [ ] **WBSA-04**: Consumer can create new TES3/Morrowind BSA archives from disk files or memory buffers.
 - [ ] **WBSA-05**: Writer can generate folder and file indexes sorted by format-compatible hash order.
 - [ ] **WBSA-06**: Writer can derive archive flags and file flags from content using compatible behavior.
 - [ ] **WBSA-07**: Writer can apply per-file compression overrides while respecting target archive defaults.
 - [ ] **WBSA-08**: Writer can write embedded file names where appropriate without triggering known compatibility hazards.
 - [ ] **WBSA-09**: Writer can optionally deduplicate identical file payloads by content hash.
-- [ ] **WBSA-10**: Maintainer can round-trip BSA writer output by packing, reopening, extracting, and byte-comparing source files.
+- [x] **WBSA-10**: Maintainer can round-trip BSA writer output by packing, reopening, extracting, and byte-comparing source files.
 
 ### BA2 Write Support
 
@@ -200,16 +200,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DDS-05 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Complete |
 | DDS-06 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Complete |
 | DDS-07 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Complete |
-| WBSA-01 | Phase 7: TES4-Family BSA Write-New Support | Pending |
-| WBSA-02 | Phase 7: TES4-Family BSA Write-New Support | Pending |
-| WBSA-03 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBSA-01 | Phase 7: TES4-Family BSA Write-New Support | Complete |
+| WBSA-02 | Phase 7: TES4-Family BSA Write-New Support | Complete |
+| WBSA-03 | Phase 7: TES4-Family BSA Write-New Support | Complete |
 | WBSA-04 | Phase 10: TES3 Write Support and BSA Format Completeness | Pending |
 | WBSA-05 | Phase 7: TES4-Family BSA Write-New Support | Pending |
 | WBSA-06 | Phase 7: TES4-Family BSA Write-New Support | Pending |
 | WBSA-07 | Phase 7: TES4-Family BSA Write-New Support | Pending |
 | WBSA-08 | Phase 7: TES4-Family BSA Write-New Support | Pending |
 | WBSA-09 | Phase 7: TES4-Family BSA Write-New Support | Pending |
-| WBSA-10 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBSA-10 | Phase 7: TES4-Family BSA Write-New Support | Complete |
 | WBA2-01 | Phase 8: BA2 GNRL Write-New Support | Pending |
 | WBA2-02 | Phase 8: BA2 GNRL Write-New Support | Pending |
 | WBA2-03 | Phase 8: BA2 GNRL Write-New Support | Pending |

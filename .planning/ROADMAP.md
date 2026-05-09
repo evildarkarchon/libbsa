@@ -231,7 +231,7 @@ Plans:
 Plans:
 
 **Wave 1**
-- [ ] 07-01-PLAN.md — Define the dependency-light public TES4-family BSA writer contract and boundary tests.
+- [x] 07-01-PLAN.md — Define the dependency-light public TES4-family BSA writer contract and boundary tests.
 
 **Wave 2** *(blocked on Wave 1 public writer contract)*
 - [ ] 07-02-PLAN.md — Implement writer-owned entry state, path validation, duplicate detection, and overwrite/source guards.
