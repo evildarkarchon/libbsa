@@ -470,6 +470,58 @@ result<void> write_archive_bytes(ba2_gnrl_target target,
   return {};
 }
 
+result<bool> path_exists_noexcept(const std::filesystem::path& path) {
+  std::error_code fs_error;
+  const bool exists = std::filesystem::exists(path, fs_error);
+  if (fs_error) {
+    return error{error_code::io_error, "BA2 GNRL writer failed to inspect output host path"};
+  }
+  return exists;
+}
+
+result<std::filesystem::path> make_unique_publish_directory(const std::filesystem::path& output_path) {
+  const auto parent = output_path.parent_path();
+  const auto filename = output_path.filename();
+  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
+    auto candidate_name = filename;
+    candidate_name += ".libbsa-tmp-" + std::to_string(counter);
+    const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
+    std::error_code fs_error;
+    // A unique directory avoids deleting caller-owned deterministic siblings such as `<archive>.tmp`.
+    if (std::filesystem::create_directory(candidate, fs_error)) {
+      return candidate;
+    }
+    if (fs_error) {
+      return error{error_code::io_error, "BA2 GNRL writer failed to reserve temporary output directory"};
+    }
+  }
+  return error{error_code::io_error, "BA2 GNRL writer exhausted temporary output directory names"};
+}
+
+void cleanup_publish_directory(const std::filesystem::path& temp_dir) noexcept {
+  std::error_code fs_error;
+  // Cleanup is best-effort because callers should receive the primary write/publish failure, not cleanup noise.
+  std::filesystem::remove_all(temp_dir, fs_error);
+}
+
+result<std::filesystem::path> reserve_backup_path(const std::filesystem::path& output_path) {
+  const auto parent = output_path.parent_path();
+  const auto filename = output_path.filename();
+  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
+    auto candidate_name = filename;
+    candidate_name += ".libbsa-bak-" + std::to_string(counter);
+    const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
+    auto exists = path_exists_noexcept(candidate);
+    if (!exists) {
+      return exists.error();
+    }
+    if (!exists.value()) {
+      return candidate;
+    }
+  }
+  return error{error_code::io_error, "BA2 GNRL writer exhausted backup output path names"};
+}
+
 result<void> validate_target_options(ba2_gnrl_target target, const ba2_gnrl_writer_options& options) {
   switch (target) {
   case ba2_gnrl_target::fallout4:
@@ -554,7 +606,11 @@ result<void> write_ba2_gnrl_archive(ba2_gnrl_target target,
   }
 
   const auto output_path = std::filesystem::path{output_host_path};
-  if (!options.overwrite_existing && std::filesystem::exists(output_path)) {
+  auto output_exists = path_exists_noexcept(output_path);
+  if (!output_exists) {
+    return output_exists.error();
+  }
+  if (!options.overwrite_existing && output_exists.value()) {
     return error{error_code::io_error, "BA2 GNRL output host path already exists"};
   }
 
@@ -575,29 +631,65 @@ result<void> write_ba2_gnrl_archive(ba2_gnrl_target target,
     return offsets.error();
   }
 
-  auto temp_path = output_path;
-  temp_path += ".tmp";
-  std::error_code fs_error;
-  std::filesystem::remove(temp_path, fs_error);
+  auto temp_dir = make_unique_publish_directory(output_path);
+  if (!temp_dir) {
+    return temp_dir.error();
+  }
+  const auto temp_path = temp_dir.value() / output_path.filename();
 
   auto written = write_archive_bytes(target, options, prepared.value(), version, file_table_offset, temp_path);
   if (!written) {
-    std::filesystem::remove(temp_path, fs_error);
+    cleanup_publish_directory(temp_dir.value());
     return written.error();
   }
 
+  std::error_code fs_error;
   if (options.overwrite_existing) {
-    std::filesystem::remove(output_path, fs_error);
-    if (fs_error) {
-      std::filesystem::remove(temp_path, fs_error);
-      return error{error_code::io_error, "BA2 GNRL writer failed to replace output host path"};
+    output_exists = path_exists_noexcept(output_path);
+    if (!output_exists) {
+      cleanup_publish_directory(temp_dir.value());
+      return output_exists.error();
+    }
+    if (output_exists.value()) {
+      const bool is_regular = std::filesystem::is_regular_file(output_path, fs_error);
+      if (fs_error || !is_regular) {
+        cleanup_publish_directory(temp_dir.value());
+        return error{error_code::io_error, "BA2 GNRL writer refuses to replace non-regular output host path"};
+      }
+
+      auto backup_path = reserve_backup_path(output_path);
+      if (!backup_path) {
+        cleanup_publish_directory(temp_dir.value());
+        return backup_path.error();
+      }
+
+      // Move the old archive aside before publish so a failed replacement can roll back to the last good file.
+      std::filesystem::rename(output_path, backup_path.value(), fs_error);
+      if (fs_error) {
+        cleanup_publish_directory(temp_dir.value());
+        return error{error_code::io_error, "BA2 GNRL writer failed to reserve output backup"};
+      }
+
+      std::filesystem::rename(temp_path, output_path, fs_error);
+      if (fs_error) {
+        std::error_code rollback_error;
+        std::filesystem::rename(backup_path.value(), output_path, rollback_error);
+        cleanup_publish_directory(temp_dir.value());
+        return error{error_code::io_error, "BA2 GNRL writer failed to publish output host path"};
+      }
+
+      std::filesystem::remove(backup_path.value(), fs_error);
+      cleanup_publish_directory(temp_dir.value());
+      return {};
     }
   }
+
   std::filesystem::rename(temp_path, output_path, fs_error);
   if (fs_error) {
-    std::filesystem::remove(temp_path, fs_error);
+    cleanup_publish_directory(temp_dir.value());
     return error{error_code::io_error, "BA2 GNRL writer failed to publish output host path"};
   }
+  cleanup_publish_directory(temp_dir.value());
   return {};
 }
 
