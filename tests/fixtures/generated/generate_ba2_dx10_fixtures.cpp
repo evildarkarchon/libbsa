@@ -398,6 +398,29 @@ archive_spec make_sfv3() {
                                     .segment = {.array_index = 1, .source_chunk_index = 1}}}}}};
 }
 
+archive_spec make_duplicate_canonical_path_malformed() {
+  return {.stem = "ba2_dx10_duplicate_canonical_path",
+          .variant = "fallout4",
+          .version = ba2_fo4_version,
+          .textures = {{.original_path = "Textures/Generated/Duplicate.dds",
+                        .height = 1,
+                        .width = 1,
+                        .num_mips = 1,
+                        .chunks = {{.decoded_payload = repeated_bytes(0x21, 4), .segment = {.source_chunk_index = 0}}}},
+                       {.original_path = "textures/generated/duplicate.dds",
+                        .height = 1,
+                        .width = 1,
+                        .num_mips = 1,
+                        .chunks = {{.decoded_payload = repeated_bytes(0x31, 4), .segment = {.source_chunk_index = 0}}}}}};
+}
+
+archive_spec make_unsupported_compression_malformed() {
+  auto archive = make_sfv3();
+  archive.stem = "ba2_dx10_unsupported_compression";
+  archive.compression_method = 99U;
+  return archive;
+}
+
 void write_file(const std::filesystem::path& path, std::span<const std::byte> values) {
   std::filesystem::create_directories(path.parent_path());
   std::ofstream out(path, std::ios::binary);
@@ -534,7 +557,9 @@ std::string malformed_manifest() {
     {"id": "ba2_dx10_bad_compressed_chunk", "archive": "ba2_dx10_bad_compressed_chunk.ba2", "expected_error": "format_error", "phase": "extraction", "target_path": "textures/generated/fo4deflate.dds"},
     {"id": "ba2_dx10_decoded_size_mismatch", "archive": "ba2_dx10_decoded_size_mismatch.ba2", "expected_error": "format_error", "phase": "extraction", "target_path": "textures/generated/fo4deflate.dds"},
     {"id": "ba2_dx10_mip_gap", "archive": "ba2_dx10_mip_gap.ba2", "expected_error": "format_error", "phase": "open"},
-    {"id": "ba2_dx10_duplicate_mip_face", "archive": "ba2_dx10_duplicate_mip_face.ba2", "expected_error": "format_error", "phase": "open"}
+    {"id": "ba2_dx10_duplicate_mip_face", "archive": "ba2_dx10_duplicate_mip_face.ba2", "expected_error": "format_error", "phase": "open"},
+    {"id": "ba2_dx10_duplicate_canonical_path", "archive": "ba2_dx10_duplicate_canonical_path.ba2", "expected_error": "format_error", "phase": "open"},
+    {"id": "ba2_dx10_unsupported_compression", "archive": "ba2_dx10_unsupported_compression.ba2", "expected_error": "unsupported", "phase": "open"}
   ]
 }
 )json";
@@ -588,6 +613,12 @@ void generate_malformed(const std::filesystem::path& output_dir) {
   overwrite_u16(duplicate_mip, static_cast<std::size_t>(second_second_chunk_offset + 16ULL), 0U);
   overwrite_u16(duplicate_mip, static_cast<std::size_t>(second_second_chunk_offset + 18ULL), 0U);
   write_file(output_dir / "ba2_dx10_duplicate_mip_face.ba2", duplicate_mip);
+
+  auto duplicate_canonical_path = make_duplicate_canonical_path_malformed();
+  write_file(output_dir / "ba2_dx10_duplicate_canonical_path.ba2", build_archive(duplicate_canonical_path));
+
+  auto unsupported_compression = make_unsupported_compression_malformed();
+  write_file(output_dir / "ba2_dx10_unsupported_compression.ba2", build_archive(unsupported_compression));
 
   write_text(output_dir / "ba2_dx10_malformed_manifest.json", malformed_manifest());
 }
