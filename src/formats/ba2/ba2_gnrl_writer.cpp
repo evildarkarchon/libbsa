@@ -352,6 +352,8 @@ result<void> assign_payload_offsets(std::span<prepared_entry> entries,
   std::map<std::vector<std::byte>, payload_assignment> deduplicated_payloads;
   for (auto& entry : entries) {
     if (deduplicate_payloads) {
+      // D-23 requires dedupe after raw-vs-compressed routing, so this key is the exact byte span
+      // the writer would store in the BA2 payload area rather than the caller's source bytes.
       const auto duplicate = deduplicated_payloads.find(entry.stored_payload);
       if (duplicate != deduplicated_payloads.end()) {
         entry.payload_offset = duplicate->second.offset;
