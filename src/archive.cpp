@@ -1,6 +1,8 @@
 #include <libbsa/archive.hpp>
 
 #include "formats/ba2/ba2_format_detector.hpp"
+#include "formats/ba2/ba2_dx10_parser.hpp"
+#include "formats/ba2/ba2_dx10_reader.hpp"
 #include "formats/ba2/ba2_gnrl_parser.hpp"
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 #include "formats/bsa/bsa_format_detector.hpp"
@@ -21,6 +23,7 @@ struct archive_reader::state {
   archive_metadata metadata;
   std::vector<entry_metadata> entries;
   std::string host_path;
+  bool is_ba2_dx10{false};
 };
 
 archive_reader::archive_reader(archive_metadata metadata)
@@ -132,14 +135,25 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     if (!archive_size) {
       return archive_size.error();
     }
+    if (detected_ba2.value().is_dx10) {
+      auto ba2_archive = formats::ba2::parse_ba2_dx10_archive_file(host_path, archive_size.value(), detected_ba2.value());
+      if (!ba2_archive) {
+        return ba2_archive.error();
+      }
+
+      archive_reader reader{ba2_archive.value().metadata};
+      reader.state_ = std::make_shared<state>(
+          state{ba2_archive.value().metadata, std::move(ba2_archive.value().entries), std::string{host_path}, true});
+      return reader;
+    }
+
     auto ba2_archive = formats::ba2::parse_ba2_gnrl_archive_file(host_path, archive_size.value(), detected_ba2.value());
     if (!ba2_archive) {
       return ba2_archive.error();
     }
-
     archive_reader reader{ba2_archive.value().metadata};
     reader.state_ = std::make_shared<state>(
-        state{ba2_archive.value().metadata, std::move(ba2_archive.value().entries), std::string{host_path}});
+        state{ba2_archive.value().metadata, std::move(ba2_archive.value().entries), std::string{host_path}, false});
     return reader;
   }
 
@@ -190,7 +204,7 @@ result<std::vector<entry_metadata>> archive_reader::entries() const {
     return formats::bsa::tes3_bsa_entries(state_->entries);
   }
   if (state_->metadata.type == archive_type::ba2) {
-    return formats::ba2::ba2_gnrl_entries(state_->entries);
+    return state_->is_ba2_dx10 ? formats::ba2::ba2_dx10_entries(state_->entries) : formats::ba2::ba2_gnrl_entries(state_->entries);
   }
   return formats::bsa::tes4_bsa_entries(state_->entries);
 }
@@ -203,7 +217,8 @@ result<std::optional<entry_metadata>> archive_reader::find(std::string_view path
     return formats::bsa::find_tes3_bsa_entry(state_->entries, path);
   }
   if (state_->metadata.type == archive_type::ba2) {
-    return formats::ba2::find_ba2_gnrl_entry(state_->entries, path);
+    return state_->is_ba2_dx10 ? formats::ba2::find_ba2_dx10_entry(state_->entries, path)
+                               : formats::ba2::find_ba2_gnrl_entry(state_->entries, path);
   }
   return formats::bsa::find_tes4_bsa_entry(state_->entries, path);
 }
@@ -216,7 +231,8 @@ result<bool> archive_reader::contains(std::string_view path) const {
     return formats::bsa::contains_tes3_bsa_entry(state_->entries, path);
   }
   if (state_->metadata.type == archive_type::ba2) {
-    return formats::ba2::contains_ba2_gnrl_entry(state_->entries, path);
+    return state_->is_ba2_dx10 ? formats::ba2::contains_ba2_dx10_entry(state_->entries, path)
+                               : formats::ba2::contains_ba2_gnrl_entry(state_->entries, path);
   }
   return formats::bsa::contains_tes4_bsa_entry(state_->entries, path);
 }
@@ -228,7 +244,8 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
   auto found = state_->metadata.variant == archive_variant::tes3
                     ? formats::bsa::find_tes3_bsa_entry(state_->entries, path)
                     : state_->metadata.type == archive_type::ba2
-                          ? formats::ba2::find_ba2_gnrl_entry(state_->entries, path)
+                          ? (state_->is_ba2_dx10 ? formats::ba2::find_ba2_dx10_entry(state_->entries, path)
+                                                 : formats::ba2::find_ba2_gnrl_entry(state_->entries, path))
                           : formats::bsa::find_tes4_bsa_entry(state_->entries, path);
   if (!found) {
     return found.error();

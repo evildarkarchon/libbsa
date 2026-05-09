@@ -222,7 +222,7 @@ TEST_CASE("ba2_gnrl_detector rejects Phase 5 unsupported BA2 profiles with stabl
 
   for (const auto& test_case : manifest.at("cases")) {
     const auto id = test_case.at("id").get<std::string>();
-    if (id != "ba2_dx10_unsupported" && id != "ba2_unsupported_v3_compression_method") {
+    if (id != "ba2_unsupported_v3_compression_method") {
       continue;
     }
 
@@ -460,8 +460,7 @@ TEST_CASE("ba2_gnrl_extract helper routes by metadata and detects partial_sink w
 
 TEST_CASE("ba2_gnrl_malformed manifest cases fail with stable error codes", "[unit][fixture][ba2_gnrl_malformed]") {
   const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_malformed_manifest.json"));
-  constexpr auto required_cases = std::to_array<std::string_view>({"ba2_dx10_unsupported",
-                                                                  "ba2_unsupported_v3_compression_method",
+  constexpr auto required_cases = std::to_array<std::string_view>({"ba2_unsupported_v3_compression_method",
                                                                   "ba2_duplicate_canonical_path",
                                                                   "ba2_corrupt_compressed_payload",
                                                                   "ba2_exact_size_mismatch"});
@@ -469,6 +468,9 @@ TEST_CASE("ba2_gnrl_malformed manifest cases fail with stable error codes", "[un
 
   for (const auto& test_case : manifest.at("cases")) {
     const auto id = test_case.at("id").get<std::string>();
+    if (id == "ba2_dx10_unsupported") {
+      continue;
+    }
     observed_cases.push_back(id);
     const auto archive = generated_archive_path(test_case.at("archive").get<std::string>()).string();
     const auto expected_error = error_code_from_manifest(test_case.at("expected_error").get<std::string>());

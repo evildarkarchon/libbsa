@@ -66,10 +66,6 @@ result<detected_ba2_format> detect_ba2_format(std::span<const std::byte> bytes) 
     return error{error_code::format_error, "BA2 header is truncated before file table offset"};
   }
 
-  if (is_dx10) {
-    return error{error_code::unsupported, "BA2 DX10 texture archives are deferred to the DDS phase"};
-  }
-
   ba2_archive_metadata ba2{};
   switch (version.value()) {
   case fallout4_version:
