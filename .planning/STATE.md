@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 09-05-PLAN.md
-last_updated: "2026-05-09T10:37:42.113Z"
+status: verifying
+stopped_at: Completed 09-06-PLAN.md
+last_updated: "2026-05-09T10:43:37.318Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 54
-  completed_plans: 53
-  percent: 98
+  completed_plans: 54
+  percent: 100
 ---
 
 # Project State
@@ -25,80 +25,31 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: 09 (ba2-dx10-write-new-support) — EXECUTING
+Phase: 09 (ba2-dx10-write-new-support) — COMPLETE
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-09
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 47
+- Total plans completed: 54
 - Average duration: 13.7 min
 - Total execution time: 1.5 hours
 
-**By Phase:**
+**Recent Plans:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 03 | 6 | - | - |
-| 07 | 6 | - | - |
-| 04 | 5 | - | - |
-| 05 | 6 | - | - |
-| 06 | 8 | - | - |
-
-| Phase 01 P01 | 8 min | 2 tasks | 7 files |
-| Phase 01 P04 | 5 min | 2 tasks | 5 files |
-| Phase 01 P02 | 18 min | 3 tasks | 9 files |
-| Phase 01 P03 | 10 min | 2 tasks | 3 files |
-| Phase 01 P05 | 35 min | 3 tasks | 6 files |
-| Phase 02 P01-05 | 85min | 13 tasks | 34 files |
-| Phase 03 P01 | 3min | 2 tasks | 7 files |
-| Phase 03 P02 | 8min | 2 tasks | 9 files |
-| Phase 03 P03 | 10min | 2 tasks | 10 files |
-| Phase 03 P04 | 35min | 2 tasks | 10 files |
-| Phase 03 P05 | 8min | 2 tasks | 7 files |
-| Phase 03 P06 | 24min | 3 tasks | 5 files |
-| Phase 04 P01 | 4 min | 3 tasks | 18 files |
-| Phase 04 P02 | 3 min | 2 tasks | 5 files |
-| Phase 04 P03 | 6 min | 3 tasks | 10 files |
-| Phase 04 P04 | 5 min | 3 tasks | 5 files |
-| Phase 04 P05 | 3min | 3 tasks | 7 files |
-| Phase 05 P01 | 3min | 2 tasks | 18 files |
-| Phase 05 P02 | 5min | 2 tasks | 8 files |
-| Phase 05 P03 | 3min | 2 tasks | 7 files |
-| Phase 05 P04 | 2min | 2 tasks | 4 files |
-| Phase 05 P05 | 7min | 3 tasks | 3 files |
-| Phase 05 P06 | 6min | 2 tasks | 3 files |
-| Phase 06 P01 | 4min | 2 tasks | 22 files |
-| Phase 06 P02 | 3 min | 3 tasks | 6 files |
-| Phase 06 P03 | 3min | 3 tasks | 4 files |
-| Phase 06 P04 | 7min | 3 tasks | 9 files |
-| Phase 06 P05 | 4min | 3 tasks | 7 files |
-| Phase 06 P06 | 6 min | 3 tasks | 3 files |
-| Phase 06 P07 | 3min | 2 tasks | 2 files |
-| Phase 06 P08 | 2min | 2 tasks | 5 files |
-| Phase 07 P01 | 3min | 2 tasks | 4 files |
-| Phase 07 P02 | 3 min | 2 tasks | 6 files |
-| Phase 07 P03 | 35min | 2 tasks | 3 files |
-| Phase 07 P04 | 3min | 2 tasks | 2 files |
-| Phase 07 P05 | 5min | 2 tasks | 2 files |
-| Phase 07 P06 | 5min | 2 tasks | 2 files |
-| Phase 08 P01 | 3min | 2 tasks | 2 files |
-| Phase 08 P02 | 3 min | 2 tasks | 2 files |
-| Phase 08 P03 | 2 min | 2 tasks | 5 files |
-| Phase 08 P04 | 15min | 2 tasks | 3 files |
-| Phase 08 P05 | 3min | 2 tasks | 2 files |
-| Phase 08 P06 | 2min | 3 tasks | 3 files |
-| Phase 08 P07 | 9min | 2 tasks | 3 files |
+| Phase Plan | Duration | Tasks | Files |
+|------------|----------|-------|-------|
 | Phase 09 P01 | 2 min | 3 tasks | 2 files |
 | Phase 09 P02 | 6min | 3 tasks | 23 files |
 | Phase 09 P03 | 4 min | 3 tasks | 3 files |
 | Phase 09 P04 | 3 min | 3 tasks | 5 files |
 | Phase 09 P05 | 5min | 3 tasks | 3 files |
+| Phase 09 P06 | 4min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -109,98 +60,18 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Roadmap]: Fine-grained sequential roadmap uses 12 phases derived from v1 requirements and research ordering.
 - [Roadmap]: Read support precedes write support so writers can be validated by reopening, extracting, and comparing output.
 - [Roadmap]: `TES5Edit/` remains read-only reference material and must not be edited, formatted, staged, or compiled into libbsa.
-- [Phase 01]: Installed-package validation uses a separate consumer CMake project configured with CMAKE_PREFIX_PATH instead of source-tree include paths.
-- [Phase 01]: Windows shared-library verification exports symbols automatically for the current source-anchor DLL and supplies runtime DLL paths during tests.
-- [Phase 01]: CI validates both windows-msvc-debug-static and windows-msvc-debug-shared presets and fails if TES5Edit has any git status output.
-- [Phase 02]: Internal primitives remain under src/detail with no public API expansion.
-- [Phase 02]: Compression adapters enforce exact-size decompression and route only by explicit metadata enum.
-- [Phase 02]: Bethesda hash compatibility follows TES5Edit LowerByte/CreateHash behavior while keeping TES5Edit read-only.
-- [Phase 03]: Expose Phase 3 reader contracts on archive_reader rather than adding separate public reader/view/extractor objects. — Plan 03-01 follows D-01 and gives later parser/extractor tasks a stable public surface.
-- [Phase 03]: Keep nlohmann-json test-only via PRIVATE libbsa_tests linkage and out of libbsa runtime/public linkage. — D-29 permits JSON manifests for tests while public/runtime dependency boundaries remain clean.
-- [Phase 03]: Fixture generation uses a C++ test tool linked to libbsa internals so archive hashes and compression payloads are produced by the same helpers later parser tests will validate.
-- [Phase 03]: Success manifests store both canonical paths and original archive spelling so later tests can verify lookup normalization without trusting host filenames.
-- [Phase 03]: Malformed fixture generation remains in the C++ fixture generator so success and malformed archives share hash/compression helper behavior.
-- [Phase 03]: Manifest validation is parser-free and uses Python standard json to validate fixture expectations before parser implementation.
-- [Phase 03]: TES4-family BSA open metadata reports archive_variant::tes4 for v103/v104/v105 while version/default_compression distinguish subtype behavior. — Avoid speculative public enum expansion before full variant model is needed.
-- [Phase 03]: Duplicate canonical path validation remains deferred to Plan 03-05 full entry parsing. — Plan 03-04 intentionally exposes metadata-only open state and does not parse entry names yet.
-- [Phase 03]: TES4-family metadata parsing exposes canonical sorted entries while preserving archive spelling in original_path with `/` separators. — Plan 03-05 prepares extraction selectors without host filesystem semantics.
-- [Phase 03]: TES4-family lookup is canonical-path based and rejects duplicate normalized keys during open. — Ensures deterministic find/contains semantics for archive consumers.
-- [Phase 03]: TES4-family extraction remains path-first on archive_reader and returns not_found for valid missing paths while preserving invalid_argument for malformed archive paths. — Plan 03-06 preserves D-14/D-20 caller semantics.
-- [Phase 03]: extract_bytes is a convenience adapter over extract(path, sink), not a separate decoding path. — Keeps embedded-name and compression behavior identical across APIs.
-- [Phase 03]: TES4-family reader state stores host path plus metadata, not whole archive bytes. — Verification required bounded open/extract behavior before completing the phase.
-- [Phase 04]: TES3 fixture manifests record both raw_tes3_data_offset and archive-absolute payload_offset so later parser work can prove D-01 through D-03 without expanding public metadata. — Keeps raw TES3 offset proof in fixtures while preserving public archive-absolute payload offsets.
-- [Phase 04]: TES3 RED tests compare manifest archive_hash values through the current public hash field until the planned Phase 04-02 neutral public rename lands. — Plan 04-01 must compile before the public metadata rename planned for 04-02.
-- [Phase 04]: entry_metadata now exposes archive_hash instead of tes4_hash so TES3 and TES4-family entries share format-neutral public metadata. — Phase 04 is the first point where the TES4-specific public field name becomes inaccurate, and this is a pre-v1 API cleanup.
-- [Phase 04]: TES3 detection is limited to byte classification of little-endian 0x00000100 and deliberately defers parser/open routing to Plan 04-03. — Plan 04-02 only prepares detector scaffolding; full TES3 parser and open dispatch are scoped to Plan 04-03.
-- [Phase 04]: TES3 parser stores archive-absolute payload offsets only; raw TES3 data-section offsets are converted and validated during parse. — Keeps public metadata consistent across archive variants while preserving TES3 compatibility.
-- [Phase 04]: TES3 hash ordering is represented with explicit low32/high32 helper functions to avoid comparator ambiguity. — Matches TES3 sorted hash records and makes validation testable.
-- [Phase 04]: TES3 listing and lookup use dedicated private helper names while preserving the established archive_reader public facade. — Minimizes TES4-family regression risk while adding variant-aware dispatch.
-- [Phase 04]: TES3 extraction uses a dedicated raw-only helper instead of reusing TES4-family compression routing, so malformed non-raw TES3 metadata fails with format_error. — Keeps TES3 read scope raw/uncompressed and prevents accidental codec routing.
-- [Phase 04]: Invalid archive-owned TES3 paths map to format_error during open. — Caller path errors remain invalid_argument, but malformed archive bytes should fail closed as format errors.
-- [Phase 04]: TES3 duplicate stored-hash validation now runs before standalone stored-vs-computed mismatch validation so collision fixtures exercise the intended branch.
-- [Phase 04]: TES3 extraction dispatches to a host-file streaming helper before generic stored-payload buffering, preserving bounded sink-first behavior.
-- [Phase 05]: [Phase 05]: BA2 fixtures use committed generated bytes plus rich manifests so later parser tasks have stable generated-only acceptance inputs. — Generated-only fixtures satisfy Phase 5 legal-input constraints and keep parser acceptance stable.
-- [Phase 05]: [Phase 05]: Starfield v3 LZ4 fixture coverage uses compression_method 3 with explicit lz4_block routing rather than extension inference. — Phase 5 decisions require explicit metadata-driven compression routing.
-- [Phase 05]: BA2 detection runs before BSA fallback for BTDX bytes, preserving byte-driven routing and clean unsupported errors for DX10. — BA2 detection runs before BSA fallback for BTDX bytes, preserving byte-driven routing and clean unsupported errors for DX10.
-- [Phase 05]: Starfield BA2 v2/v3 raw header fields are exposed as version-gated std::optional values. — Starfield BA2 v2/v3 raw header fields are exposed as version-gated std::optional values.
-- [Phase 05]: BA2 GNRL parser internals remain private and materialize public archive_metadata/entry_metadata only. — Preserves public C++20 API boundaries while adding parser-specific behavior.
-- [Phase 05]: BA2 GNRL lookup uses canonical archive path normalization and lower_bound semantics established by prior BSA readers. — Keeps find and contains behavior deterministic and consistent across archive families.
-- [Phase 05]: BA2 GNRL extraction routes by parsed entry_metadata::compression — Keeps BA2 raw, deflate, and raw LZ4 block extraction metadata-driven and prevents filename/extension inference.
-- [Phase 05]: archive_reader::extract dispatches BA2 entries to extract_ba2_gnrl_payload — Preserves sink-first BA2 extraction before generic TES4-family stored-payload buffering.
-- [Phase 05]: Malformed BA2 tests assert only stable error_code values from manifest, never diagnostic message text. — Preserves D-11 while validating fail-closed malformed and unsupported BA2 behavior.
-- [Phase 05]: Task 2 malformed hardening was already present from prior Phase 5 parser/extraction work; closeout documented existing fail-closed codec behavior. — Focused verification showed no remaining detector/parser/extractor gaps after adding the malformed manifest tests.
-- [Phase 05]: BA2 GNRL file open computes first_payload_offset from parsed records and reads only the bounded filename-table interval before extraction.
-- [Phase 05]: BA2 GNRL payload span validation uses unsigned 64-bit arithmetic before filename-table allocation or parse handoff.
-- [Phase 06]: BA2 DX10 Wave 0 fixtures are committed generated artifacts. — Matches prior GNRL fixture policy and enables tests without local game archives.
-- [Phase 06]: Placeholder DX10 Catch2 tests intentionally fail when run but are discoverable via `ctest -N`. — Downstream TDD plans need labels before replacing placeholders with real RED assertions.
-- [Phase 06]: DirectXTex is linked privately through Microsoft::DirectXTex and translated behind src/texture/directxtex_analyzer. — Keeps DDS analysis behind internal boundary without public dependency leakage.
-- [Phase 06]: Public texture metadata uses libbsa-owned numeric fields and optional entry_metadata::texture. — Preserves dependency-light public headers while satisfying DDS-03 metadata inspection.
-- [Phase 06]: DDS reconstruction emits standard DDS magic/header plus DDS_HEADER_DXT10 from libbsa-owned layout values, without DirectXTex as a runtime extraction gate. — Plan 06-03 built deterministic DDS headers behind the internal texture boundary per D-09 and D-12.
-- [Phase 06]: Chunk validation accepts only computed BA2-derived DDS order: array slice ascending, cubemap face order +X/-X/+Y/-Y/+Z/-Z, then ascending mip ranges per face or slice. — Plan 06-03 validates source chunk identity before extraction so downstream readers avoid blind archive-order concatenation.
-- [Phase 06]: Phase 6 DDS layout byte-size validation supports fixture-backed DXGI formats 28 and BC1-format ids 71/72, failing closed for unsupported formats. — Plan 06-03 follows the fixture-backed Phase 6 scope and returns format_error for unsupported texture formats.
-- [Phase 06]: BA2 DX10 open/list/find/contains route through dedicated private parser/reader helpers while preserving archive_reader as the public facade. — Plan 06-04 uses subtype-specific private helpers while keeping archive_reader as the public API.
-- [Phase 06]: DX10 chunk metadata is validated and materialized in DDS output order using validate_and_order_chunks, with source_chunk_index preserving archive source mapping. — Plan 06-04 must prepare extraction to read validated source chunks instead of blindly concatenating archive order.
-- [Phase 06]: Phase 5 GNRL unsupported-DX10 expectations were retired because DX10 is now a supported BA2 subtype. — Keeping the old unsupported assertion would contradict the Phase 6 DX10 open support requirement.
-- [Phase 06]: BA2 DX10 extraction dispatches through private extract_ba2_dx10_payload and preserves archive_reader as the only public facade. — Plan 06-05 implemented header-first DX10 extraction without expanding public APIs.
-- [Phase 06]: DX10 extraction builds DDS bytes directly and leaves DirectXTex as a test/analyzer validation boundary, not a runtime extraction gate. — Preserves D-12 and public dependency boundaries while still validating reconstructed DDS bytes in tests.
-- [Phase 06]: Malformed BA2 DX10 tests assert stable error_code values from the manifest and do not assert diagnostic text. — Preserves Phase 6 D-33 and keeps tests stable across diagnostic wording changes.
-- [Phase 06]: Decoded-size mismatch fixture metadata remains layout-valid so exact-size decompression rejects the archive during extraction. — Aligns fixture bytes with the manifest phase and proves DDS compressed-chunk fail-closed behavior.
-- [Phase 06]: BA2 DX10 host-file open now reconstructs compact metadata by reading exactly file_count UInt16-prefixed names instead of allocating the FileTableOffset-to-first-payload span. — Preserves bounded metadata reads for sparse or malicious DX10 archives.
-- [Phase 06]: Malformed DX10 manifests now fail tests on unknown expected_error strings instead of silently mapping typos to invalid_argument. — Keeps fixture coverage trustworthy when manifest strings change.
-- [Phase 06]: Unsupported Starfield v3 DX10 CompressionMethod coverage uses detector-time unsupported errors with generated repository-owned bytes. — Proves compression routing fails closed without filename or extension inference.
-- [Phase 07]: Expose TES4-family write-new as a dependency-light writer object with named target and compression policy enums. — Plan 07-01 establishes the public contract before private serialization implementation.
-- [Phase 07]: Keep Plan 07-01 writer methods declaration-only and verify contracts through type traits/requires expressions. — Later plans can add method bodies without changing the public API.
-- [Phase 07]: Plan 02 validates and owns TES4-family writer state but intentionally defers reader-reopenable BSA serialization to Plan 03. — Plan 02 scope is validation foundation; Plan 03 owns reader-reopenable serialization.
-- [Phase 07]: Duplicate canonical writer paths are accepted during add and rejected at write time with format_error. — Preserves D-07 and keeps add operations independent from write-time global validation.
-- [Phase 07]: Raw TES4-family writer output is validated exclusively through archive_reader reopen/list/find/contains/extract APIs. — Reader-backed validation preserves Phase 7 D-22 and prevents trusting writer internals for acceptance.
-- [Phase 07]: archive_metadata::default_compression remains target codec metadata; all-raw policy is proven through archive flags and per-entry raw compression metadata. — This preserves the existing reader contract while still proving writer all-raw output through observable archive flags and entry compression.
-- [Phase 07]: TES4-family writer compression routes only from explicit target profile and public policies: v103/v104 use deflate, v105 uses LZ4 frame. — Plan 07-04 implements D-09 through D-15 without public codec knobs.
-- [Phase 07]: Zero-byte writer entries are forced raw and receive the compression XOR toggle when the archive default is compressed. — This preserves D-11 and prevents readers from expecting a compressed size prefix.
-- [Phase 07]: Embedded names remain off by default and are emitted only through the global embed_file_names writer option for non-v103 targets. — Plan 07-05 implements D-18 while preserving v103 compatibility and reader-backed extraction semantics.
-- [Phase 07]: TES4-family writer deduplication remains opt-in through tes4_bsa_writer_options::deduplicate_payloads and is disabled by default. — Plan 07-06 implements D-19 and keeps default output non-deduplicated unless callers explicitly enable stored-byte dedupe.
-- [Phase 07]: Dedupe eligibility is based on byte-identical final stored payload vectors, not source bytes. — Compression-policy and embedded-name prefix differences must keep distinct payload offsets to preserve reader extraction correctness.
-- [Phase 08]: Expose BA2 GNRL write-new as a dedicated dependency-light writer object with named Fallout 4 and Starfield target profiles. — Plan 08-01 establishes the public contract before private serialization implementation.
-- [Phase 08]: Keep Plan 08-01 BA2 GNRL writer methods declaration-only. — Later Phase 8 plans can add writer-owned state and serialization without changing the public API.
-- [Phase 08]: BA2 GNRL public options default Starfield Unknown1=1, Unknown2=0, and CompressionMethod=3 while allowing caller overrides. — Preserves reference-derived defaults without exposing private codec types.
-- [Phase 08]: BA2 GNRL host-file open parses exactly file_count length-prefixed names from FileTableOffset. — This supports writer-required end-of-archive filename tables without allocating payload bytes during open.
-- [Phase 08]: BA2 GNRL filename-table validation rejects actual table/payload span intersections instead of enforcing table-before-payload ordering. — This preserves existing fixtures while allowing payload-before-name-table writer output.
-- [Phase 08]: Plan 08-03 validates and owns BA2 GNRL writer state but intentionally defers reader-reopenable BA2 serialization to Plan 08-04. — Plan 08-03 scope is validation foundation; Plan 08-04 owns full serialization.
-- [Phase 08]: Raw BA2 GNRL writer output is validated through archive_reader reopen/list/find/contains/extract APIs rather than writer internals. — Plan 08-04 follows Phase 8 reader-backed validation decisions and keeps writer acceptance observable through public APIs.
-- [Phase 08]: Phase 8 Plan 04 keeps compressed BA2 GNRL entries unsupported until Plan 08-05, while raw entries serialize fully with target-profile metadata. — The current plan scope is raw serialization; the next plan owns target-routed deflate and raw-LZ4 payload writing.
-- [Phase 08]: BA2 GNRL writer compression routes only from explicit target/options metadata: FO4 v1, Starfield v2, and Starfield v3 method 0 use deflate; Starfield v3 method 3 uses raw LZ4 block. — Plan 08-05 implemented WBA2-04 with metadata-routed compression and no filename-extension inference.
-- [Phase 08]: BA2 GNRL writer deduplication remains opt-in through ba2_gnrl_writer_options::deduplicate_payloads and is disabled by default.
+- [Phase 08]: BA2 GNRL writer deduplication remains opt-in through `ba2_gnrl_writer_options::deduplicate_payloads` and is disabled by default.
 - [Phase 08]: Dedupe eligibility is based on byte-identical final stored payload vectors after raw/compressed routing, not source bytes alone.
-- [Phase 08]: BA2 GNRL writer publish now reserves a unique sibling temporary directory instead of using and deleting deterministic <output>.tmp files.
+- [Phase 08]: BA2 GNRL writer publish reserves a unique sibling temporary directory instead of using and deleting deterministic `<output>.tmp` files.
 - [Phase 08]: Overwrite mode rejects non-regular existing destinations and uses backup+rollback before publishing replacement bytes.
-- [Phase 09]: BA2 DX10 public writer is DDS-host-file-only and compressed-only at archive level — No public memory-buffer, per-entry, or per-chunk raw override APIs were added because CONTEXT D-04/D-05/D-07 supersede stale SPEC raw/override wording.
-- [Phase 09]: Starfield v3 DX10 writer options use Unknown1=1, Unknown2=0, and CompressionMethod=3 defaults — Plan 09-01 declared the dependency-light public options surface for downstream implementation.
-- [Phase 09]: DDS source analysis copies libbsa-owned DDS and subresource bytes — Later source-file mutation cannot affect BA2 DX10 writer output.
-- [Phase 09]: Generated source DDS fixtures are repository-owned synthetic files — Fixture evidence stays under tests/fixtures/generated/source and outside TES5Edit.
-- [Phase 09]: DX10 chunk planning uses a libbsa-owned descriptor table and max_decoded_chunk_bytes sentinel semantics. — Keeps writer planning dependency-light and satisfies WBA2-09 with reference-derived defaults plus one archive-wide byte cap.
-- [Phase 09]: BA2 DX10 add_file validates DDS host files and snapshots writer-owned DDS bytes immediately. — Plan 09-04 implemented DDS add-time validation state and preserved prior writer duplicate validation boundaries.
-- [Phase 09]: Duplicate canonical DX10 archive paths remain accepted at add time and are deferred to future write_to validation. — Plan 09-04 implemented DDS add-time validation state and preserved prior writer duplicate validation boundaries.
-- [Phase 09]: BA2 DX10 writer compression is selected only by target/options metadata: FO4 deflate, Starfield v3 method 3 raw LZ4 block, and Starfield method 0 deflate. — Preserves compressed-only DX10 public policy and avoids filename-extension inference while matching reader detection routes.
-- [Phase 09]: DX10 texture chunks copy validated DDS subresource bytes in planned BA2 order without resizing, transcoding, mip generation, repair, or image-data transformation. — Preserves source DDS image payload bytes while allowing BA2-required chunk layout serialization and DDS header reconstruction on extraction.
+- [Phase 09]: BA2 DX10 public writer is DDS-host-file-only and compressed-only at archive level.
+- [Phase 09]: Starfield v3 DX10 writer options use Unknown1=1, Unknown2=0, and CompressionMethod=3 defaults.
+- [Phase 09]: DDS source analysis copies libbsa-owned DDS and subresource bytes so later source-file mutation cannot affect output.
+- [Phase 09]: DX10 chunk planning uses a libbsa-owned descriptor table and max_decoded_chunk_bytes sentinel semantics.
+- [Phase 09]: BA2 DX10 writer compression is selected only by target/options metadata: FO4 deflate, Starfield v3 method 3 raw LZ4 block, and Starfield method 0 deflate.
+- [Phase 09]: DX10 texture chunks copy validated DDS subresource bytes in planned BA2 order without resizing, transcoding, mip generation, repair, or image-data transformation.
+- [Phase 09]: BA2 DX10 writer dedupe uses stored bytes plus raw size, packed size, and compression route so payload sharing cannot cross incompatible chunk metadata.
+- [Phase 09]: BA2 DX10 writer overwrite publish mirrors Phase 8 backup/rollback behavior instead of deleting the existing output before replacement.
 
 ### Pending Todos
 
@@ -208,8 +79,8 @@ None yet.
 
 ### Blockers/Concerns
 
-- Starfield BA2 v2/v3 fields and compression behavior need fixture-backed policy before writer phases.
-- BA2 DDS reconstruction, cubemaps, mip ordering, and chunk limits need focused validation during DDS phases.
+- Starfield BA2 v2/v3 fields and compression behavior need fixture-backed policy before future writer variants.
+- BA2 DDS reconstruction, cubemaps, mip ordering, and chunk limits should remain covered during hardening.
 - Public C++20 error/result API should avoid exposing C++23 `std::expected` until the project intentionally raises the language standard.
 
 ## Deferred Items
@@ -222,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T10:37:26.363Z
-Stopped at: Completed 09-05-PLAN.md
+Last session: 2026-05-09T10:43:37.309Z
+Stopped at: Completed 09-06-PLAN.md
 Resume file: None

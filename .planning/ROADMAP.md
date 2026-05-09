@@ -305,7 +305,7 @@ Plans:
 - [x] 09-05-PLAN.md — Serialize compressed FO4 and Starfield v3 DX10 archives with reader-backed validation.
 
 **Wave 4** *(blocked on Wave 3 compressed serialization)*
-- [ ] 09-06-PLAN.md — Add DX10 chunk dedupe, safe publish hardening, and final regression gates.
+- [x] 09-06-PLAN.md — Add DX10 chunk dedupe, safe publish hardening, and final regression gates.
 
 ### Phase 10: TES3 Write Support and BSA Format Completeness
 **Goal**: Consumers can create TES3/Morrowind BSA archives from files or memory, completing read/write support for all BSA families.
