@@ -20,17 +20,44 @@ static_assert(std::is_enum_v<libbsa::entry_compression>);
 static_assert(std::is_enum_v<libbsa::tes4_bsa_target>);
 static_assert(std::is_enum_v<libbsa::archive_compression_policy>);
 static_assert(std::is_enum_v<libbsa::entry_compression_policy>);
+static_assert(std::is_enum_v<libbsa::ba2_gnrl_target>);
+static_assert(std::is_class_v<libbsa::ba2_gnrl_writer_options>);
+static_assert(std::is_class_v<libbsa::ba2_gnrl_entry_options>);
+static_assert(std::is_class_v<libbsa::ba2_gnrl_writer>);
 static_assert(std::is_default_constructible_v<libbsa::ba2_archive_metadata>);
 static_assert(std::is_constructible_v<libbsa::tes4_bsa_writer, libbsa::tes4_bsa_target>);
 static_assert(std::is_constructible_v<libbsa::tes4_bsa_writer,
                                       libbsa::tes4_bsa_target,
                                       libbsa::tes4_bsa_writer_options>);
+static_assert(std::is_constructible_v<libbsa::ba2_gnrl_writer, libbsa::ba2_gnrl_target>);
+static_assert(std::is_constructible_v<libbsa::ba2_gnrl_writer,
+                                      libbsa::ba2_gnrl_target,
+                                      libbsa::ba2_gnrl_writer_options>);
 static_assert(std::is_abstract_v<libbsa::payload_sink>);
 
 static_assert(requires(libbsa::tes4_bsa_writer& writer, std::span<const std::byte> bytes) {
   { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
   { writer.add_file("Textures/Disk.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.bsa") } -> std::same_as<libbsa::result<void>>;
+});
+
+static_assert(requires(libbsa::ba2_gnrl_writer& writer,
+                       std::span<const std::byte> bytes,
+                       libbsa::ba2_gnrl_entry_options entry_options) {
+  { libbsa::ba2_gnrl_target::fallout4 } -> std::same_as<libbsa::ba2_gnrl_target>;
+  { libbsa::ba2_gnrl_target::starfield_v2 } -> std::same_as<libbsa::ba2_gnrl_target>;
+  { libbsa::ba2_gnrl_target::starfield_v3 } -> std::same_as<libbsa::ba2_gnrl_target>;
+  { writer.target() } -> std::same_as<libbsa::ba2_gnrl_target>;
+  { writer.options() } -> std::same_as<const libbsa::ba2_gnrl_writer_options&>;
+  { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
+  { writer.add_bytes("Meshes/Memory.nif", bytes, libbsa::entry_compression_policy::raw) }
+      -> std::same_as<libbsa::result<void>>;
+  { writer.add_bytes("Meshes/Memory.nif", bytes, entry_options) } -> std::same_as<libbsa::result<void>>;
+  { writer.add_file("Meshes/Disk.nif", "source.nif") } -> std::same_as<libbsa::result<void>>;
+  { writer.add_file("Meshes/Disk.nif", "source.nif", libbsa::entry_compression_policy::compressed) }
+      -> std::same_as<libbsa::result<void>>;
+  { writer.add_file("Meshes/Disk.nif", "source.nif", entry_options) } -> std::same_as<libbsa::result<void>>;
+  { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
 });
 
 TEST_CASE("public_include_boundary umbrella header exposes public boundary types", "[unit][public-api]") {
@@ -59,6 +86,9 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
   [[maybe_unused]] libbsa::tes4_bsa_writer_options writer_options{
       libbsa::archive_compression_policy::target_default, false, false, false};
   [[maybe_unused]] auto target = libbsa::tes4_bsa_target::oblivion;
+  [[maybe_unused]] auto ba2_target = libbsa::ba2_gnrl_target::starfield_v3;
+  [[maybe_unused]] libbsa::ba2_gnrl_writer_options ba2_options{};
+  [[maybe_unused]] libbsa::ba2_gnrl_entry_options ba2_entry_options{};
   [[maybe_unused]] auto compression = libbsa::entry_compression_policy::inherit;
 
   REQUIRE(result.has_value());
