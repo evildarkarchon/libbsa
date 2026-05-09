@@ -299,7 +299,7 @@ Plans:
 - [x] 09-03-PLAN.md — Add locked-format DDS sizing and archive-wide DX10 chunk planning.
 
 **Wave 2** *(blocked on Wave 1 public contract and DDS source analysis)*
-- [ ] 09-04-PLAN.md — Implement DX10 writer state plus add-time DDS validation and snapshotting.
+- [x] 09-04-PLAN.md — Implement DX10 writer state plus add-time DDS validation and snapshotting.
 
 **Wave 3** *(blocked on Wave 1 chunk planner and Wave 2 writer state)*
 - [ ] 09-05-PLAN.md — Serialize compressed FO4 and Starfield v3 DX10 archives with reader-backed validation.
