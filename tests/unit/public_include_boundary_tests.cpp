@@ -24,6 +24,9 @@ static_assert(std::is_enum_v<libbsa::ba2_gnrl_target>);
 static_assert(std::is_class_v<libbsa::ba2_gnrl_writer_options>);
 static_assert(std::is_class_v<libbsa::ba2_gnrl_entry_options>);
 static_assert(std::is_class_v<libbsa::ba2_gnrl_writer>);
+static_assert(std::is_enum_v<libbsa::ba2_dx10_target>);
+static_assert(std::is_class_v<libbsa::ba2_dx10_writer_options>);
+static_assert(std::is_class_v<libbsa::ba2_dx10_writer>);
 static_assert(std::is_default_constructible_v<libbsa::ba2_archive_metadata>);
 static_assert(std::is_constructible_v<libbsa::tes4_bsa_writer, libbsa::tes4_bsa_target>);
 static_assert(std::is_constructible_v<libbsa::tes4_bsa_writer,
@@ -33,6 +36,10 @@ static_assert(std::is_constructible_v<libbsa::ba2_gnrl_writer, libbsa::ba2_gnrl_
 static_assert(std::is_constructible_v<libbsa::ba2_gnrl_writer,
                                       libbsa::ba2_gnrl_target,
                                       libbsa::ba2_gnrl_writer_options>);
+static_assert(std::is_constructible_v<libbsa::ba2_dx10_writer, libbsa::ba2_dx10_target>);
+static_assert(std::is_constructible_v<libbsa::ba2_dx10_writer,
+                                      libbsa::ba2_dx10_target,
+                                      libbsa::ba2_dx10_writer_options>);
 static_assert(std::is_abstract_v<libbsa::payload_sink>);
 
 static_assert(requires(libbsa::tes4_bsa_writer& writer, std::span<const std::byte> bytes) {
@@ -59,6 +66,17 @@ static_assert(requires(libbsa::ba2_gnrl_writer& writer,
   { writer.add_file("Meshes/Disk.nif", "source.nif", entry_options) } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
 });
+
+// BEGIN ba2_dx10_public_contract_assertions
+static_assert(requires(libbsa::ba2_dx10_writer& writer) {
+  { libbsa::ba2_dx10_target::fallout4 } -> std::same_as<libbsa::ba2_dx10_target>;
+  { libbsa::ba2_dx10_target::starfield_v3 } -> std::same_as<libbsa::ba2_dx10_target>;
+  { writer.target() } -> std::same_as<libbsa::ba2_dx10_target>;
+  { writer.options() } -> std::same_as<const libbsa::ba2_dx10_writer_options&>;
+  { writer.add_file("Textures/Diffuse.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
+  { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
+});
+// END ba2_dx10_public_contract_assertions
 
 TEST_CASE("public_include_boundary umbrella header exposes public boundary types", "[unit][public-api]") {
   [[maybe_unused]] libbsa::result<int> result{1};
@@ -89,9 +107,38 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
   [[maybe_unused]] auto ba2_target = libbsa::ba2_gnrl_target::starfield_v3;
   [[maybe_unused]] libbsa::ba2_gnrl_writer_options ba2_options{};
   [[maybe_unused]] libbsa::ba2_gnrl_entry_options ba2_entry_options{};
+  [[maybe_unused]] auto ba2_dx10_target = libbsa::ba2_dx10_target::fallout4;
+  [[maybe_unused]] auto ba2_dx10_starfield_target = libbsa::ba2_dx10_target::starfield_v3;
+  [[maybe_unused]] libbsa::ba2_dx10_writer_options ba2_dx10_options{};
   [[maybe_unused]] auto compression = libbsa::entry_compression_policy::inherit;
 
   REQUIRE(result.has_value());
+}
+
+TEST_CASE("public_include_boundary DX10 writer contract exposes no raw override surface", "[unit][public-api]") {
+  const auto test_file_path = std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "unit" /
+                              "public_include_boundary_tests.cpp";
+  std::ifstream file{test_file_path};
+  REQUIRE(file.is_open());
+
+  std::ostringstream contents;
+  contents << file.rdbuf();
+  const auto text = contents.str();
+  const auto begin = text.find("BEGIN ba2_dx10_public_contract_assertions");
+  const auto end = text.find("END ba2_dx10_public_contract_assertions");
+  REQUIRE(begin != std::string::npos);
+  REQUIRE(end != std::string::npos);
+  REQUIRE(begin < end);
+
+  const auto dx10_contract = text.substr(begin, end - begin);
+  constexpr auto forbidden_dx10_tokens = std::to_array<std::string_view>({"ba2_dx10_entry_options",
+                                                                         "entry_compression_policy",
+                                                                         "add_bytes",
+                                                                         "chunk_compression"});
+  for (const auto token : forbidden_dx10_tokens) {
+    INFO("DX10 public contract token: " << token);
+    REQUIRE(dx10_contract.find(token) == std::string::npos);
+  }
 }
 
 TEST_CASE("public_include_boundary excludes private Phase 2 implementation names", "[unit][public-api]") {
