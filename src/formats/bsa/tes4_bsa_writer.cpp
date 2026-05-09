@@ -126,6 +126,7 @@ struct prepared_entry {
   std::uint32_t stored_size{0};
   std::uint32_t record_flags{0};
   std::uint32_t payload_offset{0};
+  bool owns_payload_bytes{true};
   std::vector<std::byte> stored_payload;
 };
 
@@ -398,10 +399,11 @@ result<std::vector<prepared_folder>> prepare_folders(std::span<const tes4_writer
     grouped[folder].push_back(prepared_entry{folder,
                                               std::move(file_name),
                                               file_hash,
-                                              stored_size.value(),
-                                              record_flags,
-                                              0U,
-                                              std::move(stored_payload.value())});
+                                               stored_size.value(),
+                                               record_flags,
+                                               0U,
+                                               true,
+                                               std::move(stored_payload.value())});
   }
 
   std::vector<prepared_folder> folders;
@@ -418,7 +420,15 @@ result<std::vector<prepared_folder>> prepare_folders(std::span<const tes4_writer
   return folders;
 }
 
-result<void> assign_offsets(std::span<prepared_folder> folders, std::uint32_t version, std::uint32_t file_names_length) {
+struct payload_assignment {
+  std::uint32_t offset{0};
+  std::uint32_t stored_size{0};
+};
+
+result<void> assign_offsets(std::span<prepared_folder> folders,
+                            std::uint32_t version,
+                            std::uint32_t file_names_length,
+                            bool deduplicate_payloads) {
   const std::uint64_t folder_record_size = version == skyrim_se_version ? 24U : 16U;
   const std::uint64_t folder_records_size = folder_record_size * folders.size();
   std::uint64_t folder_block_cursor = header_size + folder_records_size;
@@ -455,13 +465,30 @@ result<void> assign_offsets(std::span<prepared_folder> folders, std::uint32_t ve
     return error{error_code::format_error, "TES4 BSA metadata size overflows"};
   }
 
+  std::map<std::vector<std::byte>, payload_assignment> deduplicated_payloads;
   for (auto& folder : folders) {
     for (auto& entry : folder.entries) {
+      if (deduplicate_payloads) {
+        // D-19 requires dedupe after the complete stored encoding is built, so
+        // the key includes embedded-name prefixes, raw-size prefixes, and codec bytes.
+        const auto duplicate = deduplicated_payloads.find(entry.stored_payload);
+        if (duplicate != deduplicated_payloads.end()) {
+          entry.payload_offset = duplicate->second.offset;
+          entry.stored_size = duplicate->second.stored_size;
+          entry.owns_payload_bytes = false;
+          continue;
+        }
+      }
+
       auto offset = checked_u32(payload_cursor, "TES4 BSA payload offset");
       if (!offset) {
         return offset.error();
       }
       entry.payload_offset = offset.value();
+      entry.owns_payload_bytes = true;
+      if (deduplicate_payloads) {
+        deduplicated_payloads.emplace(entry.stored_payload, payload_assignment{entry.payload_offset, entry.stored_size});
+      }
       if (!add_fits_u64(payload_cursor, entry.stored_payload.size(), payload_cursor)) {
         return error{error_code::format_error, "TES4 BSA payload span overflows"};
       }
@@ -556,6 +583,9 @@ result<void> write_archive_bytes(std::span<const prepared_folder> folders,
   }
   for (const auto& folder : folders) {
     for (const auto& entry : folder.entries) {
+      if (!entry.owns_payload_bytes) {
+        continue;
+      }
       if (!(written = writer.write_bytes(entry.stored_payload))) {
         return written.error();
       }
@@ -641,7 +671,8 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target,
                                      : (!total_file_name_length ? total_file_name_length.error() : file_count.error());
   }
 
-  auto offsets = assign_offsets(folders.value(), version.value(), total_file_name_length.value());
+  auto offsets = assign_offsets(folders.value(), version.value(), total_file_name_length.value(),
+                                options.deduplicate_payloads);
   if (!offsets) {
     return offsets.error();
   }
