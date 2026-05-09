@@ -235,17 +235,17 @@ std::pair<std::string_view, std::string_view> split_directory_file(std::string_v
   return {archive_path.substr(0, slash), archive_path.substr(slash + 1U)};
 }
 
+std::pair<std::string_view, std::string_view> split_stem_extension(std::string_view file_name) noexcept {
+  const auto dot = file_name.find_last_of('.');
+  if (dot == std::string_view::npos || dot == 0U || dot + 1U == file_name.size()) {
+    return {{}, {}};
+  }
+  return {file_name.substr(0, dot), file_name.substr(dot + 1U)};
+}
+
 bool is_ascii_extension_byte(unsigned char value) noexcept { return value > 0x20U && value <= 0x7EU; }
 
-result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view archive_path) {
-  const auto slash = archive_path.find_last_of('/');
-  const auto file_name = slash == std::string_view::npos ? archive_path : archive_path.substr(slash + 1U);
-  const auto dot = file_name.find_last_of('.');
-  if (dot == std::string_view::npos || dot + 1U == file_name.size()) {
-    return error{error_code::invalid_argument, "BA2 DX10 archive path must include a file extension"};
-  }
-
-  const auto extension = file_name.substr(dot + 1U);
+result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view extension) {
   if (extension.size() > 4U) {
     return error{error_code::invalid_argument, "BA2 DX10 extension exceeds four-byte record field"};
   }
@@ -359,13 +359,14 @@ result<prepared_entry> prepare_entry(ba2_dx10_target target,
     return error{error_code::format_error, "BA2 DX10 writer planned no chunks for texture"};
   }
 
-  auto extension = extension_fourcc_for(entry.archive_path_original);
+  const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
+  const auto [stem, extension_text] = split_stem_extension(file_name);
+  if (stem.empty() || extension_text.empty()) {
+    return error{error_code::invalid_argument, "BA2 DX10 archive path must include a file stem and extension"};
+  }
+  auto extension = extension_fourcc_for(extension_text);
   if (!extension) {
     return extension.error();
-  }
-  const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
-  if (file_name.empty()) {
-    return error{error_code::invalid_argument, "BA2 DX10 archive path must include a file name"};
   }
 
   auto chunk_count = checked_u8(planned_chunks.value().size(), "BA2 DX10 chunk count");
@@ -379,10 +380,10 @@ result<prepared_entry> prepare_entry(ba2_dx10_target target,
   }
 
   prepared_entry prepared{entry.archive_path_original,
-                          entry.archive_path_canonical,
-                          extension.value(),
-                          detail::hash_fo4(file_name),
-                          detail::hash_fo4(directory),
+                           entry.archive_path_canonical,
+                           extension.value(),
+                           detail::hash_fo4(stem),
+                           detail::hash_fo4(directory),
                           ba2_dx10_unknown_tex_default,
                           chunk_count.value(),
                           height.value(),
@@ -657,7 +658,13 @@ result<void> validate_entries(std::span<const ba2_dx10_writer_entry> entries) {
     if (!canonical_paths.insert(entry.archive_path_canonical).second) {
       return error{error_code::format_error, "BA2 DX10 writer has duplicate canonical archive paths"};
     }
-    auto fourcc = extension_fourcc_for(entry.archive_path_original);
+    const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
+    (void)directory;
+    const auto [stem, extension_text] = split_stem_extension(file_name);
+    if (stem.empty() || extension_text.empty()) {
+      return error{error_code::invalid_argument, "BA2 DX10 archive path must include a file stem and extension"};
+    }
+    auto fourcc = extension_fourcc_for(extension_text);
     if (!fourcc) {
       return fourcc.error();
     }
