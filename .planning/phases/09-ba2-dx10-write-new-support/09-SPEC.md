@@ -31,7 +31,7 @@ libbsa already reads and extracts BA2 DX10 texture archives through `archive_rea
 
 4. **DDS analysis and supported format set**: DDS inputs are analyzed through the internal DirectXTex boundary and must support the locked common-game DDS format set.
    - Current: `analyze_dds_metadata` translates DirectXTex metadata into libbsa-owned fields, and `dds_layout` supports only the fixture-backed formats used by existing read tests.
-   - Target: Writer DDS analysis accepts at least these DXGI formats by name: `BC1_UNORM`, `BC1_UNORM_SRGB`, `BC3_UNORM`, `BC4_UNORM`, `BC5_UNORM`, `BC5_SNORM`, `BC6H_UF16`, `BC7_UNORM`, `R8G8B8A8_UNORM_SRGB`, `R8_UNORM`, and `R8G8B8A8_SNORM`. Unsupported DDS formats fail with a structured error before archive bytes are finalized.
+   - Target: Writer DDS analysis accepts at least these DXGI formats by name: `BC1_UNORM`, `BC1_UNORM_SRGB`, `BC3_UNORM`, `BC4_UNORM`, `BC5_UNORM`, `BC5_SNORM`, `BC6H_UF16`, `BC7_UNORM`, `R8G8B8A8_UNORM_SRGB`, `B8G8R8A8_UNORM`, `R8_UNORM`, and `R8G8B8A8_SNORM`. Unsupported DDS formats fail with a structured error before archive bytes are finalized.
    - Acceptance: Generated DDS writer fixtures include every locked DXGI format at least once across FO4 and Starfield v3 tests, and each unsupported-format fixture fails before writing a readable archive with the expected stable `error_code`.
 
 5. **Texture record serialization**: The writer serializes BA2 DX10 texture records and filename tables compatible with existing reader behavior.
@@ -75,7 +75,7 @@ libbsa already reads and extracts BA2 DX10 texture archives through `archive_rea
 - Public BA2 DX10 write-new API for DDS host-file entries.
 - Mandatory FO4 v1 and Starfield v3 DX10 target profiles.
 - DirectXTex-backed internal DDS analysis translated into libbsa-owned metadata.
-- Support for the locked common DDS format set: `BC1_UNORM`, `BC1_UNORM_SRGB`, `BC3_UNORM`, `BC4_UNORM`, `BC5_UNORM`, `BC5_SNORM`, `BC6H_UF16`, `BC7_UNORM`, `R8G8B8A8_UNORM_SRGB`, `R8_UNORM`, and `R8G8B8A8_SNORM`.
+- Support for the locked common DDS format set: `BC1_UNORM`, `BC1_UNORM_SRGB`, `BC3_UNORM`, `BC4_UNORM`, `BC5_UNORM`, `BC5_SNORM`, `BC6H_UF16`, `BC7_UNORM`, `R8G8B8A8_UNORM_SRGB`, `B8G8R8A8_UNORM`, `R8_UNORM`, and `R8G8B8A8_SNORM`.
 - BA2 DX10 header, texture record, chunk record, payload, and filename-table serialization.
 - Mip, array, cubemap, and configurable chunk-limit planning for supported DDS inputs.
 - Target-default compression plus raw/compressed overrides for generated texture chunks.
@@ -115,7 +115,7 @@ libbsa already reads and extracts BA2 DX10 texture archives through `archive_rea
 - [ ] Public installed-header tests construct a BA2 DX10 writer, add DDS host-file entries, and finalize output without private or third-party headers.
 - [ ] Empty DDS source paths fail with `error_code::invalid_argument`; missing/unreadable and malformed DDS sources fail with stable structured errors.
 - [ ] Writer-output FO4 v1 and Starfield v3 DX10 archives reopen through `archive_reader::open` with expected archive type, variant, version, file count, default compression, and BA2 metadata.
-- [ ] Generated DDS writer fixtures cover `BC1_UNORM`, `BC1_UNORM_SRGB`, `BC3_UNORM`, `BC4_UNORM`, `BC5_UNORM`, `BC5_SNORM`, `BC6H_UF16`, `BC7_UNORM`, `R8G8B8A8_UNORM_SRGB`, `R8_UNORM`, and `R8G8B8A8_SNORM`.
+- [ ] Generated DDS writer fixtures cover `BC1_UNORM`, `BC1_UNORM_SRGB`, `BC3_UNORM`, `BC4_UNORM`, `BC5_UNORM`, `BC5_SNORM`, `BC6H_UF16`, `BC7_UNORM`, `R8G8B8A8_UNORM_SRGB`, `B8G8R8A8_UNORM`, `R8_UNORM`, and `R8G8B8A8_SNORM`.
 - [ ] Unsupported DDS formats fail before finalizing a readable archive.
 - [ ] Reopened DX10 entries expose expected normalized paths, original path spelling, texture metadata, chunk records, chunk offsets/sizes, and `BAADF00D` sentinel-backed record structure.
 - [ ] Multi-mip, array, and cubemap DDS inputs extract with matching DirectXTex metadata and validated mip/face/array ordering.
