@@ -390,3 +390,86 @@ TEST_CASE("TES4 BSA writer records compressed override metadata while archive de
     require_extracted_bytes(opened.value(), "Textures/CompressedOverride.dds", compressed_override_bytes);
   }
 }
+
+TEST_CASE("TES4 BSA writer leaves embedded names absent by default and when explicitly disabled",
+          "[unit][tes4_bsa_writer]") {
+  const std::array targets{libbsa::tes4_bsa_target::fallout3, libbsa::tes4_bsa_target::skyrim_se};
+  const auto source_bytes = bytes_from_text("payload without an embedded name prefix");
+
+  for (const auto target : targets) {
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    options.overwrite_existing = true;
+    options.embed_file_names = false;
+    libbsa::tes4_bsa_writer writer{target, options};
+
+    REQUIRE(writer.add_bytes("Meshes/Embedded/Model.nif", source_bytes).has_value());
+
+    const auto archive = output_path(target_name(target) + "-embedded-disabled.bsa");
+    auto written = writer.write_to(archive.string());
+    REQUIRE(written.has_value());
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+
+    const auto& entry = require_entry(opened.value(), "Meshes/Embedded/Model.nif");
+    CHECK_FALSE(entry.has_embedded_name);
+    CHECK(entry.embedded_name_prefix_size == 0U);
+    require_extracted_bytes(opened.value(), "Meshes/Embedded/Model.nif", source_bytes);
+  }
+}
+
+TEST_CASE("TES4 BSA writer emits opt-in embedded name prefixes for v104 and v105 targets",
+          "[unit][tes4_bsa_writer]") {
+  const std::array cases{std::pair{libbsa::tes4_bsa_target::fallout3, std::string{"Meshes/Embedded/Model.nif"}},
+                         std::pair{libbsa::tes4_bsa_target::skyrim_se,
+                                   std::string{"Scripts/Embedded/Quest.pex"}}};
+  const auto source_bytes = bytes_from_text("consumer visible bytes must not include the embedded name");
+
+  for (const auto& [target, archive_path] : cases) {
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    options.overwrite_existing = true;
+    options.embed_file_names = true;
+    libbsa::tes4_bsa_writer writer{target, options};
+
+    REQUIRE(writer.add_bytes(archive_path, source_bytes).has_value());
+
+    const auto archive = output_path(target_name(target) + "-embedded-enabled.bsa");
+    auto written = writer.write_to(archive.string());
+    REQUIRE(written.has_value());
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+
+    const auto& entry = require_entry(opened.value(), archive_path);
+    const auto expected_prefix_size = entry.original_path.substr(entry.original_path.find_last_of('/') + 1U).length() + 1U;
+    CHECK(entry.has_embedded_name);
+    CHECK(entry.embedded_name_prefix_size == expected_prefix_size);
+    require_extracted_bytes(opened.value(), archive_path, source_bytes);
+  }
+}
+
+TEST_CASE("TES4 BSA writer ignores embedded name option for v103 target compatibility",
+          "[unit][tes4_bsa_writer]") {
+  const auto source_bytes = bytes_from_text("oblivion payload remains prefix-free");
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.overwrite_existing = true;
+  options.embed_file_names = true;
+  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::oblivion, options};
+
+  REQUIRE(writer.add_bytes("Meshes/Embedded/Model.nif", source_bytes).has_value());
+
+  const auto archive = output_path("oblivion-embedded-compatibility.bsa");
+  auto written = writer.write_to(archive.string());
+  REQUIRE(written.has_value());
+
+  auto opened = libbsa::archive_reader::open(archive.string());
+  REQUIRE(opened.has_value());
+
+  const auto& entry = require_entry(opened.value(), "Meshes/Embedded/Model.nif");
+  CHECK_FALSE(entry.has_embedded_name);
+  CHECK(entry.embedded_name_prefix_size == 0U);
+  require_extracted_bytes(opened.value(), "Meshes/Embedded/Model.nif", source_bytes);
+}
