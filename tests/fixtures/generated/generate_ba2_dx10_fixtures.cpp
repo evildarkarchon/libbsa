@@ -232,7 +232,7 @@ std::uint32_t header_size_for(const archive_spec& archive) { return archive.vers
 std::uint64_t record_table_size(const archive_spec& archive) {
   std::uint64_t size = 0;
   for (const auto& texture : archive.textures) {
-    size += 28ULL + static_cast<std::uint64_t>(texture.chunks.size()) * ba2_dx10_chunk_header_size;
+    size += 24ULL + static_cast<std::uint64_t>(texture.chunks.size()) * ba2_dx10_chunk_header_size;
   }
   return size;
 }
@@ -316,7 +316,10 @@ std::vector<std::byte> build_archive(archive_spec& archive) {
     }
   }
   if (writer.bytes.size() != next_payload_offset) {
-    throw std::runtime_error("internal BA2 DX10 fixture size accounting mismatch");
+    std::ostringstream message;
+    message << "internal BA2 DX10 fixture size accounting mismatch: wrote " << writer.bytes.size() << " expected "
+            << next_payload_offset;
+    throw std::runtime_error(message.str());
   }
   return writer.bytes;
 }
@@ -535,8 +538,8 @@ void generate_malformed(const std::filesystem::path& output_dir) {
   const auto valid_fo4 = build_archive(fo4);
   const auto fixed_header_size = header_size_for(fo4);
   const auto first_record_offset = fixed_header_size;
-  const auto second_record_offset = first_record_offset + 28ULL + fo4.textures[0].chunks.size() * ba2_dx10_chunk_header_size;
-  const auto first_second_chunk_offset = second_record_offset + 28ULL;
+  const auto second_record_offset = first_record_offset + 24ULL + fo4.textures[0].chunks.size() * ba2_dx10_chunk_header_size;
+  const auto first_second_chunk_offset = second_record_offset + 24ULL;
   const auto second_second_chunk_offset = first_second_chunk_offset + ba2_dx10_chunk_header_size;
 
   write_file(output_dir / "ba2_dx10_truncated_header.ba2", std::span<const std::byte>{valid_fo4.data(), 11U});

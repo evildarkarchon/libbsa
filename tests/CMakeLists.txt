@@ -7,6 +7,11 @@ add_executable(libbsa_tests
   unit/tes4_bsa_reader_tests.cpp
   unit/tes3_bsa_reader_tests.cpp
   unit/ba2_gnrl_reader_tests.cpp
+  unit/ba2_dx10_metadata_tests.cpp
+  unit/dds_layout_tests.cpp
+  unit/ba2_dx10_parser_tests.cpp
+  unit/ba2_dx10_extraction_tests.cpp
+  unit/ba2_dx10_malformed_tests.cpp
   unit/public_include_boundary_tests.cpp
   unit/local_game_fixture_tests.cpp
   unit/validation_policy_tests.cpp
@@ -86,6 +91,22 @@ target_include_directories(generate_ba2_gnrl_fixtures_tool
     ${CMAKE_SOURCE_DIR}/src
 )
 
+add_executable(generate_ba2_dx10_fixtures_tool
+  fixtures/generated/generate_ba2_dx10_fixtures.cpp
+)
+
+target_link_libraries(generate_ba2_dx10_fixtures_tool
+  PRIVATE
+    libbsa::libbsa
+)
+
+target_compile_features(generate_ba2_dx10_fixtures_tool PRIVATE cxx_std_20)
+
+target_include_directories(generate_ba2_dx10_fixtures_tool
+  PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
 add_custom_target(generate_tes4_bsa_fixtures
   COMMAND generate_tes4_bsa_fixtures_tool --success --output ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives
   DEPENDS generate_tes4_bsa_fixtures_tool
@@ -142,6 +163,28 @@ add_custom_target(generate_ba2_gnrl_fixtures
     ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_exact_size_mismatch.ba2
     ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_unsupported_v3_compression_method.ba2
   COMMENT "Generating BA2 GNRL success and malformed fixtures"
+  VERBATIM
+)
+
+add_custom_target(generate_ba2_dx10_fixtures
+  COMMAND generate_ba2_dx10_fixtures_tool --output ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives
+  DEPENDS generate_ba2_dx10_fixtures_tool
+  BYPRODUCTS
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_fo4.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_fo4_manifest.json
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_sfv3.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_sfv3_manifest.json
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_malformed_manifest.json
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_truncated_header.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_truncated_records.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_truncated_chunks.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_invalid_payload_span.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_inconsistent_chunk_sizes.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_bad_compressed_chunk.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_decoded_size_mismatch.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_mip_gap.ba2
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_duplicate_mip_face.ba2
+  COMMENT "Generating BA2 DX10 texture success and malformed fixtures"
   VERBATIM
 )
 
