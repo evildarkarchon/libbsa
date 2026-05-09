@@ -1,10 +1,9 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <span>
-#include <string>
 #include <string_view>
-#include <vector>
 
 #include <libbsa/result.hpp>
 
@@ -96,8 +95,9 @@ class tes4_bsa_writer {
   result<void> write_to(std::string_view host_path) const;
 
  private:
-  tes4_bsa_target target_;
-  tes4_bsa_writer_options options_;
+  struct state;
+
+  std::shared_ptr<state> state_;
 };
 
 } // namespace libbsa
