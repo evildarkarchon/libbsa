@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdlib>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -613,6 +614,25 @@ void cleanup_publish_directory(const std::filesystem::path& temp_dir) noexcept {
   std::filesystem::remove_all(temp_dir, fs_error);
 }
 
+bool should_fail_after_backup_for_test(const std::filesystem::path& output_path) {
+  // Tests use this path-scoped hook to exercise the rollback branch that normally requires
+  // a narrow filesystem race after the original archive has already been moved aside.
+#ifdef _WIN32
+  char* requested_path = nullptr;
+  std::size_t requested_path_size = 0;
+  if (_dupenv_s(&requested_path, &requested_path_size, "LIBBSA_TEST_FAIL_BA2_DX10_PUBLISH_AFTER_BACKUP") != 0 ||
+      requested_path == nullptr) {
+    return false;
+  }
+  const std::filesystem::path requested{requested_path};
+  std::free(requested_path);
+  return output_path == requested;
+#else
+  const char* requested_path = std::getenv("LIBBSA_TEST_FAIL_BA2_DX10_PUBLISH_AFTER_BACKUP");
+  return requested_path != nullptr && output_path == std::filesystem::path{requested_path};
+#endif
+}
+
 result<void> validate_target_options(ba2_dx10_target target, const ba2_dx10_writer_options& options) {
   switch (target) {
   case ba2_dx10_target::fallout4:
@@ -725,6 +745,13 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target,
       if (fs_error) {
         cleanup_publish_directory(temp_dir.value());
         return error{error_code::io_error, "BA2 DX10 writer failed to reserve output backup"};
+      }
+
+      if (should_fail_after_backup_for_test(output_path)) {
+        std::error_code rollback_error;
+        std::filesystem::rename(backup_path.value(), output_path, rollback_error);
+        cleanup_publish_directory(temp_dir.value());
+        return error{error_code::io_error, "BA2 DX10 writer failed to publish output host path"};
       }
 
       std::filesystem::rename(temp_path, output_path, fs_error);
