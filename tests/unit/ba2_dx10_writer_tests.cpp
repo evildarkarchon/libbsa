@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <set>
 #include <span>
 #include <string>
@@ -46,6 +47,43 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
 std::filesystem::path writer_test_dir() {
   auto path = std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_writer_tests";
   std::filesystem::create_directories(path);
+  return path;
+}
+
+struct collecting_sink final : libbsa::payload_sink {
+  std::vector<std::byte> bytes;
+
+  libbsa::result<std::size_t> write(std::span<const std::byte> chunk) override {
+    bytes.insert(bytes.end(), chunk.begin(), chunk.end());
+    return chunk.size();
+  }
+};
+
+struct writer_proof_case {
+  std::string_view id;
+  std::string_view format_name;
+  libbsa::ba2_dx10_target target;
+};
+
+constexpr auto writer_proof_matrix = std::to_array<writer_proof_case>({
+    {"bc1_unorm", "BC1_UNORM", libbsa::ba2_dx10_target::fallout4},
+    {"bc1_unorm_srgb", "BC1_UNORM_SRGB", libbsa::ba2_dx10_target::fallout4},
+    {"bc3_unorm", "BC3_UNORM", libbsa::ba2_dx10_target::fallout4},
+    {"bc4_unorm", "BC4_UNORM", libbsa::ba2_dx10_target::fallout4},
+    {"bc5_unorm", "BC5_UNORM", libbsa::ba2_dx10_target::fallout4},
+    {"bc5_snorm", "BC5_SNORM", libbsa::ba2_dx10_target::fallout4},
+    {"bc6h_uf16", "BC6H_UF16", libbsa::ba2_dx10_target::starfield_v3},
+    {"bc7_unorm", "BC7_UNORM", libbsa::ba2_dx10_target::starfield_v3},
+    {"r8g8b8a8_unorm_srgb", "R8G8B8A8_UNORM_SRGB", libbsa::ba2_dx10_target::starfield_v3},
+    {"b8g8r8a8_unorm", "B8G8R8A8_UNORM", libbsa::ba2_dx10_target::starfield_v3},
+    {"r8_unorm", "R8_UNORM", libbsa::ba2_dx10_target::fallout4},
+    {"r8g8b8a8_snorm", "R8G8B8A8_SNORM", libbsa::ba2_dx10_target::starfield_v3},
+});
+
+std::filesystem::path unique_output_path(std::string_view stem) {
+  static std::uint32_t counter = 0;
+  auto path = writer_test_dir() / (std::string{stem} + "-" + std::to_string(++counter) + ".ba2");
+  std::filesystem::remove(path);
   return path;
 }
 
@@ -102,6 +140,127 @@ const nlohmann::json& invalid_source_case(const nlohmann::json& manifest, std::s
   });
   REQUIRE(found != manifest.at("invalid_cases").end());
   return *found;
+}
+
+void add_matrix_cases(libbsa::ba2_dx10_writer& writer,
+                      const nlohmann::json& manifest,
+                      libbsa::ba2_dx10_target target,
+                      std::vector<const nlohmann::json*>& added_cases) {
+  for (const auto& matrix_case : writer_proof_matrix) {
+    if (matrix_case.target != target) {
+      continue;
+    }
+    const auto& source_case = valid_source_case(manifest, matrix_case.id);
+    INFO("writer proof matrix format: " << matrix_case.format_name);
+    auto added = writer.add_file(source_case.at("archive_path").get<std::string>(),
+                                 (generated_source_dir() / source_case.at("file").get<std::string>()).string());
+    REQUIRE(added.has_value());
+    added_cases.push_back(&source_case);
+  }
+}
+
+void require_metadata_matches_source(const libbsa::texture_metadata& texture, const libbsa::texture::dds_source_analysis& source) {
+  CHECK(texture.dxgi_format == source.metadata.dxgi_format);
+  CHECK(texture.width == source.metadata.width);
+  CHECK(texture.height == source.metadata.height);
+  CHECK(texture.mip_count == source.metadata.mip_count);
+  CHECK(texture.array_size == source.metadata.array_size);
+  CHECK(texture.is_cubemap == source.metadata.is_cubemap);
+}
+
+void require_extracted_matches_source(std::span<const std::byte> dds_bytes,
+                                      const libbsa::texture::dds_source_analysis& source) {
+  auto extracted = libbsa::texture::analyze_dds_source(dds_bytes);
+  REQUIRE(extracted.has_value());
+  require_metadata_matches_source(extracted.value().metadata, source);
+  CHECK(extracted.value().image_payload_bytes == source.image_payload_bytes);
+}
+
+void require_reader_backed_entry(const libbsa::archive_reader& reader,
+                                 const nlohmann::json& source_case,
+                                 libbsa::entry_compression expected_compression) {
+  const auto archive_path = source_case.at("archive_path").get<std::string>();
+  auto found = reader.find(archive_path);
+  REQUIRE(found.has_value());
+  REQUIRE(found.value().has_value());
+  auto contains = reader.contains(archive_path);
+  REQUIRE(contains.has_value());
+  CHECK(contains.value());
+
+  const auto source_bytes = read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>());
+  auto source = libbsa::texture::analyze_dds_source(source_bytes);
+  REQUIRE(source.has_value());
+  REQUIRE(found.value()->texture.has_value());
+  require_metadata_matches_source(found.value()->texture.value(), source.value());
+
+  bool saw_compressed_chunk = false;
+  for (const auto& chunk : found.value()->texture->chunks) {
+    CHECK(chunk.stored_size != 0U);
+    CHECK(chunk.compression == expected_compression);
+    saw_compressed_chunk = true;
+  }
+  CHECK(saw_compressed_chunk);
+
+  collecting_sink sink;
+  auto extracted_to_sink = reader.extract(archive_path, sink);
+  REQUIRE(extracted_to_sink.has_value());
+  require_extracted_matches_source(sink.bytes, source.value());
+
+  auto extracted_bytes = reader.extract_bytes(archive_path);
+  REQUIRE(extracted_bytes.has_value());
+  require_extracted_matches_source(extracted_bytes.value(), source.value());
+}
+
+void require_writer_round_trip(libbsa::ba2_dx10_target target,
+                               std::uint32_t starfield_compression_method,
+                               std::string_view stem,
+                               libbsa::entry_compression expected_compression) {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  libbsa::ba2_dx10_writer_options options;
+  options.starfield_compression_method = starfield_compression_method;
+  libbsa::ba2_dx10_writer writer{target, options};
+  std::vector<const nlohmann::json*> added_cases;
+  add_matrix_cases(writer, manifest, target, added_cases);
+  REQUIRE_FALSE(added_cases.empty());
+
+  const auto output_path = unique_output_path(stem);
+  auto written = writer.write_to(output_path.string());
+  REQUIRE(written.has_value());
+
+  auto opened = libbsa::archive_reader::open(output_path.string());
+  REQUIRE(opened.has_value());
+  auto metadata = opened.value().metadata();
+  REQUIRE(metadata.has_value());
+  CHECK(metadata.value().type == libbsa::archive_type::ba2);
+  CHECK(metadata.value().file_count == added_cases.size());
+  CHECK(metadata.value().default_compression == expected_compression);
+
+  if (target == libbsa::ba2_dx10_target::fallout4) {
+    CHECK(metadata.value().variant == libbsa::archive_variant::fallout4);
+    CHECK(metadata.value().version == 1U);
+    REQUIRE(metadata.value().ba2.has_value());
+    CHECK_FALSE(metadata.value().ba2->starfield_unknown1.has_value());
+    CHECK_FALSE(metadata.value().ba2->compression_method.has_value());
+  } else {
+    CHECK(metadata.value().variant == libbsa::archive_variant::starfield);
+    CHECK(metadata.value().version == 3U);
+    REQUIRE(metadata.value().ba2.has_value());
+    REQUIRE(metadata.value().ba2->starfield_unknown1.has_value());
+    CHECK(metadata.value().ba2->starfield_unknown1.value() == 1U);
+    REQUIRE(metadata.value().ba2->starfield_unknown2.has_value());
+    CHECK(metadata.value().ba2->starfield_unknown2.value() == 0U);
+    REQUIRE(metadata.value().ba2->compression_method.has_value());
+    CHECK(metadata.value().ba2->compression_method.value() == starfield_compression_method);
+  }
+
+  auto entries = opened.value().entries();
+  REQUIRE(entries.has_value());
+  CHECK(entries.value().size() == added_cases.size());
+  for (const auto* source_case : added_cases) {
+    require_reader_backed_entry(opened.value(), *source_case, expected_compression);
+  }
+
+  std::filesystem::remove(output_path);
 }
 
 } // namespace
@@ -259,4 +418,28 @@ TEST_CASE("ba2_dx10_writer::add_file accepts duplicate canonical archive paths f
 
   REQUIRE(first.has_value());
   REQUIRE(second.has_value());
+}
+
+TEST_CASE("BA2 DX10 writer reopens FO4 deflate archives through archive_reader",
+          "[unit][ba2_dx10_writer][fo4][compression]") {
+  // DX10 output is compressed-only by public contract; tests intentionally avoid raw per-entry overrides.
+  require_writer_round_trip(libbsa::ba2_dx10_target::fallout4, 3U, "fo4-dx10-writer", libbsa::entry_compression::deflate);
+}
+
+TEST_CASE("BA2 DX10 writer reopens Starfield method 3 raw LZ4 archives through archive_reader",
+          "[unit][ba2_dx10_writer][starfield][compression]") {
+  libbsa::ba2_dx10_writer_options options;
+  options.starfield_compression_method = 3U;
+  CHECK(options.starfield_compression_method == 3U);
+  require_writer_round_trip(libbsa::ba2_dx10_target::starfield_v3, options.starfield_compression_method,
+                            "starfield-v3-dx10-writer", libbsa::entry_compression::lz4_block);
+}
+
+TEST_CASE("BA2 DX10 writer reopens Starfield method 0 deflate archives through archive_reader",
+          "[unit][ba2_dx10_writer][starfield][compression]") {
+  libbsa::ba2_dx10_writer_options options;
+  options.starfield_compression_method = 0U;
+  CHECK(options.starfield_compression_method == 0U);
+  require_writer_round_trip(libbsa::ba2_dx10_target::starfield_v3, options.starfield_compression_method,
+                            "starfield-v3-dx10-deflate-writer", libbsa::entry_compression::deflate);
 }
