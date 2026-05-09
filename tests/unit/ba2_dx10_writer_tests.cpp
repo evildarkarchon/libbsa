@@ -43,6 +43,19 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
   return bytes;
 }
 
+std::filesystem::path writer_test_dir() {
+  auto path = std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_writer_tests";
+  std::filesystem::create_directories(path);
+  return path;
+}
+
+void write_binary_file(const std::filesystem::path& path, std::span<const std::byte> bytes) {
+  std::ofstream output{path, std::ios::binary | std::ios::trunc};
+  REQUIRE(output.is_open());
+  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  REQUIRE(output.good());
+}
+
 const nlohmann::json& structural_case(const nlohmann::json& manifest, std::string_view key) {
   return manifest.at("structural_cases").at(std::string{key});
 }
@@ -73,6 +86,22 @@ void require_analyzes_valid_source_case(const nlohmann::json& source_case) {
   CHECK_FALSE(analysis.value().dds_bytes.empty());
   CHECK_FALSE(analysis.value().image_payload_bytes.empty());
   CHECK_FALSE(analysis.value().subresources.empty());
+}
+
+const nlohmann::json& valid_source_case(const nlohmann::json& manifest, std::string_view id) {
+  const auto found = std::ranges::find_if(manifest.at("valid_cases"), [id](const nlohmann::json& source_case) {
+    return source_case.at("id").get<std::string>() == id;
+  });
+  REQUIRE(found != manifest.at("valid_cases").end());
+  return *found;
+}
+
+const nlohmann::json& invalid_source_case(const nlohmann::json& manifest, std::string_view id) {
+  const auto found = std::ranges::find_if(manifest.at("invalid_cases"), [id](const nlohmann::json& source_case) {
+    return source_case.at("id").get<std::string>() == id;
+  });
+  REQUIRE(found != manifest.at("invalid_cases").end());
+  return *found;
 }
 
 } // namespace
@@ -146,4 +175,74 @@ TEST_CASE("BA2 DX10 writer DDS source manifest rejects malformed and unsupported
     CHECK(analysis.error().code == libbsa::error_code::format_error);
     CHECK(source_case.at("expected_error").get<std::string>() == "format_error");
   }
+}
+
+TEST_CASE("ba2_dx10_writer::add_file accepts a valid DDS source", "[unit][ba2_dx10_writer][add]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc7_unorm");
+
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+  auto added = writer.add_file(source_case.at("archive_path").get<std::string>(),
+                               (generated_source_dir() / source_case.at("file").get<std::string>()).string());
+
+  REQUIRE(added.has_value());
+}
+
+TEST_CASE("ba2_dx10_writer::add_file rejects an empty DDS host path", "[unit][ba2_dx10_writer][add]") {
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  auto added = writer.add_file("textures/empty-host.dds", "");
+
+  REQUIRE_FALSE(added.has_value());
+  CHECK(added.error().code == libbsa::error_code::invalid_argument);
+}
+
+TEST_CASE("ba2_dx10_writer::add_file rejects a missing DDS host path with structured error", "[unit][ba2_dx10_writer][add]") {
+  const auto missing = writer_test_dir() / "missing-source.dds";
+  std::filesystem::remove(missing);
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  auto added = writer.add_file("textures/missing.dds", missing.string());
+
+  REQUIRE_FALSE(added.has_value());
+  CHECK(added.error().code == libbsa::error_code::io_error);
+}
+
+TEST_CASE("ba2_dx10_writer::add_file rejects malformed DDS bytes", "[unit][ba2_dx10_writer][add]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = invalid_source_case(manifest, "malformed_truncated_dds");
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  auto added = writer.add_file("textures/malformed.dds", (generated_source_dir() / source_case.at("file").get<std::string>()).string());
+
+  REQUIRE_FALSE(added.has_value());
+  CHECK(added.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("ba2_dx10_writer::add_file rejects unsupported DDS formats", "[unit][ba2_dx10_writer][add]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = invalid_source_case(manifest, "unsupported_r32g32b32a32_float");
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  auto added = writer.add_file("textures/unsupported.dds", (generated_source_dir() / source_case.at("file").get<std::string>()).string());
+
+  REQUIRE_FALSE(added.has_value());
+  CHECK(added.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("ba2_dx10_writer::add_file snapshots DDS bytes before later source file changes", "[unit][ba2_dx10_writer][add]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto original_bytes = read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>());
+  const auto scratch_path = writer_test_dir() / "snapshot-source.dds";
+  write_binary_file(scratch_path, original_bytes);
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  auto added = writer.add_file(source_case.at("archive_path").get<std::string>(), scratch_path.string());
+
+  REQUIRE(added.has_value());
+  const auto malformed_bytes = read_binary_file(generated_source_dir() / "ba2_dx10_malformed_truncated.dds");
+  write_binary_file(scratch_path, malformed_bytes);
+  std::filesystem::remove(scratch_path);
+  SUCCEED("snapshot add succeeded before the source DDS was overwritten and deleted");
 }
