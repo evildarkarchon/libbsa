@@ -212,6 +212,59 @@ void require_raw_round_trip(const std::filesystem::path& output,
   }
 }
 
+struct compression_case {
+  libbsa::ba2_gnrl_target target;
+  std::uint32_t version;
+  std::string file_name;
+  std::optional<std::uint32_t> compression_method;
+  libbsa::entry_compression expected_compression;
+};
+
+void require_compressed_round_trip(const std::filesystem::path& output,
+                                  const std::vector<expected_entry>& expected,
+                                  std::uint32_t expected_version,
+                                  libbsa::archive_variant expected_variant,
+                                  std::optional<std::uint32_t> expected_compression_method,
+                                  libbsa::entry_compression expected_compression) {
+  auto opened = libbsa::archive_reader::open(output.string());
+  REQUIRE(opened.has_value());
+  auto metadata = opened.value().metadata();
+  REQUIRE(metadata.has_value());
+  CHECK(metadata.value().type == libbsa::archive_type::ba2);
+  CHECK(metadata.value().variant == expected_variant);
+  CHECK(metadata.value().version == expected_version);
+  CHECK(metadata.value().file_count == expected.size());
+  CHECK(metadata.value().default_compression == expected_compression);
+  REQUIRE(metadata.value().ba2.has_value());
+  CHECK(metadata.value().ba2->compression_method == expected_compression_method);
+
+  const auto layout = read_physical_layout(output);
+  CHECK(layout.version == expected_version);
+  CHECK(layout.compression_method == expected_compression_method);
+  REQUIRE(layout.records.size() == expected.size());
+
+  for (const auto& expected_entry : expected) {
+    auto found = opened.value().find(expected_entry.path);
+    REQUIRE(found.has_value());
+    REQUIRE(found.value().has_value());
+    CHECK(found.value()->compression == expected_compression);
+    CHECK(found.value()->raw_size == expected_entry.bytes.size());
+    CHECK(found.value()->stored_size > 0U);
+    CHECK(found.value()->stored_size != expected_entry.bytes.size());
+    CHECK(found.value()->payload_offset < layout.file_table_offset);
+
+    auto extracted = opened.value().extract_bytes(expected_entry.path);
+    REQUIRE(extracted.has_value());
+    CHECK(extracted.value() == expected_entry.bytes);
+  }
+
+  for (const auto& record : layout.records) {
+    CHECK(record.packed_size > 0U);
+    CHECK(record.raw_size > 0U);
+    CHECK(layout.file_table_offset >= record.offset + record.packed_size);
+  }
+}
+
 } // namespace
 
 TEST_CASE("BA2 GNRL writer rejects empty disk source host paths", "[unit][ba2_gnrl_writer]") {
@@ -371,4 +424,99 @@ TEST_CASE("BA2 GNRL writer preserves Starfield unknown overrides and BA2 record 
                            9U,
                            compression_method);
   }
+}
+
+TEST_CASE("BA2 GNRL writer all-compressed policy routes through target compression methods",
+          "[unit][ba2_gnrl_writer]") {
+  const std::vector<compression_case> cases{
+      {libbsa::ba2_gnrl_target::fallout4, 1U, "compressed-fo4-deflate.ba2", std::nullopt,
+       libbsa::entry_compression::deflate},
+      {libbsa::ba2_gnrl_target::starfield_v2, 2U, "compressed-sfv2-deflate.ba2", std::nullopt,
+       libbsa::entry_compression::deflate},
+      {libbsa::ba2_gnrl_target::starfield_v3, 3U, "compressed-sfv3-method0-deflate.ba2", 0U,
+       libbsa::entry_compression::deflate},
+      {libbsa::ba2_gnrl_target::starfield_v3, 3U, "compressed-sfv3-method3-lz4-block.ba2", 3U,
+       libbsa::entry_compression::lz4_block},
+  };
+
+  for (const auto& test_case : cases) {
+    libbsa::ba2_gnrl_writer_options options;
+    options.overwrite_existing = true;
+    options.compression = libbsa::archive_compression_policy::all_compressed;
+    if (test_case.compression_method.has_value()) {
+      options.starfield_compression_method = *test_case.compression_method;
+    }
+    if (test_case.file_name == "compressed-sfv3-method0-deflate.ba2") {
+      options.starfield_compression_method = 0U;
+    }
+    libbsa::ba2_gnrl_writer writer{test_case.target, options};
+    const std::vector<std::byte> bytes{std::byte{0x4E}, std::byte{0x4F}, std::byte{0x54}, std::byte{0x44},
+                                       std::byte{0x44}, std::byte{0x53}, std::byte{0x21}, std::byte{0x21},
+                                       std::byte{0x21}, std::byte{0x21}, std::byte{0x21}, std::byte{0x21}};
+    REQUIRE(writer.add_bytes("NoExtensionInference/Generic.payload", bytes).has_value());
+
+    const auto output = output_path(test_case.file_name);
+    auto written = writer.write_to(output.string());
+    REQUIRE(written.has_value());
+
+    require_compressed_round_trip(output,
+                                  {{"NoExtensionInference/Generic.payload", bytes, 0U}},
+                                  test_case.version,
+                                  test_case.target == libbsa::ba2_gnrl_target::fallout4
+                                      ? libbsa::archive_variant::fallout4
+                                      : libbsa::archive_variant::starfield,
+                                  test_case.compression_method,
+                                  test_case.expected_compression);
+  }
+}
+
+TEST_CASE("BA2 GNRL writer per-entry raw and compressed overrides affect only raw versus packed state",
+          "[unit][ba2_gnrl_writer]") {
+  libbsa::ba2_gnrl_writer_options options;
+  options.overwrite_existing = true;
+  options.compression = libbsa::archive_compression_policy::all_compressed;
+  options.starfield_compression_method = 3U;
+  libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::starfield_v3, options};
+
+  const std::vector<std::byte> compressed_bytes{std::byte{0x43}, std::byte{0x43}, std::byte{0x43}, std::byte{0x43},
+                                                std::byte{0x43}, std::byte{0x43}, std::byte{0x43}, std::byte{0x43}};
+  const std::vector<std::byte> raw_bytes{std::byte{0x52}, std::byte{0x41}, std::byte{0x57}};
+  const std::vector<std::byte> empty_bytes;
+  REQUIRE(writer.add_bytes("Generic/Compressed.bin", compressed_bytes).has_value());
+  REQUIRE(writer.add_bytes("Generic/RawOverride.bin", raw_bytes, libbsa::entry_compression_policy::raw).has_value());
+  REQUIRE(writer.add_bytes("Generic/Empty.bin", empty_bytes).has_value());
+
+  const auto output = output_path("compressed-sfv3-overrides.ba2");
+  auto written = writer.write_to(output.string());
+  REQUIRE(written.has_value());
+
+  auto opened = libbsa::archive_reader::open(output.string());
+  REQUIRE(opened.has_value());
+  auto compressed = opened.value().find("Generic/Compressed.bin");
+  auto raw = opened.value().find("Generic/RawOverride.bin");
+  auto empty = opened.value().find("Generic/Empty.bin");
+  REQUIRE(compressed.has_value());
+  REQUIRE(compressed.value().has_value());
+  REQUIRE(raw.has_value());
+  REQUIRE(raw.value().has_value());
+  REQUIRE(empty.has_value());
+  REQUIRE(empty.value().has_value());
+
+  CHECK(compressed.value()->compression == libbsa::entry_compression::lz4_block);
+  CHECK(compressed.value()->stored_size > 0U);
+  CHECK(raw.value()->compression == libbsa::entry_compression::none);
+  CHECK(raw.value()->stored_size == raw.value()->raw_size);
+  CHECK(empty.value()->compression == libbsa::entry_compression::none);
+  CHECK(empty.value()->stored_size == 0U);
+  CHECK(empty.value()->raw_size == 0U);
+
+  auto compressed_extracted = opened.value().extract_bytes("Generic/Compressed.bin");
+  auto raw_extracted = opened.value().extract_bytes("Generic/RawOverride.bin");
+  auto empty_extracted = opened.value().extract_bytes("Generic/Empty.bin");
+  REQUIRE(compressed_extracted.has_value());
+  REQUIRE(raw_extracted.has_value());
+  REQUIRE(empty_extracted.has_value());
+  CHECK(compressed_extracted.value() == compressed_bytes);
+  CHECK(raw_extracted.value() == raw_bytes);
+  CHECK(empty_extracted.value() == empty_bytes);
 }
