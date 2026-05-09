@@ -115,7 +115,7 @@ result<std::vector<planned_mip_range>> default_mip_ranges(const dds_texture_layo
   std::vector<planned_mip_range> ranges;
   std::uint32_t mip = 0;
 
-  // Reference-derived BA2 DX10 chunking emits a few large mips individually, then groups the tail.
+  // The reference-derived BA2 DX10 default emits a few large mips individually, then groups the tail.
   while (mip + 1U < layout.mip_count && ranges.size() < 3U && mip_dimension(layout.width, mip) >= 512U &&
          mip_dimension(layout.height, mip) >= 512U) {
     auto size = mip_range_size(layout, mip, mip);
@@ -163,6 +163,15 @@ result<std::vector<planned_mip_range>> capped_mip_ranges(const dds_texture_layou
 
   ranges.push_back(planned_mip_range{start_mip, layout.mip_count - 1U, current_size});
   return ranges;
+}
+
+void append_chunks_for_ranges(std::vector<planned_texture_chunk>& chunks,
+                              const std::vector<planned_mip_range>& ranges,
+                              std::uint32_t array_index,
+                              std::uint32_t face_index) {
+  for (const auto& range : ranges) {
+    chunks.push_back(planned_texture_chunk{array_index, face_index, range.start_mip, range.end_mip, range.raw_size});
+  }
 }
 
 result<void> write_u32(detail::binary_writer& writer, std::uint32_t value) {
@@ -274,7 +283,8 @@ result<std::vector<planned_texture_chunk>> plan_dx10_chunks(const dds_texture_la
   if (!validate_layout_shape(layout)) {
     return format_error("DDS layout has zero dimensions, mip count, or array size");
   }
-  auto ranges = max_decoded_chunk_bytes == 0U ? default_mip_ranges(layout) : capped_mip_ranges(layout, max_decoded_chunk_bytes);
+  auto ranges = max_decoded_chunk_bytes == 0U ? default_mip_ranges(layout)
+                                             : capped_mip_ranges(layout, max_decoded_chunk_bytes);
   if (!ranges) {
     return ranges.error();
   }
@@ -284,9 +294,7 @@ result<std::vector<planned_texture_chunk>> plan_dx10_chunks(const dds_texture_la
   chunks.reserve(static_cast<std::size_t>(layout.array_size) * faces_per_array * ranges.value().size());
   for (std::uint32_t array_index = 0; array_index < layout.array_size; ++array_index) {
     for (std::uint32_t face_index = 0; face_index < faces_per_array; ++face_index) {
-      for (const auto& range : ranges.value()) {
-        chunks.push_back(planned_texture_chunk{array_index, face_index, range.start_mip, range.end_mip, range.raw_size});
-      }
+      append_chunks_for_ranges(chunks, ranges.value(), array_index, face_index);
     }
   }
   return chunks;
