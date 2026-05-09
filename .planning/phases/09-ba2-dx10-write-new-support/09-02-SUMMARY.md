@@ -70,7 +70,7 @@ Each task was committed atomically:
 2. **Task 2: GREEN: Generate legal DDS source fixtures and analyze source bytes** - `55b378e` (feat)
 3. **Task 3: REFACTOR: Preserve private DirectXTex boundary and fixture provenance** - `6094687` (refactor)
 
-**Plan metadata:** pending final metadata commit
+**Plan metadata:** `b86571a` (docs: complete plan)
 
 ## Files Created/Modified
 
@@ -136,7 +136,7 @@ Ready for Plan 09-03. Downstream DX10 writer state can now consume real committe
 ## Self-Check: PASSED
 
 - Verified key created/modified files exist on disk.
-- Verified task commits `96c2ed7`, `55b378e`, and `6094687` exist in git history.
+- Verified task commits `96c2ed7`, `55b378e`, and `6094687` exist in git history; metadata commit recorded as `b86571a`.
 - Verified final focused build/test commands pass and `TES5Edit/` status is clean.
 
 ---
