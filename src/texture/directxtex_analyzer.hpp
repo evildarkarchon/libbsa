@@ -41,7 +41,7 @@ struct dds_source_analysis {
 
 /// Loads and snapshots DDS source bytes through the private texture-analysis boundary.
 ///
-/// Returns `format_error` when the bytes are malformed or use a DXGI format outside the locked
+/// Returns `format_error` when the bytes are malformed or use a texture format outside the locked
 /// BA2 DX10 writer source set.
 result<dds_source_analysis> analyze_dds_source(std::span<const std::byte> dds_bytes);
 

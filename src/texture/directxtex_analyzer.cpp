@@ -151,6 +151,8 @@ result<dds_source_analysis> analyze_dds_source(std::span<const std::byte> dds_by
     copied.reserve(source.slicePitch);
     const auto* begin = reinterpret_cast<const std::byte*>(source.pixels);
     copied.insert(copied.end(), begin, begin + source.slicePitch);
+    // D-03 requires writer-owned snapshots: callers may delete or mutate the source DDS after add.
+    // Copying here avoids storing DirectX-owned pointers or borrowing caller file bytes across phases.
     analysis.image_payload_bytes.insert(analysis.image_payload_bytes.end(), copied.begin(), copied.end());
     analysis.subresources.push_back(dds_source_subresource{array_index, face_index, mip, std::move(copied)});
   }
