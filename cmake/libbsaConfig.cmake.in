@@ -3,5 +3,6 @@
 include(CMakeFindDependencyMacro)
 find_dependency(libdeflate CONFIG)
 find_dependency(lz4 CONFIG)
+find_dependency(directxtex CONFIG)
 
 include("${CMAKE_CURRENT_LIST_DIR}/libbsaTargets.cmake")
