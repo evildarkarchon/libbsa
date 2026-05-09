@@ -2,21 +2,25 @@
 phase: 09-ba2-dx10-write-new-support
 reviewed: 2026-05-09T00:00:00Z
 depth: standard
-files_reviewed: 13
+files_reviewed: 17
 files_reviewed_list:
   - CMakeLists.txt
   - include/libbsa/writer.hpp
-  - src/formats/ba2/ba2_dx10_writer.hpp
   - src/formats/ba2/ba2_dx10_writer.cpp
-  - src/texture/directxtex_analyzer.hpp
-  - src/texture/directxtex_analyzer.cpp
-  - src/texture/dds_layout.hpp
+  - src/formats/ba2/ba2_dx10_writer.hpp
   - src/texture/dds_layout.cpp
+  - src/texture/dds_layout.hpp
+  - src/texture/directxtex_analyzer.cpp
+  - src/texture/directxtex_analyzer.hpp
   - tests/CMakeLists.txt
   - tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp
+  - tests/fixtures/generated/source/ba2_dx10_array_bc5_unorm_2slice.dds
+  - tests/fixtures/generated/source/ba2_dx10_cubemap_bc1_unorm_6face.dds
+  - tests/fixtures/generated/source/ba2_dx10_multi_mip_bc7_unorm.dds
   - tests/fixtures/generated/source/ba2_dx10_writer_sources_manifest.json
   - tests/unit/ba2_dx10_writer_tests.cpp
   - tests/unit/dds_layout_tests.cpp
+  - tests/unit/public_include_boundary_tests.cpp
 findings:
   critical: 1
   warning: 2
@@ -29,59 +33,60 @@ status: issues_found
 
 **Reviewed:** 2026-05-09T00:00:00Z
 **Depth:** standard
-**Files Reviewed:** 13
+**Files Reviewed:** 17
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the Phase 09 BA2 DX10 writer, DDS analysis/layout helpers, generated fixture source/manifest, and unit-test coverage. The implementation has one malformed-archive validation bug in shared DDS layout code and two test/fixture reliability defects that can let compatibility regressions slip through.
+Reviewed the BA2 DX10 writer implementation, DDS layout/analyzer code, fixture generator, manifest, and unit tests. The changed DDS artifacts are binary and were not deeply decoded, but their intended semantics were checked against the generator, manifest, and tests. I found one data-loss risk in publish semantics and two robustness/test-coverage issues.
 
 ## Critical Issues
 
-### CR-01: Block-compressed mip-size arithmetic can wrap for hostile dimensions
+### CR-01: `overwrite_existing = false` can still overwrite a concurrently-created destination on POSIX
 
 **Classification:** BLOCKER
-**File:** `src/texture/dds_layout.cpp:93-96`
-**Issue:** `described_mip_size` computes block counts for BC formats with `(width + 3U) / 4U` and `(height + 3U) / 4U` while `width` and `height` are `std::uint32_t`. Archive metadata is untrusted; a BA2 record can advertise dimensions near `UINT32_MAX`, causing `width + 3U` or `height + 3U` to wrap before promotion to `std::uint64_t`. That underestimates expected mip sizes, so `validate_and_order_chunks` can accept impossible chunk metadata instead of failing closed.
-**Fix:** Promote before adding and use the descriptor block dimensions rather than hard-coded `4U`.
+**File:** `src/formats/ba2/ba2_dx10_writer.cpp:666-672,744`
+
+**Issue:** `write_ba2_dx10_archive` checks `exists(output_path)` before writing the temp archive, then later publishes with `std::filesystem::rename(temp_path, output_path)`. On POSIX platforms, `rename` replaces an existing regular-file destination atomically. If another process creates `output_path` after the initial check but before line 744, the writer can replace caller-owned data even when `ba2_dx10_writer_options::overwrite_existing` is false. The project explicitly preserves a future Linux/macOS path, so this is a real cross-platform data-loss risk.
+
+**Fix:** For the non-overwrite path, publish using a no-replace operation instead of `rename` to an unchecked destination. A portable option is to sacrifice atomicity for safety by copying with `copy_options::none`, then deleting the temp file only after the copy succeeds; alternatively add platform-specific exclusive create/link handling behind a helper.
+
 ```cpp
-const auto block_width = static_cast<std::uint64_t>(descriptor.block_width);
-const auto block_height = static_cast<std::uint64_t>(descriptor.block_height);
-const auto mip_width = static_cast<std::uint64_t>(width);
-const auto mip_height = static_cast<std::uint64_t>(height);
-const std::uint64_t blocks_wide =
-    descriptor.block_width == 1U ? mip_width : (mip_width + block_width - 1U) / block_width;
-const std::uint64_t blocks_high =
-    descriptor.block_height == 1U ? mip_height : (mip_height + block_height - 1U) / block_height;
+if (!options.overwrite_existing) {
+  std::filesystem::copy_file(temp_path, output_path, std::filesystem::copy_options::none, fs_error);
+  if (fs_error) {
+    cleanup_publish_directory(temp_dir.value());
+    return error{error_code::io_error, "BA2 DX10 writer failed to publish output host path without overwrite"};
+  }
+  cleanup_publish_directory(temp_dir.value());
+  return {};
+}
 ```
-Add a regression test with BC dimensions such as `UINT32_MAX` that currently produce a tiny accepted raw size.
 
 ## Warnings
 
-### WR-01: Generated DX10 fixture name hashes do not match writer/parser convention
+### WR-01: Writer rejects `DXGI_FORMAT_R8G8B8A8_UNORM` despite layout support
 
 **Classification:** WARNING
-**File:** `tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp:400-404`
-**Issue:** `prepare_texture` hashes `texture.path` (the full canonical archive path) into the BA2 record `name_hash`, while the implemented BA2 writers hash only the file-name portion and hash the directory separately. The parser exposes the stored hash without validating it, so these generated fixtures can silently encode and document the wrong hash value while tests still pass.
-**Fix:** Split the canonical path and hash only the file name, mirroring `ba2_dx10_writer.cpp` and `ba2_gnrl_writer.cpp`.
+**File:** `src/texture/directxtex_analyzer.cpp:25-43`
+
+**Issue:** `dds_layout.cpp` includes format `28U` (`DXGI_FORMAT_R8G8B8A8_UNORM`) in the locked format descriptors, so chunk planning/header reconstruction supports it. `is_supported_writer_source_format`, however, omits `28U`, causing `ba2_dx10_writer::add_file` to reject valid R8G8B8A8_UNORM DDS sources. This inconsistency creates an avoidable correctness gap for a common uncompressed DDS format.
+
+**Fix:** Add format `28U` to `is_supported_writer_source_format`, add a generated source DDS/manifest case for it, and include it in the writer proof matrix.
+
 ```cpp
-std::uint32_t hash_file_name(std::string_view canonical_path) {
-  const auto slash = canonical_path.find_last_of('/');
-  return libbsa::detail::hash_fo4(slash == std::string_view::npos ? canonical_path
-                                                                  : canonical_path.substr(slash + 1U));
-}
-
-texture.name_hash = hash_file_name(texture.path);
-texture.directory_hash = hash_folder(texture.path);
+case 28U: // R8G8B8A8_UNORM
+  return true;
 ```
-Regenerate the DX10 fixtures and manifests after fixing the generator.
 
-### WR-02: Publish safety test asserts source-code strings instead of rollback behavior
+### WR-02: Rollback/publish test asserts source substrings instead of behavior
 
 **Classification:** WARNING
 **File:** `tests/unit/ba2_dx10_writer_tests.cpp:644-652`
-**Issue:** The rollback test passes if the source file contains the words `reserve_backup_path`, `backup`, and `rollback`; it does not exercise the overwrite failure path or prove the old archive remains restorable. Renaming helpers or comments can fail the test, while broken rollback logic can still pass as long as those strings remain.
-**Fix:** Replace the source-text inspection with behavioral coverage. For example, inject or arrange a publish failure after the backup rename, then assert that the original output bytes are restored and no partially written archive is left at the destination. If direct fault injection is not available, factor the publish operation behind a small internal seam and test the rollback branch through that seam.
+
+**Issue:** The test named `BA2 DX10 writer safe publish implementation keeps backup rollback hooks` passes if the source file merely contains the strings `reserve_backup_path`, `backup`, and `rollback`. It would still pass if rollback logic were removed but those words remained in comments or dead code, so it does not reliably protect the data-preservation behavior it claims to cover.
+
+**Fix:** Replace the source-text assertion with a behavioral test that forces publish failure after the backup is created, then verifies the original archive bytes are restored and no backup remains. If fault injection is not available yet, expose a small internal test hook around the publish helper or refactor publish into an injectable helper that can simulate a failing second rename.
 
 ---
 
