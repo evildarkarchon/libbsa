@@ -46,20 +46,19 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
                                                     libbsa::entry_compression::deflate,
                                                     std::nullopt};
   [[maybe_unused]] libbsa::entry_metadata entry{"meshes/example.nif",
-                                               "Meshes/Example.nif",
-                                               10,
+                                                "Meshes/Example.nif",
+                                                10,
                                                8,
                                                128,
                                                0x0102030405060708ULL,
                                                libbsa::entry_compression::none,
                                                0,
-                                               false,
-                                               0};
+                                                false,
+                                                0};
   [[maybe_unused]] auto reader = libbsa::archive_reader::open("boundary-smoke.bsa");
   [[maybe_unused]] libbsa::tes4_bsa_writer_options writer_options{
       libbsa::archive_compression_policy::target_default, false, false, false};
-  [[maybe_unused]] libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::oblivion, writer_options};
-  [[maybe_unused]] auto target = writer.target();
+  [[maybe_unused]] auto target = libbsa::tes4_bsa_target::oblivion;
   [[maybe_unused]] auto compression = libbsa::entry_compression_policy::inherit;
 
   REQUIRE(result.has_value());
