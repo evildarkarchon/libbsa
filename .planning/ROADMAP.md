@@ -289,7 +289,7 @@ Plans:
   2. Writer can analyze DDS input through DirectXTex internally and expose only library-owned texture metadata.
   3. Writer can split textures into compatible mip/chunk records with configurable chunk limits and per-chunk compression.
   4. Maintainer can pack, reopen, extract, and byte-compare or metadata-validate BA2 DDS writer output against source DDS files.
-**Plans**: 6 plans
+**Plans**: 7 plans
 
 Plans:
 
@@ -306,6 +306,9 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 compressed serialization)*
 - [x] 09-06-PLAN.md — Add DX10 chunk dedupe, safe publish hardening, and final regression gates.
+
+**Wave 5** *(gap closure; blocked on Wave 4 verification findings)*
+- [ ] 09-07-PLAN.md — Close hostile block-compressed DDS dimension sizing wrap gap in DX10 chunk validation.
 
 ### Phase 10: TES3 Write Support and BSA Format Completeness
 **Goal**: Consumers can create TES3/Morrowind BSA archives from files or memory, completing read/write support for all BSA families.
