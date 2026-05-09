@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Format Detection and TES4-Family BSA Read/Extract** - Consumers can detect, inspect, query, and extract TES4/FO3/FNV/Skyrim LE/SSE BSA archives.
 - [ ] **Phase 4: TES3 BSA Read/Extract** - Consumers can read and extract Morrowind BSA archives with TES3-specific offset semantics.
 - [x] **Phase 5: BA2 GNRL Read/Extract** - Consumers can read and extract Fallout 4 and Starfield general BA2 archives.
-- [ ] **Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction** - Consumers can inspect and extract BA2 texture archives as valid DDS files.
+- [x] **Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction** - Consumers can inspect and extract BA2 texture archives as valid DDS files.
 - [ ] **Phase 7: TES4-Family BSA Write-New Support** - Consumers can create compatible TES4/FO3/FNV/Skyrim LE/SSE BSA archives.
 - [ ] **Phase 8: BA2 GNRL Write-New Support** - Consumers can create compatible Fallout 4 and Starfield general BA2 archives.
 - [ ] **Phase 9: BA2 DX10 Write-New Support** - Consumers can create compatible Fallout 4 and Starfield texture BA2 archives from DDS input.
@@ -214,7 +214,7 @@ Plans:
 
 **Wave 7** *(gap closure; blocked on Wave 6 verification findings)*
 - [x] 06-07-PLAN.md — Close bounded BA2 DX10 open/list filename parsing gap.
-- [ ] 06-08-PLAN.md — Close missing malformed duplicate-path and unsupported-compression coverage gaps.
+- [x] 06-08-PLAN.md — Close missing malformed duplicate-path and unsupported-compression coverage gaps.
 
 ### Phase 7: TES4-Family BSA Write-New Support
 **Goal**: Consumers can create new TES4/Oblivion, FO3/FNV/Skyrim LE, and Skyrim SE/AE BSA archives from files or memory and prove them by reopening and extracting.
@@ -296,7 +296,7 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 3. Format Detection and TES4-Family BSA Read/Extract | 6/6 | Complete | 2026-05-08 |
 | 4. TES3 BSA Read/Extract | 2/4 | In Progress|  |
 | 5. BA2 GNRL Read/Extract | 5/6 | In Progress |  |
-| 6. DDS Boundary and BA2 DX10 Read/Reconstruction | 0/TBD | Not started | - |
+| 6. DDS Boundary and BA2 DX10 Read/Reconstruction | 8/8 | Complete | 2026-05-09 |
 | 7. TES4-Family BSA Write-New Support | 0/TBD | Not started | - |
 | 8. BA2 GNRL Write-New Support | 0/TBD | Not started | - |
 | 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |

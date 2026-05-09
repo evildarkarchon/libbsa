@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 06-06-PLAN.md
-last_updated: "2026-05-09T04:56:25.735Z"
+stopped_at: Completed 06-08-PLAN.md
+last_updated: "2026-05-09T04:58:43.189Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 35
-  completed_plans: 34
-  percent: 97
+  completed_plans: 35
+  percent: 100
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 6 of 6
 Status: Phase complete — ready for verification
 Last activity: 2026-05-09
 
-Progress: [██████████] 97%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -75,6 +75,8 @@ Progress: [██████████] 97%
 | Phase 06 P04 | 7min | 3 tasks | 9 files |
 | Phase 06 P05 | 4min | 3 tasks | 7 files |
 | Phase 06 P06 | 6 min | 3 tasks | 3 files |
+| Phase 06 P07 | 3min | 2 tasks | 2 files |
+| Phase 06 P08 | 2min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -141,6 +143,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 06]: DX10 extraction builds DDS bytes directly and leaves DirectXTex as a test/analyzer validation boundary, not a runtime extraction gate. — Preserves D-12 and public dependency boundaries while still validating reconstructed DDS bytes in tests.
 - [Phase 06]: Malformed BA2 DX10 tests assert stable error_code values from the manifest and do not assert diagnostic text. — Preserves Phase 6 D-33 and keeps tests stable across diagnostic wording changes.
 - [Phase 06]: Decoded-size mismatch fixture metadata remains layout-valid so exact-size decompression rejects the archive during extraction. — Aligns fixture bytes with the manifest phase and proves DDS compressed-chunk fail-closed behavior.
+- [Phase 06]: BA2 DX10 host-file open now reconstructs compact metadata by reading exactly file_count UInt16-prefixed names instead of allocating the FileTableOffset-to-first-payload span. — Preserves bounded metadata reads for sparse or malicious DX10 archives.
+- [Phase 06]: Malformed DX10 manifests now fail tests on unknown expected_error strings instead of silently mapping typos to invalid_argument. — Keeps fixture coverage trustworthy when manifest strings change.
+- [Phase 06]: Unsupported Starfield v3 DX10 CompressionMethod coverage uses detector-time unsupported errors with generated repository-owned bytes. — Proves compression routing fails closed without filename or extension inference.
 
 ### Pending Todos
 
@@ -162,6 +167,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T04:56:25.729Z
-Stopped at: Completed 06-06-PLAN.md
+Last session: 2026-05-09T04:58:43.184Z
+Stopped at: Completed 06-08-PLAN.md
 Resume file: None
