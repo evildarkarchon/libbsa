@@ -213,7 +213,7 @@ Plans:
 - [x] 06-06-PLAN.md — Close malformed DX10 hardening and final cross-format regression gates.
 
 **Wave 7** *(gap closure; blocked on Wave 6 verification findings)*
-- [ ] 06-07-PLAN.md — Close bounded BA2 DX10 open/list filename parsing gap.
+- [x] 06-07-PLAN.md — Close bounded BA2 DX10 open/list filename parsing gap.
 - [ ] 06-08-PLAN.md — Close missing malformed duplicate-path and unsupported-compression coverage gaps.
 
 ### Phase 7: TES4-Family BSA Write-New Support
