@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 06 planned; decision coverage gate overridden after semantic checker pass and visible D-ID citations
-last_updated: "2026-05-09T01:32:37.088Z"
-last_activity: 2026-05-09 -- Phase 06 planning complete
+last_updated: "2026-05-09T01:40:44.105Z"
+last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 5
   total_plans: 33
-  completed_plans: 27
-  percent: 82
+  completed_plans: 28
+  percent: 85
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 05 — ba2-gnrl-read-extract
+**Current focus:** Phase 06 — dds-boundary-and-ba2-dx10-read-reconstruction
 
 ## Current Position
 
-Phase: 05 (ba2-gnrl-read-extract) — EXECUTING
-Plan: 6 of 6
+Phase: 06 (dds-boundary-and-ba2-dx10-read-reconstruction) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-05-09 -- Phase 06 planning complete
+Last activity: 2026-05-09
 
-Progress: [██████████] 100%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [██████████] 100%
 | Phase 05 P04 | 2min | 2 tasks | 4 files |
 | Phase 05 P05 | 7min | 3 tasks | 3 files |
 | Phase 05 P06 | 6min | 2 tasks | 3 files |
+| Phase 06 P01 | 4min | 2 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 05]: Task 2 malformed hardening was already present from prior Phase 5 parser/extraction work; closeout documented existing fail-closed codec behavior. — Focused verification showed no remaining detector/parser/extractor gaps after adding the malformed manifest tests.
 - [Phase 05]: BA2 GNRL file open computes first_payload_offset from parsed records and reads only the bounded filename-table interval before extraction.
 - [Phase 05]: BA2 GNRL payload span validation uses unsigned 64-bit arithmetic before filename-table allocation or parse handoff.
+- [Phase 06]: BA2 DX10 Wave 0 fixtures are committed generated artifacts. — Matches prior GNRL fixture policy and enables tests without local game archives.
+- [Phase 06]: Placeholder DX10 Catch2 tests intentionally fail when run but are discoverable via `ctest -N`. — Downstream TDD plans need labels before replacing placeholders with real RED assertions.
 
 ### Pending Todos
 
@@ -142,6 +145,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T01:32:37.083Z
+Last session: 2026-05-09T01:40:34.354Z
 Stopped at: Phase 06 planned; decision coverage gate overridden after semantic checker pass and visible D-ID citations
-Resume file: .planning/phases/06-dds-boundary-and-ba2-dx10-read-reconstruction/06-01-PLAN.md
+Resume file: None

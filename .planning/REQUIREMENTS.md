@@ -61,13 +61,13 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 
 ### BA2 DDS Read Support
 
-- [ ] **DDS-01**: Consumer can read Fallout 4 BA2 DX10/DDS texture archives.
-- [ ] **DDS-02**: Consumer can read Starfield BA2 v3 DX10/DDS texture archives.
-- [ ] **DDS-03**: Consumer can inspect texture metadata including dimensions, mip count, DXGI format, cubemap/array information, and chunk layout.
-- [ ] **DDS-04**: Consumer can extract BA2 DDS entries as valid DDS files with reconstructed headers.
-- [ ] **DDS-05**: Consumer can extract BA2 DDS chunks compressed with deflate or raw LZ4 block according to archive version and chunk metadata.
-- [ ] **DDS-06**: Maintainer can validate reconstructed DDS outputs through DirectXTex metadata loading without exposing DirectXTex types publicly.
-- [ ] **DDS-07**: Consumer can extract cubemap textures with correct DDS metadata and face/mip ordering.
+- [x] **DDS-01**: Consumer can read Fallout 4 BA2 DX10/DDS texture archives.
+- [x] **DDS-02**: Consumer can read Starfield BA2 v3 DX10/DDS texture archives.
+- [x] **DDS-03**: Consumer can inspect texture metadata including dimensions, mip count, DXGI format, cubemap/array information, and chunk layout.
+- [x] **DDS-04**: Consumer can extract BA2 DDS entries as valid DDS files with reconstructed headers.
+- [x] **DDS-05**: Consumer can extract BA2 DDS chunks compressed with deflate or raw LZ4 block according to archive version and chunk metadata.
+- [x] **DDS-06**: Maintainer can validate reconstructed DDS outputs through DirectXTex metadata loading without exposing DirectXTex types publicly.
+- [x] **DDS-07**: Consumer can extract cubemap textures with correct DDS metadata and face/mip ordering.
 
 ### BSA Write Support
 
@@ -193,13 +193,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GNRL-06 | Phase 5: BA2 GNRL Read/Extract | Complete |
 | GNRL-07 | Phase 5: BA2 GNRL Read/Extract | Complete |
 | GNRL-08 | Phase 5: BA2 GNRL Read/Extract | Complete |
-| DDS-01 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
-| DDS-02 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
-| DDS-03 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
-| DDS-04 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
-| DDS-05 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
-| DDS-06 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
-| DDS-07 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Pending |
+| DDS-01 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Complete |
+| DDS-02 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Complete |
+| DDS-03 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Complete |
+| DDS-04 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Complete |
+| DDS-05 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Complete |
+| DDS-06 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Complete |
+| DDS-07 | Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction | Complete |
 | WBSA-01 | Phase 7: TES4-Family BSA Write-New Support | Pending |
 | WBSA-02 | Phase 7: TES4-Family BSA Write-New Support | Pending |
 | WBSA-03 | Phase 7: TES4-Family BSA Write-New Support | Pending |
