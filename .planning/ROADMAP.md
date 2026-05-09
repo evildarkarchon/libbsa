@@ -210,7 +210,7 @@ Plans:
 - [x] 06-05-PLAN.md — Implement BA2 DX10 DDS reconstruction and raw/deflate/raw-LZ4 chunk extraction.
 
 **Wave 6** *(blocked on Wave 5 extraction behavior)*
-- [ ] 06-06-PLAN.md — Close malformed DX10 hardening and final cross-format regression gates.
+- [x] 06-06-PLAN.md — Close malformed DX10 hardening and final cross-format regression gates.
 
 ### Phase 7: TES4-Family BSA Write-New Support
 **Goal**: Consumers can create new TES4/Oblivion, FO3/FNV/Skyrim LE, and Skyrim SE/AE BSA archives from files or memory and prove them by reopening and extracting.
