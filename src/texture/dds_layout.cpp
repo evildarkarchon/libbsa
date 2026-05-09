@@ -199,6 +199,10 @@ result<std::vector<logical_texture_segment>> validate_and_order_chunks(const dds
     return format_probe.error();
   }
 
+  // D-12: normal extraction must not ask DirectXTex whether these bytes are acceptable; this
+  // metadata-only pass fails closed before payload reads and leaves DirectXTex to tests/analyzers.
+  // D-15: BA2 texture chunks are accepted only in computed DDS order: array slices ascend first,
+  // then reference-backed cubemap face order +X, -X, +Y, -Y, +Z, -Z, then mip ranges ascend.
   const std::uint32_t faces_per_array = layout.is_cubemap ? 6U : 1U;
   std::uint32_t array_index = 0;
   std::uint32_t face_index = 0;
