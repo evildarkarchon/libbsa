@@ -257,7 +257,25 @@ Plans:
   2. Consumer can select an explicit Starfield target version and compression method policy instead of relying on file extensions.
   3. Writer can serialize BA2 filename tables at the end of the archive and preserve or set version-specific header fields according to documented target profiles.
   4. Writer can compress BA2 GNRL entries with deflate or raw LZ4 block according to the selected format/version.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 08-01-PLAN.md — Define the dependency-light public BA2 GNRL writer contract and boundary tests.
+- [ ] 08-02-PLAN.md — Update BA2 GNRL reader parsing to accept end-of-archive filename tables.
+
+**Wave 2** *(blocked on Wave 1 public writer contract)*
+- [ ] 08-03-PLAN.md — Implement writer-owned entry state, validation, source ownership, and build wiring.
+
+**Wave 3** *(blocked on Wave 1 end-table reader support and Wave 2 writer state)*
+- [ ] 08-04-PLAN.md — Serialize raw FO4 v1, Starfield v2, and Starfield v3 BA2 GNRL archives with end filename tables.
+
+**Wave 4** *(blocked on Wave 3 raw serialization)*
+- [ ] 08-05-PLAN.md — Add target-routed deflate/raw-LZ4 compression defaults and per-entry overrides.
+
+**Wave 5** *(blocked on Wave 4 compressed stored-payload shape)*
+- [ ] 08-06-PLAN.md — Add opt-in final-stored-byte deduplication and full Phase 8 regression gates.
 
 ### Phase 9: BA2 DX10 Write-New Support
 **Goal**: Consumers can create Fallout 4 and Starfield BA2 DX10/DDS texture archives from DDS files with valid mip/chunk metadata and extraction-preserving output.

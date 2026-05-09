@@ -400,22 +400,19 @@ CHECK(extracted.value() == expected_bytes);
 |---|-------|---------|---------------|
 | A1 | No claims are intentionally marked `[ASSUMED]`; the main uncertainty is explicitly MEDIUM, not assumed: Starfield v3 GNRL real-game compatibility is not fully proven by current external evidence. | Summary / Pitfalls | Planner should avoid overclaiming vanilla-game compatibility for SFv3 GNRL while still implementing the locked structural profile. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Which BA2 hash fields should Phase 8 writer lock for `NameHash` and `DirHash`?**
-   - What we know: TES5Edit write code computes `NameHash` from the base name and `DirHash` from the directory, while current generated GNRL fixtures store `archive_hash` from the full canonical path and a separate folder hash. [VERIFIED: `TES5Edit/Core/wbBSArchive.pas:1538-1544`; `generate_ba2_gnrl_fixtures.cpp:173-181`]
-   - What's unclear: Whether production writer tests should preserve current fixture semantics or correct toward TES5Edit write behavior for BA2 hash fields. [VERIFIED: source discrepancy]
-   - Recommendation: Make this a first planning task; prefer TES5Edit writer semantics if reader/tests can be updated without breaking public lookup behavior, and document the compatibility reason near the writer code. [VERIFIED: `AGENTS.md`]
+1. **RESOLVED: Which BA2 hash fields should Phase 8 writer lock for `NameHash` and `DirHash`?**
+    - What we know: TES5Edit write code computes `NameHash` from the base name and `DirHash` from the directory, while current generated GNRL fixtures store `archive_hash` from the full canonical path and a separate folder hash. [VERIFIED: `TES5Edit/Core/wbBSArchive.pas:1538-1544`; `generate_ba2_gnrl_fixtures.cpp:173-181`]
+   - Resolution: Production writer behavior should correct toward TES5Edit writer semantics: derive `NameHash` from the base filename and `DirHash` from the directory path using libbsa FO4/BA2 hash helpers, while keeping public lookup behavior path-based and deterministic. Existing generated fixture semantics are test-fixture prior art, not the writer compatibility target. Document the compatibility reason near the writer code and update writer-output tests to assert the reopened public `archive_hash` value that the reader exposes from `NameHash`. [VERIFIED: `AGENTS.md`; `08-CONTEXT.md`]
 
-2. **Should Starfield v3 GNRL default `CompressionMethod` be 3 or require explicit caller selection?**
-   - What we know: TES5Edit sets v3 DDS `CompressionMethod := 3`, and project reader supports v3 method 0 deflate and method 3 raw LZ4. [VERIFIED: `TES5Edit/Core/wbBSArchive.pas:1707-1710`; `src/formats/ba2/ba2_format_detector.cpp`]
-   - What's unclear: Wrye Bash notes general Starfield BA2s use v2 and texture BA2s use v3, so v3 GNRL is structural rather than clearly vanilla. [CITED: https://github.com/wrye-bash/wrye-bash/issues/667]
-   - Recommendation: Expose v3 method in writer options, default to 3 for `target_default`, and add tests for both method 0 and method 3. [VERIFIED: `08-CONTEXT.md`; `08-SPEC.md`]
+2. **RESOLVED: Should Starfield v3 GNRL default `CompressionMethod` be 3 or require explicit caller selection?**
+    - What we know: TES5Edit sets v3 DDS `CompressionMethod := 3`, and project reader supports v3 method 0 deflate and method 3 raw LZ4. [VERIFIED: `TES5Edit/Core/wbBSArchive.pas:1707-1710`; `src/formats/ba2/ba2_format_detector.cpp`]
+   - Resolution: Starfield v3 GNRL keeps an explicit `CompressionMethod` writer option with a reference-derived default of method `3` for `target_default`, because method `3` is the documented raw LZ4 block path for v3. Tests must cover both method `0` deflate and method `3` raw LZ4 block. Do not overclaim vanilla-game v3 GNRL compatibility; treat v3 GNRL as required structural writer support. [VERIFIED: `08-CONTEXT.md`; `08-SPEC.md`]
 
-3. **What exact public names should be used?**
-   - What we know: Names are discretionary if dedicated to BA2 GNRL and dependency-light. [VERIFIED: `08-CONTEXT.md`]
-   - What's unclear: Whether to add types into `writer.hpp` or split a new public header. [VERIFIED: discretionary area]
-   - Recommendation: Add to `writer.hpp` for consistency with Phase 7 unless the file becomes unwieldy. [VERIFIED: current structure]
+3. **RESOLVED: What exact public names should be used?**
+    - What we know: Names are discretionary if dedicated to BA2 GNRL and dependency-light. [VERIFIED: `08-CONTEXT.md`]
+   - Resolution: Plan around `ba2_gnrl_target`, `ba2_gnrl_writer_options`, and `ba2_gnrl_writer` in `include/libbsa/writer.hpp`, included by `include/libbsa/libbsa.hpp`. Exact member names remain planner/executor discretion if they preserve the dedicated BA2 GNRL writer shape, C++20 result/error style, dependency-light public headers, and Phase 8 decisions. [VERIFIED: current structure; `08-CONTEXT.md`]
 
 ## Environment Availability
 
