@@ -16,7 +16,7 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 
 <!-- Shipped and confirmed valuable. -->
 
-(None yet - ship to validate)
+- [x] Phase 07 validated TES4-family BSA write-new support for public writer construction, target profiles, raw and compressed payloads, embedded names, deduplication, and reopen/extract round-trips.
 
 ### Active
 
@@ -84,6 +84,8 @@ Testing must prove byte-level and metadata-level compatibility. Expected coverag
 | Sequence implementation read-first, then write, then performance/hardening | Correct parsing and extraction are prerequisites for reliable round-trip and compatibility validation | - Pending |
 | TES4-family reader state stores host path plus metadata, not whole archive bytes | Phase 03 verification required bounded open/extract behavior for large archives | Implemented in Phase 03 |
 | `libbsa::result::error()` reports success-result misuse with `std::logic_error` | Public API precondition mistakes should not terminate the process or return a misleading default error | Implemented in Phase 03 |
+| TES4-family BSA writing uses explicit target profiles and writer-owned entry state | Phase 07 needed a stable C++20 writer API with deterministic validation before BA2 writer work builds on it | Implemented in Phase 07 |
+| TES4-family stored-byte deduplication is opt-in and operates on final stored bytes | Matching source bytes may encode differently because of compression or embedded-name prefixes, so deduplication must compare the final bytes written to the archive | Implemented in Phase 07 |
 
 ## Evolution
 
@@ -103,4 +105,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-08 after Phase 03*
+*Last updated: 2026-05-09 after Phase 07*
