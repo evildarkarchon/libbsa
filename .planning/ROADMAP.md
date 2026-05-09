@@ -201,7 +201,7 @@ Plans:
 - [x] 06-02-PLAN.md — Add dependency-light public texture metadata and the private DirectXTex analyzer boundary.
 
 **Wave 3** *(blocked on Wave 2 metadata contract and Wave 1 fixture/test scaffolding)*
-- [ ] 06-03-PLAN.md — Add internal DDS DXT10 header construction and mip/array/cubemap layout validation.
+- [x] 06-03-PLAN.md — Add internal DDS DXT10 header construction and mip/array/cubemap layout validation.
 
 **Wave 4** *(blocked on Wave 3 DDS layout validation and Wave 2 metadata contract)*
 - [ ] 06-04-PLAN.md — Implement BA2 DX10 open, metadata parsing, deterministic listing, and normalized lookup.

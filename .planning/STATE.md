@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 06 planned; decision coverage gate overridden after semantic checker pass and visible D-ID citations
-last_updated: "2026-05-09T01:48:19.797Z"
+last_updated: "2026-05-09T01:55:39.470Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 5
   total_plans: 33
-  completed_plans: 29
-  percent: 88
+  completed_plans: 30
+  percent: 91
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 06 (dds-boundary-and-ba2-dx10-read-reconstruction) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [█████████░] 88%
 | Phase 05 P06 | 6min | 2 tasks | 3 files |
 | Phase 06 P01 | 4min | 2 tasks | 22 files |
 | Phase 06 P02 | 3 min | 3 tasks | 6 files |
+| Phase 06 P03 | 3min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 06]: Placeholder DX10 Catch2 tests intentionally fail when run but are discoverable via `ctest -N`. — Downstream TDD plans need labels before replacing placeholders with real RED assertions.
 - [Phase 06]: DirectXTex is linked privately through Microsoft::DirectXTex and translated behind src/texture/directxtex_analyzer. — Keeps DDS analysis behind internal boundary without public dependency leakage.
 - [Phase 06]: Public texture metadata uses libbsa-owned numeric fields and optional entry_metadata::texture. — Preserves dependency-light public headers while satisfying DDS-03 metadata inspection.
+- [Phase 06]: DDS reconstruction emits standard DDS magic/header plus DDS_HEADER_DXT10 from libbsa-owned layout values, without DirectXTex as a runtime extraction gate. — Plan 06-03 built deterministic DDS headers behind the internal texture boundary per D-09 and D-12.
+- [Phase 06]: Chunk validation accepts only computed BA2-derived DDS order: array slice ascending, cubemap face order +X/-X/+Y/-Y/+Z/-Z, then ascending mip ranges per face or slice. — Plan 06-03 validates source chunk identity before extraction so downstream readers avoid blind archive-order concatenation.
+- [Phase 06]: Phase 6 DDS layout byte-size validation supports fixture-backed DXGI formats 28 and BC1-format ids 71/72, failing closed for unsupported formats. — Plan 06-03 follows the fixture-backed Phase 6 scope and returns format_error for unsupported texture formats.
 
 ### Pending Todos
 
@@ -148,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T01:47:59.800Z
+Last session: 2026-05-09T01:55:19.908Z
 Stopped at: Phase 06 planned; decision coverage gate overridden after semantic checker pass and visible D-ID citations
 Resume file: None
