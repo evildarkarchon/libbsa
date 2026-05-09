@@ -64,6 +64,7 @@ target_sources(libbsa
     src/formats/ba2/ba2_format_detector.cpp
     src/formats/ba2/ba2_dx10_parser.cpp
     src/formats/ba2/ba2_dx10_reader.cpp
+    src/formats/ba2/ba2_dx10_writer.cpp
     src/formats/ba2/ba2_gnrl_parser.cpp
     src/formats/ba2/ba2_gnrl_reader.cpp
     src/formats/ba2/ba2_gnrl_writer.cpp

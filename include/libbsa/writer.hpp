@@ -268,8 +268,8 @@ class ba2_dx10_writer {
 
   /// Adds a DDS host-file payload with an explicit archive-internal texture path.
   ///
-  /// Later implementation phases validate and snapshot the DDS bytes at add time;
-  /// expected caller-data failures are reported through `result<void>`.
+  /// The DDS file is validated and snapshotted at add time; expected caller-data
+  /// failures are reported through `result<void>`.
   result<void> add_file(std::string_view archive_path, std::string_view dds_host_path);
 
   /// Finalizes the writer state into a new BA2 DX10 archive at `host_path`.
