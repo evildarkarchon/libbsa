@@ -68,6 +68,7 @@ target_sources(libbsa
     src/formats/bsa/tes3_bsa_reader.cpp
     src/formats/bsa/tes4_bsa_parser.cpp
     src/formats/bsa/tes4_bsa_reader.cpp
+    src/texture/dds_layout.cpp
     src/texture/directxtex_analyzer.cpp
     src/libbsa.cpp
 )
