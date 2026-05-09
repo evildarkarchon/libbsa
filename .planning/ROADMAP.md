@@ -269,7 +269,7 @@ Plans:
 - [x] 08-03-PLAN.md — Implement writer-owned entry state, validation, source ownership, and build wiring.
 
 **Wave 3** *(blocked on Wave 1 end-table reader support and Wave 2 writer state)*
-- [ ] 08-04-PLAN.md — Serialize raw FO4 v1, Starfield v2, and Starfield v3 BA2 GNRL archives with end filename tables.
+- [x] 08-04-PLAN.md — Serialize raw FO4 v1, Starfield v2, and Starfield v3 BA2 GNRL archives with end filename tables.
 
 **Wave 4** *(blocked on Wave 3 raw serialization)*
 - [ ] 08-05-PLAN.md — Add target-routed deflate/raw-LZ4 compression defaults and per-entry overrides.
