@@ -263,6 +263,49 @@ void require_writer_round_trip(libbsa::ba2_dx10_target target,
   std::filesystem::remove(output_path);
 }
 
+void require_structural_writer_round_trip() {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::starfield_v3};
+  std::vector<const nlohmann::json*> added_cases;
+  for (const auto id : {"multi_mip_bc7_unorm", "array_bc5_unorm_2slice", "cubemap_bc1_unorm_6face"}) {
+    const auto& source_case = valid_source_case(manifest, id);
+    auto added = writer.add_file(source_case.at("archive_path").get<std::string>(),
+                                 (generated_source_dir() / source_case.at("file").get<std::string>()).string());
+    REQUIRE(added.has_value());
+    added_cases.push_back(&source_case);
+  }
+
+  const auto output_path = unique_output_path("starfield-v3-dx10-structural-writer");
+  auto written = writer.write_to(output_path.string());
+  REQUIRE(written.has_value());
+  auto opened = libbsa::archive_reader::open(output_path.string());
+  REQUIRE(opened.has_value());
+
+  for (const auto* source_case : added_cases) {
+    require_reader_backed_entry(opened.value(), *source_case, libbsa::entry_compression::lz4_block);
+  }
+
+  const auto cubemap = opened.value().find("textures/structural/cubemap_bc1_unorm_6face.dds");
+  REQUIRE(cubemap.has_value());
+  REQUIRE(cubemap.value().has_value());
+  REQUIRE(cubemap.value()->texture.has_value());
+  CHECK(cubemap.value()->texture->is_cubemap);
+
+  const auto array = opened.value().find("textures/structural/array_bc5_unorm_2slice.dds");
+  REQUIRE(array.has_value());
+  REQUIRE(array.value().has_value());
+  REQUIRE(array.value()->texture.has_value());
+  CHECK(array.value()->texture->array_size == 2U);
+
+  const auto multi = opened.value().find("textures/structural/multi_mip_bc7_unorm.dds");
+  REQUIRE(multi.has_value());
+  REQUIRE(multi.value().has_value());
+  REQUIRE(multi.value()->texture.has_value());
+  CHECK(multi.value()->texture->mip_count == 5U);
+
+  std::filesystem::remove(output_path);
+}
+
 } // namespace
 
 TEST_CASE("BA2 DX10 writer DDS source manifest covers locked formats", "[unit][fixture][ba2_dx10_writer][dds]") {
@@ -442,4 +485,9 @@ TEST_CASE("ba2_dx10_writer reopens starfield method 0 deflate compression archiv
   CHECK(options.starfield_compression_method == 0U);
   require_writer_round_trip(libbsa::ba2_dx10_target::starfield_v3, options.starfield_compression_method,
                             "starfield-v3-dx10-deflate-writer", libbsa::entry_compression::deflate);
+}
+
+TEST_CASE("ba2_dx10_writer preserves multi mip array and cubemap image payload bytes through extraction",
+          "[unit][ba2_dx10_writer][starfield][structural]") {
+  require_structural_writer_round_trip();
 }

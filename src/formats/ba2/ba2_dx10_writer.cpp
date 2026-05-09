@@ -258,6 +258,8 @@ result<detail::compression_method> compression_method_for(ba2_dx10_target target
 result<void> append_subresource_bytes(std::vector<std::byte>& bytes,
                                       const texture::dds_source_analysis& source,
                                       const texture::planned_texture_chunk& chunk) {
+  // The writer does not transform DDS image data: it copies existing subresource bytes in the
+  // BA2-required chunk layout without resizing, transcoding, mip generation, repair, or reordering.
   for (std::uint32_t mip = chunk.start_mip; mip <= chunk.end_mip; ++mip) {
     const auto found = std::ranges::find_if(source.subresources, [&](const texture::dds_source_subresource& subresource) {
       return subresource.array_index == chunk.array_index && subresource.face_index == chunk.face_index &&
