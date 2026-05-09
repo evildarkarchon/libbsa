@@ -266,7 +266,7 @@ Plans:
 - [x] 08-02-PLAN.md — Update BA2 GNRL reader parsing to accept end-of-archive filename tables.
 
 **Wave 2** *(blocked on Wave 1 public writer contract)*
-- [ ] 08-03-PLAN.md — Implement writer-owned entry state, validation, source ownership, and build wiring.
+- [x] 08-03-PLAN.md — Implement writer-owned entry state, validation, source ownership, and build wiring.
 
 **Wave 3** *(blocked on Wave 1 end-table reader support and Wave 2 writer state)*
 - [ ] 08-04-PLAN.md — Serialize raw FO4 v1, Starfield v2, and Starfield v3 BA2 GNRL archives with end filename tables.
