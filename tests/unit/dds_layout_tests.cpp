@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <vector>
 
 namespace {
@@ -169,6 +170,49 @@ TEST_CASE("dds_layout computes locked DX10 mip byte sizes", "[unit][dds_layout]"
 
     REQUIRE(size.has_value());
     CHECK(size.value() == test_case.expected_bytes);
+  }
+}
+
+TEST_CASE("dds_layout fails closed for hostile block-compressed dimensions", "[unit][dds_layout]") {
+  const auto hostile_dimension = std::numeric_limits<std::uint32_t>::max();
+  const libbsa::texture::dds_texture_layout hostile_bc1{
+      .width = hostile_dimension,
+      .height = hostile_dimension,
+      .mip_count = 1,
+      .dxgi_format = 71,
+      .array_size = 1,
+      .is_cubemap = false,
+  };
+
+  SECTION("BC1 UINT32_MAX dimensions compute the full rounded uint64 byte size") {
+    const auto size = libbsa::texture::mip_size_for_format(hostile_bc1, 0U);
+
+    REQUIRE(size.has_value());
+    CHECK(size.value() == 9223372036854775808ULL);
+  }
+
+  SECTION("wrapped BC1 raw-size metadata is rejected") {
+    const std::array chunks{chunk(0, 0, 8)};
+    const auto result = libbsa::texture::validate_and_order_chunks(hostile_bc1, chunks);
+
+    REQUIRE_FALSE(result.has_value());
+    CHECK(result.error().code == libbsa::error_code::format_error);
+  }
+
+  SECTION("BC7 UINT32_MAX dimensions fail closed when byte size overflows") {
+    const libbsa::texture::dds_texture_layout hostile_bc7{
+        .width = hostile_dimension,
+        .height = hostile_dimension,
+        .mip_count = 1,
+        .dxgi_format = 98,
+        .array_size = 1,
+        .is_cubemap = false,
+    };
+
+    const auto size = libbsa::texture::mip_size_for_format(hostile_bc7, 0U);
+
+    REQUIRE_FALSE(size.has_value());
+    CHECK(size.error().code == libbsa::error_code::format_error);
   }
 }
 
