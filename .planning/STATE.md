@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 09-06-PLAN.md
-last_updated: "2026-05-09T10:43:37.318Z"
+stopped_at: Completed 09-07-PLAN.md
+last_updated: "2026-05-09T11:30:56.331Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 9
-  total_plans: 54
-  completed_plans: 54
+  total_plans: 55
+  completed_plans: 55
   percent: 100
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 09 (ba2-dx10-write-new-support) — COMPLETE
-Plan: 6 of 6
+Plan: 7 of 7
 Status: Phase complete — ready for verification
 Last activity: 2026-05-09
 
@@ -50,6 +50,7 @@ Progress: [██████████] 100%
 | Phase 09 P04 | 3 min | 3 tasks | 5 files |
 | Phase 09 P05 | 5min | 3 tasks | 3 files |
 | Phase 09 P06 | 4min | 3 tasks | 3 files |
+| Phase 09 P07 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 09]: DX10 texture chunks copy validated DDS subresource bytes in planned BA2 order without resizing, transcoding, mip generation, repair, or image-data transformation.
 - [Phase 09]: BA2 DX10 writer dedupe uses stored bytes plus raw size, packed size, and compression route so payload sharing cannot cross incompatible chunk metadata.
 - [Phase 09]: BA2 DX10 writer overwrite publish mirrors Phase 8 backup/rollback behavior instead of deleting the existing output before replacement.
+- [Phase 09]: DDS block-compressed block counts are rounded after uint64 promotion and use descriptor block dimensions rather than hard-coded 4x4 arithmetic.
 
 ### Pending Todos
 
@@ -93,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T10:43:37.309Z
-Stopped at: Completed 09-06-PLAN.md
+Last session: 2026-05-09T11:30:56.167Z
+Stopped at: Completed 09-07-PLAN.md
 Resume file: None

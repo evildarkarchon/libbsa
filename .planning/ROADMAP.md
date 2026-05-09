@@ -308,7 +308,7 @@ Plans:
 - [x] 09-06-PLAN.md — Add DX10 chunk dedupe, safe publish hardening, and final regression gates.
 
 **Wave 5** *(gap closure; blocked on Wave 4 verification findings)*
-- [ ] 09-07-PLAN.md — Close hostile block-compressed DDS dimension sizing wrap gap in DX10 chunk validation.
+- [x] 09-07-PLAN.md — Close hostile block-compressed DDS dimension sizing wrap gap in DX10 chunk validation.
 
 ### Phase 10: TES3 Write Support and BSA Format Completeness
 **Goal**: Consumers can create TES3/Morrowind BSA archives from files or memory, completing read/write support for all BSA families.
