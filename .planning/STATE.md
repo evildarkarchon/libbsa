@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 08-04-PLAN.md
-last_updated: "2026-05-09T08:15:00.609Z"
+stopped_at: Completed 08-05-PLAN.md
+last_updated: "2026-05-09T08:20:29.091Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 7
   total_plans: 47
-  completed_plans: 45
-  percent: 96
+  completed_plans: 46
+  percent: 98
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 08 (ba2-gnrl-write-new-support) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [██████████] 96%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -91,6 +91,7 @@ Progress: [██████████] 96%
 | Phase 08 P02 | 3 min | 2 tasks | 2 files |
 | Phase 08 P03 | 2 min | 2 tasks | 5 files |
 | Phase 08 P04 | 15min | 2 tasks | 3 files |
+| Phase 08 P05 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -179,6 +180,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 08]: Plan 08-03 validates and owns BA2 GNRL writer state but intentionally defers reader-reopenable BA2 serialization to Plan 08-04. — Plan 08-03 scope is validation foundation; Plan 08-04 owns full serialization.
 - [Phase 08]: Raw BA2 GNRL writer output is validated through archive_reader reopen/list/find/contains/extract APIs rather than writer internals. — Plan 08-04 follows Phase 8 reader-backed validation decisions and keeps writer acceptance observable through public APIs.
 - [Phase 08]: Phase 8 Plan 04 keeps compressed BA2 GNRL entries unsupported until Plan 08-05, while raw entries serialize fully with target-profile metadata. — The current plan scope is raw serialization; the next plan owns target-routed deflate and raw-LZ4 payload writing.
+- [Phase 08]: BA2 GNRL writer compression routes only from explicit target/options metadata: FO4 v1, Starfield v2, and Starfield v3 method 0 use deflate; Starfield v3 method 3 uses raw LZ4 block. — Plan 08-05 implemented WBA2-04 with metadata-routed compression and no filename-extension inference.
 
 ### Pending Todos
 
@@ -200,6 +202,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T08:14:39.674Z
-Stopped at: Completed 08-04-PLAN.md
+Last session: 2026-05-09T08:20:16.101Z
+Stopped at: Completed 08-05-PLAN.md
 Resume file: None

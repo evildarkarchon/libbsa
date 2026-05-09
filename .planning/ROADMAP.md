@@ -272,7 +272,7 @@ Plans:
 - [x] 08-04-PLAN.md — Serialize raw FO4 v1, Starfield v2, and Starfield v3 BA2 GNRL archives with end filename tables.
 
 **Wave 4** *(blocked on Wave 3 raw serialization)*
-- [ ] 08-05-PLAN.md — Add target-routed deflate/raw-LZ4 compression defaults and per-entry overrides.
+- [x] 08-05-PLAN.md — Add target-routed deflate/raw-LZ4 compression defaults and per-entry overrides.
 
 **Wave 5** *(blocked on Wave 4 compressed stored-payload shape)*
 - [ ] 08-06-PLAN.md — Add opt-in final-stored-byte deduplication and full Phase 8 regression gates.

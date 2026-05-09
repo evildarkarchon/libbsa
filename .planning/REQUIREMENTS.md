@@ -87,7 +87,7 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 - [x] **WBA2-01**: Consumer can create new Fallout 4 BA2 GNRL archives from disk files or memory buffers.
 - [x] **WBA2-02**: Consumer can create new Starfield BA2 GNRL archives with explicit target version and compression method policy.
 - [x] **WBA2-03**: Writer can serialize BA2 filename tables at the end of the archive.
-- [ ] **WBA2-04**: Writer can compress BA2 GNRL entries with deflate or raw LZ4 block according to target format/version.
+- [x] **WBA2-04**: Writer can compress BA2 GNRL entries with deflate or raw LZ4 block according to target format/version.
 - [x] **WBA2-05**: Writer can preserve or set version-specific BA2 header fields according to documented target profiles.
 - [ ] **WBA2-06**: Consumer can create new Fallout 4 BA2 DX10/DDS texture archives from DDS files.
 - [ ] **WBA2-07**: Consumer can create new Starfield BA2 v3 DX10/DDS texture archives from DDS files.
@@ -213,7 +213,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WBA2-01 | Phase 8: BA2 GNRL Write-New Support | Complete |
 | WBA2-02 | Phase 8: BA2 GNRL Write-New Support | Complete |
 | WBA2-03 | Phase 8: BA2 GNRL Write-New Support | Complete |
-| WBA2-04 | Phase 8: BA2 GNRL Write-New Support | Pending |
+| WBA2-04 | Phase 8: BA2 GNRL Write-New Support | Complete |
 | WBA2-05 | Phase 8: BA2 GNRL Write-New Support | Complete |
 | WBA2-06 | Phase 9: BA2 DX10 Write-New Support | Pending |
 | WBA2-07 | Phase 9: BA2 DX10 Write-New Support | Pending |
