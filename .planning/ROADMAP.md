@@ -246,7 +246,7 @@ Plans:
 - [x] 07-05-PLAN.md — Add explicit target-compatible embedded-name prefix emission and round-trip proof.
 
 **Wave 6** *(blocked on Wave 5 final stored payload shape)*
-- [ ] 07-06-PLAN.md — Add opt-in final-stored-byte deduplication and full Phase 7 regression gates.
+- [x] 07-06-PLAN.md — Add opt-in final-stored-byte deduplication and full Phase 7 regression gates.
 
 ### Phase 8: BA2 GNRL Write-New Support
 **Goal**: Consumers can create Fallout 4 and Starfield BA2 GNRL archives with explicit target profile, version fields, filename tables, and compression policy.

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-05-09T06:36:38.207Z"
+status: verifying
+stopped_at: Completed 07-06-PLAN.md
+last_updated: "2026-05-09T06:42:28.201Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 41
-  completed_plans: 40
-  percent: 98
+  completed_plans: 41
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 Phase: 07 (tes4-family-bsa-write-new-support) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-09
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -82,6 +82,7 @@ Progress: [██████████] 98%
 | Phase 07 P03 | 35min | 2 tasks | 3 files |
 | Phase 07 P04 | 3min | 2 tasks | 2 files |
 | Phase 07 P05 | 5min | 2 tasks | 2 files |
+| Phase 07 P06 | 5min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -160,6 +161,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 07]: TES4-family writer compression routes only from explicit target profile and public policies: v103/v104 use deflate, v105 uses LZ4 frame. — Plan 07-04 implements D-09 through D-15 without public codec knobs.
 - [Phase 07]: Zero-byte writer entries are forced raw and receive the compression XOR toggle when the archive default is compressed. — This preserves D-11 and prevents readers from expecting a compressed size prefix.
 - [Phase 07]: Embedded names remain off by default and are emitted only through the global embed_file_names writer option for non-v103 targets. — Plan 07-05 implements D-18 while preserving v103 compatibility and reader-backed extraction semantics.
+- [Phase 07]: TES4-family writer deduplication remains opt-in through tes4_bsa_writer_options::deduplicate_payloads and is disabled by default. — Plan 07-06 implements D-19 and keeps default output non-deduplicated unless callers explicitly enable stored-byte dedupe.
+- [Phase 07]: Dedupe eligibility is based on byte-identical final stored payload vectors, not source bytes. — Compression-policy and embedded-name prefix differences must keep distinct payload offsets to preserve reader extraction correctness.
 
 ### Pending Todos
 
@@ -181,6 +184,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T06:36:27.307Z
-Stopped at: Completed 07-03-PLAN.md
+Last session: 2026-05-09T06:42:11.425Z
+Stopped at: Completed 07-06-PLAN.md
 Resume file: None
