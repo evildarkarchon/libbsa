@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string_view>
 
@@ -39,6 +41,16 @@ enum class entry_compression_policy {
   compressed,
 };
 
+/// BA2 GNRL archive target profiles supported by the write-new API.
+///
+/// The selected profile controls the serialized BA2 version and the default
+/// compression metadata used when entries inherit archive-wide policy.
+enum class ba2_gnrl_target {
+  fallout4,
+  starfield_v2,
+  starfield_v3,
+};
+
 /// Options controlling TES4-family write-new archive finalization.
 struct tes4_bsa_writer_options {
   /// Archive-wide compression behavior used by entries whose policy is `inherit`.
@@ -52,6 +64,45 @@ struct tes4_bsa_writer_options {
 
   /// Allows `write_to` to replace an existing host-path archive when true.
   bool overwrite_existing{false};
+};
+
+/// Options controlling BA2 GNRL write-new archive finalization.
+struct ba2_gnrl_writer_options {
+  /// Archive-wide compression behavior used by entries whose policy is `inherit`.
+  archive_compression_policy compression = archive_compression_policy::target_default;
+
+  /// Allows `write_to` to replace an existing host-path archive when true.
+  bool overwrite_existing = false;
+
+  /// Shares identical stored payload regions only when explicitly enabled.
+  bool deduplicate_payloads = false;
+
+  /// Starfield v2/v3 Unknown1 header value; ignored for Fallout 4 v1 targets.
+  ///
+  /// xEdit/BSArchPro-derived Starfield write defaults use `1`, while callers can
+  /// override this compatibility field when preserving known archive metadata.
+  std::uint32_t starfield_unknown1 = 1U;
+
+  /// Starfield v2/v3 Unknown2 header value; ignored for Fallout 4 v1 targets.
+  std::uint32_t starfield_unknown2 = 0U;
+
+  /// Starfield v3 archive-wide compression method; ignored by v1/v2 targets.
+  ///
+  /// Method `3` maps compressed GNRL entries to raw LZ4 blocks, while method `0`
+  /// maps them to deflate. Unsupported methods fail during finalization.
+  std::uint32_t starfield_compression_method = 3U;
+};
+
+/// Per-entry options for BA2 GNRL payload and record metadata.
+struct ba2_gnrl_entry_options {
+  /// Per-entry compression override relative to the archive-wide policy.
+  entry_compression_policy compression = entry_compression_policy::inherit;
+
+  /// Optional advanced BA2 GNRL record-flags override for compatibility cases.
+  ///
+  /// Hashes, payload offsets, stored sizes, raw sizes, and the `BAADF00D`
+  /// sentinel remain writer-owned and are not caller-controlled.
+  std::optional<std::uint32_t> record_flags = std::nullopt;
 };
 
 /// Public writer for creating new TES4-family BSA archives.
@@ -92,6 +143,61 @@ class tes4_bsa_writer {
   ///
   /// Existing destinations fail unless `tes4_bsa_writer_options::overwrite_existing`
   /// was enabled, and compression or I/O failures are returned as structured errors.
+  result<void> write_to(std::string_view host_path) const;
+
+ private:
+  struct state;
+
+  std::shared_ptr<state> state_;
+};
+
+/// Public writer for creating new BA2 GNRL archives.
+///
+/// Entries are added with explicit archive-internal paths and finalized only to
+/// a host-path archive. Memory-buffer entries are copied into writer-owned state,
+/// and codec implementation details stay private behind the selected target profile.
+class ba2_gnrl_writer {
+ public:
+  /// Creates a writer for `target` using default BA2 GNRL writer options.
+  explicit ba2_gnrl_writer(ba2_gnrl_target target);
+
+  /// Creates a writer for `target` using the supplied compatibility options.
+  explicit ba2_gnrl_writer(ba2_gnrl_target target, ba2_gnrl_writer_options options);
+
+  /// Returns the BA2 GNRL target profile selected for this writer.
+  [[nodiscard]] ba2_gnrl_target target() const noexcept;
+
+  /// Returns the immutable BA2 GNRL writer options selected at construction time.
+  [[nodiscard]] const ba2_gnrl_writer_options& options() const noexcept;
+
+  /// Adds a host-file payload with an explicit archive-internal path.
+  result<void> add_file(std::string_view archive_path,
+                        std::string_view host_path,
+                        entry_compression_policy compression = entry_compression_policy::inherit);
+
+  /// Adds a host-file payload with explicit BA2 GNRL per-entry options.
+  result<void> add_file(std::string_view archive_path,
+                        std::string_view host_path,
+                        ba2_gnrl_entry_options options);
+
+  /// Adds bytes copied from caller memory with an explicit archive-internal path.
+  ///
+  /// The writer owns an independent copy after this call, so callers may release
+  /// or mutate the original memory before `write_to` is called.
+  result<void> add_bytes(std::string_view archive_path,
+                         std::span<const std::byte> bytes,
+                         entry_compression_policy compression = entry_compression_policy::inherit);
+
+  /// Adds copied memory bytes with explicit BA2 GNRL per-entry options.
+  result<void> add_bytes(std::string_view archive_path,
+                         std::span<const std::byte> bytes,
+                         ba2_gnrl_entry_options options);
+
+  /// Finalizes the writer state into a new BA2 GNRL archive at `host_path`.
+  ///
+  /// Existing destinations fail unless `ba2_gnrl_writer_options::overwrite_existing`
+  /// was enabled, and validation, compression, or I/O failures are returned as
+  /// structured errors.
   result<void> write_to(std::string_view host_path) const;
 
  private:
