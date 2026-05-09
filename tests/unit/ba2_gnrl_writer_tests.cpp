@@ -311,6 +311,41 @@ TEST_CASE("BA2 GNRL writer refuses to overwrite existing output when overwrite_e
 
   REQUIRE_FALSE(written.has_value());
   REQUIRE(written.error().code == libbsa::error_code::io_error);
+  CHECK(read_binary_file(existing) == std::vector<std::byte>{std::byte{0x01}});
+}
+
+TEST_CASE("BA2 GNRL writer preserves pre-existing deterministic temp-name siblings",
+          "[unit][ba2_gnrl_writer]") {
+  const auto output = output_path("safe-temp-collision.ba2");
+  const auto collision = output_path("safe-temp-collision.ba2.tmp");
+  const std::vector<std::byte> sentinel{std::byte{0x54}, std::byte{0x4D}, std::byte{0x50}};
+  write_binary_file(collision, sentinel);
+
+  libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, overwriting_raw_options()};
+  REQUIRE(writer.add_bytes("Meshes/SafeTemp.nif", sample_bytes()).has_value());
+
+  auto written = writer.write_to(output.string());
+
+  REQUIRE(written.has_value());
+  REQUIRE(std::filesystem::exists(collision));
+  CHECK(read_binary_file(collision) == sentinel);
+}
+
+TEST_CASE("BA2 GNRL writer rejects overwrite targets that are existing directories",
+          "[unit][ba2_gnrl_writer]") {
+  const auto directory = output_path("overwrite-directory.ba2");
+  std::error_code fs_error;
+  std::filesystem::remove_all(directory, fs_error);
+  REQUIRE(std::filesystem::create_directory(directory));
+
+  libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, overwriting_raw_options()};
+  REQUIRE(writer.add_bytes("Meshes/DirectoryTarget.nif", sample_bytes()).has_value());
+
+  auto written = writer.write_to(directory.string());
+
+  REQUIRE_FALSE(written.has_value());
+  REQUIRE(written.error().code == libbsa::error_code::io_error);
+  CHECK(std::filesystem::is_directory(directory));
 }
 
 TEST_CASE("BA2 GNRL writer reports missing disk sources as I/O errors", "[unit][ba2_gnrl_writer]") {
