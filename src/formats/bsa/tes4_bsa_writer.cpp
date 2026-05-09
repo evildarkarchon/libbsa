@@ -3,6 +3,7 @@
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
+#include <detail/compression_router.hpp>
 
 #include <algorithm>
 #include <cctype>
@@ -162,6 +163,13 @@ result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view descript
   return static_cast<std::uint32_t>(value);
 }
 
+result<std::uint32_t> checked_size_flags_payload_size(std::uint64_t value, std::string_view description) {
+  if (value > (std::numeric_limits<std::uint32_t>::max() & ~file_size_compression_toggle)) {
+    return error{error_code::format_error, std::string{description} + " exceeds TES4 BSA size-flag limits"};
+  }
+  return static_cast<std::uint32_t>(value);
+}
+
 result<std::uint8_t> checked_name_size(std::size_t size, std::string_view description) {
   if (size > static_cast<std::size_t>(std::numeric_limits<std::uint8_t>::max())) {
     return error{error_code::format_error, std::string{description} + " exceeds BSA name length limits"};
@@ -234,6 +242,75 @@ result<std::vector<std::byte>> read_source_bytes(const tes4_writer_entry& entry)
   return bytes;
 }
 
+bool archive_default_compressed(tes4_bsa_target target, archive_compression_policy policy) noexcept {
+  switch (policy) {
+  case archive_compression_policy::target_default:
+    return target != tes4_bsa_target::oblivion;
+  case archive_compression_policy::all_raw:
+    return false;
+  case archive_compression_policy::all_compressed:
+    return true;
+  }
+  return false;
+}
+
+bool requested_entry_compression(bool archive_default, entry_compression_policy policy) noexcept {
+  switch (policy) {
+  case entry_compression_policy::inherit:
+    return archive_default;
+  case entry_compression_policy::raw:
+    return false;
+  case entry_compression_policy::compressed:
+    return true;
+  }
+  return false;
+}
+
+result<detail::compression_method> compression_method_for_target(tes4_bsa_target target) {
+  switch (target) {
+  case tes4_bsa_target::oblivion:
+  case tes4_bsa_target::fallout3:
+    return detail::compression_method::deflate;
+  case tes4_bsa_target::skyrim_se:
+    return detail::compression_method::lz4_frame;
+  }
+  return error{error_code::invalid_argument, "TES4 BSA writer target profile has no compression method"};
+}
+
+void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
+  bytes.push_back(static_cast<std::byte>(value & 0xFFU));
+  bytes.push_back(static_cast<std::byte>((value >> 8U) & 0xFFU));
+  bytes.push_back(static_cast<std::byte>((value >> 16U) & 0xFFU));
+  bytes.push_back(static_cast<std::byte>((value >> 24U) & 0xFFU));
+}
+
+result<std::vector<std::byte>> encode_stored_payload(tes4_bsa_target target,
+                                                     std::span<const std::byte> raw_payload,
+                                                     bool effective_compressed) {
+  if (!effective_compressed) {
+    return std::vector<std::byte>{raw_payload.begin(), raw_payload.end()};
+  }
+
+  auto raw_size = checked_u32(raw_payload.size(), "TES4 BSA compressed raw payload size");
+  if (!raw_size) {
+    return raw_size.error();
+  }
+  auto method = compression_method_for_target(target);
+  if (!method) {
+    return method.error();
+  }
+  auto compressed = detail::compress_payload(method.value(), raw_payload);
+  if (!compressed) {
+    return compressed.error();
+  }
+
+  std::vector<std::byte> stored;
+  stored.reserve(4U + compressed.value().size());
+  append_u32_le(stored, raw_size.value());
+  stored.insert(stored.end(), compressed.value().begin(), compressed.value().end());
+  return stored;
+}
+
 result<void> write_string_terminated(detail::binary_writer& writer, std::string_view value) {
   for (const char ch : value) {
     auto written = writer.write_u8(static_cast<std::uint8_t>(static_cast<unsigned char>(ch)));
@@ -265,6 +342,8 @@ std::pair<std::string, std::string> split_folder_file(std::string_view path) {
 }
 
 result<std::vector<prepared_folder>> prepare_folders(std::span<const tes4_writer_entry> entries,
+                                                     tes4_bsa_target target,
+                                                     bool archive_default_is_compressed,
                                                      std::uint32_t version,
                                                      std::uint32_t& file_flags) {
   std::map<std::string, std::vector<prepared_entry>> grouped;
@@ -282,19 +361,31 @@ result<std::vector<prepared_folder>> prepare_folders(std::span<const tes4_writer
     }
 
     file_flags |= file_flag_for_extension(extension_of(file_name), version);
-    auto stored_size = checked_u32(payload.value().size(), "TES4 BSA stored payload size");
+    const bool entry_wants_compression = requested_entry_compression(archive_default_is_compressed, entry.compression);
+    const bool effective_compressed = entry_wants_compression && !payload.value().empty();
+    auto stored_payload = encode_stored_payload(target, payload.value(), effective_compressed);
+    if (!stored_payload) {
+      return stored_payload.error();
+    }
+    auto stored_size = checked_size_flags_payload_size(stored_payload.value().size(), "TES4 BSA stored payload size");
     if (!stored_size) {
       return stored_size.error();
+    }
+    std::uint32_t record_flags = 0U;
+    if (archive_default_is_compressed != effective_compressed) {
+      // Zero-byte entries are forced raw, so they still need the XOR toggle when
+      // the archive default is compressed or readers will expect a size prefix.
+      record_flags |= file_size_compression_toggle;
     }
 
     const auto file_hash = file_hash_for(file_name);
     grouped[folder].push_back(prepared_entry{folder,
-                                             std::move(file_name),
-                                             file_hash,
-                                             stored_size.value(),
-                                             0U,
-                                             0U,
-                                             std::move(payload.value())});
+                                              std::move(file_name),
+                                              file_hash,
+                                              stored_size.value(),
+                                              record_flags,
+                                              0U,
+                                              std::move(stored_payload.value())});
   }
 
   std::vector<prepared_folder> folders;
@@ -492,8 +583,10 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target,
     return version.error();
   }
 
+  const bool archive_default_is_compressed = archive_default_compressed(target, options.compression_policy);
+
   std::uint32_t file_flags = 0U;
-  auto folders = prepare_folders(entries, version.value(), file_flags);
+  auto folders = prepare_folders(entries, target, archive_default_is_compressed, version.value(), file_flags);
   if (!folders) {
     return folders.error();
   }
@@ -537,7 +630,7 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target,
   }
 
   std::uint32_t archive_flags = include_directory_names | include_file_names;
-  if (options.compression_policy == archive_compression_policy::all_compressed) {
+  if (archive_default_is_compressed) {
     archive_flags |= archive_compress_by_default;
   }
   if (options.embed_file_names && version.value() != oblivion_version) {
