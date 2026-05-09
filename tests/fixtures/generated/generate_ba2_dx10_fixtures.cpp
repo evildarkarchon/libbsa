@@ -156,7 +156,14 @@ std::string json_escape(std::string_view value) {
     case '"':
       out << "\\\"";
       break;
+    case '\0':
+      out << "\\u0000";
+      break;
     default:
+      if (static_cast<unsigned char>(ch) < 0x20U) {
+        out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<unsigned int>(static_cast<unsigned char>(ch));
+        break;
+      }
       out << ch;
       break;
     }

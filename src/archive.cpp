@@ -257,7 +257,8 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
     return formats::bsa::extract_tes3_bsa_payload(state_->host_path, *found.value(), sink);
   }
   if (state_->metadata.type == archive_type::ba2) {
-    return formats::ba2::extract_ba2_gnrl_payload(state_->host_path, *found.value(), sink);
+    return state_->is_ba2_dx10 ? formats::ba2::extract_ba2_dx10_payload(state_->host_path, *found.value(), sink)
+                               : formats::ba2::extract_ba2_gnrl_payload(state_->host_path, *found.value(), sink);
   }
   auto payload = read_stored_payload(state_->host_path, *found.value());
   if (!payload) {

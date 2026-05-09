@@ -19,4 +19,11 @@ result<std::optional<entry_metadata>> find_ba2_dx10_entry(std::span<const entry_
 /// Reports BA2 DX10 entry presence using the same normalization and errors as find.
 result<bool> contains_ba2_dx10_entry(std::span<const entry_metadata> entries, std::string_view path);
 
+/// Extracts one BA2 DX10 entry as a reconstructed DDS byte stream into a caller-owned sink.
+///
+/// DDS extraction writes the reconstructed DXT10 header first, then each decoded texture chunk in
+/// parser-validated DDS order. Chunk codec routing comes only from parsed texture metadata and exact
+/// decoded-size validation is applied to every compressed chunk.
+result<void> extract_ba2_dx10_payload(std::string_view host_path, const entry_metadata& entry, payload_sink& sink);
+
 } // namespace libbsa::formats::ba2
