@@ -292,6 +292,74 @@ TEST_CASE("ba2_gnrl_bounded_open opens sparse large-payload archives without rea
   REQUIRE(entry.compression == libbsa::entry_compression::none);
 }
 
+TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename table",
+          "[unit][fixture][ba2_gnrl_reader][ba2_gnrl_end_table]") {
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-end-table.ba2";
+  temp_file_cleanup cleanup{temp_path};
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  constexpr std::uint32_t file_count = 1U;
+  constexpr std::uint64_t record_table_end = 60U;
+  const std::string archive_path = "Meshes/EndTable/Alpha.nif";
+  const std::vector<std::byte> payload{
+      std::byte{0xDE}, std::byte{0xAD}, std::byte{0xBE}, std::byte{0xEF}, std::byte{0x42}};
+  const auto file_table_offset = record_table_end + payload.size();
+
+  std::vector<std::byte> bytes;
+  append_ascii(bytes, "BTDX");
+  append_u32_le(bytes, 1U);
+  append_ascii(bytes, "GNRL");
+  append_u32_le(bytes, file_count);
+  append_u64_le(bytes, static_cast<std::uint64_t>(file_table_offset)); // FileTableOffset
+
+  append_u32_le(bytes, 0x12345678U);
+  append_ascii(bytes, std::string_view{"NIF\0", 4U});
+  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, 0U);
+  append_u64_le(bytes, record_table_end);
+  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, static_cast<std::uint32_t>(payload.size()));
+  append_u32_le(bytes, 0xBAADF00DU);
+
+  bytes.insert(bytes.end(), payload.begin(), payload.end());
+  append_u16_le(bytes, static_cast<std::uint16_t>(archive_path.size()));
+  append_ascii(bytes, archive_path);
+
+  {
+    std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
+    REQUIRE(output.good());
+    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(output.good());
+  }
+
+  auto opened = libbsa::archive_reader::open(temp_path.string());
+
+  REQUIRE(opened.has_value());
+  auto metadata = opened.value().metadata();
+  REQUIRE(metadata.has_value());
+  CHECK(metadata.value().type == libbsa::archive_type::ba2);
+  CHECK(metadata.value().file_count == file_count);
+
+  auto contained = opened.value().contains("meshes/endtable/ALPHA.NIF");
+  REQUIRE(contained.has_value());
+  CHECK(contained.value());
+
+  auto found = opened.value().find("meshes/endtable/ALPHA.NIF");
+  REQUIRE(found.has_value());
+  REQUIRE(found.value().has_value());
+  CHECK(found.value()->path == "meshes/endtable/alpha.nif");
+  CHECK(found.value()->original_path == archive_path);
+  CHECK(found.value()->payload_offset == record_table_end);
+  CHECK(found.value()->raw_size == payload.size());
+  CHECK(found.value()->stored_size == payload.size());
+  CHECK(found.value()->compression == libbsa::entry_compression::none);
+
+  auto extracted = opened.value().extract_bytes(archive_path);
+  REQUIRE(extracted.has_value());
+  CHECK(extracted.value() == payload);
+}
+
 TEST_CASE("ba2_gnrl_metadata lists manifest-backed records from filename tables",
           "[unit][fixture][ba2_gnrl_metadata]") {
   bool saw_raw = false;
