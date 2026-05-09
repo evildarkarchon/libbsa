@@ -51,6 +51,16 @@ enum class ba2_gnrl_target {
   starfield_v3,
 };
 
+/// BA2 DX10/DDS texture archive target profiles supported by the write-new API.
+///
+/// The selected profile controls the serialized BA2 texture archive version and
+/// target-routed compressed chunk codec while keeping codec details out of the
+/// public C++20 header surface.
+enum class ba2_dx10_target {
+  fallout4,
+  starfield_v3,
+};
+
 /// Options controlling TES4-family write-new archive finalization.
 struct tes4_bsa_writer_options {
   /// Archive-wide compression behavior used by entries whose policy is `inherit`.
@@ -90,6 +100,36 @@ struct ba2_gnrl_writer_options {
   ///
   /// Method `3` maps compressed GNRL entries to raw LZ4 blocks, while method `0`
   /// maps them to deflate. Unsupported methods fail during finalization.
+  std::uint32_t starfield_compression_method = 3U;
+};
+
+/// Options controlling BA2 DX10/DDS write-new archive finalization.
+struct ba2_dx10_writer_options {
+  /// Allows `write_to` to replace an existing host-path archive when true.
+  bool overwrite_existing = false;
+
+  /// Shares identical final stored texture chunk payloads only when explicitly enabled.
+  bool deduplicate_payloads = false;
+
+  /// Archive-wide decoded byte cap for texture chunk planning.
+  ///
+  /// `0` selects the reference-derived default chunking behavior; nonzero values
+  /// ask the writer to split at mip boundaries where the requested cap is representable.
+  std::uint32_t max_decoded_chunk_bytes = 0U;
+
+  /// Starfield v3 Unknown1 header value; ignored for Fallout 4 v1 targets.
+  ///
+  /// xEdit/BSArchPro-derived Starfield write defaults use `1`, while callers can
+  /// override this compatibility field when preserving known archive metadata.
+  std::uint32_t starfield_unknown1 = 1U;
+
+  /// Starfield v3 Unknown2 header value; ignored for Fallout 4 v1 targets.
+  std::uint32_t starfield_unknown2 = 0U;
+
+  /// Starfield v3 archive-wide compression method; ignored by Fallout 4 v1 targets.
+  ///
+  /// Method `3` is the default compressed chunk route for Starfield v3 texture
+  /// archives, while method `0` remains available for compatibility cases.
   std::uint32_t starfield_compression_method = 3U;
 };
 
@@ -196,6 +236,45 @@ class ba2_gnrl_writer {
   /// Finalizes the writer state into a new BA2 GNRL archive at `host_path`.
   ///
   /// Existing destinations fail unless `ba2_gnrl_writer_options::overwrite_existing`
+  /// was enabled, and validation, compression, or I/O failures are returned as
+  /// structured errors.
+  result<void> write_to(std::string_view host_path) const;
+
+ private:
+  struct state;
+
+  std::shared_ptr<state> state_;
+};
+
+/// Public writer for creating new BA2 DX10/DDS texture archives.
+///
+/// Entries are added from DDS host files with explicit archive-internal paths and
+/// finalized to a host-path archive. The public DX10 contract is compressed-only
+/// at archive level: callers do not choose raw, per-entry, or per-chunk overrides
+/// because uncompressed texture archives are not a stable compatibility target.
+class ba2_dx10_writer {
+ public:
+  /// Creates a writer for `target` using default BA2 DX10 writer options.
+  explicit ba2_dx10_writer(ba2_dx10_target target);
+
+  /// Creates a writer for `target` using the supplied texture archive options.
+  explicit ba2_dx10_writer(ba2_dx10_target target, ba2_dx10_writer_options options);
+
+  /// Returns the BA2 DX10 target profile selected for this writer.
+  [[nodiscard]] ba2_dx10_target target() const noexcept;
+
+  /// Returns the immutable BA2 DX10 writer options selected at construction time.
+  [[nodiscard]] const ba2_dx10_writer_options& options() const noexcept;
+
+  /// Adds a DDS host-file payload with an explicit archive-internal texture path.
+  ///
+  /// Later implementation phases validate and snapshot the DDS bytes at add time;
+  /// expected caller-data failures are reported through `result<void>`.
+  result<void> add_file(std::string_view archive_path, std::string_view dds_host_path);
+
+  /// Finalizes the writer state into a new BA2 DX10 archive at `host_path`.
+  ///
+  /// Existing destinations fail unless `ba2_dx10_writer_options::overwrite_existing`
   /// was enabled, and validation, compression, or I/O failures are returned as
   /// structured errors.
   result<void> write_to(std::string_view host_path) const;
