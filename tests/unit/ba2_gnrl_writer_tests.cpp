@@ -520,3 +520,98 @@ TEST_CASE("BA2 GNRL writer per-entry raw and compressed overrides affect only ra
   CHECK(raw_extracted.value() == raw_bytes);
   CHECK(empty_extracted.value() == empty_bytes);
 }
+
+TEST_CASE("BA2 GNRL writer keeps duplicate payload offsets distinct by default", "[unit][ba2_gnrl_writer]") {
+  auto options = overwriting_raw_options();
+  options.deduplicate_payloads = false;
+  libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, options};
+  const std::vector<std::byte> bytes{std::byte{0x44}, std::byte{0x55}, std::byte{0x50}, std::byte{0x45}};
+
+  REQUIRE(writer.add_bytes("Meshes/DuplicateA.nif", bytes).has_value());
+  REQUIRE(writer.add_bytes("Meshes/DuplicateB.nif", bytes).has_value());
+  const auto output = output_path("dedupe-disabled-distinct-offsets.ba2");
+  REQUIRE(writer.write_to(output.string()).has_value());
+
+  auto opened = libbsa::archive_reader::open(output.string());
+  REQUIRE(opened.has_value());
+  auto first = opened.value().find("Meshes/DuplicateA.nif");
+  auto second = opened.value().find("Meshes/DuplicateB.nif");
+  REQUIRE(first.has_value());
+  REQUIRE(second.has_value());
+  REQUIRE(first.value().has_value());
+  REQUIRE(second.value().has_value());
+  CHECK(first.value()->payload_offset != second.value()->payload_offset);
+  CHECK(first.value()->compression == libbsa::entry_compression::none);
+  CHECK(second.value()->compression == libbsa::entry_compression::none);
+  CHECK(opened.value().extract_bytes("Meshes/DuplicateA.nif").value() == bytes);
+  CHECK(opened.value().extract_bytes("Meshes/DuplicateB.nif").value() == bytes);
+}
+
+TEST_CASE("BA2 GNRL writer shares offsets for byte-identical stored payloads when dedupe is enabled",
+          "[unit][ba2_gnrl_writer]") {
+  auto options = overwriting_raw_options();
+  options.deduplicate_payloads = true;
+  libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, options};
+  const std::vector<std::byte> bytes{std::byte{0x53}, std::byte{0x48}, std::byte{0x41}, std::byte{0x52},
+                                     std::byte{0x45}, std::byte{0x44}};
+
+  REQUIRE(writer.add_bytes("Meshes/SharedA.nif", bytes).has_value());
+  REQUIRE(writer.add_bytes("Meshes/SharedB.nif", bytes).has_value());
+  const auto output = output_path("dedupe-enabled-shared-offsets.ba2");
+  REQUIRE(writer.write_to(output.string()).has_value());
+
+  auto opened = libbsa::archive_reader::open(output.string());
+  REQUIRE(opened.has_value());
+  auto entries = opened.value().entries();
+  REQUIRE(entries.has_value());
+  CHECK(entries.value().size() == 2U);
+  auto first = opened.value().find("Meshes/SharedA.nif");
+  auto second = opened.value().find("Meshes/SharedB.nif");
+  REQUIRE(first.has_value());
+  REQUIRE(second.has_value());
+  REQUIRE(first.value().has_value());
+  REQUIRE(second.value().has_value());
+  CHECK(first.value()->payload_offset == second.value()->payload_offset);
+  CHECK(first.value()->stored_size == second.value()->stored_size);
+  CHECK(opened.value().extract_bytes("Meshes/SharedA.nif").value() == bytes);
+  CHECK(opened.value().extract_bytes("Meshes/SharedB.nif").value() == bytes);
+}
+
+TEST_CASE("BA2 GNRL writer dedupes compressed stored bytes but not raw and compressed source twins",
+          "[unit][ba2_gnrl_writer]") {
+  libbsa::ba2_gnrl_writer_options options;
+  options.overwrite_existing = true;
+  options.compression = libbsa::archive_compression_policy::all_compressed;
+  options.deduplicate_payloads = true;
+  options.starfield_compression_method = 3U;
+  libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::starfield_v3, options};
+  const std::vector<std::byte> bytes{std::byte{0x43}, std::byte{0x4F}, std::byte{0x4D}, std::byte{0x50},
+                                     std::byte{0x52}, std::byte{0x45}, std::byte{0x53}, std::byte{0x53},
+                                     std::byte{0x45}, std::byte{0x44}, std::byte{0x21}, std::byte{0x21}};
+
+  REQUIRE(writer.add_bytes("Compressed/First.bin", bytes, libbsa::entry_compression_policy::compressed).has_value());
+  REQUIRE(writer.add_bytes("Compressed/Second.bin", bytes, libbsa::entry_compression_policy::compressed).has_value());
+  REQUIRE(writer.add_bytes("Compressed/RawTwin.bin", bytes, libbsa::entry_compression_policy::raw).has_value());
+  const auto output = output_path("dedupe-compressed-only.ba2");
+  REQUIRE(writer.write_to(output.string()).has_value());
+
+  auto opened = libbsa::archive_reader::open(output.string());
+  REQUIRE(opened.has_value());
+  auto first = opened.value().find("Compressed/First.bin");
+  auto second = opened.value().find("Compressed/Second.bin");
+  auto raw = opened.value().find("Compressed/RawTwin.bin");
+  REQUIRE(first.has_value());
+  REQUIRE(second.has_value());
+  REQUIRE(raw.has_value());
+  REQUIRE(first.value().has_value());
+  REQUIRE(second.value().has_value());
+  REQUIRE(raw.value().has_value());
+  CHECK(first.value()->compression == libbsa::entry_compression::lz4_block);
+  CHECK(second.value()->compression == libbsa::entry_compression::lz4_block);
+  CHECK(raw.value()->compression == libbsa::entry_compression::none);
+  CHECK(first.value()->payload_offset == second.value()->payload_offset);
+  CHECK(first.value()->payload_offset != raw.value()->payload_offset);
+  CHECK(opened.value().extract_bytes("Compressed/First.bin").value() == bytes);
+  CHECK(opened.value().extract_bytes("Compressed/Second.bin").value() == bytes);
+  CHECK(opened.value().extract_bytes("Compressed/RawTwin.bin").value() == bytes);
+}
