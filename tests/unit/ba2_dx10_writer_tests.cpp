@@ -44,6 +44,12 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
   return bytes;
 }
 
+std::string read_text_file(const std::filesystem::path& path) {
+  std::ifstream stream{path};
+  REQUIRE(stream.is_open());
+  return {std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{}};
+}
+
 std::filesystem::path writer_test_dir() {
   auto path = std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_writer_tests";
   std::filesystem::create_directories(path);
@@ -306,6 +312,21 @@ void require_structural_writer_round_trip() {
   std::filesystem::remove(output_path);
 }
 
+std::vector<libbsa::texture_chunk_metadata> texture_chunks_for(const libbsa::archive_reader& reader,
+                                                               std::string_view archive_path) {
+  auto found = reader.find(archive_path);
+  REQUIRE(found.has_value());
+  REQUIRE(found.value().has_value());
+  REQUIRE(found.value()->texture.has_value());
+  return found.value()->texture->chunks;
+}
+
+void add_duplicate_dds_pair(libbsa::ba2_dx10_writer& writer, const nlohmann::json& source_case) {
+  const auto source_path = (generated_source_dir() / source_case.at("file").get<std::string>()).string();
+  REQUIRE(writer.add_file("textures/dedupe/a.dds", source_path).has_value());
+  REQUIRE(writer.add_file("textures/dedupe/b.dds", source_path).has_value());
+}
+
 } // namespace
 
 TEST_CASE("BA2 DX10 writer DDS source manifest covers locked formats", "[unit][fixture][ba2_dx10_writer][dds]") {
@@ -490,4 +511,142 @@ TEST_CASE("ba2_dx10_writer reopens starfield method 0 deflate compression archiv
 TEST_CASE("ba2_dx10_writer preserves multi mip array and cubemap image payload bytes through extraction",
           "[unit][ba2_dx10_writer][starfield][structural]") {
   require_structural_writer_round_trip();
+}
+
+TEST_CASE("BA2 DX10 writer keeps duplicate DDS chunk offsets distinct when deduplicate_payloads = false",
+          "[unit][ba2_dx10_writer][dedupe]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  libbsa::ba2_dx10_writer_options options;
+  options.deduplicate_payloads = false;
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4, options};
+  add_duplicate_dds_pair(writer, source_case);
+
+  const auto output_path = unique_output_path("dx10-dedupe-disabled-distinct-offsets");
+  REQUIRE(writer.write_to(output_path.string()).has_value());
+
+  auto opened = libbsa::archive_reader::open(output_path.string());
+  REQUIRE(opened.has_value());
+  const auto first_chunks = texture_chunks_for(opened.value(), "textures/dedupe/a.dds");
+  const auto second_chunks = texture_chunks_for(opened.value(), "textures/dedupe/b.dds");
+  REQUIRE(first_chunks.size() == second_chunks.size());
+  for (std::size_t index = 0; index < first_chunks.size(); ++index) {
+    CHECK(first_chunks[index].payload_offset != second_chunks[index].payload_offset);
+    CHECK(first_chunks[index].compression == libbsa::entry_compression::deflate);
+    CHECK(second_chunks[index].compression == libbsa::entry_compression::deflate);
+  }
+  auto extracted_first = opened.value().extract_bytes("textures/dedupe/a.dds");
+  REQUIRE(extracted_first.has_value());
+  auto extracted_duplicate = opened.value().extract_bytes("textures/dedupe/b.dds");
+  REQUIRE(extracted_duplicate.has_value());
+  const auto source = libbsa::texture::analyze_dds_source(read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>()));
+  REQUIRE(source.has_value());
+  require_extracted_matches_source(extracted_first.value(), source.value());
+  require_extracted_matches_source(extracted_duplicate.value(), source.value());
+}
+
+TEST_CASE("BA2 DX10 writer shares duplicate DDS chunk offsets when deduplicate_payloads = true",
+          "[unit][ba2_dx10_writer][dedupe]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  libbsa::ba2_dx10_writer_options options;
+  options.deduplicate_payloads = true;
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4, options};
+  add_duplicate_dds_pair(writer, source_case);
+
+  const auto output_path = unique_output_path("dx10-dedupe-enabled-shared-offsets");
+  REQUIRE(writer.write_to(output_path.string()).has_value());
+
+  auto opened = libbsa::archive_reader::open(output_path.string());
+  REQUIRE(opened.has_value());
+  const auto first_chunks = texture_chunks_for(opened.value(), "textures/dedupe/a.dds");
+  const auto second_chunks = texture_chunks_for(opened.value(), "textures/dedupe/b.dds");
+  REQUIRE(first_chunks.size() == second_chunks.size());
+  for (std::size_t index = 0; index < first_chunks.size(); ++index) {
+    CHECK(first_chunks[index].payload_offset == second_chunks[index].payload_offset);
+    CHECK(first_chunks[index].raw_size == second_chunks[index].raw_size);
+    CHECK(first_chunks[index].stored_size == second_chunks[index].stored_size);
+    CHECK(first_chunks[index].compression == second_chunks[index].compression);
+  }
+  auto extracted_first = opened.value().extract_bytes("textures/dedupe/a.dds");
+  REQUIRE(extracted_first.has_value());
+  auto extracted_duplicate = opened.value().extract_bytes("textures/dedupe/b.dds");
+  REQUIRE(extracted_duplicate.has_value());
+  const auto source = libbsa::texture::analyze_dds_source(read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>()));
+  REQUIRE(source.has_value());
+  require_extracted_matches_source(extracted_first.value(), source.value());
+  require_extracted_matches_source(extracted_duplicate.value(), source.value());
+}
+
+TEST_CASE("BA2 DX10 writer refuses to overwrite existing output by default and preserves bytes",
+          "[unit][ba2_dx10_writer][publish][overwrite]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto output = writer_test_dir() / "dx10-overwrite-default.ba2";
+  const std::vector<std::byte> sentinel{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
+  write_binary_file(output, sentinel);
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+  REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(),
+                          (generated_source_dir() / source_case.at("file").get<std::string>()).string())
+              .has_value());
+
+  auto written = writer.write_to(output.string());
+
+  REQUIRE_FALSE(written.has_value());
+  CHECK(written.error().code == libbsa::error_code::io_error);
+  CHECK(read_binary_file(output) == sentinel);
+}
+
+TEST_CASE("BA2 DX10 writer preserves caller-owned temp-name sibling files during unique temp publish",
+          "[unit][ba2_dx10_writer][publish][temp]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto output = unique_output_path("dx10-safe-temp-collision");
+  const auto collision = output.string() + ".tmp";
+  const std::vector<std::byte> sentinel{std::byte{0x54}, std::byte{0x4D}, std::byte{0x50}};
+  write_binary_file(collision, sentinel);
+  libbsa::ba2_dx10_writer_options options;
+  options.overwrite_existing = true;
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4, options};
+  REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(),
+                          (generated_source_dir() / source_case.at("file").get<std::string>()).string())
+              .has_value());
+
+  auto written = writer.write_to(output.string());
+
+  REQUIRE(written.has_value());
+  REQUIRE(std::filesystem::exists(collision));
+  CHECK(read_binary_file(collision) == sentinel);
+}
+
+TEST_CASE("BA2 DX10 writer rejects non-regular overwrite targets without replacing them",
+          "[unit][ba2_dx10_writer][publish][overwrite]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto directory = writer_test_dir() / "dx10-non-regular-overwrite.ba2";
+  std::error_code fs_error;
+  std::filesystem::remove_all(directory, fs_error);
+  REQUIRE(std::filesystem::create_directory(directory));
+  libbsa::ba2_dx10_writer_options options;
+  options.overwrite_existing = true;
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4, options};
+  REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(),
+                          (generated_source_dir() / source_case.at("file").get<std::string>()).string())
+              .has_value());
+
+  auto written = writer.write_to(directory.string());
+
+  REQUIRE_FALSE(written.has_value());
+  CHECK(written.error().code == libbsa::error_code::io_error);
+  CHECK(std::filesystem::is_directory(directory));
+}
+
+TEST_CASE("BA2 DX10 writer safe publish implementation keeps backup rollback hooks",
+          "[unit][ba2_dx10_writer][publish][overwrite]") {
+  const auto source = read_text_file(std::filesystem::path{LIBBSA_SOURCE_DIR} / "src" / "formats" / "ba2" /
+                                     "ba2_dx10_writer.cpp");
+
+  CHECK(source.find("reserve_backup_path") != std::string::npos);
+  CHECK(source.find("backup") != std::string::npos);
+  CHECK(source.find("rollback") != std::string::npos);
 }
