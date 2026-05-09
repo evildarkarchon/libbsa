@@ -207,7 +207,7 @@ Plans:
 - [x] 06-04-PLAN.md — Implement BA2 DX10 open, metadata parsing, deterministic listing, and normalized lookup.
 
 **Wave 5** *(blocked on Wave 4 parser metadata and lookup)*
-- [ ] 06-05-PLAN.md — Implement BA2 DX10 DDS reconstruction and raw/deflate/raw-LZ4 chunk extraction.
+- [x] 06-05-PLAN.md — Implement BA2 DX10 DDS reconstruction and raw/deflate/raw-LZ4 chunk extraction.
 
 **Wave 6** *(blocked on Wave 5 extraction behavior)*
 - [ ] 06-06-PLAN.md — Close malformed DX10 hardening and final cross-format regression gates.

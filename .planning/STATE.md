@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 06 planned; decision coverage gate overridden after semantic checker pass and visible D-ID citations
-last_updated: "2026-05-09T02:05:57.173Z"
+stopped_at: Completed 06-05-PLAN.md
+last_updated: "2026-05-09T02:13:52.295Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 5
   total_plans: 33
-  completed_plans: 31
-  percent: 94
+  completed_plans: 32
+  percent: 97
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 06 (dds-boundary-and-ba2-dx10-read-reconstruction) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [█████████░] 94%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Progress: [█████████░] 94%
 | Phase 06 P02 | 3 min | 3 tasks | 6 files |
 | Phase 06 P03 | 3min | 3 tasks | 4 files |
 | Phase 06 P04 | 7min | 3 tasks | 9 files |
+| Phase 06 P05 | 4min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 06]: BA2 DX10 open/list/find/contains route through dedicated private parser/reader helpers while preserving archive_reader as the public facade. — Plan 06-04 uses subtype-specific private helpers while keeping archive_reader as the public API.
 - [Phase 06]: DX10 chunk metadata is validated and materialized in DDS output order using validate_and_order_chunks, with source_chunk_index preserving archive source mapping. — Plan 06-04 must prepare extraction to read validated source chunks instead of blindly concatenating archive order.
 - [Phase 06]: Phase 5 GNRL unsupported-DX10 expectations were retired because DX10 is now a supported BA2 subtype. — Keeping the old unsupported assertion would contradict the Phase 6 DX10 open support requirement.
+- [Phase 06]: BA2 DX10 extraction dispatches through private extract_ba2_dx10_payload and preserves archive_reader as the only public facade. — Plan 06-05 implemented header-first DX10 extraction without expanding public APIs.
+- [Phase 06]: DX10 extraction builds DDS bytes directly and leaves DirectXTex as a test/analyzer validation boundary, not a runtime extraction gate. — Preserves D-12 and public dependency boundaries while still validating reconstructed DDS bytes in tests.
 
 ### Pending Todos
 
@@ -156,6 +159,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T02:05:01.859Z
-Stopped at: Phase 06 planned; decision coverage gate overridden after semantic checker pass and visible D-ID citations
+Last session: 2026-05-09T02:13:21.958Z
+Stopped at: Completed 06-05-PLAN.md
 Resume file: None
