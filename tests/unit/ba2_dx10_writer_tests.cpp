@@ -420,13 +420,13 @@ TEST_CASE("ba2_dx10_writer::add_file accepts duplicate canonical archive paths f
   REQUIRE(second.has_value());
 }
 
-TEST_CASE("BA2 DX10 writer reopens FO4 deflate archives through archive_reader",
+TEST_CASE("ba2_dx10_writer reopens fo4 deflate compression archives through archive_reader",
           "[unit][ba2_dx10_writer][fo4][compression]") {
   // DX10 output is compressed-only by public contract; tests intentionally avoid raw per-entry overrides.
   require_writer_round_trip(libbsa::ba2_dx10_target::fallout4, 3U, "fo4-dx10-writer", libbsa::entry_compression::deflate);
 }
 
-TEST_CASE("BA2 DX10 writer reopens Starfield method 3 raw LZ4 archives through archive_reader",
+TEST_CASE("ba2_dx10_writer reopens starfield method 3 raw LZ4 compression archives through archive_reader",
           "[unit][ba2_dx10_writer][starfield][compression]") {
   libbsa::ba2_dx10_writer_options options;
   options.starfield_compression_method = 3U;
@@ -435,7 +435,7 @@ TEST_CASE("BA2 DX10 writer reopens Starfield method 3 raw LZ4 archives through a
                             "starfield-v3-dx10-writer", libbsa::entry_compression::lz4_block);
 }
 
-TEST_CASE("BA2 DX10 writer reopens Starfield method 0 deflate archives through archive_reader",
+TEST_CASE("ba2_dx10_writer reopens starfield method 0 deflate compression archives through archive_reader",
           "[unit][ba2_dx10_writer][starfield][compression]") {
   libbsa::ba2_dx10_writer_options options;
   options.starfield_compression_method = 0U;
