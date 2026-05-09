@@ -1,17 +1,23 @@
 #include "formats/ba2/ba2_gnrl_writer.hpp"
 
 #include <detail/archive_path.hpp>
+#include <detail/bethesda_hash.hpp>
+#include <detail/binary_io.hpp>
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <limits>
+#include <map>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 namespace libbsa {
 
@@ -115,6 +121,317 @@ namespace {
 
 constexpr std::uint32_t starfield_deflate_method = 0U;
 constexpr std::uint32_t starfield_lz4_block_method = 3U;
+// Serialize the BA2 `BTDX`/`GNRL` header and required `0xBAADF00D` record sentinel explicitly.
+constexpr std::uint32_t ba2_btdx_magic = 0x5844'5442U;
+constexpr std::uint32_t ba2_gnrl_magic = 0x4C52'4E47U;
+constexpr std::uint32_t ba2_record_sentinel = 0xBAAD'F00DU;
+constexpr std::size_t common_header_size = 24U;
+constexpr std::size_t starfield_v2_header_size = 32U;
+constexpr std::size_t starfield_v3_header_size = 36U;
+constexpr std::size_t gnrl_record_size = 36U;
+
+struct prepared_entry {
+  std::string archive_path_original;
+  std::string archive_path_canonical;
+  std::array<std::byte, 4> extension{};
+  std::uint32_t name_hash{};
+  std::uint32_t directory_hash{};
+  std::uint32_t record_flags{};
+  std::uint64_t payload_offset{};
+  std::uint32_t packed_size{};
+  std::uint32_t raw_size{};
+  bool owns_payload_bytes{true};
+  std::vector<std::byte> stored_payload;
+};
+
+struct payload_assignment {
+  std::uint64_t offset{};
+  std::uint32_t stored_size{};
+};
+
+bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept {
+  if (lhs > std::numeric_limits<std::uint64_t>::max() - rhs) {
+    return false;
+  }
+  total = lhs + rhs;
+  return true;
+}
+
+result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view description) {
+  if (value > std::numeric_limits<std::uint32_t>::max()) {
+    return error{error_code::format_error, std::string{description} + " exceeds UInt32 range"};
+  }
+  return static_cast<std::uint32_t>(value);
+}
+
+result<std::uint16_t> checked_u16(std::uint64_t value, std::string_view description) {
+  if (value > std::numeric_limits<std::uint16_t>::max()) {
+    return error{error_code::format_error, std::string{description} + " exceeds UInt16 range"};
+  }
+  return static_cast<std::uint16_t>(value);
+}
+
+std::uint32_t version_for(ba2_gnrl_target target) noexcept {
+  switch (target) {
+  case ba2_gnrl_target::fallout4:
+    return 1U;
+  case ba2_gnrl_target::starfield_v2:
+    return 2U;
+  case ba2_gnrl_target::starfield_v3:
+    return 3U;
+  }
+  return 0U;
+}
+
+std::size_t header_size_for(std::uint32_t version) noexcept {
+  if (version >= 3U) {
+    return starfield_v3_header_size;
+  }
+  if (version >= 2U) {
+    return starfield_v2_header_size;
+  }
+  return common_header_size;
+}
+
+std::pair<std::string_view, std::string_view> split_directory_file(std::string_view archive_path) noexcept {
+  const auto slash = archive_path.find_last_of('/');
+  if (slash == std::string_view::npos) {
+    return {{}, archive_path};
+  }
+  return {archive_path.substr(0, slash), archive_path.substr(slash + 1U)};
+}
+
+result<std::vector<std::byte>> read_source_bytes(const ba2_gnrl_writer_entry& entry) {
+  if (entry.from_memory) {
+    return entry.memory_bytes;
+  }
+
+  std::ifstream input{entry.host_path, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
+  }
+  std::vector<std::byte> bytes;
+  for (char ch = 0; input.get(ch);) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+  if (input.bad()) {
+    return error{error_code::io_error, "BA2 GNRL writer failed while reading disk source"};
+  }
+  return bytes;
+}
+
+bool archive_default_raw(archive_compression_policy policy) noexcept {
+  switch (policy) {
+  case archive_compression_policy::target_default:
+  case archive_compression_policy::all_raw:
+    return true;
+  case archive_compression_policy::all_compressed:
+    return false;
+  }
+  return true;
+}
+
+bool requested_entry_raw(bool archive_raw, entry_compression_policy policy) noexcept {
+  switch (policy) {
+  case entry_compression_policy::inherit:
+    return archive_raw;
+  case entry_compression_policy::raw:
+    return true;
+  case entry_compression_policy::compressed:
+    return false;
+  }
+  return archive_raw;
+}
+
+result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view archive_path);
+
+result<std::vector<prepared_entry>> prepare_entries(ba2_gnrl_target target,
+                                                    const ba2_gnrl_writer_options& options,
+                                                    std::span<const ba2_gnrl_writer_entry> entries) {
+  const bool archive_raw = archive_default_raw(options.compression);
+  std::vector<prepared_entry> prepared;
+  prepared.reserve(entries.size());
+
+  for (const auto& entry : entries) {
+    const bool entry_raw = requested_entry_raw(archive_raw, entry.options.compression);
+    if (!entry_raw) {
+      return error{error_code::unsupported, "BA2 GNRL compressed writer entries are implemented in the compression plan"};
+    }
+
+    auto payload = read_source_bytes(entry);
+    if (!payload) {
+      return payload.error();
+    }
+    auto raw_size = checked_u32(payload.value().size(), "BA2 GNRL raw payload size");
+    if (!raw_size) {
+      return raw_size.error();
+    }
+    auto extension = extension_fourcc_for(entry.archive_path_original);
+    if (!extension) {
+      return extension.error();
+    }
+
+    const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
+    if (file_name.empty()) {
+      return error{error_code::invalid_argument, "BA2 GNRL archive path must include a file name"};
+    }
+
+    prepared.push_back(prepared_entry{entry.archive_path_original,
+                                      entry.archive_path_canonical,
+                                      extension.value(),
+                                      detail::hash_fo4(file_name),
+                                      detail::hash_fo4(directory),
+                                      entry.options.record_flags.value_or(0U),
+                                      0U,
+                                      0U,
+                                      raw_size.value(),
+                                      true,
+                                      std::move(payload.value())});
+  }
+
+  // D-17 keeps Phase 8 deterministic with a canonical-path fallback because traced BA2 writer evidence does not
+  // prove a stricter hash sort requirement. Records and final filename-table entries stay paired by this order.
+  std::sort(prepared.begin(), prepared.end(), [](const prepared_entry& lhs, const prepared_entry& rhs) {
+    return lhs.archive_path_canonical < rhs.archive_path_canonical;
+  });
+  (void)target;
+  return prepared;
+}
+
+result<void> assign_payload_offsets(std::span<prepared_entry> entries,
+                                    std::uint32_t version,
+                                    bool deduplicate_payloads,
+                                    std::uint64_t& file_table_offset) {
+  std::uint64_t record_bytes = 0;
+  if (entries.size() > std::numeric_limits<std::uint64_t>::max() / gnrl_record_size) {
+    return error{error_code::format_error, "BA2 GNRL record table size overflows"};
+  }
+  record_bytes = static_cast<std::uint64_t>(entries.size()) * gnrl_record_size;
+
+  std::uint64_t cursor = 0;
+  if (!add_fits_u64(header_size_for(version), record_bytes, cursor)) {
+    return error{error_code::format_error, "BA2 GNRL metadata size overflows"};
+  }
+  const auto first_payload_offset = cursor;
+
+  std::map<std::vector<std::byte>, payload_assignment> deduplicated_payloads;
+  for (auto& entry : entries) {
+    if (deduplicate_payloads) {
+      const auto duplicate = deduplicated_payloads.find(entry.stored_payload);
+      if (duplicate != deduplicated_payloads.end()) {
+        entry.payload_offset = duplicate->second.offset;
+        entry.owns_payload_bytes = false;
+        continue;
+      }
+    }
+
+    // Empty BA2 GNRL entries do not own a physical payload span. Point them at the first payload byte so
+    // FileTableOffset remains after every real payload while readers validate the zero-length span safely.
+    entry.payload_offset = entry.stored_payload.empty() ? first_payload_offset : cursor;
+    entry.owns_payload_bytes = true;
+    auto stored_size = checked_u32(entry.stored_payload.size(), "BA2 GNRL stored payload size");
+    if (!stored_size) {
+      return stored_size.error();
+    }
+    if (deduplicate_payloads) {
+      deduplicated_payloads.emplace(entry.stored_payload, payload_assignment{entry.payload_offset, stored_size.value()});
+    }
+    if (!add_fits_u64(cursor, entry.stored_payload.size(), cursor)) {
+      return error{error_code::format_error, "BA2 GNRL payload span overflows"};
+    }
+  }
+
+  file_table_offset = cursor;
+  return {};
+}
+
+result<void> write_name(detail::binary_writer& writer, std::string_view name) {
+  auto length = checked_u16(name.size(), "BA2 GNRL filename-table entry length");
+  if (!length) {
+    return length.error();
+  }
+  auto written = writer.write_u16_le(length.value());
+  if (!written) {
+    return written.error();
+  }
+  for (const char ch : name) {
+    if (!(written = writer.write_u8(static_cast<std::uint8_t>(static_cast<unsigned char>(ch))))) {
+      return written.error();
+    }
+  }
+  return {};
+}
+
+result<void> write_archive_bytes(ba2_gnrl_target target,
+                                 const ba2_gnrl_writer_options& options,
+                                 std::span<const prepared_entry> entries,
+                                 std::uint32_t version,
+                                 std::uint64_t file_table_offset,
+                                 const std::filesystem::path& output_path) {
+  detail::binary_writer writer;
+  auto written = writer.write_u32_le(ba2_btdx_magic);
+  if (!(written = writer.write_u32_le(version)) || !(written = writer.write_u32_le(ba2_gnrl_magic))) {
+    return written.error();
+  }
+  auto file_count = checked_u32(entries.size(), "BA2 GNRL file count");
+  if (!file_count) {
+    return file_count.error();
+  }
+  if (!(written = writer.write_u32_le(file_count.value())) || !(written = writer.write_u64_le(file_table_offset))) {
+    return written.error();
+  }
+  if (version >= 2U) {
+    // xEdit/BSArchPro initializes Starfield writer Unknown1/Unknown2 to 1/0; options can override these raw
+    // compatibility fields while keeping them library-owned and version-gated in public metadata.
+    if (!(written = writer.write_u32_le(options.starfield_unknown1)) ||
+        !(written = writer.write_u32_le(options.starfield_unknown2))) {
+      return written.error();
+    }
+  }
+  if (version >= 3U) {
+    // Phase 8 treats v3 GNRL as a structurally supported profile. Method 3 remains the default raw-LZ4-block
+    // method for later compression support; raw entries still serialize with PackedSize == 0 in this plan.
+    if (!(written = writer.write_u32_le(options.starfield_compression_method))) {
+      return written.error();
+    }
+  }
+
+  for (const auto& entry : entries) {
+    if (!(written = writer.write_u32_le(entry.name_hash)) || !(written = writer.write_bytes(entry.extension)) ||
+        !(written = writer.write_u32_le(entry.directory_hash)) || !(written = writer.write_u32_le(entry.record_flags)) ||
+        !(written = writer.write_u64_le(entry.payload_offset)) || !(written = writer.write_u32_le(entry.packed_size)) ||
+        !(written = writer.write_u32_le(entry.raw_size)) || !(written = writer.write_u32_le(ba2_record_sentinel))) {
+      return written.error();
+    }
+  }
+
+  for (const auto& entry : entries) {
+    if (!entry.owns_payload_bytes) {
+      continue;
+    }
+    if (!(written = writer.write_bytes(entry.stored_payload))) {
+      return written.error();
+    }
+  }
+
+  for (const auto& entry : entries) {
+    if (!(written = write_name(writer, entry.archive_path_original))) {
+      return written.error();
+    }
+  }
+
+  (void)target;
+  std::ofstream output{output_path, std::ios::binary | std::ios::trunc};
+  if (!output) {
+    return error{error_code::io_error, "BA2 GNRL writer failed to create temporary output"};
+  }
+  const auto bytes = writer.bytes();
+  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  if (!output) {
+    return error{error_code::io_error, "BA2 GNRL writer failed while writing temporary output"};
+  }
+  return {};
+}
 
 result<void> validate_target_options(ba2_gnrl_target target, const ba2_gnrl_writer_options& options) {
   switch (target) {
@@ -184,21 +501,6 @@ result<void> validate_entries(std::span<const ba2_gnrl_writer_entry> entries) {
   return {};
 }
 
-result<void> write_marker_archive(const std::filesystem::path& output_path) {
-  // Plan 08-03 validates writer-owned state only; Plan 08-04 replaces this marker
-  // with reader-reopenable BA2 GNRL header, record, payload, and filename tables.
-  std::ofstream output{output_path, std::ios::binary | std::ios::trunc};
-  if (!output) {
-    return error{error_code::io_error, "BA2 GNRL writer failed to create temporary output"};
-  }
-  constexpr char marker[] = {'B', 'T', 'D', 'X'};
-  output.write(marker, sizeof(marker));
-  if (!output) {
-    return error{error_code::io_error, "BA2 GNRL writer failed while writing temporary output"};
-  }
-  return {};
-}
-
 } // namespace
 
 result<void> write_ba2_gnrl_archive(ba2_gnrl_target target,
@@ -224,12 +526,24 @@ result<void> write_ba2_gnrl_archive(ba2_gnrl_target target,
     return validated.error();
   }
 
+  const auto version = version_for(target);
+  auto prepared = prepare_entries(target, options, entries);
+  if (!prepared) {
+    return prepared.error();
+  }
+
+  std::uint64_t file_table_offset = 0;
+  auto offsets = assign_payload_offsets(prepared.value(), version, options.deduplicate_payloads, file_table_offset);
+  if (!offsets) {
+    return offsets.error();
+  }
+
   auto temp_path = output_path;
   temp_path += ".tmp";
   std::error_code fs_error;
   std::filesystem::remove(temp_path, fs_error);
 
-  auto written = write_marker_archive(temp_path);
+  auto written = write_archive_bytes(target, options, prepared.value(), version, file_table_offset, temp_path);
   if (!written) {
     std::filesystem::remove(temp_path, fs_error);
     return written.error();
