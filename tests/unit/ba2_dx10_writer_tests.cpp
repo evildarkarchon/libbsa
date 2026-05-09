@@ -246,3 +246,17 @@ TEST_CASE("ba2_dx10_writer::add_file snapshots DDS bytes before later source fil
   std::filesystem::remove(scratch_path);
   SUCCEED("snapshot add succeeded before the source DDS was overwritten and deleted");
 }
+
+TEST_CASE("ba2_dx10_writer::add_file accepts duplicate canonical archive paths for write-time validation",
+          "[unit][ba2_dx10_writer][add]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto source_path = (generated_source_dir() / source_case.at("file").get<std::string>()).string();
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  auto first = writer.add_file("Textures/Duplicate.dds", source_path);
+  auto second = writer.add_file("textures/duplicate.dds", source_path);
+
+  REQUIRE(first.has_value());
+  REQUIRE(second.has_value());
+}

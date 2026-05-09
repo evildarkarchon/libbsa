@@ -90,6 +90,7 @@ result<void> ba2_dx10_writer::add_file(std::string_view archive_path, std::strin
     return entry.error();
   }
 
+  // D-03 requires add-time ownership so later source file changes or deletion cannot affect output.
   state_->entries.push_back(std::move(entry.value()));
   return {};
 }
