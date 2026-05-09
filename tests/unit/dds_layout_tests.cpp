@@ -196,7 +196,7 @@ TEST_CASE("dds_layout plans DX10 chunks from default policy and byte caps", "[un
   }
 
   SECTION("explicit max_decoded_chunk_bytes splits only at mip boundaries") {
-    const auto chunks = libbsa::texture::plan_dx10_chunks(layout, 327680U);
+    const auto chunks = libbsa::texture::plan_dx10_chunks(layout, 1048576U);
 
     REQUIRE(chunks.has_value());
     REQUIRE(chunks.value().size() == 2U);

@@ -3,6 +3,7 @@
 #include <detail/binary_io.hpp>
 
 #include <algorithm>
+#include <array>
 #include <limits>
 #include <string>
 
@@ -51,64 +52,117 @@ bool checked_mul(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noe
   return true;
 }
 
+struct dxgi_format_descriptor {
+  std::uint32_t format;
+  std::uint32_t block_width;
+  std::uint32_t block_height;
+  std::uint32_t bytes_per_block;
+};
+
+constexpr std::array locked_formats{
+    dxgi_format_descriptor{28U, 1U, 1U, 4U},  // DXGI_FORMAT_R8G8B8A8_UNORM.
+    dxgi_format_descriptor{29U, 1U, 1U, 4U},  // DXGI_FORMAT_R8G8B8A8_UNORM_SRGB.
+    dxgi_format_descriptor{31U, 1U, 1U, 4U},  // DXGI_FORMAT_R8G8B8A8_SNORM.
+    dxgi_format_descriptor{61U, 1U, 1U, 1U},  // DXGI_FORMAT_R8_UNORM.
+    dxgi_format_descriptor{71U, 4U, 4U, 8U},  // DXGI_FORMAT_BC1_UNORM.
+    dxgi_format_descriptor{72U, 4U, 4U, 8U},  // DXGI_FORMAT_BC1_UNORM_SRGB.
+    dxgi_format_descriptor{77U, 4U, 4U, 16U}, // DXGI_FORMAT_BC3_UNORM.
+    dxgi_format_descriptor{80U, 4U, 4U, 8U},  // DXGI_FORMAT_BC4_UNORM.
+    dxgi_format_descriptor{83U, 4U, 4U, 16U}, // DXGI_FORMAT_BC5_UNORM.
+    dxgi_format_descriptor{84U, 4U, 4U, 16U}, // DXGI_FORMAT_BC5_SNORM.
+    dxgi_format_descriptor{95U, 4U, 4U, 16U}, // DXGI_FORMAT_BC6H_UF16.
+    dxgi_format_descriptor{98U, 4U, 4U, 16U}, // DXGI_FORMAT_BC7_UNORM.
+    dxgi_format_descriptor{87U, 1U, 1U, 4U},  // DXGI_FORMAT_B8G8R8A8_UNORM.
+};
+
+const dxgi_format_descriptor* find_descriptor(std::uint32_t format) noexcept {
+  const auto found = std::find_if(locked_formats.begin(), locked_formats.end(), [format](const auto& descriptor) {
+    return descriptor.format == format;
+  });
+  return found == locked_formats.end() ? nullptr : &*found;
+}
+
 std::uint32_t mip_dimension(std::uint32_t dimension, std::uint32_t mip) noexcept {
   const auto shifted = mip >= 31U ? 0U : dimension >> mip;
   return std::max(1U, shifted);
 }
 
-result<std::uint64_t> rgba8_mip_size(std::uint32_t width, std::uint32_t height) {
-  std::uint64_t pixels = 0;
-  if (!checked_mul(width, height, pixels)) {
-    return format_error("DDS layout dimensions overflow pixel count");
-  }
-  std::uint64_t bytes = 0;
-  if (!checked_mul(pixels, 4U, bytes)) {
-    return format_error("DDS layout RGBA8 mip size overflows");
-  }
-  return bytes;
-}
-
-result<std::uint64_t> bc1_mip_size(std::uint32_t width, std::uint32_t height) {
-  const std::uint64_t blocks_wide = std::max<std::uint32_t>(1U, (width + 3U) / 4U);
-  const std::uint64_t blocks_high = std::max<std::uint32_t>(1U, (height + 3U) / 4U);
+result<std::uint64_t> described_mip_size(const dxgi_format_descriptor& descriptor, std::uint32_t width,
+                                         std::uint32_t height) {
+  // DirectX block-compressed DDS formats still allocate at least one 4x4 block for tiny mips.
+  const std::uint64_t blocks_wide =
+      descriptor.block_width == 1U ? width : std::max<std::uint32_t>(1U, (width + 3U) / 4U);
+  const std::uint64_t blocks_high =
+      descriptor.block_height == 1U ? height : std::max<std::uint32_t>(1U, (height + 3U) / 4U);
   std::uint64_t blocks = 0;
   if (!checked_mul(blocks_wide, blocks_high, blocks)) {
-    return format_error("DDS layout BC1 block count overflows");
+    return format_error("DDS layout mip block count overflows");
   }
   std::uint64_t bytes = 0;
-  if (!checked_mul(blocks, 8U, bytes)) {
-    return format_error("DDS layout BC1 mip size overflows");
+  if (!checked_mul(blocks, descriptor.bytes_per_block, bytes)) {
+    return format_error("DDS layout mip size overflows");
   }
   return bytes;
 }
 
-result<std::uint64_t> mip_size_for_format(const dds_texture_layout& layout, std::uint32_t mip) {
-  const auto width = mip_dimension(layout.width, mip);
-  const auto height = mip_dimension(layout.height, mip);
-  switch (layout.dxgi_format) {
-  case 28U: // DXGI_FORMAT_R8G8B8A8_UNORM; emitted by generated Phase 6 fixtures.
-    return rgba8_mip_size(width, height);
-  case 71U: // DXGI_FORMAT_BC1_UNORM; used by layout tests to lock block-compressed sizing.
-  case 72U:
-    return bc1_mip_size(width, height);
-  default:
-    return format_error("DDS layout has unsupported DXGI fixture format");
-  }
-}
+struct planned_mip_range {
+  std::uint32_t start_mip;
+  std::uint32_t end_mip;
+  std::uint64_t raw_size;
+};
 
-result<std::uint64_t> mip_range_size(const dds_texture_layout& layout, std::uint32_t start_mip,
-                                     std::uint32_t end_mip) {
-  std::uint64_t total = 0;
-  for (std::uint32_t mip = start_mip; mip <= end_mip; ++mip) {
-    auto size = mip_size_for_format(layout, mip);
+result<std::vector<planned_mip_range>> default_mip_ranges(const dds_texture_layout& layout) {
+  std::vector<planned_mip_range> ranges;
+  std::uint32_t mip = 0;
+
+  // Reference-derived BA2 DX10 chunking emits a few large mips individually, then groups the tail.
+  while (mip + 1U < layout.mip_count && ranges.size() < 3U && mip_dimension(layout.width, mip) >= 512U &&
+         mip_dimension(layout.height, mip) >= 512U) {
+    auto size = mip_range_size(layout, mip, mip);
     if (!size) {
       return size.error();
     }
-    if (!checked_add(total, size.value(), total)) {
-      return format_error("DDS layout mip range size overflows");
-    }
+    ranges.push_back(planned_mip_range{mip, mip, size.value()});
+    ++mip;
   }
-  return total;
+
+  auto tail_size = mip_range_size(layout, mip, layout.mip_count - 1U);
+  if (!tail_size) {
+    return tail_size.error();
+  }
+  ranges.push_back(planned_mip_range{mip, layout.mip_count - 1U, tail_size.value()});
+  return ranges;
+}
+
+result<std::vector<planned_mip_range>> capped_mip_ranges(const dds_texture_layout& layout,
+                                                         std::uint32_t max_decoded_chunk_bytes) {
+  std::vector<planned_mip_range> ranges;
+  std::uint32_t start_mip = 0;
+  std::uint64_t current_size = 0;
+
+  for (std::uint32_t mip = 0; mip < layout.mip_count; ++mip) {
+    auto mip_size = mip_size_for_format(layout, mip);
+    if (!mip_size) {
+      return mip_size.error();
+    }
+    if (mip_size.value() > max_decoded_chunk_bytes) {
+      return format_error("DDS layout max_decoded_chunk_bytes cannot fit one mip");
+    }
+    std::uint64_t next_size = 0;
+    if (!checked_add(current_size, mip_size.value(), next_size)) {
+      return format_error("DDS layout capped chunk size overflows");
+    }
+    if (current_size != 0U && next_size > max_decoded_chunk_bytes) {
+      ranges.push_back(planned_mip_range{start_mip, mip - 1U, current_size});
+      start_mip = mip;
+      current_size = mip_size.value();
+      continue;
+    }
+    current_size = next_size;
+  }
+
+  ranges.push_back(planned_mip_range{start_mip, layout.mip_count - 1U, current_size});
+  return ranges;
 }
 
 result<void> write_u32(detail::binary_writer& writer, std::uint32_t value) {
@@ -130,6 +184,35 @@ result<void> write_zeroes(detail::binary_writer& writer, std::size_t count) {
 }
 
 } // namespace
+
+result<std::uint64_t> mip_size_for_format(const dds_texture_layout& layout, std::uint32_t mip) {
+  if (mip >= layout.mip_count) {
+    return format_error("DDS layout mip index is out of range");
+  }
+  const auto* descriptor = find_descriptor(layout.dxgi_format);
+  if (descriptor == nullptr) {
+    return format_error("DDS layout has unsupported DXGI format");
+  }
+  return described_mip_size(*descriptor, mip_dimension(layout.width, mip), mip_dimension(layout.height, mip));
+}
+
+result<std::uint64_t> mip_range_size(const dds_texture_layout& layout, std::uint32_t start_mip,
+                                     std::uint32_t end_mip) {
+  if (start_mip > end_mip || end_mip >= layout.mip_count) {
+    return format_error("DDS layout mip range is invalid");
+  }
+  std::uint64_t total = 0;
+  for (std::uint32_t mip = start_mip; mip <= end_mip; ++mip) {
+    auto size = mip_size_for_format(layout, mip);
+    if (!size) {
+      return size.error();
+    }
+    if (!checked_add(total, size.value(), total)) {
+      return format_error("DDS layout mip range size overflows");
+    }
+  }
+  return total;
+}
 
 result<std::vector<std::byte>> build_dds_dxt10_header(const dds_texture_layout& layout) {
   if (!validate_layout_shape(layout)) {
@@ -184,6 +267,29 @@ result<std::vector<std::byte>> build_dds_dxt10_header(const dds_texture_layout& 
 
   const auto bytes = writer.bytes();
   return std::vector<std::byte>{bytes.begin(), bytes.end()};
+}
+
+result<std::vector<planned_texture_chunk>> plan_dx10_chunks(const dds_texture_layout& layout,
+                                                            std::uint32_t max_decoded_chunk_bytes) {
+  if (!validate_layout_shape(layout)) {
+    return format_error("DDS layout has zero dimensions, mip count, or array size");
+  }
+  auto ranges = max_decoded_chunk_bytes == 0U ? default_mip_ranges(layout) : capped_mip_ranges(layout, max_decoded_chunk_bytes);
+  if (!ranges) {
+    return ranges.error();
+  }
+
+  const std::uint32_t faces_per_array = layout.is_cubemap ? 6U : 1U;
+  std::vector<planned_texture_chunk> chunks;
+  chunks.reserve(static_cast<std::size_t>(layout.array_size) * faces_per_array * ranges.value().size());
+  for (std::uint32_t array_index = 0; array_index < layout.array_size; ++array_index) {
+    for (std::uint32_t face_index = 0; face_index < faces_per_array; ++face_index) {
+      for (const auto& range : ranges.value()) {
+        chunks.push_back(planned_texture_chunk{array_index, face_index, range.start_mip, range.end_mip, range.raw_size});
+      }
+    }
+  }
+  return chunks;
 }
 
 result<std::vector<logical_texture_segment>> validate_and_order_chunks(const dds_texture_layout& layout,
