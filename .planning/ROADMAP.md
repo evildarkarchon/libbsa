@@ -263,7 +263,7 @@ Plans:
 
 **Wave 1**
 - [x] 08-01-PLAN.md — Define the dependency-light public BA2 GNRL writer contract and boundary tests.
-- [ ] 08-02-PLAN.md — Update BA2 GNRL reader parsing to accept end-of-archive filename tables.
+- [x] 08-02-PLAN.md — Update BA2 GNRL reader parsing to accept end-of-archive filename tables.
 
 **Wave 2** *(blocked on Wave 1 public writer contract)*
 - [ ] 08-03-PLAN.md — Implement writer-owned entry state, validation, source ownership, and build wiring.

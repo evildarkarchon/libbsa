@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-05-09T07:57:33.372Z"
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-05-09T08:02:35.675Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 7
   total_plans: 47
-  completed_plans: 42
-  percent: 89
+  completed_plans: 43
+  percent: 91
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 08 (ba2-gnrl-write-new-support) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -88,6 +88,7 @@ Progress: [█████████░] 89%
 | Phase 07 P05 | 5min | 2 tasks | 2 files |
 | Phase 07 P06 | 5min | 2 tasks | 2 files |
 | Phase 08 P01 | 3min | 2 tasks | 2 files |
+| Phase 08 P02 | 3 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -171,6 +172,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 08]: Expose BA2 GNRL write-new as a dedicated dependency-light writer object with named Fallout 4 and Starfield target profiles. — Plan 08-01 establishes the public contract before private serialization implementation.
 - [Phase 08]: Keep Plan 08-01 BA2 GNRL writer methods declaration-only. — Later Phase 8 plans can add writer-owned state and serialization without changing the public API.
 - [Phase 08]: BA2 GNRL public options default Starfield Unknown1=1, Unknown2=0, and CompressionMethod=3 while allowing caller overrides. — Preserves reference-derived defaults without exposing private codec types.
+- [Phase 08]: BA2 GNRL host-file open parses exactly file_count length-prefixed names from FileTableOffset. — This supports writer-required end-of-archive filename tables without allocating payload bytes during open.
+- [Phase 08]: BA2 GNRL filename-table validation rejects actual table/payload span intersections instead of enforcing table-before-payload ordering. — This preserves existing fixtures while allowing payload-before-name-table writer output.
 
 ### Pending Todos
 
@@ -192,6 +195,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T07:57:04.147Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-05-09T08:02:35.668Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
