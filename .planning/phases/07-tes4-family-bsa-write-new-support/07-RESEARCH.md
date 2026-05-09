@@ -370,17 +370,16 @@ REQUIRE(bytes.value() == expected_source_bytes);
 
 All claims in this research were verified or cited — no user confirmation needed.
 
-## Open Questions
+## Open Questions — RESOLVED
 
-1. **Exact public type/function names**
+1. **Exact public type/function names — RESOLVED**
    - What we know: Writer object shape and semantics are locked, but exact names are discretionary. [VERIFIED: `07-CONTEXT.md`]
-   - What's unclear: Whether to place writer declarations in `archive.hpp` or a new `writer.hpp`. [VERIFIED: `07-CONTEXT.md`; `CMakeLists.txt`]
-   - Recommendation: Use a new `include/libbsa/writer.hpp` if the public surface exceeds a few enums and methods, then include it from `libbsa.hpp`. [VERIFIED: `include/libbsa/libbsa.hpp`; `CMakeLists.txt`]
+   - Resolution: Place the writer declarations in new public header `include/libbsa/writer.hpp` and include that header from `include/libbsa/libbsa.hpp`. [RESOLVED: selected by planner discretion; VERIFIED: `include/libbsa/libbsa.hpp`; `CMakeLists.txt`; `07-01-PLAN.md`]
+   - Selected public names: `tes4_bsa_target`, `archive_compression_policy`, `entry_compression_policy`, `tes4_bsa_writer_options`, and `tes4_bsa_writer`. [RESOLVED: selected by planner discretion; VERIFIED: `07-01-PLAN.md`]
 
-2. **Archive-wide default policy names**
+2. **Archive-wide default policy names — RESOLVED**
    - What we know: Target defaults plus all-raw/all-compressed named options are allowed if needed. [VERIFIED: `07-CONTEXT.md`]
-   - What's unclear: Exact enum spelling. [VERIFIED: `07-CONTEXT.md`]
-   - Recommendation: Use libbsa-owned names like `archive_compression_policy::{target_default, all_raw, all_compressed}` and `entry_compression_policy::{inherit, raw, compressed}`. [VERIFIED: `07-CONTEXT.md`]
+   - Resolution: Use `archive_compression_policy::{target_default, all_raw, all_compressed}` and `entry_compression_policy::{inherit, raw, compressed}`. [RESOLVED: selected by planner discretion; VERIFIED: `07-CONTEXT.md`; `07-01-PLAN.md`]
 
 ## Environment Availability
 

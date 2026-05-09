@@ -226,7 +226,27 @@ Plans:
   3. Consumer can choose archive defaults or per-file compression overrides while the writer avoids known embedded-name compatibility hazards.
   4. Consumer can optionally deduplicate identical payloads by content hash.
   5. Maintainer can pack, reopen, extract, and byte-compare TES4-family BSA writer output against source files.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 07-01-PLAN.md — Define the dependency-light public TES4-family BSA writer contract and boundary tests.
+
+**Wave 2** *(blocked on Wave 1 public writer contract)*
+- [ ] 07-02-PLAN.md — Implement writer-owned entry state, path validation, duplicate detection, and overwrite/source guards.
+
+**Wave 3** *(blocked on Wave 2 validation foundation)*
+- [ ] 07-03-PLAN.md — Serialize raw v103/v104/v105 TES4-family BSA archives with hash-sorted tables and derived flags.
+
+**Wave 4** *(blocked on Wave 3 raw serialization)*
+- [ ] 07-04-PLAN.md — Add target-routed deflate/LZ4-frame compression defaults and per-entry overrides.
+
+**Wave 5** *(blocked on Wave 4 stored payload encoding)*
+- [ ] 07-05-PLAN.md — Add explicit target-compatible embedded-name prefix emission and round-trip proof.
+
+**Wave 6** *(blocked on Wave 5 final stored payload shape)*
+- [ ] 07-06-PLAN.md — Add opt-in final-stored-byte deduplication and full Phase 7 regression gates.
 
 ### Phase 8: BA2 GNRL Write-New Support
 **Goal**: Consumers can create Fallout 4 and Starfield BA2 GNRL archives with explicit target profile, version fields, filename tables, and compression policy.
