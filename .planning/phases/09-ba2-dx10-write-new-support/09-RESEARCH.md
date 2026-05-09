@@ -351,16 +351,18 @@ struct dxgi_format_descriptor {
 
 **If this table is empty:** All claims in this research were verified or cited — no user confirmation needed.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `max_decoded_chunk_bytes = 0` mean reference-derived default, and nonzero mean byte cap?**
    - What we know: User locked one archive-wide max decoded chunk-byte control and requested reference-derived defaults. [VERIFIED: `.planning/phases/09-ba2-dx10-write-new-support/09-CONTEXT.md`]
    - What's unclear: The exact public sentinel/default name is discretionary. [VERIFIED: `.planning/phases/09-ba2-dx10-write-new-support/09-CONTEXT.md`]
    - Recommendation: Use `std::optional<std::uint32_t> max_decoded_chunk_bytes` or `0 means default`, document the sentinel, and test both default and forced-split behavior. [VERIFIED: `include/libbsa/writer.hpp` existing options style; `.planning/phases/09-ba2-dx10-write-new-support/09-CONTEXT.md`]
+   - **RESOLVED:** Use `std::uint32_t max_decoded_chunk_bytes = 0` in `ba2_dx10_writer_options`; `0` means the reference-derived default chunking policy and nonzero values enforce the archive-wide decoded-byte cap where representable. This follows the existing public options style in `writer.hpp`, satisfies D-12/D-14, avoids adding a second optional state, and must be documented/tested in the public API and writer tests.
 2. **How should array textures encode `cube_maps_raw` when not cubemaps?**
    - What we know: Existing parser infers array size by counting chunks with `start_mip == 0` unless `cube_maps_raw == 2049`; TES5Edit uses `$800` for ordinary textures and `$801` for cubemaps. [VERIFIED: `src/formats/ba2/ba2_dx10_parser.cpp`; `TES5Edit/Core/wbBSArchive.pas`]
    - What's unclear: Whether Bethesda has a separate array raw field convention beyond current parser inference. [VERIFIED: `src/formats/ba2/ba2_dx10_parser.cpp`; `TES5Edit/Core/wbBSArchive.pas`]
    - Recommendation: Preserve current reader contract: write `$800` for non-cubemaps, `$801` (`2049`) for cubemaps, and rely on repeated `start_mip==0` chunks for array-size inference unless fixture evidence proves another rule. [VERIFIED: `src/formats/ba2/ba2_dx10_parser.cpp`; `TES5Edit/Core/wbBSArchive.pas`]
+   - **RESOLVED:** Write `cube_maps_raw = 2048` (`$800`) for all non-cubemap textures, including arrays, and `cube_maps_raw = 2049` (`$801`) for cubemaps. Array size remains represented by the uniform repeated chunk pattern with `start_mip == 0` per slice/face, matching the existing reader contract and D-10/D-15 without exposing raw public overrides.
 
 ## Environment Availability
 
