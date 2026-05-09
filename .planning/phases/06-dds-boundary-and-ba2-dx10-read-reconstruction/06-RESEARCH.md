@@ -355,22 +355,25 @@ constexpr std::uint32_t d3d_resource_misc_texturecube = 0x4U;
 | A1 | Treat any BA2 DX10 `chunk_header_size` other than 24 as `format_error` for Phase 6. | Common Pitfalls | A real supported archive with a different chunk header size would be rejected; planner should mark this as fixture-scoped unless reference evidence confirms. |
 | A2 | Public `array_size` should mean caller-facing texture array elements, with cubemap state separately expressed by `is_cubemap`. | Architecture Patterns | Tests may need adjustment if user expects DirectXTex-style array size (6 for one cubemap) rather than cube count. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact semantics of BA2 DX10 `UnknownTex` and `CubeMaps` beyond `2049`**
-   - What we know: TES5Edit names `UnknownTex` as a byte and treats `CubeMaps == 2049` as cubemap; independent references call the 16-bit field unknown and note `0x0800`/cubemap behavior. [VERIFIED: TES5Edit/Core/wbBSArchive.pas] [CITED: https://miere.ru/posts/ba2-archive-format/]
-   - What's unclear: Whether `CubeMaps` encodes cube count, flags, arrays, or additional Bethesda-specific state beyond simple generated fixtures. [ASSUMED]
-   - Recommendation: Preserve raw fields publicly, implement only manifest-backed `is_cubemap`/`array_size` semantics needed for DDS-03/DDS-07, and record compatibility comments near the parser. [VERIFIED: 06-CONTEXT.md D-07]
+    - What we know: TES5Edit names `UnknownTex` as a byte and treats `CubeMaps == 2049` as cubemap; independent references call the 16-bit field unknown and note `0x0800`/cubemap behavior. [VERIFIED: TES5Edit/Core/wbBSArchive.pas] [CITED: https://miere.ru/posts/ba2-archive-format/]
+    - What's unclear: Whether `CubeMaps` encodes cube count, flags, arrays, or additional Bethesda-specific state beyond simple generated fixtures. [ASSUMED]
+    - Resolution: RESOLVED by accepted Phase 6 assumption. Preserve `unknown_tex` and `cube_maps_raw` in public libbsa-owned metadata per D-07, derive `is_cubemap` only from the fixture-backed `CubeMaps == 2049` policy needed for DDS-07, and keep `array_size` manifest-backed for generated array fixtures. Broader Bethesda-specific interpretation remains out of scope for Phase 6 and must not block implementation.
+    - Recommendation: Preserve raw fields publicly, implement only manifest-backed `is_cubemap`/`array_size` semantics needed for DDS-03/DDS-07, and record compatibility comments near the parser. [VERIFIED: 06-CONTEXT.md D-07]
 
 2. **DDS payload byte size computation for all DXGI formats**
-   - What we know: Microsoft documents pitch formulas and DirectXTex can validate reconstructed outputs. [CITED: https://learn.microsoft.com/windows/win32/direct3ddds/dx-graphics-dds-pguide]
-   - What's unclear: Phase 6 generated fixtures can use a compact subset of formats, but broader game archives may include DXGI formats that need exact byte-size helpers. [ASSUMED]
-   - Recommendation: Implement a small internal DXGI format size table for fixture-backed formats first, fail closed for unknown unsupported formats in Phase 6, and defer broader compatibility warnings to Phase 11. [VERIFIED: 06-SPEC.md]
+    - What we know: Microsoft documents pitch formulas and DirectXTex can validate reconstructed outputs. [CITED: https://learn.microsoft.com/windows/win32/direct3ddds/dx-graphics-dds-pguide]
+    - What's unclear: Phase 6 generated fixtures can use a compact subset of formats, but broader game archives may include DXGI formats that need exact byte-size helpers. [ASSUMED]
+    - Resolution: RESOLVED by accepted Phase 6 scope assumption. Implement exact byte-size helpers only for the DXGI formats emitted by `generate_ba2_dx10_fixtures.cpp`; unsupported formats fail closed with `error_code::format_error` during layout validation. Broad real-game format expansion and compatibility warnings are deferred to the validation/hardening phase identified by SPEC boundaries.
+    - Recommendation: Implement a small internal DXGI format size table for fixture-backed formats first, fail closed for unknown unsupported formats in Phase 6, and defer broader compatibility warnings to Phase 11. [VERIFIED: 06-SPEC.md]
 
 3. **DirectXTex CMake target spelling on this vcpkg baseline**
-   - What we know: `directxtex` is in `vcpkg.json`, but `CMakeLists.txt` does not yet call `find_package` for it. [VERIFIED: vcpkg.json] [VERIFIED: CMakeLists.txt]
-   - What's unclear: The exact imported target name should be verified during Wave 0 configure because vcpkg usage files are not present in the repo. [ASSUMED]
-   - Recommendation: Planner should include a Wave 0 CMake probe; likely pattern is `find_package(directxtex CONFIG REQUIRED)` with a private DirectXTex target discovered from the vcpkg usage file. [ASSUMED]
+    - What we know: `directxtex` is in `vcpkg.json`, but `CMakeLists.txt` does not yet call `find_package` for it. [VERIFIED: vcpkg.json] [VERIFIED: CMakeLists.txt]
+    - What's unclear: The exact imported target name should be verified during Wave 0 configure because vcpkg usage files are not present in the repo. [ASSUMED]
+    - Resolution: RESOLVED by implementation-time probe requirement. Plan 06-02 must verify the imported target while adding private linkage; the accepted assumption is `find_package(directxtex CONFIG REQUIRED)` plus the vcpkg-provided DirectXTex target selected by CMake configure output. If target spelling differs, the executor updates only the private link line and records the discovered target in the plan summary.
+    - Recommendation: Planner should include a Wave 0 CMake probe; likely pattern is `find_package(directxtex CONFIG REQUIRED)` with a private DirectXTex target discovered from the vcpkg usage file. [ASSUMED]
 
 ## Environment Availability
 

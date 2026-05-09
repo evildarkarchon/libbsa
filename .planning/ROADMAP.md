@@ -190,7 +190,27 @@ Plans:
   2. Consumer can extract BA2 DDS entries as valid DDS files with reconstructed headers and correct face/mip ordering for cubemaps.
   3. Consumer can extract BA2 DDS chunks compressed with deflate or raw LZ4 block according to archive version and chunk metadata.
   4. Maintainer can validate reconstructed DDS outputs through DirectXTex metadata loading without exposing DirectXTex types in public headers.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 06-01-PLAN.md — Create generated BA2 DX10 fixtures, rich manifests, and CTest scaffolding for all DDS requirements.
+
+**Wave 2** *(blocked on Wave 1 fixture/test scaffolding)*
+- [ ] 06-02-PLAN.md — Add dependency-light public texture metadata and the private DirectXTex analyzer boundary.
+
+**Wave 3** *(blocked on Wave 2 metadata contract and Wave 1 fixture/test scaffolding)*
+- [ ] 06-03-PLAN.md — Add internal DDS DXT10 header construction and mip/array/cubemap layout validation.
+
+**Wave 4** *(blocked on Wave 3 DDS layout validation and Wave 2 metadata contract)*
+- [ ] 06-04-PLAN.md — Implement BA2 DX10 open, metadata parsing, deterministic listing, and normalized lookup.
+
+**Wave 5** *(blocked on Wave 4 parser metadata and lookup)*
+- [ ] 06-05-PLAN.md — Implement BA2 DX10 DDS reconstruction and raw/deflate/raw-LZ4 chunk extraction.
+
+**Wave 6** *(blocked on Wave 5 extraction behavior)*
+- [ ] 06-06-PLAN.md — Close malformed DX10 hardening and final cross-format regression gates.
 
 ### Phase 7: TES4-Family BSA Write-New Support
 **Goal**: Consumers can create new TES4/Oblivion, FO3/FNV/Skyrim LE, and Skyrim SE/AE BSA archives from files or memory and prove them by reopening and extracting.
