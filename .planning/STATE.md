@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 8 context gathered
-last_updated: "2026-05-09T07:48:25.373Z"
-last_activity: 2026-05-09 -- Phase 08 planning complete
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-05-09T07:57:33.372Z"
+last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 7
   total_plans: 47
-  completed_plans: 41
-  percent: 87
+  completed_plans: 42
+  percent: 89
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
+Phase: 08 (ba2-gnrl-write-new-support) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-05-09 -- Phase 08 planning complete
+Last activity: 2026-05-09
 
-Progress: [██████████] 100%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -87,6 +87,7 @@ Progress: [██████████] 100%
 | Phase 07 P04 | 3min | 2 tasks | 2 files |
 | Phase 07 P05 | 5min | 2 tasks | 2 files |
 | Phase 07 P06 | 5min | 2 tasks | 2 files |
+| Phase 08 P01 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -167,6 +168,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 07]: Embedded names remain off by default and are emitted only through the global embed_file_names writer option for non-v103 targets. — Plan 07-05 implements D-18 while preserving v103 compatibility and reader-backed extraction semantics.
 - [Phase 07]: TES4-family writer deduplication remains opt-in through tes4_bsa_writer_options::deduplicate_payloads and is disabled by default. — Plan 07-06 implements D-19 and keeps default output non-deduplicated unless callers explicitly enable stored-byte dedupe.
 - [Phase 07]: Dedupe eligibility is based on byte-identical final stored payload vectors, not source bytes. — Compression-policy and embedded-name prefix differences must keep distinct payload offsets to preserve reader extraction correctness.
+- [Phase 08]: Expose BA2 GNRL write-new as a dedicated dependency-light writer object with named Fallout 4 and Starfield target profiles. — Plan 08-01 establishes the public contract before private serialization implementation.
+- [Phase 08]: Keep Plan 08-01 BA2 GNRL writer methods declaration-only. — Later Phase 8 plans can add writer-owned state and serialization without changing the public API.
+- [Phase 08]: BA2 GNRL public options default Starfield Unknown1=1, Unknown2=0, and CompressionMethod=3 while allowing caller overrides. — Preserves reference-derived defaults without exposing private codec types.
 
 ### Pending Todos
 
@@ -188,6 +192,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T07:22:07.930Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-ba2-gnrl-write-new-support/08-CONTEXT.md
+Last session: 2026-05-09T07:57:04.147Z
+Stopped at: Completed 08-01-PLAN.md
+Resume file: None
