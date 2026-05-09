@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 09-03-PLAN.md
-last_updated: "2026-05-09T10:30:15.331Z"
+stopped_at: Completed 09-05-PLAN.md
+last_updated: "2026-05-09T10:37:42.113Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 54
-  completed_plans: 52
-  percent: 96
+  completed_plans: 53
+  percent: 98
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 09 (ba2-dx10-write-new-support) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [██████████] 96%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -98,6 +98,7 @@ Progress: [██████████] 96%
 | Phase 09 P02 | 6min | 3 tasks | 23 files |
 | Phase 09 P03 | 4 min | 3 tasks | 3 files |
 | Phase 09 P04 | 3 min | 3 tasks | 5 files |
+| Phase 09 P05 | 5min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -198,6 +199,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 09]: DX10 chunk planning uses a libbsa-owned descriptor table and max_decoded_chunk_bytes sentinel semantics. — Keeps writer planning dependency-light and satisfies WBA2-09 with reference-derived defaults plus one archive-wide byte cap.
 - [Phase 09]: BA2 DX10 add_file validates DDS host files and snapshots writer-owned DDS bytes immediately. — Plan 09-04 implemented DDS add-time validation state and preserved prior writer duplicate validation boundaries.
 - [Phase 09]: Duplicate canonical DX10 archive paths remain accepted at add time and are deferred to future write_to validation. — Plan 09-04 implemented DDS add-time validation state and preserved prior writer duplicate validation boundaries.
+- [Phase 09]: BA2 DX10 writer compression is selected only by target/options metadata: FO4 deflate, Starfield v3 method 3 raw LZ4 block, and Starfield method 0 deflate. — Preserves compressed-only DX10 public policy and avoids filename-extension inference while matching reader detection routes.
+- [Phase 09]: DX10 texture chunks copy validated DDS subresource bytes in planned BA2 order without resizing, transcoding, mip generation, repair, or image-data transformation. — Preserves source DDS image payload bytes while allowing BA2-required chunk layout serialization and DDS header reconstruction on extraction.
 
 ### Pending Todos
 
@@ -219,6 +222,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T10:29:57.431Z
-Stopped at: Completed 09-03-PLAN.md
+Last session: 2026-05-09T10:37:26.363Z
+Stopped at: Completed 09-05-PLAN.md
 Resume file: None

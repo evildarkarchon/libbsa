@@ -93,7 +93,7 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 - [x] **WBA2-07**: Consumer can create new Starfield BA2 v3 DX10/DDS texture archives from DDS files.
 - [x] **WBA2-08**: Writer can analyze DDS input through DirectXTex and generate BA2 texture records from library-owned metadata.
 - [x] **WBA2-09**: Writer can split DDS textures into compatible mip/chunk records with configurable chunk limits.
-- [ ] **WBA2-10**: Writer can apply per-chunk compression and serialize chunk metadata so extracted DDS output remains valid.
+- [x] **WBA2-10**: Writer can apply per-chunk compression and serialize chunk metadata so extracted DDS output remains valid.
 - [x] **WBA2-11**: Maintainer can round-trip BA2 writer output by packing, reopening, extracting, and byte-comparing or metadata-validating source files.
 
 ### Compatibility and Validation
@@ -219,7 +219,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WBA2-07 | Phase 9: BA2 DX10 Write-New Support | Complete |
 | WBA2-08 | Phase 9: BA2 DX10 Write-New Support | Complete |
 | WBA2-09 | Phase 9: BA2 DX10 Write-New Support | Complete |
-| WBA2-10 | Phase 9: BA2 DX10 Write-New Support | Pending |
+| WBA2-10 | Phase 9: BA2 DX10 Write-New Support | Complete |
 | WBA2-11 | Phase 9: BA2 DX10 Write-New Support | Complete |
 | COMP-01 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Pending |
 | COMP-02 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Pending |

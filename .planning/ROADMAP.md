@@ -302,7 +302,7 @@ Plans:
 - [x] 09-04-PLAN.md — Implement DX10 writer state plus add-time DDS validation and snapshotting.
 
 **Wave 3** *(blocked on Wave 1 chunk planner and Wave 2 writer state)*
-- [ ] 09-05-PLAN.md — Serialize compressed FO4 and Starfield v3 DX10 archives with reader-backed validation.
+- [x] 09-05-PLAN.md — Serialize compressed FO4 and Starfield v3 DX10 archives with reader-backed validation.
 
 **Wave 4** *(blocked on Wave 3 compressed serialization)*
 - [ ] 09-06-PLAN.md — Add DX10 chunk dedupe, safe publish hardening, and final regression gates.
