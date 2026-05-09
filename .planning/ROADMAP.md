@@ -275,7 +275,7 @@ Plans:
 - [x] 08-05-PLAN.md — Add target-routed deflate/raw-LZ4 compression defaults and per-entry overrides.
 
 **Wave 5** *(blocked on Wave 4 compressed stored-payload shape)*
-- [ ] 08-06-PLAN.md — Add opt-in final-stored-byte deduplication and full Phase 8 regression gates.
+- [x] 08-06-PLAN.md — Add opt-in final-stored-byte deduplication and full Phase 8 regression gates.
 
 ### Phase 9: BA2 DX10 Write-New Support
 **Goal**: Consumers can create Fallout 4 and Starfield BA2 DX10/DDS texture archives from DDS files with valid mip/chunk metadata and extraction-preserving output.
@@ -336,7 +336,7 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 5. BA2 GNRL Read/Extract | 5/6 | In Progress |  |
 | 6. DDS Boundary and BA2 DX10 Read/Reconstruction | 8/8 | Complete | 2026-05-09 |
 | 7. TES4-Family BSA Write-New Support | 0/TBD | Not started | - |
-| 8. BA2 GNRL Write-New Support | 0/TBD | Not started | - |
+| 8. BA2 GNRL Write-New Support | 6/6 | Complete | 2026-05-09 |
 | 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |
 | 10. TES3 Write Support and BSA Format Completeness | 0/TBD | Not started | - |
 | 11. Compatibility Warnings, Validation API, and Hardening | 0/TBD | Not started | - |
