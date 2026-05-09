@@ -77,7 +77,7 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 - [ ] **WBSA-04**: Consumer can create new TES3/Morrowind BSA archives from disk files or memory buffers.
 - [x] **WBSA-05**: Writer can generate folder and file indexes sorted by format-compatible hash order.
 - [x] **WBSA-06**: Writer can derive archive flags and file flags from content using compatible behavior.
-- [ ] **WBSA-07**: Writer can apply per-file compression overrides while respecting target archive defaults.
+- [x] **WBSA-07**: Writer can apply per-file compression overrides while respecting target archive defaults.
 - [ ] **WBSA-08**: Writer can write embedded file names where appropriate without triggering known compatibility hazards.
 - [ ] **WBSA-09**: Writer can optionally deduplicate identical file payloads by content hash.
 - [x] **WBSA-10**: Maintainer can round-trip BSA writer output by packing, reopening, extracting, and byte-comparing source files.
@@ -206,7 +206,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WBSA-04 | Phase 10: TES3 Write Support and BSA Format Completeness | Pending |
 | WBSA-05 | Phase 7: TES4-Family BSA Write-New Support | Complete |
 | WBSA-06 | Phase 7: TES4-Family BSA Write-New Support | Complete |
-| WBSA-07 | Phase 7: TES4-Family BSA Write-New Support | Pending |
+| WBSA-07 | Phase 7: TES4-Family BSA Write-New Support | Complete |
 | WBSA-08 | Phase 7: TES4-Family BSA Write-New Support | Pending |
 | WBSA-09 | Phase 7: TES4-Family BSA Write-New Support | Pending |
 | WBSA-10 | Phase 7: TES4-Family BSA Write-New Support | Complete |

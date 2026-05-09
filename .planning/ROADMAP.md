@@ -240,7 +240,7 @@ Plans:
 - [x] 07-03-PLAN.md — Serialize raw v103/v104/v105 TES4-family BSA archives with hash-sorted tables and derived flags.
 
 **Wave 4** *(blocked on Wave 3 raw serialization)*
-- [ ] 07-04-PLAN.md — Add target-routed deflate/LZ4-frame compression defaults and per-entry overrides.
+- [x] 07-04-PLAN.md — Add target-routed deflate/LZ4-frame compression defaults and per-entry overrides.
 
 **Wave 5** *(blocked on Wave 4 stored payload encoding)*
 - [ ] 07-05-PLAN.md — Add explicit target-compatible embedded-name prefix emission and round-trip proof.
