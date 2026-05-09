@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: verifying
 stopped_at: Completed 08-06-PLAN.md
-last_updated: "2026-05-09T08:25:24.945Z"
+last_updated: "2026-05-09T08:43:54.364Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 8
-  total_plans: 47
-  completed_plans: 47
+  total_plans: 48
+  completed_plans: 48
   percent: 100
 ---
 
@@ -93,6 +93,7 @@ Progress: [██████████] 100%
 | Phase 08 P04 | 15min | 2 tasks | 3 files |
 | Phase 08 P05 | 3min | 2 tasks | 2 files |
 | Phase 08 P06 | 2min | 3 tasks | 3 files |
+| Phase 08 P07 | 9min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -184,6 +185,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 08]: BA2 GNRL writer compression routes only from explicit target/options metadata: FO4 v1, Starfield v2, and Starfield v3 method 0 use deflate; Starfield v3 method 3 uses raw LZ4 block. — Plan 08-05 implemented WBA2-04 with metadata-routed compression and no filename-extension inference.
 - [Phase 08]: BA2 GNRL writer deduplication remains opt-in through ba2_gnrl_writer_options::deduplicate_payloads and is disabled by default.
 - [Phase 08]: Dedupe eligibility is based on byte-identical final stored payload vectors after raw/compressed routing, not source bytes alone.
+- [Phase 08]: BA2 GNRL writer publish now reserves a unique sibling temporary directory instead of using and deleting deterministic <output>.tmp files.
+- [Phase 08]: Overwrite mode rejects non-regular existing destinations and uses backup+rollback before publishing replacement bytes.
 
 ### Pending Todos
 
@@ -205,6 +208,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T08:25:24.938Z
+Last session: 2026-05-09T08:42:19.496Z
 Stopped at: Completed 08-06-PLAN.md
 Resume file: None

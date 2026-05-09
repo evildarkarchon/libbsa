@@ -278,7 +278,7 @@ Plans:
 - [x] 08-06-PLAN.md — Add opt-in final-stored-byte deduplication and full Phase 8 regression gates.
 
 **Wave 6** *(gap closure; blocked on Wave 5 verification findings)*
-- [ ] 08-07-PLAN.md — Close BA2 GNRL writer filesystem publish safety gaps for temp collisions and overwrite rollback.
+- [x] 08-07-PLAN.md — Close BA2 GNRL writer filesystem publish safety gaps for temp collisions and overwrite rollback.
 
 ### Phase 9: BA2 DX10 Write-New Support
 **Goal**: Consumers can create Fallout 4 and Starfield BA2 DX10/DDS texture archives from DDS files with valid mip/chunk metadata and extraction-preserving output.
