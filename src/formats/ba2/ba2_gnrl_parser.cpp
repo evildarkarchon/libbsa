@@ -69,6 +69,14 @@ bool span_fits_u64(std::uint64_t start, std::uint64_t length, std::uint64_t tota
   return start <= total && length <= total - start;
 }
 
+bool spans_overlap_u64(std::uint64_t first_start, std::uint64_t first_length, std::uint64_t second_start,
+                       std::uint64_t second_length) noexcept {
+  if (first_length == 0U || second_length == 0U) {
+    return false;
+  }
+  return first_start < second_start + second_length && second_start < first_start + first_length;
+}
+
 std::size_t header_size_for(std::uint32_t version) noexcept {
   if (version == starfield_v3_version) {
     return starfield_v3_header_size;
@@ -195,6 +203,52 @@ result<std::vector<std::string>> read_names(std::span<const std::byte> name_tabl
   return names;
 }
 
+result<std::vector<std::string>> read_names_from_file(std::ifstream& input, std::uint64_t file_table_offset,
+                                                      std::uint32_t file_count, std::uint64_t archive_size,
+                                                      std::size_t& consumed) {
+  if (file_table_offset > archive_size) {
+    return error{error_code::format_error, "BA2 GNRL FileTableOffset is outside archive bytes"};
+  }
+
+  std::vector<std::string> names;
+  names.reserve(file_count);
+  std::uint64_t cursor = file_table_offset;
+  for (std::uint32_t index = 0; index < file_count; ++index) {
+    if (!span_fits_u64(cursor, 2U, archive_size)) {
+      return error{error_code::format_error, "BA2 GNRL filename table is truncated before UInt16 length"};
+    }
+    auto length_bytes = read_file_bytes_at(input, cursor, 2U, "BA2 GNRL filename length");
+    if (!length_bytes) {
+      return length_bytes.error();
+    }
+    detail::binary_reader length_reader{length_bytes.value()};
+    const auto length = length_reader.read_u16_le();
+    if (!length) {
+      return error{error_code::format_error, "BA2 GNRL filename table is truncated before UInt16 length"};
+    }
+    cursor += 2U;
+    if (!span_fits_u64(cursor, length.value(), archive_size)) {
+      return error{error_code::format_error, "BA2 GNRL filename table is truncated before name bytes"};
+    }
+    auto name_bytes = read_file_bytes_at(input, cursor, length.value(), "BA2 GNRL filename bytes");
+    if (!name_bytes) {
+      return name_bytes.error();
+    }
+    if (name_bytes.value().empty()) {
+      return error{error_code::format_error, "BA2 GNRL filename table contains an empty name"};
+    }
+    names.push_back(bytes_to_string(name_bytes.value()));
+    cursor += length.value();
+  }
+
+  const auto consumed_u64 = cursor - file_table_offset;
+  if (consumed_u64 > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+    return error{error_code::format_error, "BA2 GNRL filename table size exceeds platform limits"};
+  }
+  consumed = static_cast<std::size_t>(consumed_u64);
+  return names;
+}
+
 entry_compression compression_for(const gnrl_record& record, detected_ba2_format detected) noexcept {
   if (record.packed_size == 0U) {
     return entry_compression::none;
@@ -202,29 +256,15 @@ entry_compression compression_for(const gnrl_record& record, detected_ba2_format
   return detected.default_compression;
 }
 
-result<std::uint64_t> first_payload_offset_for(std::span<const gnrl_record> records, std::uint64_t archive_size) {
-  std::uint64_t first_payload_offset = archive_size;
-  for (const auto& record : records) {
-    const auto stored_size = static_cast<std::uint64_t>(record.packed_size != 0U ? record.packed_size : record.size);
-    if (!span_fits_u64(record.offset, stored_size, archive_size)) {
-      return error{error_code::format_error, "BA2 GNRL entry payload span is outside the archive"};
-    }
-    if (stored_size != 0U) {
-      first_payload_offset = std::min(first_payload_offset, record.offset);
-    }
-  }
-  return first_payload_offset;
-}
-
 result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size,
-                                                        std::size_t name_table_end,
+                                                        std::uint64_t name_table_offset,
+                                                        std::uint64_t name_table_end,
                                                         std::span<const gnrl_record> records,
                                                         std::span<const std::string> names,
                                                         detected_ba2_format detected) {
   std::vector<entry_metadata> entries;
   entries.reserve(records.size());
   std::unordered_set<std::string> canonical_paths;
-  std::uint64_t first_payload_offset = std::numeric_limits<std::uint64_t>::max();
 
   for (std::size_t index = 0; index < records.size(); ++index) {
     auto original_path = names[index];
@@ -241,8 +281,8 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     if (!span_fits_u64(records[index].offset, stored_size, archive_size)) {
       return error{error_code::format_error, "BA2 GNRL entry payload span is outside the archive"};
     }
-    if (stored_size != 0U) {
-      first_payload_offset = std::min(first_payload_offset, records[index].offset);
+    if (spans_overlap_u64(records[index].offset, stored_size, name_table_offset, name_table_end - name_table_offset)) {
+      return error{error_code::format_error, "BA2 GNRL filename table intersects payload data"};
     }
 
     entries.push_back(entry_metadata{canonical.value().value,
@@ -255,10 +295,6 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                                      records[index].unknown,
                                      false,
                                      0U});
-  }
-
-  if (first_payload_offset != std::numeric_limits<std::uint64_t>::max() && name_table_end > first_payload_offset) {
-    return error{error_code::format_error, "BA2 GNRL filename table overlaps payload data"};
   }
 
   std::sort(entries.begin(), entries.end(), [](const entry_metadata& lhs, const entry_metadata& rhs) {
@@ -314,7 +350,7 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_impl(std::span<const std::byte> 
     return error{error_code::format_error, "BA2 GNRL filename table is too large"};
   }
 
-  auto entries = materialize_entries(archive_size, name_table_end, records.value(), names.value(), detected);
+  auto entries = materialize_entries(archive_size, file_table_offset, name_table_end, records.value(), names.value(), detected);
   if (!entries) {
     return entries.error();
   }
@@ -371,7 +407,7 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(std::string_view host_path,
     return error{error_code::format_error, "BA2 GNRL FileTableOffset is outside the metadata span"};
   }
 
-  const auto metadata_size = static_cast<std::size_t>(header.value().file_table_offset);
+  const auto metadata_size = records_end;
   auto metadata_bytes = read_file_bytes_at(input, 0U, metadata_size, "BA2 GNRL header and record table");
   if (!metadata_bytes) {
     return metadata_bytes.error();
@@ -387,28 +423,30 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(std::string_view host_path,
     return records.error();
   }
 
-  auto first_payload_offset = first_payload_offset_for(records.value(), archive_size);
-  if (!first_payload_offset) {
-    return first_payload_offset.error();
+  std::size_t name_table_consumed = 0;
+  // The writer-required BA2 layout can place payload bytes before the final filename table, so host-file open
+  // parses exactly file_count length-prefixed names from FileTableOffset instead of deriving a table size from
+  // the first payload offset. This preserves bounded open behavior for both sparse payloads and end tables.
+  auto names = read_names_from_file(input, header.value().file_table_offset, header.value().file_count, archive_size,
+                                    name_table_consumed);
+  if (!names) {
+    return names.error();
   }
-  if (header.value().file_table_offset > first_payload_offset.value()) {
-    return error{error_code::format_error, "BA2 GNRL filename table overlaps payload data"};
-  }
-  const auto name_table_size_u64 = first_payload_offset.value() - header.value().file_table_offset;
-  if (name_table_size_u64 > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
-    return error{error_code::format_error, "BA2 GNRL filename table size exceeds platform limits"};
+  const auto name_table_end = header.value().file_table_offset + static_cast<std::uint64_t>(name_table_consumed);
+  auto entries = materialize_entries(static_cast<std::size_t>(archive_size), header.value().file_table_offset,
+                                     name_table_end, records.value(), names.value(), detected);
+  if (!entries) {
+    return entries.error();
   }
 
-  // Open/list parsing needs only the length-prefixed filename table. Payload bytes stay unread until extraction,
-  // so large valid BA2 archives cannot force open-time allocation of the payload region.
-  auto name_table_bytes = read_file_bytes_at(input, header.value().file_table_offset,
-                                             static_cast<std::size_t>(name_table_size_u64),
-                                             "BA2 GNRL filename table");
-  if (!name_table_bytes) {
-    return name_table_bytes.error();
-  }
-  metadata_bytes.value().insert(metadata_bytes.value().end(), name_table_bytes.value().begin(), name_table_bytes.value().end());
-  return parse_ba2_gnrl_archive_impl(metadata_bytes.value(), static_cast<std::size_t>(archive_size), detected);
+  return ba2_gnrl_archive{archive_metadata{archive_type::ba2,
+                                           detected.variant,
+                                           header.value().version,
+                                           0U,
+                                           header.value().file_count,
+                                           detected.default_compression,
+                                           header.value().ba2},
+                          std::move(entries.value())};
 }
 
 } // namespace libbsa::formats::ba2
