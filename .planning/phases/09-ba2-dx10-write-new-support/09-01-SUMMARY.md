@@ -64,7 +64,7 @@ Each task was committed atomically:
 2. **Task 2: GREEN: Add declaration-only public DX10 writer surface** - `472efdc` (feat)
 3. **Task 3: REFACTOR: Verify public boundary remains sealed** - `b0e2e3c` (refactor)
 
-**Plan metadata:** pending final docs commit
+**Plan metadata:** `433fe0a` (docs)
 
 ## Files Created/Modified
 
