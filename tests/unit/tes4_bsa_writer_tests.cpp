@@ -473,3 +473,116 @@ TEST_CASE("TES4 BSA writer ignores embedded name option for v103 target compatib
   CHECK(entry.embedded_name_prefix_size == 0U);
   require_extracted_bytes(opened.value(), "Meshes/Embedded/Model.nif", source_bytes);
 }
+
+TEST_CASE("TES4 BSA writer leaves duplicate stored bytes at distinct offsets by default",
+          "[unit][tes4_bsa_writer]") {
+  const auto source_bytes = bytes_from_text("identical source bytes stored twice without dedupe");
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.deduplicate_payloads = false;
+  options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+
+  REQUIRE(writer.add_bytes("Meshes/Dedupe/First.nif", source_bytes).has_value());
+  REQUIRE(writer.add_bytes("Meshes/Dedupe/Second.nif", source_bytes).has_value());
+
+  const auto archive = output_path("dedupe-disabled-distinct-offsets.bsa");
+  auto written = writer.write_to(archive.string());
+  REQUIRE(written.has_value());
+
+  auto opened = libbsa::archive_reader::open(archive.string());
+  REQUIRE(opened.has_value());
+
+  const auto& first = require_entry(opened.value(), "Meshes/Dedupe/First.nif");
+  const auto& second = require_entry(opened.value(), "Meshes/Dedupe/Second.nif");
+  CHECK(first.payload_offset != second.payload_offset);
+  CHECK(first.stored_size == second.stored_size);
+  require_extracted_bytes(opened.value(), "Meshes/Dedupe/First.nif", source_bytes);
+  require_extracted_bytes(opened.value(), "Meshes/Dedupe/Second.nif", source_bytes);
+}
+
+TEST_CASE("TES4 BSA writer shares offsets for opt-in identical final stored bytes",
+          "[unit][tes4_bsa_writer]") {
+  const auto source_bytes = bytes_from_text("identical source bytes stored twice with opt-in dedupe");
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.deduplicate_payloads = true;
+  options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+
+  REQUIRE(writer.add_bytes("Meshes/Dedupe/First.nif", source_bytes).has_value());
+  REQUIRE(writer.add_bytes("Meshes/Dedupe/Second.nif", source_bytes).has_value());
+
+  const auto archive = output_path("dedupe-enabled-shared-offsets.bsa");
+  auto written = writer.write_to(archive.string());
+  REQUIRE(written.has_value());
+
+  auto opened = libbsa::archive_reader::open(archive.string());
+  REQUIRE(opened.has_value());
+
+  const auto& first = require_entry(opened.value(), "Meshes/Dedupe/First.nif");
+  const auto& second = require_entry(opened.value(), "Meshes/Dedupe/Second.nif");
+  CHECK(first.payload_offset == second.payload_offset);
+  CHECK(first.stored_size == second.stored_size);
+  require_extracted_bytes(opened.value(), "Meshes/Dedupe/First.nif", source_bytes);
+  require_extracted_bytes(opened.value(), "Meshes/Dedupe/Second.nif", source_bytes);
+}
+
+TEST_CASE("TES4 BSA writer does not dedupe matching source bytes with different compression encodings",
+          "[unit][tes4_bsa_writer]") {
+  const auto source_bytes = bytes_from_text("same source but raw and compressed stored bytes differ");
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.deduplicate_payloads = true;
+  options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+
+  REQUIRE(writer.add_bytes("Meshes/Dedupe/Raw.nif", source_bytes, libbsa::entry_compression_policy::raw).has_value());
+  REQUIRE(writer.add_bytes("Meshes/Dedupe/Compressed.nif", source_bytes,
+                           libbsa::entry_compression_policy::compressed)
+              .has_value());
+
+  const auto archive = output_path("dedupe-compression-mismatch.bsa");
+  auto written = writer.write_to(archive.string());
+  REQUIRE(written.has_value());
+
+  auto opened = libbsa::archive_reader::open(archive.string());
+  REQUIRE(opened.has_value());
+
+  const auto& raw = require_entry(opened.value(), "Meshes/Dedupe/Raw.nif");
+  const auto& compressed = require_entry(opened.value(), "Meshes/Dedupe/Compressed.nif");
+  CHECK(raw.payload_offset != compressed.payload_offset);
+  CHECK(raw.compression == libbsa::entry_compression::none);
+  CHECK(compressed.compression == libbsa::entry_compression::deflate);
+  require_extracted_bytes(opened.value(), "Meshes/Dedupe/Raw.nif", source_bytes);
+  require_extracted_bytes(opened.value(), "Meshes/Dedupe/Compressed.nif", source_bytes);
+}
+
+TEST_CASE("TES4 BSA writer does not dedupe matching source bytes with different embedded-name prefixes",
+          "[unit][tes4_bsa_writer]") {
+  const auto source_bytes = bytes_from_text("same source but embedded prefixes include file names");
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.embed_file_names = true;
+  options.deduplicate_payloads = true;
+  options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+
+  REQUIRE(writer.add_bytes("Meshes/Dedupe/First.nif", source_bytes).has_value());
+  REQUIRE(writer.add_bytes("Meshes/Dedupe/Second.nif", source_bytes).has_value());
+
+  const auto archive = output_path("dedupe-embedded-name-mismatch.bsa");
+  auto written = writer.write_to(archive.string());
+  REQUIRE(written.has_value());
+
+  auto opened = libbsa::archive_reader::open(archive.string());
+  REQUIRE(opened.has_value());
+
+  const auto& first = require_entry(opened.value(), "Meshes/Dedupe/First.nif");
+  const auto& second = require_entry(opened.value(), "Meshes/Dedupe/Second.nif");
+  CHECK(first.payload_offset != second.payload_offset);
+  CHECK(first.has_embedded_name);
+  CHECK(second.has_embedded_name);
+  require_extracted_bytes(opened.value(), "Meshes/Dedupe/First.nif", source_bytes);
+  require_extracted_bytes(opened.value(), "Meshes/Dedupe/Second.nif", source_bytes);
+}
