@@ -13,6 +13,7 @@ add_executable(libbsa_tests
   unit/dds_layout_tests.cpp
   unit/ba2_dx10_parser_tests.cpp
   unit/ba2_dx10_extraction_tests.cpp
+  unit/ba2_dx10_writer_tests.cpp
   unit/ba2_dx10_malformed_tests.cpp
   unit/public_include_boundary_tests.cpp
   unit/local_game_fixture_tests.cpp
