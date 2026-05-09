@@ -741,6 +741,18 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target,
     }
   }
 
+  if (!options.overwrite_existing) {
+    // POSIX rename would replace a destination created after the initial existence check;
+    // copy_options::none preserves the caller's no-overwrite contract at the cost of atomic publish.
+    std::filesystem::copy_file(temp_path, output_path, std::filesystem::copy_options::none, fs_error);
+    if (fs_error) {
+      cleanup_publish_directory(temp_dir.value());
+      return error{error_code::io_error, "BA2 DX10 writer failed to publish output host path without overwrite"};
+    }
+    cleanup_publish_directory(temp_dir.value());
+    return {};
+  }
+
   std::filesystem::rename(temp_path, output_path, fs_error);
   if (fs_error) {
     cleanup_publish_directory(temp_dir.value());
