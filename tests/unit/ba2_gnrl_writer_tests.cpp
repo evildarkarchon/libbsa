@@ -453,14 +453,14 @@ TEST_CASE("BA2 GNRL writer all-compressed policy routes through target compressi
     const std::vector<std::byte> bytes{std::byte{0x4E}, std::byte{0x4F}, std::byte{0x54}, std::byte{0x44},
                                        std::byte{0x44}, std::byte{0x53}, std::byte{0x21}, std::byte{0x21},
                                        std::byte{0x21}, std::byte{0x21}, std::byte{0x21}, std::byte{0x21}};
-    REQUIRE(writer.add_bytes("NoExtensionInference/Generic.payload", bytes).has_value());
+    REQUIRE(writer.add_bytes("NoExtensionInference/Generic.bin", bytes).has_value());
 
     const auto output = output_path(test_case.file_name);
     auto written = writer.write_to(output.string());
     REQUIRE(written.has_value());
 
     require_compressed_round_trip(output,
-                                  {{"NoExtensionInference/Generic.payload", bytes, 0U}},
+                                  {{"NoExtensionInference/Generic.bin", bytes, 0U}},
                                   test_case.version,
                                   test_case.target == libbsa::ba2_gnrl_target::fallout4
                                       ? libbsa::archive_variant::fallout4

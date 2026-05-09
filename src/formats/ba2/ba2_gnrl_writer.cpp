@@ -3,6 +3,7 @@
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
+#include <detail/compression_router.hpp>
 
 #include <algorithm>
 #include <array>
@@ -220,27 +221,45 @@ result<std::vector<std::byte>> read_source_bytes(const ba2_gnrl_writer_entry& en
   return bytes;
 }
 
-bool archive_default_raw(archive_compression_policy policy) noexcept {
+bool archive_default_compressed(archive_compression_policy policy) noexcept {
   switch (policy) {
   case archive_compression_policy::target_default:
-  case archive_compression_policy::all_raw:
-    return true;
   case archive_compression_policy::all_compressed:
+    return true;
+  case archive_compression_policy::all_raw:
     return false;
   }
   return true;
 }
 
-bool requested_entry_raw(bool archive_raw, entry_compression_policy policy) noexcept {
+bool requested_entry_compression(bool archive_compressed, entry_compression_policy policy) noexcept {
   switch (policy) {
   case entry_compression_policy::inherit:
-    return archive_raw;
+    return archive_compressed;
   case entry_compression_policy::raw:
-    return true;
-  case entry_compression_policy::compressed:
     return false;
+  case entry_compression_policy::compressed:
+    return true;
   }
-  return archive_raw;
+  return archive_compressed;
+}
+
+result<detail::compression_method> compression_method_for_compressed_entry(ba2_gnrl_target target,
+                                                                           std::uint32_t starfield_method) {
+  switch (target) {
+  case ba2_gnrl_target::fallout4:
+  case ba2_gnrl_target::starfield_v2:
+    return detail::compression_method::deflate;
+  case ba2_gnrl_target::starfield_v3:
+    if (starfield_method == starfield_deflate_method) {
+      return detail::compression_method::deflate;
+    }
+    if (starfield_method == starfield_lz4_block_method) {
+      return detail::compression_method::lz4_block;
+    }
+    return error{error_code::unsupported, "BA2 GNRL Starfield v3 compression method is unsupported"};
+  }
+  return error{error_code::invalid_argument, "BA2 GNRL writer target profile is not supported"};
 }
 
 result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view archive_path);
@@ -248,23 +267,40 @@ result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view archive_p
 result<std::vector<prepared_entry>> prepare_entries(ba2_gnrl_target target,
                                                     const ba2_gnrl_writer_options& options,
                                                     std::span<const ba2_gnrl_writer_entry> entries) {
-  const bool archive_raw = archive_default_raw(options.compression);
+  const bool archive_compressed = archive_default_compressed(options.compression);
   std::vector<prepared_entry> prepared;
   prepared.reserve(entries.size());
 
   for (const auto& entry : entries) {
-    const bool entry_raw = requested_entry_raw(archive_raw, entry.options.compression);
-    if (!entry_raw) {
-      return error{error_code::unsupported, "BA2 GNRL compressed writer entries are implemented in the compression plan"};
-    }
-
     auto payload = read_source_bytes(entry);
     if (!payload) {
       return payload.error();
     }
+    const bool entry_compressed = !payload.value().empty() &&
+                                  requested_entry_compression(archive_compressed, entry.options.compression);
     auto raw_size = checked_u32(payload.value().size(), "BA2 GNRL raw payload size");
     if (!raw_size) {
       return raw_size.error();
+    }
+    std::vector<std::byte> stored_payload;
+    std::uint32_t packed_size = 0U;
+    if (entry_compressed) {
+      auto method = compression_method_for_compressed_entry(target, options.starfield_compression_method);
+      if (!method) {
+        return method.error();
+      }
+      auto compressed = detail::compress_payload(method.value(), payload.value());
+      if (!compressed) {
+        return compressed.error();
+      }
+      auto packed = checked_u32(compressed.value().size(), "BA2 GNRL packed payload size");
+      if (!packed) {
+        return packed.error();
+      }
+      packed_size = packed.value();
+      stored_payload = std::move(compressed.value());
+    } else {
+      stored_payload = std::move(payload.value());
     }
     auto extension = extension_fourcc_for(entry.archive_path_original);
     if (!extension) {
@@ -281,12 +317,12 @@ result<std::vector<prepared_entry>> prepare_entries(ba2_gnrl_target target,
                                       extension.value(),
                                       detail::hash_fo4(file_name),
                                       detail::hash_fo4(directory),
-                                      entry.options.record_flags.value_or(0U),
-                                      0U,
-                                      0U,
-                                      raw_size.value(),
-                                      true,
-                                      std::move(payload.value())});
+                                       entry.options.record_flags.value_or(0U),
+                                       0U,
+                                       packed_size,
+                                       raw_size.value(),
+                                       true,
+                                       std::move(stored_payload)});
   }
 
   // D-17 keeps Phase 8 deterministic with a canonical-path fallback because traced BA2 writer evidence does not
@@ -294,7 +330,6 @@ result<std::vector<prepared_entry>> prepare_entries(ba2_gnrl_target target,
   std::sort(prepared.begin(), prepared.end(), [](const prepared_entry& lhs, const prepared_entry& rhs) {
     return lhs.archive_path_canonical < rhs.archive_path_canonical;
   });
-  (void)target;
   return prepared;
 }
 
