@@ -198,7 +198,7 @@ Plans:
 - [x] 06-01-PLAN.md — Create generated BA2 DX10 fixtures, rich manifests, and CTest scaffolding for all DDS requirements.
 
 **Wave 2** *(blocked on Wave 1 fixture/test scaffolding)*
-- [ ] 06-02-PLAN.md — Add dependency-light public texture metadata and the private DirectXTex analyzer boundary.
+- [x] 06-02-PLAN.md — Add dependency-light public texture metadata and the private DirectXTex analyzer boundary.
 
 **Wave 3** *(blocked on Wave 2 metadata contract and Wave 1 fixture/test scaffolding)*
 - [ ] 06-03-PLAN.md — Add internal DDS DXT10 header construction and mip/array/cubemap layout validation.
