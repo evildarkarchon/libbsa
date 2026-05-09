@@ -138,6 +138,7 @@ struct prepared_chunk {
   std::uint32_t raw_size{};
   std::uint16_t start_mip{};
   std::uint16_t end_mip{};
+  detail::compression_method compression{};
   bool owns_payload_bytes{true};
   std::vector<std::byte> stored_payload;
 };
@@ -160,6 +161,26 @@ struct prepared_entry {
 
 struct payload_assignment {
   std::uint64_t offset{};
+};
+
+struct dedupe_key {
+  std::vector<std::byte> stored_payload;
+  std::uint32_t raw_size{};
+  std::uint32_t packed_size{};
+  detail::compression_method compression{};
+
+  bool operator<(const dedupe_key& other) const noexcept {
+    if (stored_payload != other.stored_payload) {
+      return stored_payload < other.stored_payload;
+    }
+    if (raw_size != other.raw_size) {
+      return raw_size < other.raw_size;
+    }
+    if (packed_size != other.packed_size) {
+      return packed_size < other.packed_size;
+    }
+    return static_cast<int>(compression) < static_cast<int>(other.compression);
+  }
 };
 
 bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept {
@@ -310,7 +331,14 @@ result<prepared_chunk> prepare_chunk(ba2_dx10_target target,
   if (!start_mip || !end_mip) {
     return !start_mip ? start_mip.error() : end_mip.error();
   }
-  return prepared_chunk{0U, packed_size.value(), raw_size.value(), start_mip.value(), end_mip.value(), true, std::move(compressed.value())};
+  return prepared_chunk{0U,
+                        packed_size.value(),
+                        raw_size.value(),
+                        start_mip.value(),
+                        end_mip.value(),
+                        method.value(),
+                        true,
+                        std::move(compressed.value())};
 }
 
 result<prepared_entry> prepare_entry(ba2_dx10_target target,
@@ -418,11 +446,15 @@ result<void> assign_payload_offsets(std::span<prepared_entry> entries,
     }
   }
 
-  std::map<std::vector<std::byte>, payload_assignment> deduplicated_payloads;
+  std::map<dedupe_key, payload_assignment> deduplicated_payloads;
   for (auto& entry : entries) {
     for (auto& chunk : entry.chunks) {
+      // D-20 requires DX10 dedupe to prove both byte identity and chunk metadata identity. Two
+      // chunks only share storage when the final stored bytes, raw size, packed size, and explicit
+      // compression route all match; texture dimensions and mip identity remain separate records.
+      dedupe_key key{chunk.stored_payload, chunk.raw_size, chunk.packed_size, chunk.compression};
       if (deduplicate_payloads) {
-        const auto duplicate = deduplicated_payloads.find(chunk.stored_payload);
+        const auto duplicate = deduplicated_payloads.find(key);
         if (duplicate != deduplicated_payloads.end()) {
           chunk.payload_offset = duplicate->second.offset;
           chunk.owns_payload_bytes = false;
@@ -432,7 +464,7 @@ result<void> assign_payload_offsets(std::span<prepared_entry> entries,
       chunk.payload_offset = cursor;
       chunk.owns_payload_bytes = true;
       if (deduplicate_payloads) {
-        deduplicated_payloads.emplace(chunk.stored_payload, payload_assignment{chunk.payload_offset});
+        deduplicated_payloads.emplace(std::move(key), payload_assignment{chunk.payload_offset});
       }
       if (!add_fits_u64(cursor, chunk.stored_payload.size(), cursor)) {
         return error{error_code::format_error, "BA2 DX10 payload span overflows"};
@@ -545,6 +577,8 @@ result<std::filesystem::path> make_unique_publish_directory(const std::filesyste
     candidate_name += ".libbsa-tmp-" + std::to_string(counter);
     const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
     std::error_code fs_error;
+    // A unique directory avoids deterministic `<archive>.tmp` cleanup, which could delete a
+    // caller-owned sibling that merely looks like a temporary file.
     if (std::filesystem::create_directory(candidate, fs_error)) {
       return candidate;
     }
@@ -553,6 +587,24 @@ result<std::filesystem::path> make_unique_publish_directory(const std::filesyste
     }
   }
   return error{error_code::io_error, "BA2 DX10 writer exhausted temporary output directory names"};
+}
+
+result<std::filesystem::path> reserve_backup_path(const std::filesystem::path& output_path) {
+  const auto parent = output_path.parent_path();
+  const auto filename = output_path.filename();
+  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
+    auto candidate_name = filename;
+    candidate_name += ".libbsa-bak-" + std::to_string(counter);
+    const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
+    auto exists = path_exists_noexcept(candidate);
+    if (!exists) {
+      return exists.error();
+    }
+    if (!exists.value()) {
+      return candidate;
+    }
+  }
+  return error{error_code::io_error, "BA2 DX10 writer exhausted backup output path names"};
 }
 
 void cleanup_publish_directory(const std::filesystem::path& temp_dir) noexcept {
@@ -649,16 +701,43 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target,
   }
 
   std::error_code fs_error;
-  if (options.overwrite_existing && output_exists.value()) {
-    const bool is_regular = std::filesystem::is_regular_file(output_path, fs_error);
-    if (fs_error || !is_regular) {
+  if (options.overwrite_existing) {
+    output_exists = path_exists_noexcept(output_path);
+    if (!output_exists) {
       cleanup_publish_directory(temp_dir.value());
-      return error{error_code::io_error, "BA2 DX10 writer refuses to replace non-regular output host path"};
+      return output_exists.error();
     }
-    std::filesystem::remove(output_path, fs_error);
-    if (fs_error) {
+    if (output_exists.value()) {
+      const bool is_regular = std::filesystem::is_regular_file(output_path, fs_error);
+      if (fs_error || !is_regular) {
+        cleanup_publish_directory(temp_dir.value());
+        return error{error_code::io_error, "BA2 DX10 writer refuses to replace non-regular output host path"};
+      }
+
+      auto backup_path = reserve_backup_path(output_path);
+      if (!backup_path) {
+        cleanup_publish_directory(temp_dir.value());
+        return backup_path.error();
+      }
+
+      // Move the old archive aside before publish so a failed replacement can roll back to the last good file.
+      std::filesystem::rename(output_path, backup_path.value(), fs_error);
+      if (fs_error) {
+        cleanup_publish_directory(temp_dir.value());
+        return error{error_code::io_error, "BA2 DX10 writer failed to reserve output backup"};
+      }
+
+      std::filesystem::rename(temp_path, output_path, fs_error);
+      if (fs_error) {
+        std::error_code rollback_error;
+        std::filesystem::rename(backup_path.value(), output_path, rollback_error);
+        cleanup_publish_directory(temp_dir.value());
+        return error{error_code::io_error, "BA2 DX10 writer failed to publish output host path"};
+      }
+
+      std::filesystem::remove(backup_path.value(), fs_error);
       cleanup_publish_directory(temp_dir.value());
-      return error{error_code::io_error, "BA2 DX10 writer failed to replace output host path"};
+      return {};
     }
   }
 
