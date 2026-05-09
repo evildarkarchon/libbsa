@@ -6,6 +6,7 @@
 #include <detail/binary_io.hpp>
 
 #include <algorithm>
+#include <array>
 #include <fstream>
 #include <limits>
 #include <optional>
@@ -121,6 +122,68 @@ std::string bytes_to_string(std::span<const std::byte> bytes) {
     result.push_back(static_cast<char>(std::to_integer<unsigned char>(value)));
   }
   return result;
+}
+
+void append_u16_le(std::vector<std::byte>& output, std::uint16_t value) {
+  output.push_back(static_cast<std::byte>(value & 0xFFU));
+  output.push_back(static_cast<std::byte>((value >> 8U) & 0xFFU));
+}
+
+result<std::vector<std::byte>> parse_ba2_dx10_names_from_file(std::ifstream& input,
+                                                              std::uint64_t file_table_offset,
+                                                              std::uint64_t first_payload_offset,
+                                                              std::uint32_t file_count) {
+  if (file_table_offset > first_payload_offset) {
+    return error{error_code::format_error, "BA2 DX10 filename table overlaps payload data"};
+  }
+  if (file_table_offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
+    return error{error_code::format_error, "BA2 DX10 filename table offset exceeds stream limits"};
+  }
+
+  std::vector<std::byte> encoded_names;
+  encoded_names.reserve(static_cast<std::size_t>(file_count) * 2U);
+  input.clear();
+  input.seekg(static_cast<std::streamoff>(file_table_offset), std::ios::beg);
+  if (!input) {
+    return error{error_code::io_error, "failed to seek while reading BA2 DX10 filename table"};
+  }
+
+  std::uint64_t cursor = file_table_offset;
+  for (std::uint32_t index = 0; index < file_count; ++index) {
+    if (first_payload_offset - cursor < 2U) {
+      return error{error_code::format_error, "BA2 DX10 filename table is truncated before UInt16 length"};
+    }
+
+    std::array<unsigned char, 2U> length_bytes{};
+    input.read(reinterpret_cast<char*>(length_bytes.data()), static_cast<std::streamsize>(length_bytes.size()));
+    if (input.bad()) {
+      return error{error_code::io_error, "failed while reading BA2 DX10 filename length"};
+    }
+    if (static_cast<std::size_t>(input.gcount()) != length_bytes.size()) {
+      return error{error_code::format_error, "BA2 DX10 filename table is truncated before UInt16 length"};
+    }
+
+    const auto length = static_cast<std::uint16_t>(length_bytes[0] | (static_cast<std::uint16_t>(length_bytes[1]) << 8U));
+    cursor += 2U;
+    if (static_cast<std::uint64_t>(length) > first_payload_offset - cursor) {
+      return error{error_code::format_error, "BA2 DX10 filename table name crosses payload data"};
+    }
+
+    std::vector<std::byte> name_bytes(length);
+    input.read(reinterpret_cast<char*>(name_bytes.data()), static_cast<std::streamsize>(name_bytes.size()));
+    if (input.bad()) {
+      return error{error_code::io_error, "failed while reading BA2 DX10 filename bytes"};
+    }
+    if (static_cast<std::size_t>(input.gcount()) != name_bytes.size()) {
+      return error{error_code::format_error, "BA2 DX10 filename table is truncated before name bytes"};
+    }
+
+    append_u16_le(encoded_names, length);
+    encoded_names.insert(encoded_names.end(), name_bytes.begin(), name_bytes.end());
+    cursor += length;
+  }
+
+  return encoded_names;
 }
 
 void normalize_original_separators(std::string& value) {
@@ -503,16 +566,12 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_file(std::string_view host_path,
   if (header.value().file_table_offset > first_payload_offset.value()) {
     return error{error_code::format_error, "BA2 DX10 filename table overlaps payload data"};
   }
-  const auto name_table_size_u64 = first_payload_offset.value() - header.value().file_table_offset;
-  if (name_table_size_u64 > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
-    return error{error_code::format_error, "BA2 DX10 filename table size exceeds platform limits"};
-  }
-
-  // Open/list parsing needs only the length-prefixed filename table; payload bytes stay unread until
-  // extraction so sparse or very large DX10 payload bytes stay unread during metadata inspection.
-  auto name_table_bytes = read_file_bytes_at(input, header.value().file_table_offset,
-                                             static_cast<std::size_t>(name_table_size_u64),
-                                             "BA2 DX10 filename table");
+  // BA2 DX10 filename tables are count-delimited, so sparse padding between the last encoded name
+  // and first payload must not be allocated during open/list metadata parsing.
+  auto name_table_bytes = parse_ba2_dx10_names_from_file(input,
+                                                         header.value().file_table_offset,
+                                                         first_payload_offset.value(),
+                                                         header.value().file_count);
   if (!name_table_bytes) {
     return name_table_bytes.error();
   }

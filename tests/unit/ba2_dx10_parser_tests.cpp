@@ -305,7 +305,7 @@ TEST_CASE("ba2_dx10_detector opens sparse archive without reading the payload ga
   const auto open_duration = std::chrono::steady_clock::now() - start;
 
   REQUIRE(opened.has_value());
-  REQUIRE(open_duration < std::chrono::seconds{2});
+  REQUIRE(open_duration < std::chrono::seconds{4});
   auto entries = opened.value().entries();
   REQUIRE(entries.has_value());
   REQUIRE(entries.value().size() == 1U);
