@@ -123,6 +123,145 @@ TEST_CASE("dds_layout allows repeated mip ranges across different array slices",
   CHECK(segments.value()[1].source_chunk_index == 1U);
 }
 
+TEST_CASE("dds_layout computes locked DX10 mip byte sizes", "[unit][dds_layout]") {
+  struct format_case {
+    std::uint32_t dxgi_format;
+    const char* name;
+    std::uint32_t width;
+    std::uint32_t height;
+    std::uint64_t expected_bytes;
+  };
+
+  const std::array cases{
+      // DXGI_FORMAT_BC1_UNORM=71 and DXGI_FORMAT_BC1_UNORM_SRGB=72: 4x4 blocks, 8 bytes.
+      format_case{71U, "BC1_UNORM", 4U, 4U, 8U},
+      format_case{72U, "BC1_UNORM_SRGB", 2U, 2U, 8U},
+      // DXGI_FORMAT_BC3_UNORM=77: 4x4 blocks, 16 bytes.
+      format_case{77U, "BC3_UNORM", 4U, 4U, 16U},
+      // DXGI_FORMAT_BC4_UNORM=80: 4x4 blocks, 8 bytes.
+      format_case{80U, "BC4_UNORM", 4U, 4U, 8U},
+      // DXGI_FORMAT_BC5_UNORM=83 and DXGI_FORMAT_BC5_SNORM=84: 4x4 blocks, 16 bytes.
+      format_case{83U, "BC5_UNORM", 4U, 4U, 16U},
+      format_case{84U, "BC5_SNORM", 4U, 4U, 16U},
+      // DXGI_FORMAT_BC6H_UF16=95 and DXGI_FORMAT_BC7_UNORM=98: 4x4 blocks, 16 bytes.
+      format_case{95U, "BC6H_UF16", 4U, 4U, 16U},
+      format_case{98U, "BC7_UNORM", 4U, 4U, 16U},
+      // DXGI_FORMAT_R8G8B8A8_UNORM_SRGB=29, B8G8R8A8_UNORM=87, and R8G8B8A8_SNORM=31: 4 bytes/pixel.
+      format_case{29U, "R8G8B8A8_UNORM_SRGB", 4U, 4U, 64U},
+      format_case{87U, "B8G8R8A8_UNORM", 4U, 4U, 64U},
+      format_case{31U, "R8G8B8A8_SNORM", 4U, 4U, 64U},
+      // DXGI_FORMAT_R8_UNORM=61: 1 byte/pixel.
+      format_case{61U, "R8_UNORM", 4U, 4U, 16U},
+  };
+
+  for (const auto& test_case : cases) {
+    CAPTURE(test_case.name);
+    const libbsa::texture::dds_texture_layout layout{
+        .width = test_case.width,
+        .height = test_case.height,
+        .mip_count = 1,
+        .dxgi_format = test_case.dxgi_format,
+        .array_size = 1,
+        .is_cubemap = false,
+    };
+
+    const auto size = libbsa::texture::mip_size_for_format(layout, 0U);
+
+    REQUIRE(size.has_value());
+    CHECK(size.value() == test_case.expected_bytes);
+  }
+}
+
+TEST_CASE("dds_layout plans DX10 chunks from default policy and byte caps", "[unit][dds_layout]") {
+  const libbsa::texture::dds_texture_layout layout{
+      .width = 1024,
+      .height = 1024,
+      .mip_count = 5,
+      .dxgi_format = 98, // DXGI_FORMAT_BC7_UNORM=98.
+      .array_size = 1,
+      .is_cubemap = false,
+  };
+
+  SECTION("reference default max_decoded_chunk_bytes groups contiguous mips") {
+    const auto chunks = libbsa::texture::plan_dx10_chunks(layout, 0U);
+
+    REQUIRE(chunks.has_value());
+    REQUIRE(chunks.value().size() == 3U);
+    CHECK(chunks.value()[0].start_mip == 0U);
+    CHECK(chunks.value()[0].end_mip == 0U);
+    CHECK(chunks.value()[1].start_mip == 1U);
+    CHECK(chunks.value()[1].end_mip == 1U);
+    CHECK(chunks.value()[2].start_mip == 2U);
+    CHECK(chunks.value()[2].end_mip == 4U);
+  }
+
+  SECTION("explicit max_decoded_chunk_bytes splits only at mip boundaries") {
+    const auto chunks = libbsa::texture::plan_dx10_chunks(layout, 327680U);
+
+    REQUIRE(chunks.has_value());
+    REQUIRE(chunks.value().size() == 2U);
+    CHECK(chunks.value()[0].start_mip == 0U);
+    CHECK(chunks.value()[0].end_mip == 0U);
+    CHECK(chunks.value()[1].start_mip == 1U);
+    CHECK(chunks.value()[1].end_mip == 4U);
+  }
+
+  SECTION("impossible max_decoded_chunk_bytes fails closed") {
+    const auto chunks = libbsa::texture::plan_dx10_chunks(layout, 1U);
+
+    REQUIRE_FALSE(chunks.has_value());
+    CHECK(chunks.error().code == libbsa::error_code::format_error);
+  }
+}
+
+TEST_CASE("dds_layout repeats DX10 chunk plans for arrays and cubemaps", "[unit][dds_layout]") {
+  SECTION("array slices repeat the same mip split") {
+    const libbsa::texture::dds_texture_layout layout{
+        .width = 4,
+        .height = 4,
+        .mip_count = 2,
+        .dxgi_format = 71,
+        .array_size = 2,
+        .is_cubemap = false,
+    };
+
+    const auto chunks = libbsa::texture::plan_dx10_chunks(layout, 8U);
+
+    REQUIRE(chunks.has_value());
+    REQUIRE(chunks.value().size() == 4U);
+    CHECK(chunks.value()[0].array_index == 0U);
+    CHECK(chunks.value()[0].start_mip == 0U);
+    CHECK(chunks.value()[1].array_index == 0U);
+    CHECK(chunks.value()[1].start_mip == 1U);
+    CHECK(chunks.value()[2].array_index == 1U);
+    CHECK(chunks.value()[2].start_mip == 0U);
+    CHECK(chunks.value()[3].array_index == 1U);
+    CHECK(chunks.value()[3].start_mip == 1U);
+  }
+
+  SECTION("cubemap faces repeat the same mip split") {
+    const libbsa::texture::dds_texture_layout layout{
+        .width = 4,
+        .height = 4,
+        .mip_count = 1,
+        .dxgi_format = 71,
+        .array_size = 1,
+        .is_cubemap = true,
+    };
+
+    const auto chunks = libbsa::texture::plan_dx10_chunks(layout, 0U);
+
+    REQUIRE(chunks.has_value());
+    REQUIRE(chunks.value().size() == 6U);
+    for (std::uint32_t face = 0; face < 6U; ++face) {
+      CHECK(chunks.value()[face].array_index == 0U);
+      CHECK(chunks.value()[face].face_index == face);
+      CHECK(chunks.value()[face].start_mip == 0U);
+      CHECK(chunks.value()[face].end_mip == 0U);
+    }
+  }
+}
+
 TEST_CASE("dds_layout rejects gaps, duplicate coverage, impossible sizes, and unsupported formats",
           "[unit][dds_layout]") {
   const libbsa::texture::dds_texture_layout bc1_two_mips{
