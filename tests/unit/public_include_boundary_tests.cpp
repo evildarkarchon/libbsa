@@ -3,10 +3,12 @@
 #include <libbsa/libbsa.hpp>
 
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <span>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -15,8 +17,21 @@ static_assert(__cplusplus >= 202002L, "libbsa public headers require C++20 or ne
 static_assert(std::is_enum_v<libbsa::archive_type>);
 static_assert(std::is_enum_v<libbsa::archive_variant>);
 static_assert(std::is_enum_v<libbsa::entry_compression>);
+static_assert(std::is_enum_v<libbsa::tes4_bsa_target>);
+static_assert(std::is_enum_v<libbsa::archive_compression_policy>);
+static_assert(std::is_enum_v<libbsa::entry_compression_policy>);
 static_assert(std::is_default_constructible_v<libbsa::ba2_archive_metadata>);
+static_assert(std::is_constructible_v<libbsa::tes4_bsa_writer, libbsa::tes4_bsa_target>);
+static_assert(std::is_constructible_v<libbsa::tes4_bsa_writer,
+                                      libbsa::tes4_bsa_target,
+                                      libbsa::tes4_bsa_writer_options>);
 static_assert(std::is_abstract_v<libbsa::payload_sink>);
+
+static_assert(requires(libbsa::tes4_bsa_writer& writer, std::span<const std::byte> bytes) {
+  { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
+  { writer.add_file("Textures/Disk.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
+  { writer.write_to("out.bsa") } -> std::same_as<libbsa::result<void>>;
+});
 
 TEST_CASE("public_include_boundary umbrella header exposes public boundary types", "[unit][public-api]") {
   [[maybe_unused]] libbsa::result<int> result{1};
@@ -41,6 +56,11 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
                                                false,
                                                0};
   [[maybe_unused]] auto reader = libbsa::archive_reader::open("boundary-smoke.bsa");
+  [[maybe_unused]] libbsa::tes4_bsa_writer_options writer_options{
+      libbsa::archive_compression_policy::target_default, false, false, false};
+  [[maybe_unused]] libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::oblivion, writer_options};
+  [[maybe_unused]] auto target = writer.target();
+  [[maybe_unused]] auto compression = libbsa::entry_compression_policy::inherit;
 
   REQUIRE(result.has_value());
 }
