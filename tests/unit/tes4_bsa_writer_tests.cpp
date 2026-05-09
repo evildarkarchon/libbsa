@@ -2,6 +2,9 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <detail/bethesda_hash.hpp>
+
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -39,6 +42,33 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
     bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
   }
   return bytes;
+}
+
+std::uint32_t read_u32_le_at(const std::vector<std::byte>& bytes, std::size_t offset) {
+  REQUIRE(offset + 4U <= bytes.size());
+  return static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset])) |
+         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset + 1U])) << 8U) |
+         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset + 2U])) << 16U) |
+         (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset + 3U])) << 24U);
+}
+
+std::uint64_t read_u64_le_at(const std::vector<std::byte>& bytes, std::size_t offset) {
+  REQUIRE(offset + 8U <= bytes.size());
+  std::uint64_t value = 0;
+  for (std::size_t index = 0; index < 8U; ++index) {
+    value |= static_cast<std::uint64_t>(std::to_integer<unsigned char>(bytes[offset + index])) << (index * 8U);
+  }
+  return value;
+}
+
+std::vector<std::uint64_t> sorted_hashes(std::vector<std::string_view> names) {
+  std::vector<std::uint64_t> hashes;
+  hashes.reserve(names.size());
+  for (const auto name : names) {
+    hashes.push_back(libbsa::detail::hash_tes4(name));
+  }
+  std::sort(hashes.begin(), hashes.end());
+  return hashes;
 }
 
 class collecting_sink final : public libbsa::payload_sink {
@@ -227,6 +257,72 @@ TEST_CASE("TES4 BSA writer raw output reopens for every target profile", "[unit]
   }
 }
 
+TEST_CASE("TES4 BSA writer serializes derived file flags and hash-sorted tables", "[unit][tes4_bsa_writer]") {
+  constexpr std::uint32_t expected_v103_file_flags = 0x0001U | 0x0002U | 0x0008U | 0x0010U | 0x0100U;
+  constexpr std::size_t header_size = 36U;
+  constexpr std::size_t legacy_folder_record_size = 16U;
+
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::oblivion, options};
+
+  REQUIRE(writer.add_bytes("Scripts/Beta/Quest.pex", bytes_from_text("script")).has_value());
+  REQUIRE(writer.add_bytes("Meshes/Alpha/Model.nif", bytes_from_text("model")).has_value());
+  REQUIRE(writer.add_bytes("Docs/Misc/Readme.txt", bytes_from_text("misc")).has_value());
+  REQUIRE(writer.add_bytes("Textures/Zeta/Diffuse.dds", bytes_from_text("texture")).has_value());
+  REQUIRE(writer.add_bytes("Meshes/Alpha/Anim.kf", bytes_from_text("animation")).has_value());
+  REQUIRE(writer.add_bytes("Interface/Gamma/Menu.xml", bytes_from_text("menu")).has_value());
+
+  const auto archive = output_path("byte-level-flags-and-sort-order.bsa");
+  auto written = writer.write_to(archive.string());
+  REQUIRE(written.has_value());
+
+  const auto bytes = read_binary_file(archive);
+  REQUIRE(bytes.size() >= header_size);
+  CHECK(read_u32_le_at(bytes, 32U) == expected_v103_file_flags);
+
+  const auto folder_count = read_u32_le_at(bytes, 16U);
+  REQUIRE(folder_count == 5U);
+
+  std::vector<std::uint64_t> actual_folder_hashes;
+  actual_folder_hashes.reserve(folder_count);
+  std::size_t cursor = header_size;
+  for (std::uint32_t index = 0; index < folder_count; ++index) {
+    actual_folder_hashes.push_back(read_u64_le_at(bytes, cursor));
+    cursor += legacy_folder_record_size;
+  }
+  CHECK(actual_folder_hashes == sorted_hashes({"Docs/Misc", "Interface/Gamma", "Meshes/Alpha", "Scripts/Beta", "Textures/Zeta"}));
+
+  for (std::uint32_t folder_index = 0; folder_index < folder_count; ++folder_index) {
+    REQUIRE(cursor < bytes.size());
+    const auto encoded_name_size = std::to_integer<unsigned char>(bytes[cursor]);
+    REQUIRE(encoded_name_size > 0U);
+    ++cursor;
+    REQUIRE(cursor + encoded_name_size <= bytes.size());
+    std::string folder_name;
+    folder_name.reserve(encoded_name_size - 1U);
+    for (std::size_t index = 0; index + 1U < encoded_name_size; ++index) {
+      folder_name.push_back(static_cast<char>(std::to_integer<unsigned char>(bytes[cursor + index])));
+    }
+    cursor += encoded_name_size;
+
+    const auto file_count_for_folder = read_u32_le_at(bytes, header_size + folder_index * legacy_folder_record_size + 8U);
+    std::vector<std::uint64_t> actual_file_hashes;
+    actual_file_hashes.reserve(file_count_for_folder);
+    for (std::uint32_t file_index = 0; file_index < file_count_for_folder; ++file_index) {
+      actual_file_hashes.push_back(read_u64_le_at(bytes, cursor));
+      cursor += 16U;
+    }
+
+    if (folder_name == "Meshes/Alpha") {
+      CHECK(actual_file_hashes == sorted_hashes({"Model.nif", "Anim.kf"}));
+    } else {
+      CHECK(std::is_sorted(actual_file_hashes.begin(), actual_file_hashes.end()));
+    }
+  }
+}
+
 TEST_CASE("TES4 BSA writer copies memory entries into writer-owned state", "[unit][tes4_bsa_writer]") {
   libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::oblivion};
   auto bytes = sample_bytes();
@@ -389,6 +485,62 @@ TEST_CASE("TES4 BSA writer records compressed override metadata while archive de
     CHECK(compressed_override.compression == compressed_entry_method(target));
     require_extracted_bytes(opened.value(), "Textures/CompressedOverride.dds", compressed_override_bytes);
   }
+}
+
+TEST_CASE("TES4 BSA writer target-default compression round-trips inherited entries", "[unit][tes4_bsa_writer]") {
+  constexpr std::uint32_t archive_compress_by_default = 0x0004U;
+  const std::array targets{libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3,
+                           libbsa::tes4_bsa_target::skyrim_se};
+  const auto inherited_bytes = bytes_from_text("target default inherited bytes must survive extraction");
+
+  for (const auto target : targets) {
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::target_default;
+    options.overwrite_existing = true;
+    libbsa::tes4_bsa_writer writer{target, options};
+
+    REQUIRE(writer.add_bytes("Meshes/TargetDefault.nif", inherited_bytes).has_value());
+
+    const auto archive = output_path(target_name(target) + "-target-default-compression.bsa");
+    auto written = writer.write_to(archive.string());
+    REQUIRE(written.has_value());
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    const auto& entry = require_entry(opened.value(), "Meshes/TargetDefault.nif");
+
+    if (target == libbsa::tes4_bsa_target::oblivion) {
+      CHECK((metadata.value().archive_flags & archive_compress_by_default) == 0U);
+      CHECK(entry.compression == libbsa::entry_compression::none);
+    } else {
+      CHECK((metadata.value().archive_flags & archive_compress_by_default) != 0U);
+      CHECK(entry.compression == compressed_entry_method(target));
+    }
+    require_extracted_bytes(opened.value(), "Meshes/TargetDefault.nif", inherited_bytes);
+  }
+}
+
+TEST_CASE("TES4 BSA writer overwrites existing archives when overwrite_existing is true", "[unit][tes4_bsa_writer]") {
+  const auto archive = output_path("overwrite-explicit-success.bsa");
+  write_binary_file(archive, bytes_from_text("pre-existing non-archive bytes"));
+
+  const auto source_bytes = bytes_from_text("replacement archive payload");
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+
+  REQUIRE(writer.add_bytes("Meshes/Overwrite/Replacement.nif", source_bytes).has_value());
+
+  auto written = writer.write_to(archive.string());
+  REQUIRE(written.has_value());
+
+  auto opened = libbsa::archive_reader::open(archive.string());
+  REQUIRE(opened.has_value());
+  require_extracted_bytes(opened.value(), "Meshes/Overwrite/Replacement.nif", source_bytes);
 }
 
 TEST_CASE("TES4 BSA writer leaves embedded names absent by default and when explicitly disabled",
