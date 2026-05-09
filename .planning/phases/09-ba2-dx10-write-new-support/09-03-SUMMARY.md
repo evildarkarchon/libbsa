@@ -64,7 +64,7 @@ Each task was committed atomically:
 2. **Task 2: GREEN: Implement checked locked-format sizing and planner** - `c3971f6` (feat)
 3. **Task 3: REFACTOR: Reuse planner in existing chunk validation safely** - `8270200` (refactor)
 
-**Plan metadata:** pending final docs commit
+**Plan metadata:** `46e4264` (docs)
 
 ## Files Created/Modified
 
