@@ -90,6 +90,17 @@ libbsa::entry_compression expected_target_default_compression(libbsa::tes4_bsa_t
   return libbsa::entry_compression::none;
 }
 
+libbsa::entry_compression compressed_entry_method(libbsa::tes4_bsa_target target) {
+  switch (target) {
+  case libbsa::tes4_bsa_target::oblivion:
+  case libbsa::tes4_bsa_target::fallout3:
+    return libbsa::entry_compression::deflate;
+  case libbsa::tes4_bsa_target::skyrim_se:
+    return libbsa::entry_compression::lz4_frame;
+  }
+  return libbsa::entry_compression::none;
+}
+
 std::string target_name(libbsa::tes4_bsa_target target) {
   switch (target) {
   case libbsa::tes4_bsa_target::oblivion:
@@ -100,6 +111,21 @@ std::string target_name(libbsa::tes4_bsa_target target) {
     return "skyrim-se";
   }
   return "unknown";
+}
+
+const libbsa::entry_metadata& require_entry(const libbsa::archive_reader& reader, std::string_view path) {
+  auto found = reader.find(path);
+  REQUIRE(found.has_value());
+  REQUIRE(found.value().has_value());
+  return *found.value();
+}
+
+void require_extracted_bytes(const libbsa::archive_reader& reader,
+                             std::string_view path,
+                             const std::vector<std::byte>& expected) {
+  auto extracted = reader.extract_bytes(path);
+  REQUIRE(extracted.has_value());
+  CHECK(extracted.value() == expected);
 }
 
 } // namespace
@@ -280,4 +306,87 @@ TEST_CASE("TES4 BSA writer requires explicit archive paths for disk entries", "[
   auto added = writer.add_file("Textures/Disk.dds", source.string());
 
   REQUIRE(added.has_value());
+}
+
+TEST_CASE("TES4 BSA writer compresses inherited entries and preserves raw overrides under all-compressed policy",
+          "[unit][tes4_bsa_writer]") {
+  const std::array targets{libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3,
+                           libbsa::tes4_bsa_target::skyrim_se};
+
+  const auto inherited_bytes = bytes_from_text("compress me according to the target profile");
+  const auto raw_override_bytes = bytes_from_text("keep this entry raw even though the archive default is compressed");
+  const std::vector<std::byte> zero_byte_payload;
+
+  for (const auto target : targets) {
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_compressed;
+    options.overwrite_existing = true;
+    libbsa::tes4_bsa_writer writer{target, options};
+
+    REQUIRE(writer.add_bytes("Meshes/Compressed.nif", inherited_bytes).has_value());
+    REQUIRE(writer.add_bytes("Meshes/RawOverride.nif", raw_override_bytes,
+                             libbsa::entry_compression_policy::raw)
+                .has_value());
+    REQUIRE(writer.add_bytes("Meshes/ZeroByte.nif", zero_byte_payload).has_value());
+
+    const auto archive = output_path(target_name(target) + "-all-compressed-overrides.bsa");
+    auto written = writer.write_to(archive.string());
+    REQUIRE(written.has_value());
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+
+    const auto& compressed = require_entry(opened.value(), "Meshes/Compressed.nif");
+    CHECK(compressed.compression == compressed_entry_method(target));
+    require_extracted_bytes(opened.value(), "Meshes/Compressed.nif", inherited_bytes);
+
+    const auto& raw_override = require_entry(opened.value(), "Meshes/RawOverride.nif");
+    CHECK(raw_override.compression == libbsa::entry_compression::none);
+    require_extracted_bytes(opened.value(), "Meshes/RawOverride.nif", raw_override_bytes);
+
+    const auto& zero_byte = require_entry(opened.value(), "Meshes/ZeroByte.nif");
+    CHECK(zero_byte.compression == libbsa::entry_compression::none);
+    require_extracted_bytes(opened.value(), "Meshes/ZeroByte.nif", zero_byte_payload);
+  }
+}
+
+TEST_CASE("TES4 BSA writer records compressed override metadata while archive default remains raw",
+          "[unit][tes4_bsa_writer]") {
+  constexpr std::uint32_t archive_compress_by_default = 0x0004U;
+  const std::array targets{libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3,
+                           libbsa::tes4_bsa_target::skyrim_se};
+
+  const auto raw_bytes = bytes_from_text("raw archive default entry");
+  const auto compressed_override_bytes = bytes_from_text("compressed per-entry override from all-raw archive");
+
+  for (const auto target : targets) {
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    options.overwrite_existing = true;
+    libbsa::tes4_bsa_writer writer{target, options};
+
+    REQUIRE(writer.add_bytes("Textures/RawDefault.dds", raw_bytes).has_value());
+    REQUIRE(writer.add_bytes("Textures/CompressedOverride.dds", compressed_override_bytes,
+                             libbsa::entry_compression_policy::compressed)
+                .has_value());
+
+    const auto archive = output_path(target_name(target) + "-all-raw-compressed-override.bsa");
+    auto written = writer.write_to(archive.string());
+    REQUIRE(written.has_value());
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    CHECK((metadata.value().archive_flags & archive_compress_by_default) == 0U);
+
+    const auto& raw_default = require_entry(opened.value(), "Textures/RawDefault.dds");
+    CHECK(raw_default.compression == libbsa::entry_compression::none);
+    require_extracted_bytes(opened.value(), "Textures/RawDefault.dds", raw_bytes);
+
+    const auto& compressed_override = require_entry(opened.value(), "Textures/CompressedOverride.dds");
+    CHECK(compressed_override.compression == compressed_entry_method(target));
+    require_extracted_bytes(opened.value(), "Textures/CompressedOverride.dds", compressed_override_bytes);
+  }
 }
