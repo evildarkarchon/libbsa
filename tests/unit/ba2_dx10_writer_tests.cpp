@@ -2,6 +2,8 @@
 
 #include <detail/bethesda_hash.hpp>
 
+#include <formats/ba2/ba2_publish.hpp>
+
 #include <libbsa/libbsa.hpp>
 
 #include "texture/directxtex_analyzer.hpp"
@@ -9,7 +11,6 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
-#include <cstdlib>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -224,22 +225,6 @@ void require_writer_record_metadata_matches_reference(const std::filesystem::pat
     CHECK(found->directory_hash == expected.directory_hash);
     CHECK(found->extension == expected.extension);
   }
-}
-
-void set_publish_after_backup_failure_hook(const std::filesystem::path& output_path) {
-#ifdef _WIN32
-  REQUIRE(_putenv_s("LIBBSA_TEST_FAIL_BA2_DX10_PUBLISH_AFTER_BACKUP", output_path.string().c_str()) == 0);
-#else
-  REQUIRE(setenv("LIBBSA_TEST_FAIL_BA2_DX10_PUBLISH_AFTER_BACKUP", output_path.string().c_str(), 1) == 0);
-#endif
-}
-
-void clear_publish_after_backup_failure_hook() {
-#ifdef _WIN32
-  REQUIRE(_putenv_s("LIBBSA_TEST_FAIL_BA2_DX10_PUBLISH_AFTER_BACKUP", "") == 0);
-#else
-  REQUIRE(unsetenv("LIBBSA_TEST_FAIL_BA2_DX10_PUBLISH_AFTER_BACKUP") == 0);
-#endif
 }
 
 const nlohmann::json& structural_case(const nlohmann::json& manifest, std::string_view key) {
@@ -809,30 +794,25 @@ TEST_CASE("BA2 DX10 writer rejects non-regular overwrite targets without replaci
   CHECK(std::filesystem::is_directory(directory));
 }
 
-TEST_CASE("BA2 DX10 writer restores original archive when overwrite publish fails after backup",
+TEST_CASE("BA2 DX10 internal publish rollback helper restores the original archive after publish failure",
           "[unit][ba2_dx10_writer][publish][overwrite]") {
-  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
-  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
   const auto output = unique_output_path("dx10-overwrite-rollback");
   const std::vector<std::byte> original_bytes{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
   write_binary_file(output, original_bytes);
-  libbsa::ba2_dx10_writer_options options;
-  options.overwrite_existing = true;
-  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4, options};
-  REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(),
-                          (generated_source_dir() / source_case.at("file").get<std::string>()).string())
-              .has_value());
+  auto backup = output;
+  backup += ".libbsa-bak-test";
+  std::filesystem::remove(backup);
+  std::error_code fs_error;
+  std::filesystem::rename(output, backup, fs_error);
+  REQUIRE_FALSE(fs_error);
 
-  set_publish_after_backup_failure_hook(output);
-  auto written = writer.write_to(output.string());
-  clear_publish_after_backup_failure_hook();
+  auto restored = libbsa::formats::ba2::publish_detail::restore_backup_after_publish_failure(
+      backup, output, [](const std::filesystem::path& from, const std::filesystem::path& to, std::error_code& error) {
+        std::filesystem::rename(from, to, error);
+      });
 
-  REQUIRE_FALSE(written.has_value());
-  CHECK(written.error().code == libbsa::error_code::io_error);
+  REQUIRE_FALSE(restored.has_value());
+  CHECK(restored.error().code == libbsa::error_code::io_error);
   CHECK(read_binary_file(output) == original_bytes);
-  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
-    auto backup = output;
-    backup += ".libbsa-bak-" + std::to_string(counter);
-    CHECK_FALSE(std::filesystem::exists(backup));
-  }
+  CHECK_FALSE(std::filesystem::exists(backup));
 }
