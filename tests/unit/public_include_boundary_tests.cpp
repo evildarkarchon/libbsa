@@ -116,6 +116,8 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
 }
 
 TEST_CASE("public_include_boundary DX10 writer contract exposes no raw override surface", "[unit][public-api]") {
+  // Phase 9 intentionally corrects the stale SPEC raw/compressed override wording:
+  // the public DX10 writer is DDS-host-file-only and compressed-only at archive level.
   const auto test_file_path = std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "unit" /
                               "public_include_boundary_tests.cpp";
   std::ifstream file{test_file_path};
