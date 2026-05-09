@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 06 planned; decision coverage gate overridden after semantic checker pass and visible D-ID citations
-last_updated: "2026-05-09T01:55:39.470Z"
+last_updated: "2026-05-09T02:05:57.173Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 5
   total_plans: 33
-  completed_plans: 30
-  percent: 91
+  completed_plans: 31
+  percent: 94
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 06 (dds-boundary-and-ba2-dx10-read-reconstruction) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [█████████░] 91%
 | Phase 06 P01 | 4min | 2 tasks | 22 files |
 | Phase 06 P02 | 3 min | 3 tasks | 6 files |
 | Phase 06 P03 | 3min | 3 tasks | 4 files |
+| Phase 06 P04 | 7min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 06]: DDS reconstruction emits standard DDS magic/header plus DDS_HEADER_DXT10 from libbsa-owned layout values, without DirectXTex as a runtime extraction gate. — Plan 06-03 built deterministic DDS headers behind the internal texture boundary per D-09 and D-12.
 - [Phase 06]: Chunk validation accepts only computed BA2-derived DDS order: array slice ascending, cubemap face order +X/-X/+Y/-Y/+Z/-Z, then ascending mip ranges per face or slice. — Plan 06-03 validates source chunk identity before extraction so downstream readers avoid blind archive-order concatenation.
 - [Phase 06]: Phase 6 DDS layout byte-size validation supports fixture-backed DXGI formats 28 and BC1-format ids 71/72, failing closed for unsupported formats. — Plan 06-03 follows the fixture-backed Phase 6 scope and returns format_error for unsupported texture formats.
+- [Phase 06]: BA2 DX10 open/list/find/contains route through dedicated private parser/reader helpers while preserving archive_reader as the public facade. — Plan 06-04 uses subtype-specific private helpers while keeping archive_reader as the public API.
+- [Phase 06]: DX10 chunk metadata is validated and materialized in DDS output order using validate_and_order_chunks, with source_chunk_index preserving archive source mapping. — Plan 06-04 must prepare extraction to read validated source chunks instead of blindly concatenating archive order.
+- [Phase 06]: Phase 5 GNRL unsupported-DX10 expectations were retired because DX10 is now a supported BA2 subtype. — Keeping the old unsupported assertion would contradict the Phase 6 DX10 open support requirement.
 
 ### Pending Todos
 
@@ -152,6 +156,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T01:55:19.908Z
+Last session: 2026-05-09T02:05:01.859Z
 Stopped at: Phase 06 planned; decision coverage gate overridden after semantic checker pass and visible D-ID citations
 Resume file: None

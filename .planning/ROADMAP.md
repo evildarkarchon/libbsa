@@ -204,7 +204,7 @@ Plans:
 - [x] 06-03-PLAN.md — Add internal DDS DXT10 header construction and mip/array/cubemap layout validation.
 
 **Wave 4** *(blocked on Wave 3 DDS layout validation and Wave 2 metadata contract)*
-- [ ] 06-04-PLAN.md — Implement BA2 DX10 open, metadata parsing, deterministic listing, and normalized lookup.
+- [x] 06-04-PLAN.md — Implement BA2 DX10 open, metadata parsing, deterministic listing, and normalized lookup.
 
 **Wave 5** *(blocked on Wave 4 parser metadata and lookup)*
 - [ ] 06-05-PLAN.md — Implement BA2 DX10 DDS reconstruction and raw/deflate/raw-LZ4 chunk extraction.
