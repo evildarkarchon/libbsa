@@ -237,7 +237,7 @@ Plans:
 - [x] 07-02-PLAN.md — Implement writer-owned entry state, path validation, duplicate detection, and overwrite/source guards.
 
 **Wave 3** *(blocked on Wave 2 validation foundation)*
-- [ ] 07-03-PLAN.md — Serialize raw v103/v104/v105 TES4-family BSA archives with hash-sorted tables and derived flags.
+- [x] 07-03-PLAN.md — Serialize raw v103/v104/v105 TES4-family BSA archives with hash-sorted tables and derived flags.
 
 **Wave 4** *(blocked on Wave 3 raw serialization)*
 - [ ] 07-04-PLAN.md — Add target-routed deflate/LZ4-frame compression defaults and per-entry overrides.
