@@ -243,7 +243,7 @@ Plans:
 - [x] 07-04-PLAN.md — Add target-routed deflate/LZ4-frame compression defaults and per-entry overrides.
 
 **Wave 5** *(blocked on Wave 4 stored payload encoding)*
-- [ ] 07-05-PLAN.md — Add explicit target-compatible embedded-name prefix emission and round-trip proof.
+- [x] 07-05-PLAN.md — Add explicit target-compatible embedded-name prefix emission and round-trip proof.
 
 **Wave 6** *(blocked on Wave 5 final stored payload shape)*
 - [ ] 07-06-PLAN.md — Add opt-in final-stored-byte deduplication and full Phase 7 regression gates.

@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-05-09T06:31:22.397Z"
+last_updated: "2026-05-09T06:36:38.207Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 6
   total_plans: 41
-  completed_plans: 39
-  percent: 95
+  completed_plans: 40
+  percent: 98
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 07 (tes4-family-bsa-write-new-support) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [██████████] 95%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -81,6 +81,7 @@ Progress: [██████████] 95%
 | Phase 07 P02 | 3 min | 2 tasks | 6 files |
 | Phase 07 P03 | 35min | 2 tasks | 3 files |
 | Phase 07 P04 | 3min | 2 tasks | 2 files |
+| Phase 07 P05 | 5min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 07]: archive_metadata::default_compression remains target codec metadata; all-raw policy is proven through archive flags and per-entry raw compression metadata. — This preserves the existing reader contract while still proving writer all-raw output through observable archive flags and entry compression.
 - [Phase 07]: TES4-family writer compression routes only from explicit target profile and public policies: v103/v104 use deflate, v105 uses LZ4 frame. — Plan 07-04 implements D-09 through D-15 without public codec knobs.
 - [Phase 07]: Zero-byte writer entries are forced raw and receive the compression XOR toggle when the archive default is compressed. — This preserves D-11 and prevents readers from expecting a compressed size prefix.
+- [Phase 07]: Embedded names remain off by default and are emitted only through the global embed_file_names writer option for non-v103 targets. — Plan 07-05 implements D-18 while preserving v103 compatibility and reader-backed extraction semantics.
 
 ### Pending Todos
 
@@ -179,6 +181,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T06:31:12.835Z
+Last session: 2026-05-09T06:36:27.307Z
 Stopped at: Completed 07-03-PLAN.md
 Resume file: None
