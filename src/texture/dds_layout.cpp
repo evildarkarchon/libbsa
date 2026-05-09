@@ -87,13 +87,22 @@ std::uint32_t mip_dimension(std::uint32_t dimension, std::uint32_t mip) noexcept
   return std::max(1U, shifted);
 }
 
+std::uint64_t rounded_block_count(std::uint32_t dimension, std::uint32_t block_dimension) noexcept {
+  if (block_dimension == 1U) {
+    return dimension;
+  }
+
+  // Promote before adding the block-rounding bias so hostile uint32 DDS dimensions cannot wrap.
+  return std::max<std::uint64_t>(
+      1U, (static_cast<std::uint64_t>(dimension) + static_cast<std::uint64_t>(block_dimension) - 1U) /
+              static_cast<std::uint64_t>(block_dimension));
+}
+
 result<std::uint64_t> described_mip_size(const dxgi_format_descriptor& descriptor, std::uint32_t width,
                                          std::uint32_t height) {
   // DirectX block-compressed DDS formats still allocate at least one 4x4 block for tiny mips.
-  const std::uint64_t blocks_wide =
-      descriptor.block_width == 1U ? width : std::max<std::uint32_t>(1U, (width + 3U) / 4U);
-  const std::uint64_t blocks_high =
-      descriptor.block_height == 1U ? height : std::max<std::uint32_t>(1U, (height + 3U) / 4U);
+  const std::uint64_t blocks_wide = rounded_block_count(width, descriptor.block_width);
+  const std::uint64_t blocks_high = rounded_block_count(height, descriptor.block_height);
   std::uint64_t blocks = 0;
   if (!checked_mul(blocks_wide, blocks_high, blocks)) {
     return format_error("DDS layout mip block count overflows");
