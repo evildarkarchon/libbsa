@@ -250,6 +250,8 @@ entry_compression compression_for(const dx10_chunk_record& chunk, detected_ba2_f
   if (chunk.packed_size == 0U) {
     return entry_compression::none;
   }
+  // Starfield v3 CompressionMethod 3 is normalized by the detector into raw-LZ4 block metadata here;
+  // DX10 chunks still decide raw-vs-compressed from PackedSize, never filename or extension spelling.
   return detected.default_compression;
 }
 
@@ -271,6 +273,8 @@ result<std::uint64_t> first_payload_offset_for(std::span<const dx10_record> reco
 }
 
 std::uint32_t inferred_array_size(const dx10_record& record) noexcept {
+  // TES5Edit treats CubeMaps == 2049 as the cubemap signal. Preserve cube_maps_raw separately so
+  // future compatibility work can revisit broader Bethesda-specific flag meanings without data loss.
   if (record.cube_maps_raw == ba2_dx10_cubemap_raw) {
     return 1U;
   }
