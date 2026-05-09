@@ -113,7 +113,7 @@ std::string target_name(libbsa::tes4_bsa_target target) {
   return "unknown";
 }
 
-const libbsa::entry_metadata& require_entry(const libbsa::archive_reader& reader, std::string_view path) {
+libbsa::entry_metadata require_entry(const libbsa::archive_reader& reader, std::string_view path) {
   auto found = reader.find(path);
   REQUIRE(found.has_value());
   REQUIRE(found.value().has_value());

@@ -285,10 +285,26 @@ void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
 }
 
 result<std::vector<std::byte>> encode_stored_payload(tes4_bsa_target target,
-                                                     std::span<const std::byte> raw_payload,
-                                                     bool effective_compressed) {
+                                                      std::span<const std::byte> raw_payload,
+                                                      bool effective_compressed,
+                                                      bool emit_embedded_name,
+                                                      std::string_view file_name) {
+  std::vector<std::byte> stored;
+  if (emit_embedded_name) {
+    auto embedded_name_length = checked_name_size(file_name.size(), "TES4 BSA embedded file name");
+    if (!embedded_name_length) {
+      return embedded_name_length.error();
+    }
+    stored.reserve(1U + file_name.size() + raw_payload.size());
+    stored.push_back(static_cast<std::byte>(embedded_name_length.value()));
+    for (const char ch : file_name) {
+      stored.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+    }
+  }
+
   if (!effective_compressed) {
-    return std::vector<std::byte>{raw_payload.begin(), raw_payload.end()};
+    stored.insert(stored.end(), raw_payload.begin(), raw_payload.end());
+    return stored;
   }
 
   auto raw_size = checked_u32(raw_payload.size(), "TES4 BSA compressed raw payload size");
@@ -304,8 +320,7 @@ result<std::vector<std::byte>> encode_stored_payload(tes4_bsa_target target,
     return compressed.error();
   }
 
-  std::vector<std::byte> stored;
-  stored.reserve(4U + compressed.value().size());
+  stored.reserve(stored.size() + 4U + compressed.value().size());
   append_u32_le(stored, raw_size.value());
   stored.insert(stored.end(), compressed.value().begin(), compressed.value().end());
   return stored;
@@ -342,10 +357,11 @@ std::pair<std::string, std::string> split_folder_file(std::string_view path) {
 }
 
 result<std::vector<prepared_folder>> prepare_folders(std::span<const tes4_writer_entry> entries,
-                                                     tes4_bsa_target target,
-                                                     bool archive_default_is_compressed,
-                                                     std::uint32_t version,
-                                                     std::uint32_t& file_flags) {
+                                                      tes4_bsa_target target,
+                                                      bool archive_default_is_compressed,
+                                                      bool emit_embedded_names,
+                                                      std::uint32_t version,
+                                                      std::uint32_t& file_flags) {
   std::map<std::string, std::vector<prepared_entry>> grouped;
   file_flags = 0U;
 
@@ -363,7 +379,7 @@ result<std::vector<prepared_folder>> prepare_folders(std::span<const tes4_writer
     file_flags |= file_flag_for_extension(extension_of(file_name), version);
     const bool entry_wants_compression = requested_entry_compression(archive_default_is_compressed, entry.compression);
     const bool effective_compressed = entry_wants_compression && !payload.value().empty();
-    auto stored_payload = encode_stored_payload(target, payload.value(), effective_compressed);
+    auto stored_payload = encode_stored_payload(target, payload.value(), effective_compressed, emit_embedded_names, file_name);
     if (!stored_payload) {
       return stored_payload.error();
     }
@@ -584,9 +600,10 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target,
   }
 
   const bool archive_default_is_compressed = archive_default_compressed(target, options.compression_policy);
+  const bool emit_embedded_names = options.embed_file_names && version.value() != oblivion_version;
 
   std::uint32_t file_flags = 0U;
-  auto folders = prepare_folders(entries, target, archive_default_is_compressed, version.value(), file_flags);
+  auto folders = prepare_folders(entries, target, archive_default_is_compressed, emit_embedded_names, version.value(), file_flags);
   if (!folders) {
     return folders.error();
   }
@@ -633,7 +650,7 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target,
   if (archive_default_is_compressed) {
     archive_flags |= archive_compress_by_default;
   }
-  if (options.embed_file_names && version.value() != oblivion_version) {
+  if (emit_embedded_names) {
     archive_flags |= archive_embed_names;
   }
 
