@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-05-09T06:12:08.674Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-05-09T06:18:00.303Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 12
   completed_phases: 6
   total_plans: 41
-  completed_plans: 36
-  percent: 88
+  completed_plans: 37
+  percent: 90
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 ## Current Position
 
 Phase: 07 (tes4-family-bsa-write-new-support) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Progress: [█████████░] 88%
 | Phase 06 P07 | 3min | 2 tasks | 2 files |
 | Phase 06 P08 | 2min | 2 tasks | 5 files |
 | Phase 07 P01 | 3min | 2 tasks | 4 files |
+| Phase 07 P02 | 3 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -149,6 +150,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 06]: Unsupported Starfield v3 DX10 CompressionMethod coverage uses detector-time unsupported errors with generated repository-owned bytes. — Proves compression routing fails closed without filename or extension inference.
 - [Phase 07]: Expose TES4-family write-new as a dependency-light writer object with named target and compression policy enums. — Plan 07-01 establishes the public contract before private serialization implementation.
 - [Phase 07]: Keep Plan 07-01 writer methods declaration-only and verify contracts through type traits/requires expressions. — Later plans can add method bodies without changing the public API.
+- [Phase 07]: Plan 02 validates and owns TES4-family writer state but intentionally defers reader-reopenable BSA serialization to Plan 03. — Plan 02 scope is validation foundation; Plan 03 owns reader-reopenable serialization.
+- [Phase 07]: Duplicate canonical writer paths are accepted during add and rejected at write time with format_error. — Preserves D-07 and keeps add operations independent from write-time global validation.
 
 ### Pending Todos
 
@@ -170,6 +173,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-09T06:12:08.667Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-05-09T06:17:35.365Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
