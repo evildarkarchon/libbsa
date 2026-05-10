@@ -65,7 +65,7 @@ enum class ba2_dx10_target {
 ///
 /// Phase 12 D-07 through D-09 keep packing controls at `write_to` time rather
 /// than in target compatibility options. `worker_count == 1` preserves serial
-/// behavior, values greater than one opt into parallel-capable work for writer
+/// behavior, `worker_count > 1` opts into parallel-capable work for writer
 /// paths that support it, and `worker_count == 0` is invalid.
 struct write_execution_options {
   /// Positive worker count requested for finalization work.

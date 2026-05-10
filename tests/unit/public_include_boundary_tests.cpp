@@ -200,10 +200,26 @@ TEST_CASE("public_include_boundary DX10 writer contract exposes no raw override 
 }
 
 TEST_CASE("public_include_boundary excludes private Phase 2 implementation names", "[unit][public-api]") {
-  constexpr auto forbidden_tokens = std::to_array<std::string_view>({"libdeflate", "lz4::", "DirectXTex", "DirectX::",
-                                                                     "DXGI", "Windows.h", "DDS_HEADER_DXT10",
-                                                                     "TES5Edit", "std::expected", "bethesda_hash",
-                                                                     "compression_router", "archive_path_key"});
+  constexpr auto forbidden_tokens = std::to_array<std::string_view>({"libdeflate",
+                                                                     "lz4::",
+                                                                     "DirectXTex",
+                                                                     "DirectX::",
+                                                                     "DXGI",
+                                                                     "Windows.h",
+                                                                     "DDS_HEADER_DXT10",
+                                                                     "TES5Edit",
+                                                                     "std::expected",
+                                                                     "std::thread",
+                                                                     "std::jthread",
+                                                                     "std::mutex",
+                                                                     "bethesda_hash",
+                                                                     "compression_router",
+                                                                     "archive_path_key",
+                                                                     "formats::",
+                                                                     "tes3_writer_entry",
+                                                                     "tes4_writer_entry",
+                                                                     "ba2_gnrl_writer_entry",
+                                                                     "ba2_dx10_writer_entry"});
   const auto include_dir = std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa";
 
   for (const auto& entry : std::filesystem::directory_iterator{include_dir}) {
@@ -226,4 +242,43 @@ TEST_CASE("public_include_boundary excludes private Phase 2 implementation names
       }
     }
   }
+}
+
+TEST_CASE("public_include_boundary writer execution options stay dependency-light", "[unit][public-api]") {
+  const auto writer_header = std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa" / "writer.hpp";
+  std::ifstream file{writer_header};
+  REQUIRE(file.is_open());
+
+  std::ostringstream contents;
+  contents << file.rdbuf();
+  const auto text = contents.str();
+  const auto begin = text.find("/// Write-call execution controls");
+  const auto end = text.find("/// Options controlling TES4-family", begin);
+  REQUIRE(begin != std::string::npos);
+  REQUIRE(end != std::string::npos);
+  REQUIRE(begin < end);
+
+  const auto section = text.substr(begin, end - begin);
+  constexpr auto forbidden_tokens = std::to_array<std::string_view>({"std::thread",
+                                                                     "std::jthread",
+                                                                     "std::mutex",
+                                                                     "std::expected",
+                                                                     "libdeflate",
+                                                                     "lz4",
+                                                                     "DirectXTex",
+                                                                     "Windows.h",
+                                                                     "TES5Edit",
+                                                                     "formats::",
+                                                                     "tes3_writer_entry",
+                                                                     "tes4_writer_entry",
+                                                                     "ba2_gnrl_writer_entry",
+                                                                     "ba2_dx10_writer_entry"});
+  for (const auto token : forbidden_tokens) {
+    INFO("writer execution option public boundary token: " << token);
+    REQUIRE(section.find(token) == std::string::npos);
+  }
+
+  REQUIRE(section.find("worker_count == 1") != std::string::npos);
+  REQUIRE(section.find("worker_count > 1") != std::string::npos);
+  REQUIRE(section.find("worker_count == 0") != std::string::npos);
 }
