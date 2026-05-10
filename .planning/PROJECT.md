@@ -18,23 +18,13 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 
 - [x] Phase 07 validated TES4-family BSA write-new support for public writer construction, target profiles, raw and compressed payloads, embedded names, deduplication, and reopen/extract round-trips.
 - [x] Phase 10 validated TES3/Morrowind BSA write-new support for public disk/memory writer APIs, byte-accurate serialization, reader-backed round-trip extraction, synthetic fixture evidence, embedded-NUL path rejection, and no-replace publish semantics.
+- [x] Phase 12 validated bounded-memory extraction and writer finalization, opt-in parallel worker execution, benchmark reporting, public API documentation, thread-safety guidance, and compile-checked consumer examples.
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
 
-- [ ] Provide a C++20 library surface that can be consumed as a static or dynamic library without UI/tooling coupling.
-- [ ] Auto-detect and read TES3, TES4, FO3/FNV/Skyrim LE, Skyrim SE/AE, Fallout 4 BA2, and Starfield BA2 archive variants.
-- [ ] Extract individual files, stream extracted data to caller-provided sinks, and bulk-iterate archive contents.
-- [ ] Transparently handle required compression modes: deflate, LZ4 frame, and raw LZ4 block.
-- [ ] Reconstruct valid DDS files from BA2 DDS texture archives.
-- [ ] Create new archives for every supported BSA and BA2 variant, including correct indexes, hashes, compression, flags, and DDS mip chunking.
-- [ ] Support query and inspection APIs for paths, existence, metadata, archive type, version, flags, and file counts.
-- [ ] Preserve byte-level compatibility with official Bethesda tools and BSArchPro through fixture, round-trip, and compatibility tests.
-- [ ] Use streaming I/O and bounded buffers so large archives do not require whole-archive memory loading.
-- [ ] Add multi-threaded packing/extraction and benchmarks after baseline read/write correctness is established.
-- [ ] Harden parsing and error handling for malformed archives, known Bethesda quirks, and edge-case compatibility behavior.
-- [ ] Document public APIs and integration examples once the API stabilizes.
+- [x] v1 roadmap requirements are complete as of Phase 12 verification; future active scope should come from the next milestone or v2 requirement promotion.
 
 ### Out of Scope
 
@@ -67,7 +57,7 @@ Testing must prove byte-level and metadata-level compatibility. Expected coverag
 - **API design**: Public headers should remain minimal and avoid leaking platform, compression, or DirectXTex implementation details.
 - **State model**: No global mutable state or singleton-based behavior; thread safety should come from isolated objects and explicit ownership.
 - **Error model**: In C++20 public APIs, prefer a local `libbsa::result<T>` or explicit error-code style for I/O and format failures; reserve exceptions for programmer precondition violations.
-- **Performance**: Large archive support must use streaming I/O, with full multi-threaded packing/extraction deferred until the dedicated performance phase.
+- **Performance**: Large archive support uses streaming I/O and bounded scratch buffers, with opt-in bounded parallel packing/extraction validated in Phase 12.
 
 ## Key Decisions
 
@@ -87,6 +77,9 @@ Testing must prove byte-level and metadata-level compatibility. Expected coverag
 | `libbsa::result::error()` reports success-result misuse with `std::logic_error` | Public API precondition mistakes should not terminate the process or return a misleading default error | Implemented in Phase 03 |
 | TES4-family BSA writing uses explicit target profiles and writer-owned entry state | Phase 07 needed a stable C++20 writer API with deterministic validation before BA2 writer work builds on it | Implemented in Phase 07 |
 | TES4-family stored-byte deduplication is opt-in and operates on final stored bytes | Matching source bytes may encode differently because of compression or embedded-name prefixes, so deduplication must compare the final bytes written to the archive | Implemented in Phase 07 |
+| Public parallel worker counts are bounded and result-mapped | Worker-count options are public input, so oversized values and worker startup failures must not escape the `result` error contract | Implemented in Phase 12 |
+| BA2 GNRL disk-backed finalization validates prepared source sizes | Disk sources can change between preparation and streaming; finalization and dedupe comparisons must reject growth or truncation before publishing malformed offsets | Implemented in Phase 12 |
+| BA2 GNRL publish uses no-replace and rollback helpers | No-overwrite mode must preserve raced destinations, and overwrite failures must report backup restoration failures distinctly | Implemented in Phase 12 |
 
 ## Evolution
 
@@ -106,4 +99,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-10 after Phase 10*
+*Last updated: 2026-05-10 after Phase 12*
