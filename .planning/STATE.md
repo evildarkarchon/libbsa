@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 12-06-PLAN.md
-last_updated: "2026-05-10T08:51:18.117Z"
+status: verifying
+stopped_at: Completed 12-07-PLAN.md
+last_updated: "2026-05-10T08:59:27.154Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 12
-  completed_phases: 11
+  completed_phases: 12
   total_plans: 75
-  completed_plans: 74
-  percent: 99
+  completed_plans: 75
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 
 Phase: 12 (performance-concurrency-documentation-and-polish) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-10
 
-Progress: [██████████] 99%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [██████████] 99%
 | Phase 12 P04 | 12.3min | 3 tasks | 7 files |
 | Phase 12 P05 | 7min | 3 tasks | 5 files |
 | Phase 12 P06 | 5min | 3 tasks | 10 files |
+| Phase 12 P07 | 4min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 12]: Public API documentation is generated from include/libbsa plus docs pages only, with src, tests, build output, and TES5Edit excluded. — This enforces the D-21 and D-27 boundary between public API docs, private implementation, and read-only reference material.
 - [Phase 12]: docs/thread-safety.md is the canonical D-23 thread-safety reference and public headers point readers to it instead of duplicating every rule inline. — A single canonical document plus policy tests keeps reader, writer, sink, validation, benchmark, and bulk extraction rules aligned.
 - [Phase 12]: Docs generation and thread-safety coverage are enforced by default source-text policy tests. — Default CTest coverage catches Doxygen scope drift and D-23 public-type coverage gaps before docs are published.
+- [Phase 12]: Consumer examples are compile-checked through the installed package smoke source and mirrored by docs headings. — Keeps documentation snippets tied to the public umbrella include and installed libbsa::libbsa target.
+- [Phase 12]: Phase 12 benchmark and documentation evidence remains legal synthetic data only and keeps TES5Edit read-only. — Preserves fixture legality and the project reference boundary through final documentation.
+- [Phase 12]: Target-format guidance is machine-checked against required headings, compression route text, and public compatibility_warning_code values parsed from validation.hpp. — Forces future warning-code or format-policy changes to update consumer documentation.
 
 ### Pending Todos
 
@@ -161,6 +165,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T08:51:18.110Z
-Stopped at: Completed 12-06-PLAN.md
+Last session: 2026-05-10T08:59:27.146Z
+Stopped at: Completed 12-07-PLAN.md
 Resume file: None
