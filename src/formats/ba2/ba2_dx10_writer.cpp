@@ -108,6 +108,13 @@ result<void> ba2_dx10_writer::add_file(std::string_view archive_path, std::strin
 }
 
 result<void> ba2_dx10_writer::write_to(std::string_view host_path) const {
+  return write_to(host_path, write_execution_options{});
+}
+
+result<void> ba2_dx10_writer::write_to(std::string_view host_path, write_execution_options execution) const {
+  if (execution.worker_count == 0U) {
+    return error{error_code::invalid_argument, "BA2 DX10 writer worker_count must be positive"};
+  }
   return formats::ba2::write_ba2_dx10_archive(state_->target, state_->options, state_->entries, host_path);
 }
 

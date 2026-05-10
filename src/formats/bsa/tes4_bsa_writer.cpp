@@ -93,6 +93,13 @@ result<void> tes4_bsa_writer::add_bytes(std::string_view archive_path,
 }
 
 result<void> tes4_bsa_writer::write_to(std::string_view host_path) const {
+  return write_to(host_path, write_execution_options{});
+}
+
+result<void> tes4_bsa_writer::write_to(std::string_view host_path, write_execution_options execution) const {
+  if (execution.worker_count == 0U) {
+    return error{error_code::invalid_argument, "TES4 BSA writer worker_count must be positive"};
+  }
   return formats::bsa::write_tes4_bsa_archive(state_->target, state_->options, state_->entries, host_path);
 }
 

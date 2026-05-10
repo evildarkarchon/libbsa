@@ -61,6 +61,17 @@ enum class ba2_dx10_target {
   starfield_v3,
 };
 
+/// Write-call execution controls shared by public writer finalization APIs.
+///
+/// Phase 12 D-07 through D-09 keep packing controls at `write_to` time rather
+/// than in target compatibility options. `worker_count == 1` preserves serial
+/// behavior, values greater than one opt into parallel-capable work for writer
+/// paths that support it, and `worker_count == 0` is invalid.
+struct write_execution_options {
+  /// Positive worker count requested for finalization work.
+  std::uint32_t worker_count{1U};
+};
+
 /// Options controlling TES4-family write-new archive finalization.
 struct tes4_bsa_writer_options {
   /// Archive-wide compression behavior used by entries whose policy is `inherit`.
@@ -191,6 +202,12 @@ class tes4_bsa_writer {
   /// was enabled, and compression or I/O failures are returned as structured errors.
   result<void> write_to(std::string_view host_path) const;
 
+  /// Finalizes the writer state using explicit write-call execution controls.
+  ///
+  /// `execution.worker_count` must be positive. A value of `1` preserves the
+  /// serial behavior of the one-argument overload.
+  result<void> write_to(std::string_view host_path, write_execution_options execution) const;
+
  private:
   struct state;
 
@@ -230,6 +247,13 @@ class tes3_bsa_writer {
   /// Existing destinations fail unless `tes3_bsa_writer_options::overwrite_existing`
   /// was enabled, and validation or I/O failures are returned as structured errors.
   result<void> write_to(std::string_view host_path) const;
+
+  /// Finalizes the TES3 writer using explicit write-call execution controls.
+  ///
+  /// `execution.worker_count` must be positive. TES3 has no compression work in
+  /// this phase, so values greater than one are accepted for the uniform public
+  /// shape while preserving the existing serial output path.
+  result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:
   struct state;
@@ -286,6 +310,12 @@ class ba2_gnrl_writer {
   /// structured errors.
   result<void> write_to(std::string_view host_path) const;
 
+  /// Finalizes the BA2 GNRL writer using explicit write-call execution controls.
+  ///
+  /// `execution.worker_count` must be positive. A value of `1` preserves the
+  /// serial behavior of the one-argument overload.
+  result<void> write_to(std::string_view host_path, write_execution_options execution) const;
+
  private:
   struct state;
 
@@ -324,6 +354,12 @@ class ba2_dx10_writer {
   /// was enabled, and validation, compression, or I/O failures are returned as
   /// structured errors.
   result<void> write_to(std::string_view host_path) const;
+
+  /// Finalizes the BA2 DX10 writer using explicit write-call execution controls.
+  ///
+  /// `execution.worker_count` must be positive. A value of `1` preserves the
+  /// serial behavior of the one-argument overload.
+  result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:
   struct state;
