@@ -67,6 +67,9 @@ enum class ba2_dx10_target {
 /// than in target compatibility options. `worker_count == 1` preserves serial
 /// behavior, `worker_count > 1` opts into parallel-capable work for writer
 /// paths that support it, and `worker_count == 0` is invalid.
+///
+/// Thread-safety: the options value is copied into `write_to`; the writer owns
+/// worker scheduling for that call. See `docs/thread-safety.md` for D-23 rules.
 struct write_execution_options {
   /// Positive worker count requested for finalization work.
   std::uint32_t worker_count{1U};
@@ -166,6 +169,10 @@ struct ba2_gnrl_entry_options {
 ///
 /// Entries are added with explicit archive-internal paths and finalized to a
 /// host-path archive. Memory-buffer entries are copied into writer-owned state.
+///
+/// Thread-safety: independent writer objects may be used concurrently, but
+/// mutation is not concurrent with other mutation or `write_to` on the same
+/// writer object. See `docs/thread-safety.md`.
 class tes4_bsa_writer {
  public:
   /// Creates a writer for `target` using default writer options.
@@ -219,6 +226,10 @@ class tes4_bsa_writer {
 /// TES3 writer output is raw/uncompressed. The public surface intentionally has
 /// no compression, dedupe, or embedded-name controls because Morrowind BSA
 /// archives in this phase are one raw payload per archive entry.
+///
+/// Thread-safety: independent writer objects may be used concurrently, but
+/// mutation is not concurrent with other mutation or `write_to` on the same
+/// writer object. See `docs/thread-safety.md`.
 class tes3_bsa_writer {
  public:
   /// Creates a raw/uncompressed TES3 writer using default writer options.
@@ -266,6 +277,10 @@ class tes3_bsa_writer {
 /// Entries are added with explicit archive-internal paths and finalized only to
 /// a host-path archive. Memory-buffer entries are copied into writer-owned state,
 /// and codec implementation details stay private behind the selected target profile.
+///
+/// Thread-safety: independent writer objects may be used concurrently, but
+/// mutation is not concurrent with other mutation or `write_to` on the same
+/// writer object. See `docs/thread-safety.md`.
 class ba2_gnrl_writer {
  public:
   /// Creates a writer for `target` using default BA2 GNRL writer options.
@@ -328,6 +343,10 @@ class ba2_gnrl_writer {
 /// finalized to a host-path archive. The public DX10 contract is compressed-only
 /// at archive level: callers do not choose raw, per-entry, or per-chunk overrides
 /// because uncompressed texture archives are not a stable compatibility target.
+///
+/// Thread-safety: independent writer objects may be used concurrently, but
+/// mutation is not concurrent with other mutation or `write_to` on the same
+/// writer object. See `docs/thread-safety.md`.
 class ba2_dx10_writer {
  public:
   /// Creates a writer for `target` using default BA2 DX10 writer options.

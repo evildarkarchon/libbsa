@@ -90,6 +90,9 @@ struct validation_options {
 /// Reports expose only overall validity, optional archive metadata, fatal
 /// diagnostics, and compatibility warnings. They do not expose parser offsets,
 /// record indexes, chunk indexes, entry listings, or extraction bytes.
+///
+/// Thread-safety: reports are independent values after return; see
+/// `docs/thread-safety.md` for validation result inspection rules.
 struct validation_report {
   /// True when no fatal validation errors were found.
   bool valid{false};
@@ -112,6 +115,9 @@ struct validation_report {
 /// Result-level failures are reserved for call/setup failures such as invalid
 /// or unreadable host paths. Inspectable archive problems are reported inside
 /// `validation_report::errors` so callers can display all available diagnostics.
+///
+/// Thread-safety: validation uses no global mutable state, so independent calls
+/// may run concurrently subject to the host filesystem.
 [[nodiscard]] result<validation_report> validate_archive(std::string_view host_path, validation_options options = {});
 
 } // namespace libbsa

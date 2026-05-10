@@ -160,6 +160,9 @@ struct entry_metadata {
 /// Implementations must return the number of bytes accepted from `bytes`. The
 /// extractor treats partial acceptance as `error_code::io_error` so callers
 /// never observe ambiguous partial-success extraction.
+///
+/// Thread-safety: sinks are caller-owned; see `docs/thread-safety.md` for the
+/// D-23 distinct-sink rule used by parallel bulk extraction.
 class payload_sink {
  public:
   virtual ~payload_sink() = default;
@@ -172,6 +175,9 @@ class payload_sink {
 ///
 /// The default is intentionally serial. Pass a positive value greater than one
 /// to opt into parallel extraction of independent entries.
+///
+/// Thread-safety: options are copied into the extraction call; see
+/// `docs/thread-safety.md` for caller mutation rules.
 struct bulk_extract_options {
   /// Number of worker threads to use; `0` is invalid and never means "auto".
   std::uint32_t worker_count{1U};
@@ -190,6 +196,9 @@ struct bulk_extract_request {
 /// may be called concurrently and the returned sinks may be written on worker
 /// threads. libbsa does not call user factory or sink methods while holding an
 /// internal mutex.
+///
+/// Thread-safety: D-23 requires caller-owned factories to protect shared state
+/// and return distinct sinks for concurrent entry extraction.
 class bulk_extract_sink_factory {
  public:
   virtual ~bulk_extract_sink_factory() = default;
@@ -202,6 +211,9 @@ class bulk_extract_sink_factory {
 };
 
 /// Per-request result record returned by `archive_reader::extract_entries`.
+///
+/// Thread-safety: result records are independent values after the caller-owned
+/// result vector is no longer being mutated.
 struct bulk_extract_entry_result {
   /// Requested archive path in the same order supplied by the caller.
   std::string path;
@@ -221,6 +233,10 @@ struct bulk_extract_entry_result {
 /// Use `open()` for fallible construction. A successfully opened reader exposes
 /// archive metadata, deterministic entry listings, canonical path lookup, and
 /// synchronous extraction for the archive variants implemented by libbsa.
+///
+/// Thread-safety: independently opened readers may be used concurrently; one
+/// reader may run concurrent const extraction calls only with distinct sinks as
+/// described in `docs/thread-safety.md`.
 class archive_reader {
  public:
   /// Attempts to open an archive from a host path string.
