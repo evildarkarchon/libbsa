@@ -2,15 +2,19 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <span>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include <nlohmann/json.hpp>
 
 namespace {
 
@@ -26,6 +30,10 @@ std::filesystem::path generated_archive_dir() {
 
 std::filesystem::path generated_source_dir() {
   return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" / "source";
+}
+
+std::filesystem::path compatibility_matrix_path() {
+  return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" / "compatibility_matrix.json";
 }
 
 std::filesystem::path validation_test_dir() {
@@ -50,6 +58,23 @@ std::vector<std::byte> bytes_from_text(std::string_view text) {
     bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
   }
   return bytes;
+}
+
+nlohmann::json read_json_file(const std::filesystem::path& path) {
+  std::ifstream stream{path};
+  REQUIRE(stream.is_open());
+  return nlohmann::json::parse(stream);
+}
+
+libbsa::error_code error_code_from_matrix(std::string_view value) {
+  if (value == "format_error") {
+    return libbsa::error_code::format_error;
+  }
+  if (value == "unsupported") {
+    return libbsa::error_code::unsupported;
+  }
+  FAIL("unknown compatibility matrix expected_error: " << value);
+  return libbsa::error_code::format_error;
 }
 
 void require_valid_archive(std::string_view host_path,
@@ -90,6 +115,47 @@ void require_malformed_open_report(std::string_view file_name, libbsa::error_cod
   CHECK_FALSE(report.metadata.has_value());
   REQUIRE(report.errors.size() == 1U);
   CHECK(report.errors.front().code == expected_code);
+}
+
+bool report_has_error_code(const libbsa::validation_report& report, libbsa::error_code expected_code) {
+  return std::any_of(report.errors.begin(), report.errors.end(), [expected_code](const libbsa::validation_diagnostic& error) {
+    return error.code == expected_code;
+  });
+}
+
+void require_matrix_open_report(const nlohmann::json& row) {
+  const auto archive_path = generated_archive_dir() / row.at("archive").get<std::string>();
+  const auto expected_code = error_code_from_matrix(row.at("expected_error").get<std::string>());
+
+  auto opened = libbsa::archive_reader::open(archive_path.string());
+  REQUIRE_FALSE(opened.has_value());
+  CHECK(opened.error().code == expected_code);
+
+  auto validated = libbsa::validate_archive(archive_path.string());
+  REQUIRE(validated.has_value());
+  const auto& report = validated.value();
+  CHECK_FALSE(report.valid);
+  CHECK_FALSE(report.is_valid());
+  CHECK_FALSE(report.metadata.has_value());
+  CHECK(report_has_error_code(report, expected_code));
+}
+
+void require_matrix_extraction_report(const nlohmann::json& row) {
+  const auto archive_path = generated_archive_dir() / row.at("archive").get<std::string>();
+  const auto expected_code = error_code_from_matrix(row.at("expected_error").get<std::string>());
+  libbsa::validation_options options;
+  options.validate_entry_extractability = true;
+
+  auto opened = libbsa::archive_reader::open(archive_path.string());
+  REQUIRE(opened.has_value());
+
+  auto validated = libbsa::validate_archive(archive_path.string(), options);
+  REQUIRE(validated.has_value());
+  const auto& report = validated.value();
+  CHECK_FALSE(report.valid);
+  CHECK_FALSE(report.is_valid());
+  CHECK(report.metadata.has_value());
+  CHECK(report_has_error_code(report, expected_code));
 }
 
 std::filesystem::path write_tes3_archive() {
@@ -185,4 +251,35 @@ TEST_CASE("validation_api reports malformed archives without lenient readers", "
   require_malformed_open_report("malformed_unsupported_version.bsa", libbsa::error_code::unsupported);
   require_malformed_open_report("ba2_duplicate_canonical_path.ba2", libbsa::error_code::format_error);
   require_malformed_open_report("ba2_dx10_truncated_header.ba2", libbsa::error_code::format_error);
+}
+
+TEST_CASE("validation_api reports compatibility_matrix malformed rows as validation errors",
+          "[unit][fixture][malformed][validation_api][compatibility_matrix]") {
+  REQUIRE(std::filesystem::is_regular_file(compatibility_matrix_path()));
+  const auto matrix = read_json_file(compatibility_matrix_path());
+  bool observed_open_phase = false;
+  bool observed_extraction_phase = false;
+
+  for (const auto& row : matrix.at("rows")) {
+    if (row.at("evidence_type").get<std::string>() != "manifest") {
+      continue;
+    }
+
+    INFO("compatibility_matrix validation row: " << row.at("id").get<std::string>());
+    const auto phase = row.at("phase").get<std::string>();
+    if (phase == "open") {
+      observed_open_phase = true;
+      require_matrix_open_report(row);
+      continue;
+    }
+    if (phase == "extraction") {
+      observed_extraction_phase = true;
+      require_matrix_extraction_report(row);
+      continue;
+    }
+    FAIL("unknown compatibility matrix validation phase: " << phase);
+  }
+
+  CHECK(observed_open_phase);
+  CHECK(observed_extraction_phase);
 }
