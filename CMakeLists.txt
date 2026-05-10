@@ -54,6 +54,7 @@ target_sources(libbsa
         include/libbsa/writer.hpp
   PRIVATE
     src/archive.cpp
+    src/validation.cpp
     src/detail/archive_path.cpp
     src/detail/bethesda_hash.cpp
     src/detail/binary_io.cpp

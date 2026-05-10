@@ -96,7 +96,7 @@ struct validation_report {
   std::vector<compatibility_warning> warnings;
 
   /// Returns true when the report represents a valid archive.
-  [[nodiscard]] bool is_valid() const noexcept { return valid; }
+  [[nodiscard]] bool is_valid() const noexcept;
 };
 
 /// Validates an archive host path and returns structured diagnostics.
