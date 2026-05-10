@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 10-05-PLAN.md
-last_updated: "2026-05-10T00:29:55.116Z"
-last_activity: 2026-05-10
+status: gaps_found
+stopped_at: Phase 10 verification found gaps
+last_updated: "2026-05-10T01:05:00Z"
+last_activity: 2026-05-10 -- Phase 10 verification found gaps
 progress:
   total_phases: 12
-  completed_phases: 10
+  completed_phases: 9
   total_plans: 60
   completed_plans: 60
   percent: 100
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 Phase: 10 (tes3-write-support-and-bsa-format-completeness) — EXECUTING
 Plan: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-05-10
+Status: Verification found 2 gaps — gap closure required
+Last activity: 2026-05-10 -- Phase 10 verification found gaps
 
-Progress: [██████████] 100%
+Progress: [██████████] 100% plan execution; verification gaps remain
 
 ## Performance Metrics
 
@@ -98,6 +98,7 @@ None yet.
 - Starfield BA2 v2/v3 fields and compression behavior need fixture-backed policy before future writer variants.
 - BA2 DDS reconstruction, cubemaps, mip ordering, and chunk limits should remain covered during hardening.
 - Public C++20 error/result API should avoid exposing C++23 `std::expected` until the project intentionally raises the language standard.
+- Phase 10 verification found two TES3 writer gaps: embedded NUL archive paths can produce self-inconsistent archives, and non-overwrite publish lacks a final no-replace check before rename.
 
 ## Deferred Items
 
@@ -109,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T00:29:22.188Z
-Stopped at: Completed 10-05-PLAN.md
-Resume file: None
+Last session: 2026-05-10T01:05:00Z
+Stopped at: Phase 10 verification found gaps
+Resume file: .planning/phases/10-tes3-write-support-and-bsa-format-completeness/10-VERIFICATION.md

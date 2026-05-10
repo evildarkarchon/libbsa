@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 7: TES4-Family BSA Write-New Support** - Consumers can create compatible TES4/FO3/FNV/Skyrim LE/SSE BSA archives.
 - [ ] **Phase 8: BA2 GNRL Write-New Support** - Consumers can create compatible Fallout 4 and Starfield general BA2 archives.
 - [ ] **Phase 9: BA2 DX10 Write-New Support** - Consumers can create compatible Fallout 4 and Starfield texture BA2 archives from DDS input.
-- [x] **Phase 10: TES3 Write Support and BSA Format Completeness** - Consumers can create Morrowind BSA archives and complete BSA read/write coverage. (completed 2026-05-10)
+- [ ] **Phase 10: TES3 Write Support and BSA Format Completeness** - Consumers can create Morrowind BSA archives and complete BSA read/write coverage.
 - [ ] **Phase 11: Compatibility Warnings, Validation API, and Hardening** - Consumers receive structured validation results while malformed inputs are rejected safely.
 - [ ] **Phase 12: Performance, Concurrency, Documentation, and Polish** - Consumers can use bounded-memory, parallel-capable workflows with documented APIs and examples.
 
