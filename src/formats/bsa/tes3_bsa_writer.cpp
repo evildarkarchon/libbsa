@@ -1,6 +1,7 @@
 #include "formats/bsa/tes3_bsa_writer.hpp"
 
 #include <detail/archive_path.hpp>
+#include <detail/atomic_file_ops.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 
@@ -478,8 +479,8 @@ result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
     return error{error_code::io_error, "TES3 BSA output host path already exists"};
   }
 
-  std::filesystem::rename(temp_path, output_path, fs_error);
-  if (fs_error) {
+  auto published = detail::publish_file_without_replace(temp_path, output_path);
+  if (!published) {
     cleanup_publish_directory(temp_dir.value());
     return error{error_code::io_error, "TES3 BSA writer failed to publish output host path"};
   }
