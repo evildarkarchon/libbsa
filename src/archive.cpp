@@ -15,7 +15,6 @@
 
 #include <cstddef>
 #include <fstream>
-#include <limits>
 #include <optional>
 #include <string>
 #include <utility>
@@ -91,39 +90,6 @@ result<std::uint64_t> archive_file_size(std::string_view host_path) {
     return error{error_code::io_error, "failed to determine archive host path size"};
   }
   return static_cast<std::uint64_t>(size);
-}
-
-result<std::vector<std::byte>> read_stored_payload(std::string_view host_path, const entry_metadata& entry) {
-  std::ifstream input{std::string{host_path}, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "failed to open archive host path for extraction"};
-  }
-  if (entry.payload_offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
-    return error{error_code::format_error, "BSA payload offset exceeds stream limits"};
-  }
-  if (entry.stored_size > static_cast<std::uint64_t>(std::vector<std::byte>{}.max_size())) {
-    return error{error_code::format_error, "BSA stored payload exceeds platform vector limits"};
-  }
-  if (entry.stored_size > static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max())) {
-    return error{error_code::format_error, "BSA stored payload exceeds stream limits"};
-  }
-
-  auto payload = detail::make_byte_vector(static_cast<std::size_t>(entry.stored_size), "BSA stored payload");
-  if (!payload) {
-    return payload.error();
-  }
-  input.seekg(static_cast<std::streamoff>(entry.payload_offset), std::ios::beg);
-  if (!input) {
-    return error{error_code::io_error, "failed to seek to archive payload"};
-  }
-  input.read(reinterpret_cast<char*>(payload.value().data()), static_cast<std::streamsize>(payload.value().size()));
-  if (input.bad()) {
-    return error{error_code::io_error, "failed while reading archive payload"};
-  }
-  if (static_cast<std::size_t>(input.gcount()) != payload.value().size()) {
-    return error{error_code::format_error, "BSA entry payload span is outside the archive"};
-  }
-  return std::move(payload).value();
 }
 
 } // namespace

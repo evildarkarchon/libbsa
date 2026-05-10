@@ -17,10 +17,6 @@ namespace {
 
 constexpr std::size_t extraction_chunk_size = 64U * 1024U;
 
-bool span_fits(std::size_t start, std::size_t length, std::size_t total) noexcept {
-  return start <= total && length <= total - start;
-}
-
 result<std::size_t> checked_size(std::uint64_t value, std::string_view description) {
   if (value > std::numeric_limits<std::size_t>::max()) {
     return error{error_code::format_error, std::string{description} + " exceeds platform limits"};
@@ -83,15 +79,6 @@ result<void> write_in_chunks(payload_sink& sink, std::span<const std::byte> byte
     offset += chunk_size;
   }
   return {};
-}
-
-result<std::span<const std::byte>> consumer_payload_span(std::span<const std::byte> stored_payload,
-                                                         const entry_metadata& entry) {
-  if (entry.embedded_name_prefix_size > stored_payload.size()) {
-    return error{error_code::format_error, "TES4 BSA embedded-name prefix exceeds stored payload"};
-  }
-  // Embedded names are part of the on-disk payload but not the consumer-visible file bytes.
-  return stored_payload.subspan(entry.embedded_name_prefix_size);
 }
 
 result<void> stream_payload_range(std::ifstream& input,
@@ -187,31 +174,6 @@ result<std::vector<std::byte>> read_bytes_at(std::ifstream& input,
   return std::move(bytes).value();
 }
 
-result<void> extract_stored_payload(std::span<const std::byte> stored_payload, const entry_metadata& entry,
-                                    payload_sink& sink) {
-  auto payload = consumer_payload_span(stored_payload, entry);
-  if (!payload) {
-    return payload.error();
-  }
-  if (entry.compression == entry_compression::none) {
-    return write_in_chunks(sink, payload.value());
-  }
-  if (payload.value().size() < 4U) {
-    return error{error_code::format_error, "TES4 BSA compressed payload size prefix is truncated"};
-  }
-
-  const auto expected_size = read_u32_le(payload.value().first(4U));
-  if (expected_size != entry.raw_size) {
-    return error{error_code::format_error, "TES4 BSA compressed payload size prefix does not match metadata"};
-  }
-  auto decoded = detail::decompress_payload_exact(compression_method_for(entry.compression), payload.value().subspan(4U),
-                                                  static_cast<std::size_t>(expected_size));
-  if (!decoded) {
-    return decoded.error();
-  }
-  return write_in_chunks(sink, decoded.value());
-}
-
 result<void> extract_file_payload(std::ifstream& input, const entry_metadata& entry, payload_sink& sink) {
   if (entry.embedded_name_prefix_size > entry.stored_size) {
     return error{error_code::format_error, "TES4 BSA embedded-name prefix exceeds stored payload"};
@@ -283,11 +245,6 @@ result<bool> contains_tes4_bsa_entry(std::span<const entry_metadata> entries, st
     return found.error();
   }
   return found.value().has_value();
-}
-
-result<void> extract_tes4_bsa_payload(std::span<const std::byte> stored_payload, const entry_metadata& entry,
-                                      payload_sink& sink) {
-  return extract_stored_payload(stored_payload, entry, sink);
 }
 
 result<void> extract_tes4_bsa_payload_from_file(std::string_view host_path,
