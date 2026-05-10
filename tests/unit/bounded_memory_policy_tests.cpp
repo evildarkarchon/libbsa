@@ -173,3 +173,20 @@ TEST_CASE("bounded_memory_policy public headers do not expose private BA2 writer
     }
   }
 }
+
+TEST_CASE("bounded_memory_policy writer header keeps BA2 execution boundary dependency-light",
+          "[unit][bounded_memory_policy][public-api][ba2_writer_execution]") {
+  constexpr auto forbidden_tokens = std::array<std::string_view, 5U>{
+      "DirectXTex",
+      "DXGI",
+      "libdeflate",
+      "lz4",
+      "TES5Edit",
+  };
+
+  const auto text = read_text_file(source_root() / "include" / "libbsa" / "writer.hpp");
+  for (const auto token : forbidden_tokens) {
+    INFO("public writer.hpp dependency token: " << token);
+    REQUIRE(text.find(token) == std::string::npos);
+  }
+}

@@ -2,6 +2,7 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include "formats/ba2/ba2_publish.hpp"
 #include "texture/directxtex_analyzer.hpp"
 
 #include <nlohmann/json.hpp>
@@ -15,6 +16,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -371,4 +373,75 @@ TEST_CASE("ba2_writer_execution missing GNRL disk source with worker_count prese
   REQUIRE_FALSE(written.has_value());
   REQUIRE(written.error().code == libbsa::error_code::io_error);
   CHECK(read_binary_file(archive) == sentinel);
+}
+
+TEST_CASE("ba2_writer_execution missing GNRL disk source with worker_count leaves no partial output",
+          "[unit][ba2_writer_execution][ba2_gnrl_writer][worker_count][publish]") {
+  const auto archive = output_path("missing-source-no-partial.ba2");
+  const auto missing_source = output_path("missing-gnrl-source-no-partial.nif");
+  std::error_code fs_error;
+  std::filesystem::remove(archive, fs_error);
+  std::filesystem::remove(missing_source, fs_error);
+
+  libbsa::ba2_gnrl_writer_options options;
+  options.compression = libbsa::archive_compression_policy::all_compressed;
+  libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, options};
+  REQUIRE(writer.add_file("Meshes/Missing/NoPartial.nif", missing_source.string()).has_value());
+
+  libbsa::write_execution_options execution;
+  execution.worker_count = 4U;
+  auto written = writer.write_to(archive.string(), execution);
+
+  REQUIRE_FALSE(written.has_value());
+  REQUIRE(written.error().code == libbsa::error_code::io_error);
+  CHECK_FALSE(std::filesystem::exists(archive));
+}
+
+TEST_CASE("ba2_writer_execution duplicate DX10 canonical paths return format_error without partial output",
+          "[unit][ba2_writer_execution][ba2_dx10_writer][worker_count][publish][DX10]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto source = make_dx10_case(manifest, "bc1_unorm");
+  const auto archive = output_path("dx10-duplicate-no-partial.ba2");
+  std::error_code fs_error;
+  std::filesystem::remove(archive, fs_error);
+
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+  REQUIRE(writer.add_file("Textures/Duplicate/Texture.dds", source.source_path.string()).has_value());
+  REQUIRE(writer.add_file("textures/duplicate/texture.dds", source.source_path.string()).has_value());
+
+  libbsa::write_execution_options execution;
+  execution.worker_count = 4U;
+  auto written = writer.write_to(archive.string(), execution);
+
+  REQUIRE_FALSE(written.has_value());
+  REQUIRE(written.error().code == libbsa::error_code::format_error);
+  CHECK_FALSE(std::filesystem::exists(archive));
+}
+
+TEST_CASE("ba2_writer_execution publish rollback helper preserves backup sentinel contract",
+          "[unit][ba2_writer_execution][publish]") {
+  const auto backup = output_path("rollback-backup.ba2");
+  const auto output = output_path("rollback-output.ba2");
+  const auto sentinel = bytes_from_text("rollback sentinel bytes");
+  write_binary_file(backup, sentinel);
+
+  auto restored = libbsa::formats::ba2::publish_detail::restore_backup_after_publish_failure(
+      backup, output, [](const std::filesystem::path& from, const std::filesystem::path& to, std::error_code& error) {
+        std::filesystem::rename(from, to, error);
+      });
+
+  REQUIRE_FALSE(restored.has_value());
+  REQUIRE(restored.error().code == libbsa::error_code::io_error);
+  CHECK(read_binary_file(output) == sentinel);
+  CHECK_FALSE(std::filesystem::exists(backup));
+
+  std::error_code injected_error = std::make_error_code(std::errc::permission_denied);
+  auto failed_restore = libbsa::formats::ba2::publish_detail::restore_backup_after_publish_failure(
+      backup, output, [injected_error](const std::filesystem::path&,
+                                       const std::filesystem::path&,
+                                       std::error_code& error) { error = injected_error; });
+
+  REQUIRE_FALSE(failed_restore.has_value());
+  REQUIRE(failed_restore.error().code == libbsa::error_code::io_error);
+  CHECK(read_binary_file(output) == sentinel);
 }
