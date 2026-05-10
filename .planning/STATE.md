@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: Complete Library
 status: Awaiting next milestone
 stopped_at: Completed 12-07-PLAN.md
-last_updated: "2026-05-10T12:47:00.167Z"
-last_activity: 2026-05-10 — Completed quick task 260510-7x3: Fix package consumer smoke CMake runtime DLL copy syntax
+last_updated: "2026-05-10T13:00:26.606Z"
+last_activity: 2026-05-10 — Completed quick task 260510-8aa: Research and fix BA2 GNRL payload metadata-overlap rejection
 progress:
   total_phases: 12
   completed_phases: 12
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 Phase: Milestone v1.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-05-10 — Completed quick task 260510-7x3: Fix package consumer smoke CMake runtime DLL copy syntax
+Last activity: 2026-05-10 — Completed quick task 260510-8aa: Research and fix BA2 GNRL payload metadata-overlap rejection
 
 ## Performance Metrics
 
@@ -119,6 +119,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 11]: The Python validator rejects unknown matrix families, categories, expected errors, phases, evidence types, and unresolved evidence references. — This prevents malformed coverage claims from drifting away from generated manifests or explicit tests.
 - [Quick Task 260510-7if]: libbsa is Windows-only; Linux, macOS, POSIX, and cross-platform portability findings are out of scope unless the user explicitly reopens platform support.
 - [Quick Task 260510-7if]: Linux CMake profiles are intentionally removed; supported configured profiles are the Windows MSVC static/shared presets.
+- [Quick Task 260510-8aa]: Non-empty BA2 GNRL payload spans that intersect the fixed header or record table are malformed. — TES5Edit's writer reserves that metadata prefix and refuses zero offsets, while libbsa keeps strict open behavior by rejecting the span before entry materialization.
 - [Phase 12]: Bulk extraction uses archive_reader::extract_entries with an explicit positive worker_count and request-order result records.
 - [Phase 12]: Bulk extraction sink factories must return distinct per-entry sinks and may be called concurrently when worker_count is greater than 1.
 - [Phase 12]: Raw extraction bounded-memory proof uses large synthetic TES3, TES4, BA2 GNRL, and generated raw BA2 DX10 archives plus reader source-policy checks.
@@ -169,6 +170,7 @@ None yet.
 | 260510-6n7 | Route BA2 DX10 no-overwrite publish through no-replace helper | 2026-05-10 | uncommitted | [260510-6n7-route-ba2-dx10-no-overwrite-publish-thro](./quick/260510-6n7-route-ba2-dx10-no-overwrite-publish-thro/) |
 | 260510-7if | Declare libbsa Windows-only and remove Linux CMake presets | 2026-05-10 | uncommitted | [260510-7if-declare-libbsa-windows-only-and-remove-l](./quick/260510-7if-declare-libbsa-windows-only-and-remove-l/) |
 | 260510-7x3 | Fix package consumer smoke CMake runtime DLL copy syntax | 2026-05-10 | uncommitted | [260510-7x3-fix-package-consumer-smoke-cmake-runtime](./quick/260510-7x3-fix-package-consumer-smoke-cmake-runtime/) |
+| 260510-8aa | Research and fix BA2 GNRL payload metadata-overlap rejection | 2026-05-10 | uncommitted | [260510-8aa-research-and-fix-ba2-gnrl-payload-metada](./quick/260510-8aa-research-and-fix-ba2-gnrl-payload-metada/) |
 
 ## Deferred Items
 

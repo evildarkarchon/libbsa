@@ -256,7 +256,8 @@ entry_compression compression_for(const gnrl_record& record, detected_ba2_format
   return detected.default_compression;
 }
 
-result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size,
+result<std::vector<entry_metadata>> materialize_entries(std::uint64_t archive_size,
+                                                        std::uint64_t records_end,
                                                         std::uint64_t name_table_offset,
                                                         std::uint64_t name_table_end,
                                                         std::span<const gnrl_record> records,
@@ -280,6 +281,11 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     const auto stored_size = records[index].packed_size != 0U ? records[index].packed_size : records[index].size;
     if (!span_fits_u64(records[index].offset, stored_size, archive_size)) {
       return error{error_code::format_error, "BA2 GNRL entry payload span is outside the archive"};
+    }
+    // BSArchPro writes GNRL payloads after the fixed header and records; spans into this prefix
+    // would later extract archive metadata bytes as if they were file payload.
+    if (spans_overlap_u64(records[index].offset, stored_size, 0U, records_end)) {
+      return error{error_code::format_error, "BA2 GNRL entry payload span intersects header or record table"};
     }
     if (spans_overlap_u64(records[index].offset, stored_size, name_table_offset, name_table_end - name_table_offset)) {
       return error{error_code::format_error, "BA2 GNRL filename table intersects payload data"};
@@ -350,7 +356,8 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_impl(std::span<const std::byte> 
     return error{error_code::format_error, "BA2 GNRL filename table is too large"};
   }
 
-  auto entries = materialize_entries(archive_size, file_table_offset, name_table_end, records.value(), names.value(), detected);
+  auto entries = materialize_entries(static_cast<std::uint64_t>(archive_size), static_cast<std::uint64_t>(records_end),
+                                     file_table_offset, name_table_end, records.value(), names.value(), detected);
   if (!entries) {
     return entries.error();
   }
@@ -433,7 +440,7 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(std::string_view host_path,
     return names.error();
   }
   const auto name_table_end = header.value().file_table_offset + static_cast<std::uint64_t>(name_table_consumed);
-  auto entries = materialize_entries(static_cast<std::size_t>(archive_size), header.value().file_table_offset,
+  auto entries = materialize_entries(archive_size, static_cast<std::uint64_t>(records_end), header.value().file_table_offset,
                                      name_table_end, records.value(), names.value(), detected);
   if (!entries) {
     return entries.error();

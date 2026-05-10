@@ -361,6 +361,49 @@ TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename t
   CHECK(extracted.value() == payload);
 }
 
+TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
+          "[unit][malformed][ba2_gnrl_detector]") {
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-payload-in-metadata.ba2";
+  temp_file_cleanup cleanup{temp_path};
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  constexpr std::uint32_t file_count = 1U;
+  constexpr std::uint64_t record_table_end = 60U;
+  const std::string archive_path = "Meshes/Invalid/HeaderPayload.nif";
+
+  std::vector<std::byte> bytes;
+  append_ascii(bytes, "BTDX");
+  append_u32_le(bytes, 1U);
+  append_ascii(bytes, "GNRL");
+  append_u32_le(bytes, file_count);
+  append_u64_le(bytes, record_table_end);
+
+  append_u32_le(bytes, 0x12345678U);
+  append_ascii(bytes, std::string_view{"NIF\0", 4U});
+  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, 0U);
+  append_u64_le(bytes, 0U);
+  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, 4U);
+  append_u32_le(bytes, 0xBAADF00DU);
+
+  append_u16_le(bytes, static_cast<std::uint16_t>(archive_path.size()));
+  append_ascii(bytes, archive_path);
+
+  {
+    std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
+    REQUIRE(output.good());
+    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(output.good());
+  }
+
+  auto opened = libbsa::archive_reader::open(temp_path.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
 TEST_CASE("ba2_gnrl_metadata lists manifest-backed records from filename tables",
           "[unit][fixture][ba2_gnrl_metadata]") {
   bool saw_raw = false;
