@@ -380,6 +380,6 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 7. TES4-Family BSA Write-New Support | 0/TBD | Not started | - |
 | 8. BA2 GNRL Write-New Support | 6/6 | Complete | 2026-05-09 |
 | 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |
-| 10. TES3 Write Support and BSA Format Completeness | 6/6 | Complete   | 2026-05-10 |
+| 10. TES3 Write Support and BSA Format Completeness | 6/6 | Complete    | 2026-05-10 |
 | 11. Compatibility Warnings, Validation API, and Hardening | 0/TBD | Not started | - |
 | 12. Performance, Concurrency, Documentation, and Polish | 0/TBD | Not started | - |

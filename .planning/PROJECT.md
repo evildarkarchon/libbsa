@@ -17,6 +17,7 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 <!-- Shipped and confirmed valuable. -->
 
 - [x] Phase 07 validated TES4-family BSA write-new support for public writer construction, target profiles, raw and compressed payloads, embedded names, deduplication, and reopen/extract round-trips.
+- [x] Phase 10 validated TES3/Morrowind BSA write-new support for public disk/memory writer APIs, byte-accurate serialization, reader-backed round-trip extraction, synthetic fixture evidence, embedded-NUL path rejection, and no-replace publish semantics.
 
 ### Active
 
@@ -105,4 +106,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-09 after Phase 07*
+*Last updated: 2026-05-10 after Phase 10*
