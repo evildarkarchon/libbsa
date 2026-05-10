@@ -350,7 +350,24 @@ Plans:
   3. Consumer can receive structured compatibility warnings for known Bethesda quirks without adopting a logging framework.
   4. Parser can gracefully reject malformed, truncated, oversized, or internally inconsistent archives under sanitizer-backed tests.
   5. Maintainer can trace each non-obvious compatibility rule to reference evidence or fixture coverage.
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 11-01-PLAN.md — Define the dependency-light public validation API contract and boundary tests.
+- [ ] 11-05-PLAN.md — Harden malformed manifest expected-error mapping in existing reader tests.
+
+**Wave 2** *(blocked on Wave 1 public validation contract where applicable)*
+- [ ] 11-02-PLAN.md — Implement strict-open-backed validation reports for fixtures and writer output.
+- [ ] 11-04-PLAN.md — Add machine-checked compatibility evidence catalog and fixture policy updates.
+
+**Wave 3** *(blocked on Wave 2 validation implementation/catalog where applicable)*
+- [ ] 11-03-PLAN.md — Implement representative typed compatibility warning scenarios across BSA and BA2.
+- [ ] 11-07-PLAN.md — Add additive sanitizer-oriented preset, documentation, and policy preservation tests.
+
+**Wave 4** *(blocked on validation implementation and strict malformed helper mapping)*
+- [ ] 11-06-PLAN.md — Add the consolidated malformed hardening matrix and validation-report coverage.
 
 ### Phase 12: Performance, Concurrency, Documentation, and Polish
 **Goal**: Consumers can use bounded-memory, documented, parallel-capable archive workflows, and maintainers can measure performance and publish integration guidance.
