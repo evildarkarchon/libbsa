@@ -19,6 +19,7 @@ add_executable(libbsa_tests
   unit/public_include_boundary_tests.cpp
   unit/local_game_fixture_tests.cpp
   unit/validation_policy_tests.cpp
+  unit/validation_api_tests.cpp
   unit/binary_io_tests.cpp
   unit/archive_path_tests.cpp
   unit/payload_stream_tests.cpp

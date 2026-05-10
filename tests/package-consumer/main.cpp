@@ -1,7 +1,7 @@
 #include <libbsa/libbsa.hpp>
 
 int main() {
-  auto result = libbsa::archive_reader::open("consumer-smoke.bsa");
+  auto result = libbsa::validate_archive("consumer-smoke.bsa");
   if (result) {
     return 1;
   }
