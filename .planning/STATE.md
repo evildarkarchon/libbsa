@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-05-10T04:18:35.628Z"
+stopped_at: Completed 11-04-PLAN.md
+last_updated: "2026-05-10T04:24:13.262Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 12
   completed_phases: 10
   total_plans: 68
-  completed_plans: 65
-  percent: 96
+  completed_plans: 66
+  percent: 97
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 11 (Compatibility Warnings, Validation API, and Hardening) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-05-10
 
-Progress: [██████████] 96%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██████████] 96%
 | Phase 11 P05 | 2 min | 2 tasks | 3 files |
 | Phase 11 P02 | 5 min | 2 tasks | 6 files |
 | Phase 11 P03 | 4 min | 2 tasks | 3 files |
+| Phase 11 P04 | 2 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 11]: Target-family mismatch warnings compare caller expectations against parsed archive metadata only. — Prevents validation warnings from depending on host file extensions or private parser guesses.
 - [Phase 11]: Entry-level warning records include optional normalized archive paths but no byte offsets, record indexes, or chunk indexes. — Preserves the Phase 11 public/private diagnostic boundary and keeps parser coordinates out of the stable API.
 - [Phase 11]: Sound payload warning detection treats compressed entries under sound/ or with .wav, .xwm, or .fuz extensions as advisory compatibility risks. — Matches the locked representative warning scenario without adding public warning filters or logging callbacks.
+- [Phase 11]: Public compatibility warning evidence is cataloged by one section per warning code so the policy test can enforce local Rule and Evidence coverage. — Plan 11-04 needs machine-checked catalog entries with local Rule and Evidence text.
+- [Phase 11]: Optional local game or BSArchPro-derived checks remain smoke/compare-only, require requires-game-fixture, and skip when LIBBSA_GAME_FIXTURES is unset. — D-14, D-18, and D-19 keep optional corpus data out of default acceptance and committed fixtures.
 
 ### Pending Todos
 
@@ -126,6 +129,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T04:18:35.621Z
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-05-10T04:24:13.255Z
+Stopped at: Completed 11-04-PLAN.md
 Resume file: None
