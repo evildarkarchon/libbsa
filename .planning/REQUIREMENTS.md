@@ -112,11 +112,11 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 - [x] **PERF-03**: Consumer can opt into parallel compression during packing after single-threaded correctness is established.
 - [x] **PERF-04**: Consumer can opt into parallel decompression during bulk extraction after single-threaded correctness is established.
 - [x] **PERF-05**: Maintainer can run benchmarks comparing single-threaded and multi-threaded packing/extraction for large archives.
-- [ ] **PERF-06**: Consumer can understand documented thread-safety guarantees for readers, writers, entries, callbacks, and sinks.
+- [x] **PERF-06**: Consumer can understand documented thread-safety guarantees for readers, writers, entries, callbacks, and sinks.
 
 ### Documentation and Examples
 
-- [ ] **DOC-01**: Consumer can read Doxygen-generated public API documentation for supported archive operations.
+- [x] **DOC-01**: Consumer can read Doxygen-generated public API documentation for supported archive operations.
 - [ ] **DOC-02**: Consumer can follow integration examples for opening archives, listing files, extracting files, creating archives, and handling errors.
 - [ ] **DOC-03**: Consumer can read target-format guidance that explains supported variants, compression methods, and known compatibility warnings.
 - [x] **DOC-04**: Maintainer can run CI for build and test validation on MSVC and optionally Clang/GCC.
@@ -232,8 +232,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERF-03 | Phase 12: Performance, Concurrency, Documentation, and Polish | Complete |
 | PERF-04 | Phase 12: Performance, Concurrency, Documentation, and Polish | Complete |
 | PERF-05 | Phase 12: Performance, Concurrency, Documentation, and Polish | Complete |
-| PERF-06 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
-| DOC-01 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| PERF-06 | Phase 12: Performance, Concurrency, Documentation, and Polish | Complete |
+| DOC-01 | Phase 12: Performance, Concurrency, Documentation, and Polish | Complete |
 | DOC-02 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
 | DOC-03 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
 | DOC-04 | Phase 1: Foundation, API Boundary, and Test Harness | Complete |

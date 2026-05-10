@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 12-05-PLAN.md
-last_updated: "2026-05-10T08:42:02.084Z"
+stopped_at: Completed 12-06-PLAN.md
+last_updated: "2026-05-10T08:51:18.117Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 12
   completed_phases: 11
   total_plans: 75
-  completed_plans: 73
-  percent: 97
+  completed_plans: 74
+  percent: 99
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 12 (performance-concurrency-documentation-and-polish) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-05-10
 
-Progress: [██████████] 97%
+Progress: [██████████] 99%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [██████████] 97%
 | Phase 12 P03 | 10min | 3 tasks | 6 files |
 | Phase 12 P04 | 12.3min | 3 tasks | 7 files |
 | Phase 12 P05 | 7min | 3 tasks | 5 files |
+| Phase 12 P06 | 5min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase ?]: Benchmark evidence uses a custom C++20 runner with no new benchmark dependency. — Plan 12-05 keeps benchmark tooling lightweight and avoids adding a benchmark library dependency.
 - [Phase ?]: Benchmark data is generated legal synthetic temp data and never uses TES5Edit or game archives. — Preserves D-26 and D-27 fixture legality and reference-boundary rules.
 - [Phase ?]: Benchmark timing is report-only; correctness, report generation, and explicit target wiring are the automated contract. — Default tests must not fail on host-dependent speedup values.
+- [Phase 12]: Doxygen remains optional through find_package(Doxygen QUIET); normal configure/build paths continue when the tool is missing. — Plan 12-06 satisfies DOC-01 without adding Doxygen as a required runtime or build dependency.
+- [Phase 12]: Public API documentation is generated from include/libbsa plus docs pages only, with src, tests, build output, and TES5Edit excluded. — This enforces the D-21 and D-27 boundary between public API docs, private implementation, and read-only reference material.
+- [Phase 12]: docs/thread-safety.md is the canonical D-23 thread-safety reference and public headers point readers to it instead of duplicating every rule inline. — A single canonical document plus policy tests keeps reader, writer, sink, validation, benchmark, and bulk extraction rules aligned.
+- [Phase 12]: Docs generation and thread-safety coverage are enforced by default source-text policy tests. — Default CTest coverage catches Doxygen scope drift and D-23 public-type coverage gaps before docs are published.
 
 ### Pending Todos
 
@@ -156,6 +161,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T08:42:01.831Z
-Stopped at: Completed 12-05-PLAN.md
+Last session: 2026-05-10T08:51:18.110Z
+Stopped at: Completed 12-06-PLAN.md
 Resume file: None
