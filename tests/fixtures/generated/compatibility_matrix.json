@@ -1,0 +1,192 @@
+{
+  "matrix_kind": "phase11_malformed_hardening",
+  "requirements": ["COMP-04", "COMP-05"],
+  "rows": [
+    {
+      "id": "tes3_truncated_header",
+      "family": "tes3_bsa",
+      "category": "truncated_structure",
+      "evidence_type": "manifest",
+      "archive": "tes3_truncated_header.bsa",
+      "manifest": "tes3_malformed_manifest.json",
+      "case_id": "tes3_truncated_header",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "tes3_invalid_payload_span",
+      "family": "tes3_bsa",
+      "category": "invalid_payload_span",
+      "evidence_type": "manifest",
+      "archive": "tes3_invalid_payload_span.bsa",
+      "manifest": "tes3_malformed_manifest.json",
+      "case_id": "tes3_invalid_payload_span",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "tes3_inconsistent_counts_offsets",
+      "family": "tes3_bsa",
+      "category": "invalid_payload_span",
+      "evidence_type": "manifest",
+      "archive": "tes3_inconsistent_counts_offsets.bsa",
+      "manifest": "tes3_malformed_manifest.json",
+      "case_id": "tes3_inconsistent_counts_offsets",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "tes3_duplicate_canonical_path",
+      "family": "tes3_bsa",
+      "category": "duplicate_canonical_path",
+      "evidence_type": "manifest",
+      "archive": "tes3_duplicate_canonical_path.bsa",
+      "manifest": "tes3_malformed_manifest.json",
+      "case_id": "tes3_duplicate_canonical_path",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "malformed_truncated_table",
+      "family": "tes4_bsa",
+      "category": "truncated_structure",
+      "evidence_type": "manifest",
+      "archive": "malformed_truncated_table.bsa",
+      "manifest": "malformed_manifest.json",
+      "case_id": "truncated_table",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "malformed_duplicate_canonical_path",
+      "family": "tes4_bsa",
+      "category": "duplicate_canonical_path",
+      "evidence_type": "manifest",
+      "archive": "malformed_duplicate_canonical_path.bsa",
+      "manifest": "malformed_manifest.json",
+      "case_id": "duplicate_canonical_path",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "malformed_corrupt_compressed_payload",
+      "family": "tes4_bsa",
+      "category": "decompression_failure",
+      "evidence_type": "manifest",
+      "archive": "malformed_corrupt_compressed_payload.bsa",
+      "manifest": "malformed_manifest.json",
+      "case_id": "corrupt_compressed_payload",
+      "phase": "extraction",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "tes4_oversized_arithmetic",
+      "family": "tes4_bsa",
+      "category": "oversized_arithmetic",
+      "evidence_type": "test",
+      "test_file": "tests/unit/tes4_bsa_reader_tests.cpp",
+      "test_name": "tes4_bsa_malformed_open rejects matched oversized file counts before allocation",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "ba2_truncated_name_table",
+      "family": "ba2_gnrl",
+      "category": "truncated_structure",
+      "evidence_type": "manifest",
+      "archive": "ba2_truncated_name_table.ba2",
+      "manifest": "ba2_gnrl_malformed_manifest.json",
+      "case_id": "ba2_truncated_name_table",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "ba2_invalid_payload_span",
+      "family": "ba2_gnrl",
+      "category": "invalid_payload_span",
+      "evidence_type": "manifest",
+      "archive": "ba2_invalid_payload_span.ba2",
+      "manifest": "ba2_gnrl_malformed_manifest.json",
+      "case_id": "ba2_invalid_payload_span",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "ba2_unsupported_v3_compression_method",
+      "family": "ba2_gnrl",
+      "category": "unsupported_route",
+      "evidence_type": "manifest",
+      "archive": "ba2_unsupported_v3_compression_method.ba2",
+      "manifest": "ba2_gnrl_malformed_manifest.json",
+      "case_id": "ba2_unsupported_v3_compression_method",
+      "phase": "open",
+      "expected_error": "unsupported"
+    },
+    {
+      "id": "ba2_exact_size_mismatch",
+      "family": "ba2_gnrl",
+      "category": "decompression_failure",
+      "evidence_type": "manifest",
+      "archive": "ba2_exact_size_mismatch.ba2",
+      "manifest": "ba2_gnrl_malformed_manifest.json",
+      "case_id": "ba2_exact_size_mismatch",
+      "phase": "extraction",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "ba2_dx10_truncated_records",
+      "family": "ba2_dx10",
+      "category": "truncated_structure",
+      "evidence_type": "manifest",
+      "archive": "ba2_dx10_truncated_records.ba2",
+      "manifest": "ba2_dx10_malformed_manifest.json",
+      "case_id": "ba2_dx10_truncated_records",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "ba2_dx10_invalid_payload_span",
+      "family": "ba2_dx10",
+      "category": "invalid_payload_span",
+      "evidence_type": "manifest",
+      "archive": "ba2_dx10_invalid_payload_span.ba2",
+      "manifest": "ba2_dx10_malformed_manifest.json",
+      "case_id": "ba2_dx10_invalid_payload_span",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "ba2_dx10_decoded_size_mismatch",
+      "family": "ba2_dx10",
+      "category": "decompression_failure",
+      "evidence_type": "manifest",
+      "archive": "ba2_dx10_decoded_size_mismatch.ba2",
+      "manifest": "ba2_dx10_malformed_manifest.json",
+      "case_id": "ba2_dx10_decoded_size_mismatch",
+      "phase": "extraction",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "ba2_dx10_duplicate_mip_face",
+      "family": "ba2_dx10",
+      "category": "dds_chunk_layout",
+      "evidence_type": "manifest",
+      "archive": "ba2_dx10_duplicate_mip_face.ba2",
+      "manifest": "ba2_dx10_malformed_manifest.json",
+      "case_id": "ba2_dx10_duplicate_mip_face",
+      "phase": "open",
+      "expected_error": "format_error"
+    },
+    {
+      "id": "ba2_dx10_unsupported_compression",
+      "family": "ba2_dx10",
+      "category": "unsupported_route",
+      "evidence_type": "manifest",
+      "archive": "ba2_dx10_unsupported_compression.ba2",
+      "manifest": "ba2_dx10_malformed_manifest.json",
+      "case_id": "ba2_dx10_unsupported_compression",
+      "phase": "open",
+      "expected_error": "unsupported"
+    }
+  ]
+}
