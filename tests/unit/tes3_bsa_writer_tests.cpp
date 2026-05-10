@@ -569,11 +569,13 @@ TEST_CASE("tes3_bsa_writer refuses a destination created during non-overwrite pu
   std::error_code fs_error;
   std::filesystem::remove(archive, fs_error);
   const std::vector<std::byte> sentinel{std::byte{0x4E}, std::byte{0x45}, std::byte{0x57}};
+  std::atomic_bool watcher_started{false};
   std::atomic_bool stop_watcher{false};
 
   std::thread watcher{[&] {
     const auto parent = archive.parent_path();
     const auto temp_prefix = archive.filename().string() + ".libbsa-tmp-";
+    watcher_started.store(true);
     while (!stop_watcher.load()) {
       for (const auto& entry : std::filesystem::directory_iterator{parent}) {
         if (entry.is_directory() && entry.path().filename().string().rfind(temp_prefix, 0U) == 0U) {
@@ -585,9 +587,12 @@ TEST_CASE("tes3_bsa_writer refuses a destination created during non-overwrite pu
       std::this_thread::sleep_for(std::chrono::milliseconds{1});
     }
   }};
+  while (!watcher_started.load()) {
+    std::this_thread::yield();
+  }
 
   libbsa::tes3_bsa_writer writer;
-  const std::vector<std::byte> large_payload(16U * 1024U * 1024U, std::byte{0x41});
+  const std::vector<std::byte> large_payload(128U * 1024U * 1024U, std::byte{0x41});
   REQUIRE(writer.add_bytes("Meshes/Race.NIF", large_payload).has_value());
 
   auto written = writer.write_to(archive.string());
