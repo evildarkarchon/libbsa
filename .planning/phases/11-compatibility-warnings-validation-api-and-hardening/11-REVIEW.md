@@ -1,14 +1,23 @@
 ---
 phase: 11-compatibility-warnings-validation-api-and-hardening
-reviewed: 2026-05-10T04:42:10Z
+reviewed: 2026-05-10T05:06:41Z
 depth: standard
-files_reviewed: 19
+files_reviewed: 28
 files_reviewed_list:
   - CMakeLists.txt
   - CMakePresets.json
   - docs/compatibility-evidence.md
   - include/libbsa/libbsa.hpp
   - include/libbsa/validation.hpp
+  - src/archive.cpp
+  - src/detail/byte_vector.hpp
+  - src/detail/deflate_codec.cpp
+  - src/detail/lz4_block_codec.cpp
+  - src/detail/lz4_frame_codec.cpp
+  - src/formats/ba2/ba2_dx10_reader.cpp
+  - src/formats/ba2/ba2_gnrl_reader.cpp
+  - src/formats/bsa/tes4_bsa_reader.cpp
+  - src/formats/bsa/tes4_bsa_reader.hpp
   - src/validation.cpp
   - tests/CMakeLists.txt
   - tests/fixtures/README.md
@@ -24,99 +33,42 @@ files_reviewed_list:
   - tests/unit/validation_api_tests.cpp
   - tests/unit/validation_policy_tests.cpp
 findings:
-  critical: 1
-  warning: 3
+  critical: 0
+  warning: 0
   info: 0
-  total: 4
-status: issues_found
+  total: 0
+status: clean
 ---
 
 # Phase 11: Code Review Report
 
-**Reviewed:** 2026-05-10T04:42:10Z
+**Reviewed:** 2026-05-10T05:06:41Z
 **Depth:** standard
-**Files Reviewed:** 19
-**Status:** issues_found
+**Files Reviewed:** 28
+**Status:** clean
 
 ## Summary
 
-Reviewed Phase 11 validation API, warning policy, malformed matrix, sanitizer preset, fixture policy, and public API/test contract changes. The main blocker is that opt-in extractability validation routes through `extract_bytes`, which can allocate archive-controlled payload sizes and let `std::bad_alloc` escape the public `result` error model. The remaining issues are test-gate and portability defects.
+Reviewed all non-planning files changed from `6d9ad74..HEAD` after commit `7ed2bd3` while excluding `TES5Edit/`.
 
-## Critical Issues
+The prior warning is fixed. `src/archive.cpp` no longer contains the obsolete `read_stored_payload` helper, the span-based `extract_tes4_bsa_payload` declaration and definition were removed from the TES4 reader, and `archive_reader::extract` now keeps TES4 extraction on `extract_tes4_bsa_payload_from_file`.
 
-### CR-01: BLOCKER - Extractability validation materializes archive-controlled payloads
+All reviewed files meet quality standards. No issues found.
 
-**File:** `src/validation.cpp:120`
+Verification performed:
 
-**Issue:** `validate_extractability` calls `reader.extract_bytes(entry.path)` for every entry. `extract_bytes` creates a vector-backed sink sized from parser-derived `entry.raw_size`, so `validation_options::validate_entry_extractability = true` can force large allocations for valid large/sparse archives or malicious archive metadata. That violates the public `result`-based error contract because allocation failure can throw instead of returning `validation_report.errors`, and it makes validation a memory DoS path. This is especially risky because validation is meant to harden untrusted archives.
-
-**Fix:**
-```cpp
-class discard_sink final : public payload_sink {
- public:
-  result<std::size_t> write(std::span<const std::byte> bytes) override {
-    return bytes.size();
-  }
-};
-
-void validate_extractability(const archive_reader& reader,
-                             const std::vector<entry_metadata>& entries,
-                             validation_report& report) {
-  for (const auto& entry : entries) {
-    discard_sink sink;
-    auto extracted = reader.extract(entry.path, sink);
-    if (!extracted) {
-      append_fatal(report, extracted.error().code);
-    }
-  }
-}
-```
-Add a regression using a sparse large raw payload with `validate_entry_extractability = true` to prove validation streams into the discard sink and does not allocate the entry bytes.
-
-## Warnings
-
-### WR-01: WARNING - Matrix validator is not part of the default test gate
-
-**File:** `tests/CMakeLists.txt:228`
-
-**Issue:** `tests/fixtures/generated/validate_fixture_manifests.py` now contains the strongest matrix consistency checks, including archive/manifest/case `phase` and `expected_error` matching, but `tests/CMakeLists.txt` never registers that script as a CTest test. The GitHub workflow only runs `ctest`, so these checks are manual-only and can silently drift from default CI.
-
-**Fix:**
-```cmake
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
-
-add_test(
-  NAME validate_fixture_manifests
-  COMMAND Python3::Interpreter
-          ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/validate_fixture_manifests.py
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
-set_tests_properties(validate_fixture_manifests PROPERTIES
-  LABELS "unit;fixture;malformed;compatibility_matrix"
-)
+```text
+rg -n "read_stored_payload|extract_tes4_bsa_payload\b|extract_tes4_bsa_payload_from_file|tes4_bsa_payload" src\archive.cpp src\formats\bsa\tes4_bsa_reader.cpp src\formats\bsa\tes4_bsa_reader.hpp include tests
+cmake --build --preset windows-msvc-debug-static --target libbsa_tests
+python tests\fixtures\generated\validate_fixture_manifests.py
+ctest --preset windows-msvc-debug-static -R "validation_api|validation_policy|validate_fixture_manifests|compatibility_matrix|compatibility_warning|tes4_bsa" --output-on-failure
+ctest --preset windows-msvc-debug-static --output-on-failure
 ```
 
-### WR-02: WARNING - Catalog coverage test duplicates the warning-code list instead of deriving it
-
-**File:** `tests/unit/validation_policy_tests.cpp:65`
-
-**Issue:** The catalog test hard-codes the three Phase 11 warning-code strings. If `include/libbsa/validation.hpp` adds another `compatibility_warning_code`, the test can still pass while the new public warning is missing from `docs/compatibility-evidence.md`. That weakens the intended "every public warning code is cataloged" contract.
-
-**Fix:** Read `include/libbsa/validation.hpp`, extract the enumerators from `enum class compatibility_warning_code`, and require a catalog heading for every extracted name. Keep the existing rule/evidence checks after the dynamically collected list is built.
-
-### WR-03: WARNING - `std::move` is used without including `<utility>`
-
-**File:** `src/validation.cpp:53`
-
-**Issue:** `append_warning` uses `std::move`, but `src/validation.cpp` does not include `<utility>`. The current build succeeds through transitive standard-library includes, but that is not guaranteed and can break on another STL/toolchain.
-
-**Fix:**
-```cpp
-#include <utility>
-```
+Focused CTest passed 32/32. Full CTest passed 188/188, with `local game fixtures are opt-in` skipped as expected.
 
 ---
 
-_Reviewed: 2026-05-10T04:42:10Z_
+_Reviewed: 2026-05-10T05:06:41Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
