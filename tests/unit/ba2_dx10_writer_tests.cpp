@@ -750,6 +750,16 @@ TEST_CASE("BA2 DX10 writer refuses to overwrite existing output by default and p
   CHECK(read_binary_file(output) == sentinel);
 }
 
+TEST_CASE("BA2 DX10 writer routes no-overwrite publish through the no-replace helper",
+          "[unit][ba2_dx10_writer][publish][policy]") {
+  const auto source = read_text_file(std::filesystem::path{LIBBSA_SOURCE_DIR} / "src" / "formats" / "ba2" /
+                                     "ba2_dx10_writer.cpp");
+
+  CHECK(source.find("detail::publish_file_without_replace(temp_path, output_path)") != std::string::npos);
+  CHECK(source.find("std::filesystem::copy_file(temp_path, output_path") == std::string::npos);
+  CHECK(source.find("BA2 DX10 writer failed to publish output host path without overwrite") != std::string::npos);
+}
+
 TEST_CASE("BA2 DX10 writer preserves caller-owned temp-name sibling files during unique temp publish",
           "[unit][ba2_dx10_writer][publish][temp]") {
   const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");

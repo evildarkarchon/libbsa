@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: Complete Library
 status: Awaiting next milestone
 stopped_at: Completed 12-07-PLAN.md
-last_updated: "2026-05-10T11:37:42.224Z"
-last_activity: 2026-05-10 — Completed quick task 260510-6by: Fix vcpkg registry baseline CI failure
+last_updated: "2026-05-10T11:48:39.480Z"
+last_activity: 2026-05-10 — Completed quick task 260510-6n7: Route BA2 DX10 no-overwrite publish through no-replace helper
 progress:
   total_phases: 12
   completed_phases: 12
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 Phase: Milestone v1.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-05-10 — Completed quick task 260510-6by: Fix vcpkg registry baseline CI failure
+Last activity: 2026-05-10 — Completed quick task 260510-6n7: Route BA2 DX10 no-overwrite publish through no-replace helper
 
 ## Performance Metrics
 
@@ -166,6 +166,7 @@ None yet.
 | 260510-46t | Close gaps and tech_debt from .planning/v1.0-MILESTONE-AUDIT.md | 2026-05-10 | f675b41 | [260510-46t-close-gaps-and-tech-debt-from-planning-v](./quick/260510-46t-close-gaps-and-tech-debt-from-planning-v/) |
 | 260510-62q | Update Visual Studio toolchain references to Visual Studio 2026 | 2026-05-10 | uncommitted | [260510-62q-update-visual-studio-2026-docs](./quick/260510-62q-update-visual-studio-2026-docs/) |
 | 260510-6by | Fix vcpkg registry baseline CI failure | 2026-05-10 | ee0ca39 | [260510-6by-fix-vcpkg-registry-baseline-ci-failure](./quick/260510-6by-fix-vcpkg-registry-baseline-ci-failure/) |
+| 260510-6n7 | Route BA2 DX10 no-overwrite publish through no-replace helper | 2026-05-10 | uncommitted | [260510-6n7-route-ba2-dx10-no-overwrite-publish-thro](./quick/260510-6n7-route-ba2-dx10-no-overwrite-publish-thro/) |
 
 ## Deferred Items
 

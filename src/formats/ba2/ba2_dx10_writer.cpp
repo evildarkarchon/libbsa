@@ -2,6 +2,7 @@
 
 #include "formats/ba2/ba2_publish.hpp"
 
+#include <detail/atomic_file_ops.hpp>
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
@@ -920,10 +921,18 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target,
   }
 
   if (!options.overwrite_existing) {
-    // POSIX rename would replace a destination created after the initial existence check;
-    // copy_options::none preserves the caller's no-overwrite contract at the cost of atomic publish.
-    std::filesystem::copy_file(temp_path, output_path, std::filesystem::copy_options::none, fs_error);
-    if (fs_error) {
+    output_exists = path_exists_noexcept(output_path);
+    if (!output_exists) {
+      cleanup_publish_directory(temp_dir.value());
+      return output_exists.error();
+    }
+    if (output_exists.value()) {
+      cleanup_publish_directory(temp_dir.value());
+      return error{error_code::io_error, "BA2 DX10 output host path already exists"};
+    }
+
+    auto published = detail::publish_file_without_replace(temp_path, output_path);
+    if (!published) {
       cleanup_publish_directory(temp_dir.value());
       return error{error_code::io_error, "BA2 DX10 writer failed to publish output host path without overwrite"};
     }
