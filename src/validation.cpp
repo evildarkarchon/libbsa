@@ -3,12 +3,21 @@
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace libbsa {
 namespace {
+
+/// Payload sink that proves extraction can stream bytes without retaining them.
+class discard_payload_sink final : public payload_sink {
+public:
+  /// Accepts a delivered payload span and reports the full span as consumed.
+  result<std::size_t> write(std::span<const std::byte> bytes) override { return bytes.size(); }
+};
 
 std::string diagnostic_message_for(error_code code) {
   switch (code) {
@@ -112,12 +121,15 @@ void append_entry_warnings(const archive_metadata& metadata,
   }
 }
 
-/// Validates every parsed entry through the public extraction convenience API.
+/// Validates every parsed entry through the streaming extraction API.
 void validate_extractability(const archive_reader& reader,
                              const std::vector<entry_metadata>& entries,
                              validation_report& report) {
+  discard_payload_sink sink;
   for (const auto& entry : entries) {
-    auto extracted = reader.extract_bytes(entry.path);
+    // Validation must not retain archive-controlled payload bytes; extraction
+    // is streamed only to prove payload decode and sink delivery succeed.
+    auto extracted = reader.extract(entry.path, sink);
     if (!extracted) {
       append_fatal(report, extracted.error().code);
     }
