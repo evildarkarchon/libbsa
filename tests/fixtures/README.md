@@ -153,6 +153,15 @@ The default opt-in harness for those comparisons is
 `tests/unit/local_game_fixture_tests.cpp`, driven by
 `LIBBSA_BSARCHPRO_EXPECTED` or local `bsarchpro_expected.json`.
 
+## Phase 12 benchmark and generated data policy
+
+Phase 12 benchmark inputs are generated legal synthetic data only. The
+benchmark runner and report target are documented in `benchmarks/README.md` and
+must not use game archives, BSArchPro exports, or `TES5Edit/` as a fixture
+workspace. Benchmark report data is maintainer evidence, not a committed game
+corpus, and default acceptance must continue to pass without local copyrighted
+archives.
+
 ## Sanitizer hardening path
 
 Maintainers on supported non-Windows Clang/GCC-style toolchains can run the
