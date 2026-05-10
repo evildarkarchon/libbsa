@@ -3,7 +3,6 @@
 #include <detail/archive_path.hpp>
 
 #include <algorithm>
-#include <filesystem>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -20,6 +19,8 @@ namespace {
 
 std::string preserved_archive_path(std::string_view archive_path) {
   std::string preserved{archive_path};
+  // TES3 serializes a flat name table, but libbsa still normalizes separators so
+  // callers get stable archive keys without losing the caller's path casing.
   std::replace(preserved.begin(), preserved.end(), '\\', '/');
   return preserved;
 }
