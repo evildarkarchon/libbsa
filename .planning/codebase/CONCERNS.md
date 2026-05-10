@@ -145,15 +145,15 @@
 
 ## Dependencies at Risk
 
-**DirectXTex portability and version behavior:**
+**DirectXTex Windows dependency and version behavior:**
 - Risk: DDS parsing and BA2 DX10 writer support depend on DirectXTex behavior and availability through vcpkg.
-- Impact: Cross-platform builds or future DirectXTex metadata changes can affect `src/texture/directxtex_analyzer.cpp`, `src/texture/dds_layout.cpp`, and BA2 DX10 writer/parser tests.
-- Migration plan: Keep DirectXTex behind `src/texture/directxtex_analyzer.*`; add Linux CI coverage before treating non-Windows support as production-ready.
+- Impact: Future DirectXTex metadata changes can affect `src/texture/directxtex_analyzer.cpp`, `src/texture/dds_layout.cpp`, and BA2 DX10 writer/parser tests.
+- Migration plan: Keep DirectXTex behind `src/texture/directxtex_analyzer.*` for API cleanliness, but treat Windows as the only supported platform.
 
 **vcpkg manifest dependency pinning needs maintenance:**
 - Risk: `vcpkg.json` and `vcpkg-configuration.json` pin a baseline, but there is no separate dependency-update validation workflow.
 - Impact: Dependency security fixes or API changes in `libdeflate`, `lz4`, `DirectXTex`, `Catch2`, or `nlohmann-json` can remain untested until a manual baseline update.
-- Migration plan: Add a periodic dependency refresh branch/workflow that runs Windows static/shared tests, sanitizer presets where available, benchmark report generation, and package-consumer smoke tests.
+- Migration plan: Add a periodic dependency refresh branch/workflow that runs Windows static/shared tests, benchmark report generation, and package-consumer smoke tests.
 
 **Binary ABI policy is deferred:**
 - Risk: Public headers expose value types containing `std::string`, `std::vector`, `std::optional`, and pimpl-owning classes, but the project has no stable ABI contract.
@@ -173,7 +173,7 @@
 - Files: `docs/integration-examples.md`, `docs/target-format-guide.md`, `docs/api-mainpage.md`, `CMakePresets.json`, `README.md`
 
 **No public fuzzing harness:**
-- Problem: Malformed generated fixtures and sanitizer presets exist, but there is no committed libFuzzer/AFL-style public harness for parser entry points.
+- Problem: Malformed generated fixtures exist, but there is no committed libFuzzer/AFL-style public harness for parser entry points.
 - Blocks: Continuous malformed-input discovery beyond the curated fixture matrix.
 - Files: `tests/fixtures/generated/compatibility_matrix.json`, `tests/fixtures/README.md`, `CMakePresets.json`, `src/archive.cpp`
 
@@ -185,16 +185,10 @@
 - Risk: Generated fixtures can miss real-world archive quirks, especially in Starfield BA2 variants and uncommon DDS layouts.
 - Priority: High for future compatibility hardening.
 
-**Sanitizer preset is documented but not run by CI:**
-- What's not tested: The `linux-clang-asan-ubsan` configure/build/test preset is not part of `.github/workflows/ci.yml`.
-- Files: `CMakePresets.json`, `.github/workflows/ci.yml`, `tests/unit/validation_policy_tests.cpp`, `tests/fixtures/README.md`
-- Risk: Parser, decompressor, and malformed-input undefined behavior can slip past Windows Debug CTest.
-- Priority: High for parser/security hardening.
-
-**Release and non-MSVC portability lanes are absent from CI:**
+**Release lane is absent from CI:**
 - What's not tested: `.github/workflows/ci.yml` runs Windows MSVC Debug static and shared presets only.
 - Files: `.github/workflows/ci.yml`, `CMakePresets.json`, `CMakeLists.txt`
-- Risk: Optimization-sensitive issues, GCC/Clang portability, DirectXTex-on-Linux behavior, and package export differences are not continuously exercised.
+- Risk: Optimization-sensitive issues and package export differences are not continuously exercised.
 - Priority: Medium.
 
 **Benchmark report target is manual:**

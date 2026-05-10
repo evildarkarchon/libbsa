@@ -162,21 +162,12 @@ workspace. Benchmark report data is maintainer evidence, not a committed game
 corpus, and default acceptance must continue to pass without local copyrighted
 archives.
 
-## Sanitizer hardening path
+## Platform policy
 
-Maintainers on supported non-Windows Clang/GCC-style toolchains can run the
-additive sanitizer preset against malformed parser, compression, and validation
-coverage:
-
-```powershell
-cmake --preset linux-clang-asan-ubsan
-cmake --build --preset linux-clang-asan-ubsan
-ctest --preset linux-clang-asan-ubsan -L "malformed|validation|compression" --output-on-failure
-```
-
-The default Windows MSVC static/shared CI presets remain unchanged; sanitizer
-support is an opt-in hardening path rather than a default acceptance
-requirement.
+libbsa is Windows-only. Fixture, malformed-input, compression, validation, and
+compatibility checks are maintained through the Windows MSVC static/shared
+presets in `CMakePresets.json`. Linux, macOS, POSIX, and cross-platform
+sanitizer profiles are intentionally not part of the supported test contract.
 
 ## Provenance requirements
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-**libbsa** is a reusable C++ library for reading and writing Bethesda Game Studios archive formats (BSA and BA2). It targets all known format versions spanning Morrowind through Starfield, providing a clean, portable API suitable for embedding in modding tools, asset pipelines, and game utilities.
+**libbsa** is a reusable Windows-only C++ library for reading and writing Bethesda Game Studios archive formats (BSA and BA2). It targets all known format versions spanning Morrowind through Starfield, providing a clean API suitable for embedding in Windows modding tools, asset pipelines, and game utilities.
 
 The behavioral reference is the BSArchPro codebase within TES5Edit. This library reimplements that behavior as idiomatic C++20 with no UI coupling.
 
@@ -14,7 +14,7 @@ The behavioral reference is the BSArchPro codebase within TES5Edit. This library
 2. **Correctness** -- Byte-level compatibility with archives produced by official tools (Archive.exe, Archive2.exe) and BSArchPro.
 3. **Reusability** -- Static or dynamic library consumption; no global state; no mandatory dynamic allocation strategy.
 4. **Performance** -- Multi-threaded packing/extraction; zero-copy where possible; streaming I/O for large archives.
-5. **Portability** -- Windows primary target; minimize platform-specific code to enable future Linux/macOS support.
+5. **Windows support** -- Windows is the only supported platform; do not add Linux, macOS, POSIX, or cross-platform portability requirements unless the project scope is explicitly reopened.
 
 ---
 
@@ -282,7 +282,7 @@ Test framework: to be selected in Milestone 1 (likely Catch2 or GoogleTest via v
 |------|--------|------------|
 | Undocumented format quirks | Incorrect output breaks game loading | Byte-compare against BSArchPro output; test with real game archives |
 | BA2 version drift (future game updates) | Library becomes outdated | Extensible format registry; version field drives behavior branches |
-| DirectXTex Windows-only concern | Blocks future cross-platform | Isolate DDS logic behind an interface; DDS write is only required for BA2 DDS archives |
+| DirectXTex Windows dependency | Reviewers may mistake it for a portability issue | Treat Windows-only DirectXTex usage as expected; keep public headers clean, but do not require Linux/macOS support |
 | Large archive performance | Unusable for 50+ GB Starfield archives | Streaming I/O from milestone 1; defer full parallelism to milestone 9 |
 | LZ4 frame vs. block confusion | Silent data corruption | Dedicated code paths per format with explicit version and `CompressionMethod` checks; extensive test coverage |
 

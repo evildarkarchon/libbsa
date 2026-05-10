@@ -41,7 +41,7 @@
 - Python3 - `tests/CMakeLists.txt` runs `tests/fixtures/generated/validate_fixture_manifests.py` as the `validate_fixture_manifests` CTest test.
 
 **Build/Dev:**
-- CMakePresets - `CMakePresets.json` defines `windows-msvc-debug-static`, `windows-msvc-debug-shared`, and `linux-clang-asan-ubsan`.
+- CMakePresets - `CMakePresets.json` defines the supported Windows presets `windows-msvc-debug-static` and `windows-msvc-debug-shared`.
 - GitHub Actions - `.github/workflows/ci.yml` runs the Windows MSVC static and shared presets, executes CTest, and checks that `TES5Edit/` remains unchanged.
 - Doxygen - `find_package(Doxygen QUIET)` in `CMakeLists.txt` enables the optional `libbsa_docs` target; `docs/Doxyfile.in` scopes generated API docs to `include/libbsa/` and selected docs pages.
 - clangd - `.clangd` sets `-std=c++20` and `-Iinclude` for editor indexing.
@@ -73,7 +73,7 @@
 
 **Build:**
 - `CMakeLists.txt` - Root project, library target, public header file set, private sources, dependencies, options, docs target, benchmark target, install/export package, and test subdirectory.
-- `CMakePresets.json` - Windows static/shared debug presets and Linux Clang ASan/UBSan preset.
+- `CMakePresets.json` - Windows static/shared debug presets.
 - `vcpkg.json` - Package manifest for `libdeflate`, `lz4`, `directxtex`, `catch2`, and `nlohmann-json`.
 - `vcpkg-configuration.json` - vcpkg builtin registry baseline.
 - `tests/CMakeLists.txt` - Unit test executable, fixture generation targets, Catch2 discovery, package-consumer smoke test, and Python manifest validator.

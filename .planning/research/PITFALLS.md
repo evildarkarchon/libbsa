@@ -150,7 +150,7 @@ The public API wants friendly paths, but Bethesda archive paths are virtual path
 
 **Consequences:**
 - Non-ASCII filenames cannot be found after round-trip.
-- Hashes differ between Windows and future Linux/macOS builds.
+- Hashes differ across Windows configurations or locale/encoding settings.
 - Writer output differs from BSArchPro or official tools because normalization happens at the wrong boundary.
 - Extraction can create unsafe host paths if `..`, drive letters, or absolute paths are not sanitized separately.
 
@@ -170,7 +170,7 @@ The public API wants friendly paths, but Bethesda archive paths are virtual path
 Milestone 1 must define the archive path type before hash lookup. Milestones 2-8 must use it consistently. Milestone 10 should add malicious path fixtures.
 
 **Specific compatibility risk:**  
-Hash lookup failures, duplicate/missing files, cross-platform incompatibility, and path traversal vulnerabilities during extraction.
+Hash lookup failures, duplicate/missing files, inconsistent Windows host behavior, and path traversal vulnerabilities during extraction.
 
 ---
 
@@ -185,7 +185,7 @@ Archive record tables look like fixed C structs, and casting is faster to write 
 **Consequences:**
 - BA2 records with 64-bit offsets are misread on alignment-sensitive platforms.
 - Integer overflow in offset + size calculations enables out-of-bounds reads.
-- Future Linux/macOS support becomes fragile.
+- Compiler, optimization, or architecture changes make parser behavior fragile.
 - Fuzzing finds parser crashes instead of clean format errors.
 
 **Prevention:**

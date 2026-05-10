@@ -177,21 +177,27 @@ TEST_CASE("CI and presets preserve static shared and TES5Edit build boundaries",
   REQUIRE(workflow.find("TES5Edit submodule changed during CI") != std::string::npos);
 }
 
-TEST_CASE("sanitizer validation path is additive and documented", "[unit][validation_policy]") {
+TEST_CASE("configured build profiles are Windows-only and documented", "[unit][validation_policy]") {
   const auto root = source_root();
   const auto presets = read_text_file(root / "CMakePresets.json");
   const auto workflow = read_text_file(root / ".github/workflows/ci.yml");
   const auto fixture_policy = read_text_file(root / "tests/fixtures/README.md");
+  const auto readme = read_text_file(root / "README.md");
+  const auto agents = read_text_file(root / "AGENTS.md");
+  const auto claude = read_text_file(root / "CLAUDE.md");
 
-  REQUIRE(presets.find("linux-clang-asan-ubsan") != std::string::npos);
-  REQUIRE(presets.find("-fsanitize=address,undefined") != std::string::npos);
   REQUIRE(presets.find("windows-msvc-debug-static") != std::string::npos);
   REQUIRE(presets.find("windows-msvc-debug-shared") != std::string::npos);
+  REQUIRE(presets.find("linux-clang-asan-ubsan") == std::string::npos);
+  REQUIRE(presets.find("-fsanitize=address,undefined") == std::string::npos);
 
   REQUIRE(workflow.find("windows-msvc-debug-static") != std::string::npos);
   REQUIRE(workflow.find("windows-msvc-debug-shared") != std::string::npos);
   REQUIRE(workflow.find("git status --short TES5Edit") != std::string::npos);
 
-  REQUIRE(fixture_policy.find("ctest --preset linux-clang-asan-ubsan -L \"malformed|validation|compression\" "
-                              "--output-on-failure") != std::string::npos);
+  REQUIRE(fixture_policy.find("Windows-only") != std::string::npos);
+  REQUIRE(fixture_policy.find("linux-clang-asan-ubsan") == std::string::npos);
+  REQUIRE(readme.find("Windows-only") != std::string::npos);
+  REQUIRE(agents.find("Windows-only") != std::string::npos);
+  REQUIRE(claude.find("Windows-only") != std::string::npos);
 }

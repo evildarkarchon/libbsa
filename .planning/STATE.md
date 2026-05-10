@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: Complete Library
 status: Awaiting next milestone
 stopped_at: Completed 12-07-PLAN.md
-last_updated: "2026-05-10T11:48:39.480Z"
-last_activity: 2026-05-10 — Completed quick task 260510-6n7: Route BA2 DX10 no-overwrite publish through no-replace helper
+last_updated: "2026-05-10T12:31:10.645Z"
+last_activity: 2026-05-10 — Completed quick task 260510-7if: Declare libbsa Windows-only and remove Linux CMake presets
 progress:
   total_phases: 12
   completed_phases: 12
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 Phase: Milestone v1.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-05-10 — Completed quick task 260510-6n7: Route BA2 DX10 no-overwrite publish through no-replace helper
+Last activity: 2026-05-10 — Completed quick task 260510-7if: Declare libbsa Windows-only and remove Linux CMake presets
 
 ## Performance Metrics
 
@@ -117,8 +117,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 11]: The consolidated malformed matrix uses manifest evidence for generated archive rows and test evidence for the TES4 oversized arithmetic regression. — This keeps mandatory evidence legal while referencing the existing in-repo arithmetic regression.
 - [Phase 11]: Validation API matrix coverage runs each manifest-backed row through strict open or opt-in extractability validation according to the row phase. — This preserves fail-closed open behavior and exercises extraction/decompression failures through public validation reports.
 - [Phase 11]: The Python validator rejects unknown matrix families, categories, expected errors, phases, evidence types, and unresolved evidence references. — This prevents malformed coverage claims from drifting away from generated manifests or explicit tests.
-- [Phase 11]: The sanitizer hardening path is additive through linux-clang-asan-ubsan presets and is not added to the default Windows MSVC CI workflow. — Plan 11-07 preserves default Windows static/shared CI while adding an opt-in hardening path.
-- [Phase 11]: Fixture policy documents the exact CTest label selection for malformed, validation, and compression sanitizer runs. — Plan 11-07 makes the hardening command machine-checkable through validation policy tests.
+- [Quick Task 260510-7if]: libbsa is Windows-only; Linux, macOS, POSIX, and cross-platform portability findings are out of scope unless the user explicitly reopens platform support.
+- [Quick Task 260510-7if]: Linux CMake profiles are intentionally removed; supported configured profiles are the Windows MSVC static/shared presets.
 - [Phase 12]: Bulk extraction uses archive_reader::extract_entries with an explicit positive worker_count and request-order result records.
 - [Phase 12]: Bulk extraction sink factories must return distinct per-entry sinks and may be called concurrently when worker_count is greater than 1.
 - [Phase 12]: Raw extraction bounded-memory proof uses large synthetic TES3, TES4, BA2 GNRL, and generated raw BA2 DX10 archives plus reader source-policy checks.
@@ -167,6 +167,7 @@ None yet.
 | 260510-62q | Update Visual Studio toolchain references to Visual Studio 2026 | 2026-05-10 | uncommitted | [260510-62q-update-visual-studio-2026-docs](./quick/260510-62q-update-visual-studio-2026-docs/) |
 | 260510-6by | Fix vcpkg registry baseline CI failure | 2026-05-10 | ee0ca39 | [260510-6by-fix-vcpkg-registry-baseline-ci-failure](./quick/260510-6by-fix-vcpkg-registry-baseline-ci-failure/) |
 | 260510-6n7 | Route BA2 DX10 no-overwrite publish through no-replace helper | 2026-05-10 | uncommitted | [260510-6n7-route-ba2-dx10-no-overwrite-publish-thro](./quick/260510-6n7-route-ba2-dx10-no-overwrite-publish-thro/) |
+| 260510-7if | Declare libbsa Windows-only and remove Linux CMake presets | 2026-05-10 | uncommitted | [260510-7if-declare-libbsa-windows-only-and-remove-l](./quick/260510-7if-declare-libbsa-windows-only-and-remove-l/) |
 
 ## Deferred Items
 

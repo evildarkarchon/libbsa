@@ -8,7 +8,7 @@
 libbsa/
 +-- AGENTS.md                       # Project rules, TES5Edit boundary, GSD guidance
 +-- CMakeLists.txt                  # Main CMake target, install/export, docs, benchmarks, tests
-+-- CMakePresets.json               # Windows MSVC static/shared and Linux sanitizer presets
++-- CMakePresets.json               # Windows MSVC static/shared presets
 +-- vcpkg.json                      # vcpkg manifest dependencies
 +-- vcpkg-configuration.json        # vcpkg registry baseline
 +-- cmake/

@@ -13,6 +13,10 @@ Useful reference areas currently include:
 - `TES5Edit/Core/wbBSArchive.pas`
 - `TES5Edit/Core/wbBSA.pas`
 
+## Platform Support
+
+libbsa is a Windows-only library. Development, review, CI, packaging, and dependency validation target Windows with MSVC and vcpkg. Do not raise portability findings or add implementation work solely to support Linux, macOS, POSIX, or general cross-platform behavior unless the user explicitly reopens platform support.
+
 ## Hard Boundary: TES5Edit Is Read-Only
 
 `TES5Edit/` is a read-only reference submodule. Do not modify it for any reason.
@@ -32,7 +36,7 @@ All implementation work belongs outside `TES5Edit/`.
 
 - The implementation language is C++.
 - Keep the library reusable and independent of application-specific UI or tooling.
-- Prefer clear, portable C++ interfaces over direct transliteration of Delphi/Pascal structure.
+- Prefer clear, idiomatic Windows-oriented C++ interfaces over direct transliteration of Delphi/Pascal structure.
 - Preserve archive-format behavior discovered from BSArchPro unless there is a documented reason to diverge.
 - When porting behavior, trace the reference code first and record non-obvious compatibility constraints near the new implementation.
 
@@ -94,9 +98,9 @@ Deflate and LZ4 compression/decompression support are required.
 
 **libbsa**
 
-libbsa is a reusable C++20 library for reading and writing Bethesda Game Studios archive formats, including BSA and BA2 variants from Morrowind through Starfield. It is for modding tools, asset pipelines, and game utilities that need archive access without UI coupling or Delphi/BSArchPro implementation details leaking into the public API.
+libbsa is a reusable Windows-only C++20 library for reading and writing Bethesda Game Studios archive formats, including BSA and BA2 variants from Morrowind through Starfield. It is for modding tools, asset pipelines, and game utilities that need archive access without UI coupling or Delphi/BSArchPro implementation details leaking into the public API.
 
-The library reimplements BSArchPro-compatible behavior using clean, portable C++ interfaces. TES5Edit is the behavioral reference and compatibility guide, but the implementation remains independent and lives outside the `TES5Edit/` submodule.
+The library reimplements BSArchPro-compatible behavior using clean, idiomatic C++ interfaces for Windows. TES5Edit is the behavioral reference and compatibility guide, but the implementation remains independent and lives outside the `TES5Edit/` submodule.
 
 **Core Value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
 
@@ -106,7 +110,7 @@ The library reimplements BSArchPro-compatible behavior using clean, portable C++
 - **Reference boundary**: `TES5Edit/` is read-only - it may guide behavior but must not be edited, formatted, staged, or compiled into libbsa.
 - **Dependencies**: Use `libdeflate`, official `lz4`, and `DirectXTex` via vcpkg - no other external dependencies without documented justification.
 - **Build and tests**: Use CMake, vcpkg manifest mode, Catch2, and CTest for repeatable library builds and validation.
-- **Portability**: Windows is the primary target, but platform-specific code should be minimized to preserve a future Linux/macOS path.
+- **Platform support**: Windows is the only supported target. Reviewers should not request Linux, macOS, POSIX, or cross-platform portability work unless the user explicitly changes this constraint.
 - **API design**: Public headers should remain minimal and avoid leaking platform, compression, or DirectXTex implementation details.
 - **State model**: No global mutable state or singleton-based behavior; thread safety should come from isolated objects and explicit ownership.
 - **Error model**: In C++20 public APIs, prefer a local `libbsa::result<T>` or explicit error-code style for I/O and format failures; reserve exceptions for programmer precondition violations.
@@ -129,13 +133,13 @@ The library reimplements BSArchPro-compatible behavior using clean, portable C++
 |---------|------------------|---------|-------------|-----------------|------------|
 | libdeflate | vcpkg `libdeflate` `1.25#0`; enable `compression` and `decompression`; do not enable `gzip`/`zlib` unless fixtures prove wrapped-stream need | Deflate compression/decompression | TES4/FO3/FNV/Skyrim LE BSA payloads; Fallout 4 BA2; Starfield BA2 v2 and v3 when not LZ4 | libdeflate is optimized for fast whole-buffer DEFLATE, matching BSA/BA2 chunk payloads better than streaming zlib wrappers. Wrap it behind exact-size helpers that fail if decompressed bytes do not match archive metadata. | HIGH |
 | lz4 | vcpkg `lz4` `1.10.0#0`; link official `lz4::lz4`; do not depend on the CLI | LZ4 frame and raw block compression/decompression | Skyrim SE/AE BSA uses LZ4 frame APIs; Starfield BA2 v3 `CompressionMethod == 3` uses raw LZ4 block APIs | Official liblz4 exposes both `LZ4F_*` frame APIs and `LZ4_*safe*` block APIs. Keeping separate wrappers for frame-vs-block paths prevents a high-risk class of silent corruption. | HIGH |
-| DirectXTex | vcpkg `directxtex` `2026-03-31#0`; use core library, avoid optional image/tool features unless needed | DDS metadata parsing, DXGI format interpretation, mip/cubemap analysis, DDS header reconstruction support | BA2 DX10/DDS read and write phases only | DirectXTex is the maintained Microsoft library for DDS metadata (`GetMetadataFromDDSMemory`, `LoadFromDDSMemory`, `TexMetadata`, `ScratchImage`) and has current vcpkg support. Keep it behind an internal adapter so public headers do not leak DirectX/DXGI or platform details. | HIGH on Windows; MEDIUM for future Linux/macOS validation |
+| DirectXTex | vcpkg `directxtex` `2026-03-31#0`; use core library, avoid optional image/tool features unless needed | DDS metadata parsing, DXGI format interpretation, mip/cubemap analysis, DDS header reconstruction support | BA2 DX10/DDS read and write phases only | DirectXTex is the maintained Microsoft library for DDS metadata (`GetMetadataFromDDSMemory`, `LoadFromDDSMemory`, `TexMetadata`, `ScratchImage`) and has current vcpkg support. Keep it behind an internal adapter so public headers do not leak DirectX/DXGI or platform details. | HIGH on Windows |
 ### Development and Validation Tools
 | Tool / Library | Version / Policy | Purpose | When to Use | Why Recommended | Confidence |
 |----------------|------------------|---------|-------------|-----------------|------------|
 | Catch2 | vcpkg `catch2` `3.14.0#0`; consider `thread-safe-assertions` feature before parallel test phases | Unit, fixture, round-trip, compatibility, and regression tests | From Milestone 1 | Catch2 is C++-native, concise for data-driven binary fixture tests, and integrates with CTest via `catch_discover_tests`. Prefer it over GoogleTest unless mocking becomes a concrete requirement. | HIGH |
 | CTest | Bundled with CMake | Test orchestration and CI reporting | All milestones | Keeps tests build-system-native. Use labels such as `unit`, `fixture`, `roundtrip`, `compat`, `malformed`, `slow`, and `requires-game-fixture`. | HIGH |
-| CMakePresets.json | Schema compatible with CMake `3.24+` | Repeatable configure/build/test workflows | Project foundation | Presets should encode vcpkg toolchain, triplet, build type, warnings, sanitizers, and static/shared variants so contributors do not hand-type fragile CMake commands. | HIGH |
+| CMakePresets.json | Schema compatible with CMake `3.24+` | Repeatable Windows configure/build/test workflows | Project foundation | Presets should encode the vcpkg toolchain, build type, and static/shared Windows variants so contributors do not hand-type fragile CMake commands. | HIGH |
 | Sanitizers | Compiler-provided ASan/UBSan on Clang/GCC; MSVC ASan where practical | Parser/decompressor hardening | Start with parsing and malformed fixture phases | Archive parsers consume untrusted binary data. Sanitizers should run on malformed headers, oversized sizes, truncated payloads, and decompression failure cases. | HIGH |
 | Doxygen | System package or CI/vcpkg tool when docs generation is added | Public API documentation | Once public headers stabilize | Project requires Doxygen comments for public APIs; generate docs in CI later, but do not add it as a runtime dependency. | MEDIUM |
 ## Installation / Baseline Shape
@@ -151,10 +155,10 @@ The library reimplements BSArchPro-compatible behavior using clean, portable C++
 ## Alternatives Considered
 | Recommended | Alternative | Why Not / When Alternative Makes Sense | Confidence |
 |-------------|-------------|----------------------------------------|------------|
-| CMake + vcpkg manifest mode | Meson, Bazel, Premake, raw Visual Studio solutions | These can build C++, but CMake + vcpkg is the most common portable library distribution path for C++ consumers and aligns with vcpkg package exports. Add another build system only for a real downstream integration need. | HIGH |
+| CMake + vcpkg manifest mode | Meson, Bazel, Premake, raw Visual Studio solutions | These can build C++, but CMake + vcpkg is the selected Windows library distribution path and aligns with vcpkg package exports. Add another build system only for a real downstream integration need. | HIGH |
 | libdeflate | zlib, miniz, zlib-ng | zlib is slower and oriented around zlib streams; miniz adds speculative vendored code; zlib-ng is unnecessary while libdeflate satisfies required DEFLATE payloads. Add zlib compatibility only if fixtures prove Bethesda data uses wrapped zlib streams. | HIGH |
-| official lz4 | Bundled LZ4 source, game-specific LZ4 reimplementation | Official lz4 has stable frame and block APIs and active portability work. Reimplementation risks silent corruption; vendoring creates update/security burden. | HIGH |
-| DirectXTex behind an adapter | Hand-written DDS parser, DirectXTK utilities, texconv CLI invocation | A hand parser may be tempting for read-only extraction, but BA2 DDS write support needs robust DXGI, mip, array, and cubemap metadata. Shelling out to tools is not suitable for an embeddable library. Keep DirectXTex internal to preserve future portability. | MEDIUM-HIGH |
+| official lz4 | Bundled LZ4 source, game-specific LZ4 reimplementation | Official lz4 has stable frame and block APIs. Reimplementation risks silent corruption; vendoring creates update/security burden. | HIGH |
+| DirectXTex behind an adapter | Hand-written DDS parser, DirectXTK utilities, texconv CLI invocation | A hand parser may be tempting for read-only extraction, but BA2 DDS write support needs robust DXGI, mip, array, and cubemap metadata. Shelling out to tools is not suitable for an embeddable library. Keep DirectXTex internal so the public API stays clean. | MEDIUM-HIGH |
 | Catch2 + CTest | GoogleTest | GoogleTest is strong for large orgs and mocking-heavy code. libbsa primarily needs fixture-driven parser and round-trip tests, where Catch2 is lighter and terser. Switch only if mocks or org standards become real requirements. | MEDIUM |
 ## What NOT to Use
 | Avoid | Why | Use Instead | Confidence |
@@ -163,7 +167,7 @@ The library reimplements BSArchPro-compatible behavior using clean, portable C++
 | Public `std::expected` while claiming C++20 | `std::expected` is C++23; exposing it breaks the stated C++20 API contract | `libbsa::result<T>` or explicit `std::error_code`-style APIs; reconsider on an intentional C++23 migration | HIGH |
 | `std::filesystem::path` for archive-internal paths | Bethesda virtual paths are normalized archive keys, not host filesystem paths; host separator/case/encoding rules can corrupt lookups and hashes | Store archive paths as normalized UTF-8/byte strings with explicit normalization; use filesystem paths only at host I/O boundaries | HIGH |
 | LZ4 frame API for Starfield BA2 v3 raw LZ4 blocks | LZ4 frame and raw block formats are different; wrong API selection can fail or corrupt output | Route by archive family/version/`CompressionMethod`: `LZ4F_*` for SSE frames, `LZ4_*safe*` for Starfield raw blocks | HIGH |
-| DirectXTex or DXGI types in public headers | Leaks implementation/platform details and harms future Linux/macOS path | Internal `dds_metadata` / `texture_layout` value types translated from DirectXTex internally | HIGH |
+| DirectXTex or DXGI types in public headers | Leaks implementation/platform details into downstream consumers | Internal `dds_metadata` / `texture_layout` value types translated from DirectXTex internally | HIGH |
 | External logging/formatting libraries by default (`spdlog`, `fmt`) | Not required by a reusable archive library and violates minimal-dependency constraints | Return structured errors and let consumers log/format however they choose | HIGH |
 | Boost, libarchive, ZIP/7z libraries | They do not implement Bethesda BSA/BA2 semantics and add large dependency/API surface | Purpose-built BSA/BA2 parsers/writers | HIGH |
 | Whole-archive memory loading as primary design | Starfield archives can be very large; whole-file reads break performance and memory goals | Streaming sources/sinks and bounded scratch buffers | HIGH |
@@ -189,13 +193,12 @@ The library reimplements BSArchPro-compatible behavior using clean, portable C++
 | vcpkg manifest mode | libdeflate `1.25`, lz4 `1.10.0`, DirectXTex `2026-03-31`, Catch2 `3.14.0` | Commit a baseline. Use `version>=` for known minimums; use `overrides` only to force a problematic package version. | HIGH |
 | libdeflate `1.25` | All vcpkg triplets | vcpkg package supports all triplets; whole-buffer API fits archive payload chunks. | HIGH |
 | lz4 `1.10.0` | All vcpkg triplets | vcpkg package supports all triplets; library license is BSD-2-Clause. Do not use CLI GPL terms or CLI behavior as library API. | HIGH |
-| DirectXTex `2026-03-31` | vcpkg Windows and Linux triplets; Windows primary | vcpkg lists support for `(windows & !arm32) | linux`. Treat Linux DirectXTex usage as a validation item and keep public API platform-neutral. | MEDIUM |
+| DirectXTex `2026-03-31` | vcpkg Windows triplets | libbsa is Windows-only; validate DirectXTex through Windows vcpkg/MSVC presets. | HIGH |
 | Catch2 `3.14.0` | CMake/CTest | vcpkg package supports all triplets; `catch_discover_tests` has recent fixes and is appropriate for fixture labels. | HIGH |
 ## CI / Toolchain Recommendation
 - Primary lane: Windows + Visual Studio 2026/VS 18.x, vcpkg manifest mode, Debug and Release.
 - Secondary lane: Windows + latest CMake `4.3.x` to expose policy warnings early.
-- Portability lane after foundation: Linux + Clang or GCC using vcpkg; initially build parser/compression tests, then validate DirectXTex DDS behavior.
-- Sanitizer lane: Linux Clang ASan/UBSan for parser, decompressor, and malformed fixture tests.
+- No Linux, macOS, POSIX, or cross-platform portability lane is supported unless the user explicitly reopens platform support.
 - Build both static and shared library configurations before publishing an install/export package.
 ## Sources
 - Project context: `J:\libbsa-gsd\.planning\PROJECT.md`, `J:\libbsa-gsd\docs\PRD.md`, `J:\libbsa-gsd\AGENTS.md` — constraints, milestones, TES5Edit boundary, required dependencies.
@@ -208,7 +211,7 @@ The library reimplements BSArchPro-compatible behavior using clean, portable C++
 - LZ4 GitHub releases — `v1.10.0` official release, stable library notes, frame/block API context: https://github.com/lz4/lz4/releases
 - Context7 `/microsoft/directxtex` — verified DDS metadata/load APIs (`GetMetadataFromDDSMemory`, `LoadFromDDSMemory`, `TexMetadata`, `ScratchImage`).
 - DirectXTex GitHub releases — March 2026 release, public mip helpers, permissive DDS reader update, VS 2026 support, vcpkg availability: https://github.com/microsoft/DirectXTex/releases
-- vcpkg package page — `directxtex` `2026-03-31#0`, features, Windows/Linux support, last updated 2026-04-01: https://vcpkg.io/en/package/directxtex.html
+- vcpkg package page — `directxtex` `2026-03-31#0`, feature/package metadata, last updated 2026-04-01: https://vcpkg.io/en/package/directxtex.html
 - vcpkg package page and Catch2 GitHub releases — `catch2` `3.14.0#0`, thread-safe assertion feature, latest release fixes: https://vcpkg.io/en/package/catch2.html and https://github.com/catchorg/Catch2/releases
 <!-- GSD:stack-end -->
 

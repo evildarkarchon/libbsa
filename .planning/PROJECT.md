@@ -2,9 +2,9 @@
 
 ## What This Is
 
-libbsa is a reusable C++20 library for reading, writing, validating, and extracting Bethesda Game Studios archive formats, including BSA and BA2 variants from Morrowind through Starfield. It is for modding tools, asset pipelines, and game utilities that need archive access without UI coupling or Delphi/BSArchPro implementation details leaking into the public API.
+libbsa is a reusable Windows-only C++20 library for reading, writing, validating, and extracting Bethesda Game Studios archive formats, including BSA and BA2 variants from Morrowind through Starfield. It is for modding tools, asset pipelines, and game utilities that need archive access without UI coupling or Delphi/BSArchPro implementation details leaking into the public API.
 
-The library reimplements BSArchPro-compatible behavior using clean, portable C++ interfaces. TES5Edit remains the behavioral reference and compatibility guide, but the implementation is independent and lives outside the `TES5Edit/` submodule.
+The library reimplements BSArchPro-compatible behavior using clean, idiomatic Windows C++ interfaces. TES5Edit remains the behavioral reference and compatibility guide, but the implementation is independent and lives outside the `TES5Edit/` submodule.
 
 ## Core Value
 
@@ -65,7 +65,7 @@ Supported archive families include TES3 BSA, TES4 BSA v103, FO3/FNV/Skyrim LE BS
 - **Reference boundary**: `TES5Edit/` is read-only - it may guide behavior but must not be edited, formatted, staged, or compiled into libbsa.
 - **Dependencies**: Use `libdeflate`, official `lz4`, and `DirectXTex` via vcpkg - no other external dependencies without documented justification.
 - **Build and tests**: Use CMake, vcpkg manifest mode, Catch2, and CTest for repeatable library builds and validation.
-- **Portability**: Windows is the primary target, but platform-specific code should be minimized to preserve a future Linux/macOS path.
+- **Platform support**: Windows is the only supported target. Do not add Linux, macOS, POSIX, or cross-platform portability requirements unless the user explicitly reopens platform support.
 - **API design**: Public headers should remain minimal and avoid leaking platform, compression, or DirectXTex implementation details.
 - **State model**: No global mutable state or singleton-based behavior; thread safety should come from isolated objects and explicit ownership.
 - **Error model**: In C++20 public APIs, prefer a local `libbsa::result<T>` or explicit error-code style for I/O and format failures; reserve exceptions for programmer precondition violations.
@@ -79,7 +79,8 @@ Supported archive families include TES3 BSA, TES4 BSA v103, FO3/FNV/Skyrim LE BS
 |----------|-----------|---------|
 | Build a reusable library only, not a CLI or GUI | The core value is embeddable archive functionality for downstream tools | Implemented in v1.0 |
 | Treat TES5Edit/BSArchPro as read-only reference material | Preserves clean ownership, avoids Delphi/UI coupling, and respects the submodule boundary | Implemented in v1.0 |
-| Use C++20 with CMake and vcpkg | Matches project constraints and supports portable reusable library packaging | Implemented in v1.0 |
+| Use C++20 with CMake and vcpkg | Matches project constraints and supports Windows reusable library packaging | Implemented in v1.0 |
+| Treat libbsa as Windows-only | Review agents should not spend effort on Linux, macOS, POSIX, or cross-platform portability concerns | Active after v1.0 |
 | Use libdeflate for deflate payloads | Required dependency and a good fit for archive chunk compression/decompression | Implemented in v1.0 |
 | Use official lz4 for both frame and raw block paths | SSE BSA uses LZ4 frame while Starfield BA2 v3 uses raw LZ4 blocks; separate APIs reduce corruption risk | Implemented in v1.0 |
 | Use DirectXTex only behind an internal texture-analysis boundary | DDS metadata work needs robust DXGI handling without leaking DirectXTex into public headers | Implemented in v1.0 |

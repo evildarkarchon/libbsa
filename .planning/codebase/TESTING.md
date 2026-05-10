@@ -25,10 +25,6 @@ cmake --preset windows-msvc-debug-shared
 cmake --build --preset windows-msvc-debug-shared
 ctest --preset windows-msvc-debug-shared --output-on-failure
 
-cmake --preset linux-clang-asan-ubsan
-cmake --build --preset linux-clang-asan-ubsan
-ctest --preset linux-clang-asan-ubsan -L "malformed|validation|compression" --output-on-failure
-
 cmake --build --preset windows-msvc-debug-static --target libbsa_benchmark_report
 ```
 
@@ -52,7 +48,7 @@ tests/
 ├── CMakeLists.txt                         # Builds libbsa_tests, fixture generators, CTest cases
 ├── unit/                                  # Catch2 source files
 ├── fixtures/
-│   ├── README.md                          # Fixture, local corpus, sanitizer, and label policy
+│   ├── README.md                          # Fixture, local corpus, Windows-only, and label policy
 │   ├── generated/
 │   │   ├── archives/                      # Committed legal BSA/BA2 fixtures and manifests
 │   │   ├── source/                        # Committed generated DDS/source fixtures
@@ -148,7 +144,7 @@ std::vector<std::byte> bytes_from_hex(std::string_view hex) {
 **Location:**
 - Committed fixture archives and manifests are under `tests/fixtures/generated/archives/`. They are generated legal data with provenance fields and are validated by `tests/fixtures/generated/validate_fixture_manifests.py`.
 - DDS source fixtures are under `tests/fixtures/generated/source/` and are used by `tests/unit/ba2_dx10_writer_tests.cpp` and `tests/unit/ba2_writer_execution_tests.cpp`.
-- The fixture policy in `tests/fixtures/README.md` is authoritative for generated data, local game fixtures, compatibility evidence, sanitizer labels, and `TES5Edit/` restrictions.
+- The fixture policy in `tests/fixtures/README.md` is authoritative for generated data, local game fixtures, compatibility evidence, Windows-only testing policy, and `TES5Edit/` restrictions.
 - Regeneration targets are declared in `tests/CMakeLists.txt`: `generate_tes4_bsa_fixtures`, `generate_tes3_bsa_fixtures`, `generate_tes3_bsa_writer_fixtures`, `generate_ba2_gnrl_fixtures`, and `generate_ba2_dx10_fixtures`.
 
 ## Coverage

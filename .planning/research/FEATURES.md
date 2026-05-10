@@ -54,11 +54,11 @@ These features make libbsa more valuable than shelling out to BSArch/Archive2 or
 | Fine-grained validation API | Callers can validate an archive or planned package without extracting/writing it. | MEDIUM-HIGH | Useful for asset pipelines. Should report machine-readable warnings/errors. |
 | Format-preserving read metadata | Enables tools to inspect and rewrite archives without losing unknown fields like Starfield v2 `Unknown1`/`Unknown2`. | MEDIUM | Preserve known-unknown fields as named opaque metadata; avoid pretending they are understood. |
 | Incremental/cancellable operation hooks | Asset pipelines need progress and cancellation for multi-GB operations, even without a GUI. | MEDIUM | Provide callback/cancellation points without taking a dependency on a logging/progress framework. |
-| Cross-platform-friendly implementation boundary | Windows is primary, but Linux/macOS consumers in mod tooling benefit if non-Windows paths are not blocked by headers. | MEDIUM | DirectXTex and filesystem interactions must remain behind internal/adaptable boundaries. |
+| Windows-only implementation boundary | Reviewers and implementers need clear platform scope so DirectXTex, MSVC, and Windows filesystem behavior are treated as expected. | HIGH | Keep public headers clean for consumers, but do not add Linux, macOS, POSIX, or cross-platform requirements. |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
-Features that seem useful but conflict with the library’s non-goals, portability, or compatibility focus.
+Features that seem useful but conflict with the library’s non-goals, Windows-only scope, or compatibility focus.
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
@@ -67,13 +67,13 @@ Features that seem useful but conflict with the library’s non-goals, portabili
 | Network/URL archive access | Some tools might want remote asset pipelines. | Non-goal and adds security, retries, caching, and dependency concerns. | Accept caller-provided streams/sources; callers own network transport. |
 | ZIP/7z/libarchive support | “Archive library” sounds generic. | Dilutes Bethesda-specific compatibility value and violates non-goal. | Stay purpose-built for BSA/BA2; consumers can compose with other libraries. |
 | Editing/compiling TES5Edit code | Faster path to behavior parity. | Violates hard repository boundary and leaks Delphi/UI implementation details. | Trace TES5Edit behavior as read-only prior art and reimplement cleanly. |
-| Public DirectXTex/libdeflate/lz4 types | Makes advanced users feel closer to internals. | Leaks dependencies and harms ABI/portability. | Translate to libbsa-native metadata and error types at public boundaries. |
+| Public DirectXTex/libdeflate/lz4 types | Makes advanced users feel closer to internals. | Leaks dependencies and harms ABI cleanliness. | Translate to libbsa-native metadata and error types at public boundaries. |
 | In-place archive mutation early | Appears convenient for mod tools. | Hard to make safe with offset shifts, dedup, compression changes, BA2 file tables, and crash recovery. | Support read existing + write new archive first; revisit transactional in-place update only after compatibility hardening. |
 | Whole-archive memory loading | Simpler implementation. | Fails large Starfield/FO4 use cases and contradicts performance goals. | Bounded streaming readers/writers with scratch buffers. |
 | Silent best-effort extraction on corrupt archives | Users may prefer getting “something.” | Can hide corruption and create invalid assets. | Provide explicit recovery/lenient mode later; default should fail with precise diagnostics. |
 | Global configuration/singletons | Convenient for compression levels/logging. | Breaks thread safety and embedding. | Pass options explicitly through archive open/build contexts. |
 | Automatic format inference from output extension only | Convenient for writer API. | `.bsa`/`.ba2` is insufficient for game/version/DDS distinctions and can produce invalid archives. | Require explicit target profile; use extension only as validation hint. |
-| Shelling out to Archive2/BSArch/texconv | Quickly obtains compatibility. | Not reusable, not portable, error-prone, and introduces external tool dependencies. | Implement native library behavior and compare against tool outputs in tests. |
+| Shelling out to Archive2/BSArch/texconv | Quickly obtains compatibility. | Not reusable as a library, error-prone, and introduces external tool dependencies. | Implement native library behavior and compare against tool outputs in tests. |
 | Default compression of every file | Smaller archives look attractive. | BSArch warns that some sounds/voices/strings can fail in compressed archives; game-specific rules matter. | Compatibility profiles with per-file default decisions and warnings. |
 
 ## Feature Dependencies
