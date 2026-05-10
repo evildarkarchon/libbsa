@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 10 verification found gaps
-last_updated: "2026-05-10T02:23:02.593Z"
-last_activity: 2026-05-10 -- Phase 10 planning complete
+stopped_at: Completed 10-06-PLAN.md
+last_updated: "2026-05-10T02:27:02.934Z"
+last_activity: 2026-05-10
 progress:
   total_phases: 12
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 61
-  completed_plans: 60
-  percent: 98
+  completed_plans: 61
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 ## Current Position
 
 Phase: 10 (tes3-write-support-and-bsa-format-completeness) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
-Last activity: 2026-05-10 -- Phase 10 planning complete
+Last activity: 2026-05-10
 
-Progress: [█████████░] 5/6 plans executed; gap-closure plan ready
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [█████████░] 5/6 plans executed; gap-closure plan 
 | Phase 10 P03 | 15min | 3 tasks | 3 files |
 | Phase 10 P04 | 3min | 3 tasks | 2 files |
 | Phase 10 P05 | 28min | 3 tasks | 5 files |
+| Phase 10 P06 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 10]: Root-level TES3 writer paths remain in round-trip coverage when accepted by shared archive path normalization because TES3 archives use a flat name table. — Plan 04 kept Readme.txt coverage aligned with D-14 and current shared validator behavior.
 - [Phase 10]: Committed TES3 writer fixture evidence is generated only through the public tes3_bsa_writer API. — This satisfies D-09 and D-10 while keeping fixture evidence legal and independent of TES5Edit.
 - [Phase 10]: TES3 writer fixture validation uses structural table facts and reader extraction instead of full archive golden equality. — This satisfies D-12 and avoids over-constraining non-semantic archive bytes.
+- [Phase 10]: Shared archive path normalization rejects embedded NUL bytes before separator normalization so all callers get stable invalid_argument behavior.
+- [Phase 10]: TES3 non-overwrite publish remains routed through publish_file_without_replace after a final destination existence check.
 
 ### Pending Todos
 
@@ -110,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T01:05:00Z
-Stopped at: Phase 10 verification found gaps
-Resume file: .planning/phases/10-tes3-write-support-and-bsa-format-completeness/10-VERIFICATION.md
+Last session: 2026-05-10T02:27:02.928Z
+Stopped at: Completed 10-06-PLAN.md
+Resume file: None
