@@ -33,9 +33,11 @@ struct tes4_bsa_writer::state {
 
 namespace {
 
-std::string preserved_archive_path(std::string_view archive_path) {
+std::string stored_tes4_archive_path(std::string_view archive_path) {
   std::string preserved{archive_path};
-  std::replace(preserved.begin(), preserved.end(), '\\', '/');
+  // TES4 BSA folder records and embedded-name prefixes use Bethesda-style
+  // backslashes even though public lookup keys normalize both separator forms.
+  std::replace(preserved.begin(), preserved.end(), '/', '\\');
   return preserved;
 }
 
@@ -47,7 +49,7 @@ result<formats::bsa::tes4_writer_entry> make_entry(std::string_view archive_path
   }
 
   formats::bsa::tes4_writer_entry entry;
-  entry.archive_path_original = preserved_archive_path(archive_path);
+  entry.archive_path_original = stored_tes4_archive_path(archive_path);
   entry.archive_path_canonical = std::move(canonical.value().value);
   entry.compression = compression;
   return entry;
@@ -400,11 +402,20 @@ result<void> write_folder_name(detail::binary_writer& writer, std::string_view v
 }
 
 std::pair<std::string, std::string> split_folder_file(std::string_view path) {
-  const auto separator = path.find_last_of('/');
+  const auto separator = path.find_last_of("/\\");
   if (separator == std::string_view::npos) {
     return {{}, std::string{path}};
   }
   return {std::string{path.substr(0, separator)}, std::string{path.substr(separator + 1U)}};
+}
+
+std::string join_folder_file(std::string_view folder, std::string_view file_name) {
+  std::string path;
+  path.reserve(folder.size() + 1U + file_name.size());
+  path.append(folder);
+  path.push_back('\\');
+  path.append(file_name);
+  return path;
 }
 
 result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
@@ -448,9 +459,10 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
   prepared.file_name = std::move(file_name);
   prepared.file_hash = file_hash_for(prepared.file_name);
   prepared.record_flags = record_flags;
+  const auto embedded_name = join_folder_file(prepared.folder, prepared.file_name);
 
   if (!entry.from_memory && !effective_compressed) {
-    auto prefix = make_embedded_name_prefix(emit_embedded_names, prepared.file_name);
+    auto prefix = make_embedded_name_prefix(emit_embedded_names, embedded_name);
     if (!prefix) {
       return prefix.error();
     }
@@ -476,7 +488,7 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
   }
 
   auto stored_payload = encode_stored_payload(target, payload.value(), effective_compressed, emit_embedded_names,
-                                              prepared.file_name);
+                                              embedded_name);
   if (!stored_payload) {
     return stored_payload.error();
   }

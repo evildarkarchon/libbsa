@@ -292,7 +292,8 @@ TEST_CASE("TES4 BSA writer serializes derived file flags and hash-sorted tables"
     actual_folder_hashes.push_back(read_u64_le_at(bytes, cursor));
     cursor += legacy_folder_record_size;
   }
-  CHECK(actual_folder_hashes == sorted_hashes({"Docs/Misc", "Interface/Gamma", "Meshes/Alpha", "Scripts/Beta", "Textures/Zeta"}));
+  CHECK(actual_folder_hashes ==
+        sorted_hashes({"Docs\\Misc", "Interface\\Gamma", "Meshes\\Alpha", "Scripts\\Beta", "Textures\\Zeta"}));
 
   for (std::uint32_t folder_index = 0; folder_index < folder_count; ++folder_index) {
     REQUIRE(cursor < bytes.size());
@@ -315,7 +316,9 @@ TEST_CASE("TES4 BSA writer serializes derived file flags and hash-sorted tables"
       cursor += 16U;
     }
 
-    if (folder_name == "Meshes/Alpha") {
+    CHECK(folder_name.find('/') == std::string::npos);
+
+    if (folder_name == "Meshes\\Alpha") {
       CHECK(actual_file_hashes == sorted_hashes({"Model.nif", "Anim.kf"}));
     } else {
       CHECK(std::is_sorted(actual_file_hashes.begin(), actual_file_hashes.end()));
@@ -595,9 +598,20 @@ TEST_CASE("TES4 BSA writer emits opt-in embedded name prefixes for v104 and v105
     REQUIRE(opened.has_value());
 
     const auto& entry = require_entry(opened.value(), archive_path);
-    const auto expected_prefix_size = entry.original_path.substr(entry.original_path.find_last_of('/') + 1U).length() + 1U;
+    auto expected_embedded_name = archive_path;
+    std::replace(expected_embedded_name.begin(), expected_embedded_name.end(), '/', '\\');
+    const auto expected_prefix_size = expected_embedded_name.length() + 1U;
     CHECK(entry.has_embedded_name);
     CHECK(entry.embedded_name_prefix_size == expected_prefix_size);
+
+    const auto archive_bytes = read_binary_file(archive);
+    REQUIRE(static_cast<std::size_t>(entry.payload_offset) + expected_prefix_size <= archive_bytes.size());
+    CHECK(std::to_integer<unsigned char>(archive_bytes[entry.payload_offset]) == expected_embedded_name.length());
+    for (std::size_t index = 0; index < expected_embedded_name.length(); ++index) {
+      CHECK(static_cast<char>(std::to_integer<unsigned char>(archive_bytes[entry.payload_offset + 1U + index])) ==
+            expected_embedded_name[index]);
+    }
+
     require_extracted_bytes(opened.value(), archive_path, source_bytes);
   }
 }
