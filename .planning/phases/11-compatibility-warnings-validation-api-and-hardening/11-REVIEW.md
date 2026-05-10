@@ -1,36 +1,12 @@
 ---
 phase: 11-compatibility-warnings-validation-api-and-hardening
-reviewed: 2026-05-10T05:06:41Z
+reviewed: 2026-05-10T05:18:46Z
 depth: standard
-files_reviewed: 28
+files_reviewed: 4
 files_reviewed_list:
-  - CMakeLists.txt
-  - CMakePresets.json
   - docs/compatibility-evidence.md
-  - include/libbsa/libbsa.hpp
-  - include/libbsa/validation.hpp
-  - src/archive.cpp
-  - src/detail/byte_vector.hpp
-  - src/detail/deflate_codec.cpp
-  - src/detail/lz4_block_codec.cpp
-  - src/detail/lz4_frame_codec.cpp
-  - src/formats/ba2/ba2_dx10_reader.cpp
-  - src/formats/ba2/ba2_gnrl_reader.cpp
-  - src/formats/bsa/tes4_bsa_reader.cpp
-  - src/formats/bsa/tes4_bsa_reader.hpp
-  - src/validation.cpp
-  - tests/CMakeLists.txt
   - tests/fixtures/README.md
-  - tests/fixtures/generated/compatibility_matrix.json
-  - tests/fixtures/generated/validate_fixture_manifests.py
-  - tests/package-consumer/main.cpp
-  - tests/unit/ba2_gnrl_reader_tests.cpp
-  - tests/unit/compatibility_matrix_tests.cpp
-  - tests/unit/compatibility_warning_tests.cpp
-  - tests/unit/public_include_boundary_tests.cpp
-  - tests/unit/tes3_bsa_reader_tests.cpp
-  - tests/unit/tes4_bsa_reader_tests.cpp
-  - tests/unit/validation_api_tests.cpp
+  - tests/unit/local_game_fixture_tests.cpp
   - tests/unit/validation_policy_tests.cpp
 findings:
   critical: 0
@@ -42,33 +18,53 @@ status: clean
 
 # Phase 11: Code Review Report
 
-**Reviewed:** 2026-05-10T05:06:41Z
+**Reviewed:** 2026-05-10T05:18:46Z
 **Depth:** standard
-**Files Reviewed:** 28
+**Files Reviewed:** 4
 **Status:** clean
 
 ## Summary
 
-Reviewed all non-planning files changed from `6d9ad74..HEAD` after commit `7ed2bd3` while excluding `TES5Edit/`.
+Reviewed the Phase 11 gap-closure commit `83bf32e` against previous clean review
+commit `7d5e85a`, scoped to non-planning changes outside `TES5Edit/`.
 
-The prior warning is fixed. `src/archive.cpp` no longer contains the obsolete `read_stored_payload` helper, the span-based `extract_tes4_bsa_payload` declaration and definition were removed from the TES4 reader, and `archive_reader::extract` now keeps TES4 extraction on `extract_tes4_bsa_payload_from_file`.
+The BSArchPro-derived comparison harness is opt-in and safe for the default
+suite. It only runs comparisons when `LIBBSA_BSARCHPRO_EXPECTED` points to a
+local manifest or when `LIBBSA_GAME_FIXTURES` contains a local
+`bsarchpro_expected.json`; otherwise the local fixture and BSArchPro comparison
+CTest cases are discovered but skipped. The reviewed documentation keeps
+committed fixtures on generated/writer-output evidence and states that local game
+archives, extracted payloads, and BSArchPro-derived corpus output must not be
+committed. `tests/fixtures/local/*` remains ignored, with only `.gitkeep`
+tracked.
 
 All reviewed files meet quality standards. No issues found.
 
 Verification performed:
 
 ```text
-rg -n "read_stored_payload|extract_tes4_bsa_payload\b|extract_tes4_bsa_payload_from_file|tes4_bsa_payload" src\archive.cpp src\formats\bsa\tes4_bsa_reader.cpp src\formats\bsa\tes4_bsa_reader.hpp include tests
+git diff --name-only 7d5e85a..83bf32e -- . ':!.planning/' ':!TES5Edit/' ':!package-lock.json' ':!yarn.lock' ':!Gemfile.lock' ':!poetry.lock'
+git diff --check 7d5e85a..83bf32e -- docs/compatibility-evidence.md tests/fixtures/README.md tests/unit/local_game_fixture_tests.cpp tests/unit/validation_policy_tests.cpp
 cmake --build --preset windows-msvc-debug-static --target libbsa_tests
-python tests\fixtures\generated\validate_fixture_manifests.py
-ctest --preset windows-msvc-debug-static -R "validation_api|validation_policy|validate_fixture_manifests|compatibility_matrix|compatibility_warning|tes4_bsa" --output-on-failure
-ctest --preset windows-msvc-debug-static --output-on-failure
+ctest --preset windows-msvc-debug-static -R "local game fixtures|BSArchPro-derived|validation_policy" --output-on-failure
+ctest --preset windows-msvc-debug-static -L validation_policy --output-on-failure
+ctest --preset windows-msvc-debug-static -R "requires-game-fixture label|local fixture policy" --output-on-failure
+git ls-files tests/fixtures/local docs/compatibility-evidence.md tests/fixtures/README.md tests/unit/local_game_fixture_tests.cpp tests/unit/validation_policy_tests.cpp
+git check-ignore -v tests/fixtures/local/example.bsa
+git check-ignore -v tests/fixtures/local/bsarchpro_expected.json
 ```
 
-Focused CTest passed 32/32. Full CTest passed 188/188, with `local game fixtures are opt-in` skipped as expected.
+Focused CTest passed. With `LIBBSA_GAME_FIXTURES` and
+`LIBBSA_BSARCHPRO_EXPECTED` unset, both local-corpus tests were skipped by
+default:
+
+```text
+local game fixtures are opt-in ... Skipped
+BSArchPro-derived expected fixture comparisons are opt-in ... Skipped
+```
 
 ---
 
-_Reviewed: 2026-05-10T05:06:41Z_
+_Reviewed: 2026-05-10T05:18:46Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
