@@ -359,7 +359,7 @@ Plans:
 - [x] 11-05-PLAN.md — Harden malformed manifest expected-error mapping in existing reader tests.
 
 **Wave 2** *(blocked on Wave 1 public validation contract where applicable)*
-- [ ] 11-02-PLAN.md — Implement strict-open-backed validation reports for fixtures and writer output.
+- [x] 11-02-PLAN.md — Implement strict-open-backed validation reports for fixtures and writer output.
 
 **Wave 3** *(blocked on Wave 2 validation implementation where applicable)*
 - [ ] 11-03-PLAN.md — Implement representative typed compatibility warning scenarios across BSA and BA2.
@@ -400,5 +400,5 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 8. BA2 GNRL Write-New Support | 6/6 | Complete | 2026-05-09 |
 | 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |
 | 10. TES3 Write Support and BSA Format Completeness | 6/6 | Complete    | 2026-05-10 |
-| 11. Compatibility Warnings, Validation API, and Hardening | 2/7 | In Progress|  |
+| 11. Compatibility Warnings, Validation API, and Hardening | 3/7 | In Progress|  |
 | 12. Performance, Concurrency, Documentation, and Polish | 0/TBD | Not started | - |

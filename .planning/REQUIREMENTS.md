@@ -99,7 +99,7 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 ### Compatibility and Validation
 
 - [ ] **COMP-01**: Maintainer can compare extracted fixture output against BSArchPro-derived expected bytes or metadata.
-- [ ] **COMP-02**: Maintainer can verify archives produced by libbsa load or validate as compatible with their target game/archive family.
+- [x] **COMP-02**: Maintainer can verify archives produced by libbsa load or validate as compatible with their target game/archive family.
 - [x] **COMP-03**: Consumer can receive structured compatibility warnings for known Bethesda quirks without requiring a logging framework.
 - [x] **COMP-04**: Parser can gracefully reject malformed, truncated, oversized, or internally inconsistent archives.
 - [ ] **COMP-05**: Maintainer can run sanitizer-backed malformed-input tests for parser and decompressor hardening.
@@ -222,7 +222,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WBA2-10 | Phase 9: BA2 DX10 Write-New Support | Complete |
 | WBA2-11 | Phase 9: BA2 DX10 Write-New Support | Complete |
 | COMP-01 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Pending |
-| COMP-02 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Pending |
+| COMP-02 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Complete |
 | COMP-03 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Complete |
 | COMP-04 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Complete |
 | COMP-05 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Pending |

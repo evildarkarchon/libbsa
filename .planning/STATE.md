@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 11-05-PLAN.md
-last_updated: "2026-05-10T04:02:55.054Z"
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-05-10T04:10:49.986Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 12
   completed_phases: 10
   total_plans: 68
-  completed_plans: 63
-  percent: 93
+  completed_plans: 64
+  percent: 94
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 11 (Compatibility Warnings, Validation API, and Hardening) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-05-10
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [█████████░] 93%
 | Phase 10 P06 | 12min | 2 tasks | 2 files |
 | Phase 11 P01 | 4 min | 2 tasks | 4 files |
 | Phase 11 P05 | 2 min | 2 tasks | 3 files |
+| Phase 11 P02 | 5 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 11]: Plan 11-01 introduces the public validation contract only; validation behavior and the function definition remain for the later implementation plan. — Matches the plan boundary and leaves strict-open-backed behavior for Plan 11-02.
 - [Phase 11]: Public compatibility warnings expose stable code and severity values while keeping byte offsets, record indexes, and chunk indexes out of the public report model. — Satisfies the Phase 11 public/private boundary and D-09 information-disclosure mitigation.
 - [Phase 11]: Unknown malformed manifest expected_error values are treated as test-oracle failures instead of being remapped to invalid_argument. — Matches Phase 11 D-13 and D-17 by making manifest typos fail loudly while preserving stable public error-code assertions.
+- [Phase 11]: validate_archive reuses archive_reader::open as the single strict parser source of truth — Prevents the validation facade from becoming a lenient second reader.
+- [Phase 11]: validate_archive keeps empty and unreadable host paths as result-level setup failures — Readable unsupported or malformed archive bytes are instead reported as fatal validation diagnostics.
+- [Phase 11]: Entry extractability validation remains opt-in and uses public reader APIs — validation_report does not expose archive_reader, entry listings, or extraction bytes.
 
 ### Pending Todos
 
@@ -118,6 +122,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T04:02:55.048Z
-Stopped at: Completed 11-05-PLAN.md
+Last session: 2026-05-10T04:10:49.980Z
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None
