@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 Phase: 12
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-05-10
+Last activity: 2026-05-10 - Completed quick task 260510-46t: Close gaps and tech_debt from .planning/v1.0-MILESTONE-AUDIT.md
 
 Progress: [██████████] 100%
 
@@ -154,6 +154,12 @@ None yet.
 - BA2 DDS reconstruction, cubemaps, mip ordering, and chunk limits should remain covered during hardening.
 - Public C++20 error/result API should avoid exposing C++23 `std::expected` until the project intentionally raises the language standard.
 - Phase 10 verification found two TES3 writer gaps: embedded NUL archive paths can produce self-inconsistent archives, and non-overwrite publish lacks a final no-replace check before rename.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260510-46t | Close gaps and tech_debt from .planning/v1.0-MILESTONE-AUDIT.md | 2026-05-10 | f675b41 | [260510-46t-close-gaps-and-tech-debt-from-planning-v](./quick/260510-46t-close-gaps-and-tech-debt-from-planning-v/) |
 
 ## Deferred Items
 
