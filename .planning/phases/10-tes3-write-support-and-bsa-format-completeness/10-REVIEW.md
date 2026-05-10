@@ -1,96 +1,73 @@
 ---
 phase: 10-tes3-write-support-and-bsa-format-completeness
-reviewed: 2026-05-09T00:00:00Z
+reviewed: 2026-05-09T12:00:00Z
 depth: standard
-files_reviewed: 9
+files_reviewed: 11
 files_reviewed_list:
   - CMakeLists.txt
   - include/libbsa/writer.hpp
+  - src/detail/atomic_file_ops.hpp
   - src/formats/bsa/tes3_bsa_writer.cpp
   - src/formats/bsa/tes3_bsa_writer.hpp
   - tests/CMakeLists.txt
+  - tests/fixtures/generated/archives/tes3_writer_canonical.bsa
   - tests/fixtures/generated/archives/tes3_writer_canonical_manifest.json
   - tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp
   - tests/unit/public_include_boundary_tests.cpp
   - tests/unit/tes3_bsa_writer_tests.cpp
 findings:
-  critical: 2
-  warning: 1
+  critical: 1
+  warning: 0
   info: 0
-  total: 3
+  total: 1
 status: issues_found
 ---
 
 # Phase 10: Code Review Report
 
-**Reviewed:** 2026-05-09T00:00:00Z
+**Reviewed:** 2026-05-09T12:00:00Z
 **Depth:** standard
-**Files Reviewed:** 9
+**Files Reviewed:** 11
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the TES3 writer public API, implementation, build wiring, generator, manifest, and unit tests after the prior fixes. The previous temp-file collision issue is improved by using a unique temporary directory, and source validation now happens before publish-path reservation. However, the publish logic still has non-atomic path reservation races that can overwrite or strand caller-owned files on platforms where `std::filesystem::rename` replaces existing destination files. One regression test also relies on timing and a 128 MiB payload, so it can pass without proving the race is closed.
+Reviewed the TES3 writer API, atomic publish helper, writer implementation, build wiring, generated fixture manifest/generator, and unit tests. The prior no-replace publish finding is resolved by `publish_file_without_replace`, and the prior backup-reservation finding is resolved by reserving a writer-owned backup directory before moving the existing archive. The deterministic helper tests now directly cover no-replace publish and backup directory reservation.
+
+One overwrite-mode data-loss race remains: the implementation moves the old archive out of the destination name before publishing the replacement, then refuses to restore it if another actor creates the destination during that gap. That can leave the caller's original archive stranded in a backup directory while `write_to` reports failure.
 
 ## Critical Issues
 
-### CR-01: Non-overwrite publish can still replace a concurrently-created destination
+### CR-01: Overwrite publish can strand the original archive when another writer wins the publish gap
 
-**File:** `src/formats/bsa/tes3_bsa_writer.cpp:471-484`
-**Issue:** The non-overwrite path checks `exists(output_path)` and then calls `std::filesystem::rename(temp_path, output_path)`. That check/use pair is not atomic. If another process creates `output_path` after line 476 but before line 481, C++ permits `rename` to replace an existing non-directory destination on POSIX-like platforms. This violates `overwrite_existing == false` and can destroy caller-owned data despite the earlier existence checks.
-**Fix:** Publish with an atomic no-replace primitive instead of `exists` + `rename`. If the project keeps a portable C++20 surface, hide the platform-specific publish behind an internal helper and fail when the destination already exists.
+**Classification:** BLOCKER
+**File:** `src/formats/bsa/tes3_bsa_writer.cpp:439-458`
+**Issue:** In overwrite mode, the writer first renames the existing archive into `backup_path` (lines 439-445), then publishes the new archive with no-replace semantics (line 447). If another process creates `output_path` between those operations, `publish_file_without_replace` correctly fails, but the rollback branch only restores the backup when `output_path` does **not** exist (lines 449-455). In the interloper case, the function returns an error while leaving the caller's original archive under the backup directory and leaving the interloper's file at the requested archive path. That is a data-loss/atomicity failure for `overwrite_existing = true`.
+**Fix:** Do not remove the original destination name before publishing the replacement. Use a platform-specific atomic replace operation for overwrite mode so failure leaves the old archive at `output_path`; if rollback/backups are required, use APIs that replace while preserving a backup without an externally observable missing-destination gap.
 
 ```cpp
-result<void> publish_without_replace(const std::filesystem::path& temp_path,
-                                     const std::filesystem::path& output_path) {
+inline result<void> replace_file_atomically(const std::filesystem::path& temp_path,
+                                           const std::filesystem::path& output_path) {
 #if defined(_WIN32)
-  if (!MoveFileExW(temp_path.c_str(), output_path.c_str(), 0)) {
-    return error{error_code::io_error, "TES3 BSA writer failed to publish output host path"};
+  if (!MoveFileExW(temp_path.c_str(), output_path.c_str(),
+                   MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+    return error{error_code::io_error, "failed to atomically replace output host path"};
   }
-  return {};
 #else
-  // Prefer renameat2(..., RENAME_NOREPLACE) where available; otherwise use a
-  // documented link/unlink fallback that never replaces an existing output.
-#endif
-}
-```
-
-### CR-02: Backup path selection is not reserved atomically and can clobber caller files
-
-**File:** `src/formats/bsa/tes3_bsa_writer.cpp:366-381,450-455`
-**Issue:** `reserve_backup_path` only checks that `<archive>.libbsa-bak-N` does not exist, then the caller later renames the original archive into that path. If another process creates the backup candidate between lines 377 and 451, `std::filesystem::rename(output_path, backup_path)` can replace that file on POSIX-like platforms. This is another caller-owned data loss path in overwrite mode.
-**Fix:** Reserve the backup namespace atomically, the same way the temp publish directory is reserved. For example, create a unique backup directory first, then move the old archive inside that directory.
-
-```cpp
-result<std::filesystem::path> make_unique_backup_directory(const std::filesystem::path& output_path) {
-  const auto parent = output_path.parent_path();
-  const auto filename = output_path.filename();
-  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
-    auto candidate_name = filename;
-    candidate_name += ".libbsa-bakdir-" + std::to_string(counter);
-    const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
-    std::error_code fs_error;
-    if (std::filesystem::create_directory(candidate, fs_error)) {
-      return candidate / filename;
-    }
-    if (fs_error) {
-      return error{error_code::io_error, "TES3 BSA writer failed to reserve backup directory"};
-    }
+  std::error_code fs_error;
+  std::filesystem::rename(temp_path, output_path, fs_error); // POSIX rename replaces atomically.
+  if (fs_error) {
+    return error{error_code::io_error, "failed to atomically replace output host path"};
   }
-  return error{error_code::io_error, "TES3 BSA writer exhausted backup directory names"};
+#endif
+  return {};
 }
 ```
 
-## Warnings
-
-### WR-01: Race regression test is timing-dependent and can pass without covering the vulnerable window
-
-**File:** `tests/unit/tes3_bsa_writer_tests.cpp:567-605`
-**Issue:** The watcher only creates the destination after it sees the temporary directory. The test depends on a 128 MiB payload making `write_archive_bytes` slow enough for the watcher to win before the implementation's second `exists` check. It does not cover the critical window after line 476 and before the final `rename`, and it can become flaky or falsely reassuring across machines and filesystems.
-**Fix:** Make the race deterministic by injecting a test hook/publish strategy into the internal writer path, or factor the publish operation into an internal helper that can be unit-tested with a fake filesystem/publisher. Avoid timing-based synchronization and large payloads for correctness tests.
+Then route the `options.overwrite_existing && output_exists` branch through that helper instead of renaming the old file to a backup before publish. Add a regression test that deterministically creates `output_path` after backup reservation but before publish, and assert the original archive is not stranded away from the requested path on failure.
 
 ---
 
-_Reviewed: 2026-05-09T00:00:00Z_
+_Reviewed: 2026-05-09T12:00:00Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
