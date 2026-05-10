@@ -140,6 +140,9 @@ TEST_CASE("local fixture policy keeps game archives ignored and provenance docum
   REQUIRE(readme.find("The legal provenance") != std::string::npos);
   REQUIRE(readme.find("The behavior it proves") != std::string::npos);
   REQUIRE(readme.find("TES5Edit/ must not be used as a fixture workspace") != std::string::npos);
+  REQUIRE(readme.find("LIBBSA_BSARCHPRO_EXPECTED") != std::string::npos);
+  REQUIRE(readme.find("bsarchpro_expected.json") != std::string::npos);
+  REQUIRE(readme.find("BSArchPro-derived expected fixture comparisons are opt-in") != std::string::npos);
 
   REQUIRE(gitignore.find("/tests/fixtures/local/*") != std::string::npos);
   REQUIRE(gitignore.find("!/tests/fixtures/local/.gitkeep") != std::string::npos);

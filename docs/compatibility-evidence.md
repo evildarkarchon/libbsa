@@ -7,6 +7,11 @@ that keeps the evidence reproducible.
 Generated legal fixtures and writer-output archives are the mandatory evidence
 path for Phase 11. Optional local game or BSArchPro-derived checks may add
 smoke/compare confidence, but they are never required for the default suite.
+The executable opt-in comparison harness is
+`tests/unit/local_game_fixture_tests.cpp`; it consumes
+`LIBBSA_BSARCHPRO_EXPECTED` or a local `bsarchpro_expected.json` manifest under
+`LIBBSA_GAME_FIXTURES` and compares libbsa metadata plus optional extracted
+bytes or FNV-1a payload hashes against BSArchPro-derived expectations.
 
 ### `compressed_sound_payload`
 
@@ -29,7 +34,9 @@ smoke/compare confidence, but they are never required for the default suite.
 ## Optional Local Corpus Checks
 
 Local game archives or BSArchPro-derived comparison output may supplement this
-catalog only as smoke/compare checks. They must:
+catalog only as smoke/compare checks. The local comparison manifest is
+exercised by the `BSArchPro-derived expected fixture comparisons are opt-in`
+CTest case. Such checks must:
 
 - Use the `[requires-game-fixture]` tag and remain skipped when `LIBBSA_GAME_FIXTURES` is unset.
 - Read from ignored local data locations, not committed fixture directories.

@@ -90,6 +90,52 @@ Game-derived archives must not be committed to this repository.
   the `LIBBSA_GAME_FIXTURES` environment variable.
 - Tests that require local game data must be tagged `requires-game-fixture` and
   skipped by default when no local fixture path is configured.
+- BSArchPro-derived comparison manifests may be provided with
+  `LIBBSA_BSARCHPRO_EXPECTED`, or as `bsarchpro_expected.json` under
+  `LIBBSA_GAME_FIXTURES`. The opt-in CTest case
+  `BSArchPro-derived expected fixture comparisons are opt-in` opens each listed
+  archive through libbsa and compares public metadata plus optional extracted
+  payload bytes or FNV-1a hashes against the BSArchPro-derived expectations.
+
+### BSArchPro-derived comparison manifest schema
+
+`bsarchpro_expected.json` is local-only evidence. It must not include
+copyrighted archive bytes unless the file remains outside git. A minimal
+metadata-only case looks like:
+
+```json
+{
+  "provenance": "Expected metadata exported from BSArchPro for a local corpus.",
+  "cases": [
+    {
+      "archive": "Skyrim - Meshes.bsa",
+      "type": "bsa",
+      "variant": "tes4",
+      "version": 105,
+      "entries": [
+        {
+          "path": "meshes/example/example.nif",
+          "raw_size": 1234,
+          "stored_size": 567,
+          "compression": "lz4_frame",
+          "expected": {
+            "fnv1a32": "0x1234abcd",
+            "size": 1234
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+`archive` may be absolute or relative to the manifest file. Case-level
+metadata fields are optional but, when present, are compared against
+`archive_reader::metadata()`. Entry expectations require `path` and may include
+`raw_size`, `stored_size`, `compression`, `has_embedded_name`,
+`embedded_name_prefix_size`, and either `expected.bytes_hex` for small exact
+payload checks or `expected.fnv1a32` plus `expected.size` for larger local
+corpus output.
 
 ## Compatibility evidence
 
@@ -103,6 +149,9 @@ writer-output archives as the mandatory path. Optional game archives or
 BSArchPro-derived compare output are smoke/compare only: tests must use the
 `requires-game-fixture` label, skip when `LIBBSA_GAME_FIXTURES` is unset, and
 must not commit copyrighted bytes or use `TES5Edit/` as a fixture workspace.
+The default opt-in harness for those comparisons is
+`tests/unit/local_game_fixture_tests.cpp`, driven by
+`LIBBSA_BSARCHPRO_EXPECTED` or local `bsarchpro_expected.json`.
 
 ## Sanitizer hardening path
 
