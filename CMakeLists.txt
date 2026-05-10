@@ -4,12 +4,13 @@ project(libbsa VERSION 0.1.0 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
+include(CTest)
 
 find_package(libdeflate CONFIG REQUIRED)
 find_package(lz4 CONFIG REQUIRED)
 find_package(directxtex CONFIG REQUIRED)
 
-option(LIBBSA_BUILD_TESTS "Build libbsa tests" ON)
+option(LIBBSA_BUILD_TESTS "Build libbsa tests" ${BUILD_TESTING})
 option(LIBBSA_BUILD_BENCHMARKS "Build libbsa benchmark tools" ON)
 
 find_package(Doxygen QUIET)
@@ -154,9 +155,7 @@ install(FILES
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libbsa
 )
 
-if(LIBBSA_BUILD_TESTS)
-  include(CTest)
-  enable_testing()
+if(BUILD_TESTING AND LIBBSA_BUILD_TESTS)
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
     add_subdirectory(tests)
   endif()

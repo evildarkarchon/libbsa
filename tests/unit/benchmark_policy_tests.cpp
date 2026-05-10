@@ -55,6 +55,18 @@ TEST_CASE("benchmark_policy CMake exposes explicit benchmark report tooling", "[
   REQUIRE(tests_cmake.find("unit/benchmark_policy_tests.cpp") != std::string::npos);
 }
 
+TEST_CASE("build_policy BUILD_TESTING disables test dependency discovery", "[unit][build_policy]") {
+  const auto cmake = read_text_file(source_root() / "CMakeLists.txt");
+
+  require_all_tokens(cmake,
+                     {"include(CTest)",
+                      "option(LIBBSA_BUILD_TESTS \"Build libbsa tests\" ${BUILD_TESTING})",
+                      "if(BUILD_TESTING AND LIBBSA_BUILD_TESTS)",
+                      "add_subdirectory(tests)"});
+  REQUIRE(cmake.find("if(LIBBSA_BUILD_TESTS)") == std::string_view::npos);
+  REQUIRE(cmake.find("enable_testing()") == std::string_view::npos);
+}
+
 TEST_CASE("benchmark_policy runner contains correctness checked report scenarios", "[unit][benchmark_policy]") {
   const auto benchmark_source = read_text_file(source_root() / "benchmarks" / "libbsa_benchmarks.cpp");
 
