@@ -505,21 +505,21 @@ Set warning behavior intentionally; a missing local Doxygen CLI should not block
 |---|-------|---------|---------------|
 | - | No `[ASSUMED]` claims are intentionally used. | All sections | Planner can proceed without an explicit user-confirmation gate for research claims. [VERIFIED: source-tag audit] |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **How should BA2 DX10 preserve add-time DDS snapshot semantics under bounded memory?** [VERIFIED: include/libbsa/writer.hpp; VERIFIED: src/formats/ba2/ba2_dx10_writer.cpp]
+1. **How should BA2 DX10 preserve add-time DDS snapshot semantics under bounded memory?** **RESOLVED:** Use writer-owned temp snapshot files or bounded per-subresource temp payloads so Phase 9 add-time snapshot semantics remain intact without retaining full DDS/source bytes in long-lived writer memory. Do not document a broad DX10 exception to the bounded-memory writer rule. [VERIFIED: include/libbsa/writer.hpp; VERIFIED: src/formats/ba2/ba2_dx10_writer.cpp]
    - What we know: Existing BA2 DX10 `add_file` reads and analyzes the whole DDS file at add time. [VERIFIED: src/formats/ba2/ba2_dx10_writer.cpp]
-   - What's unclear: Whether the planner should implement writer-owned temp snapshot files or document a narrow DX10 exception. [VERIFIED: 12-SPEC.md]
+   - Previously unclear: Whether the planner should implement writer-owned temp snapshot files or document a narrow DX10 exception. [VERIFIED: 12-SPEC.md]
    - Recommendation: Use writer-owned temp snapshot files or temp chunk payloads so source lifetime remains stable without keeping full DDS bytes in memory. [VERIFIED: 12-CONTEXT.md]
 
-2. **Should CI install Doxygen or only policy-check docs wiring?** [VERIFIED: environment probe; VERIFIED: 12-CONTEXT.md]
+2. **Should CI install Doxygen or only policy-check docs wiring?** **RESOLVED:** Keep Doxygen generation optional in normal local/default builds, policy-check the CMake/docs wiring by default, and make any docs-generation CI lane conditional on Doxygen availability or an explicit CI install step. [VERIFIED: environment probe; VERIFIED: 12-CONTEXT.md]
    - What we know: Local `doxygen` is missing, and D-21 says validation should run when Doxygen is available without adding a runtime dependency. [VERIFIED: environment probe; VERIFIED: 12-CONTEXT.md]
-   - What's unclear: Whether default CI should install Doxygen for the docs target. [VERIFIED: .github/workflows/ci.yml]
+   - Previously unclear: Whether default CI should install Doxygen for the docs target. [VERIFIED: .github/workflows/ci.yml]
    - Recommendation: Make Doxygen generation optional locally, add source/policy tests by default, and add a non-default or CI-install docs check only if setup cost is acceptable. [CITED: cmake.org/cmake/help/latest/module/FindDoxygen.html]
 
-3. **Doxygen latest-version source conflict needs no pin.** [CITED: doxygen.nl/manual/changelog.html; CITED: github.com/doxygen/doxygen/releases/latest]
+3. **Doxygen latest-version source conflict needs no pin.** **RESOLVED:** Do not pin an exact Doxygen version in Phase 12 plans; rely on `find_package(Doxygen QUIET)` and record the installed version when a local or CI docs-generation check actually runs. [CITED: doxygen.nl/manual/changelog.html; CITED: github.com/doxygen/doxygen/releases/latest]
    - What we know: Official changelog lists release 1.17.0 dated 2026-04-30, while the fetched GitHub latest page returned 1.15.0. [CITED: doxygen.nl/manual/changelog.html; CITED: github.com/doxygen/doxygen/releases/latest]
-   - What's unclear: Which feed package managers will expose on this machine. [VERIFIED: environment probe]
+   - Previously unclear: Which feed package managers will expose on this machine. [VERIFIED: environment probe]
    - Recommendation: Do not pin an exact Doxygen version in the plan; rely on `find_package(Doxygen QUIET)` and document the local installed version when available. [CITED: cmake.org/cmake/help/latest/module/FindDoxygen.html]
 
 ## Environment Availability
