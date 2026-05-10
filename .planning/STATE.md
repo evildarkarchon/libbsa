@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 11-04-PLAN.md
-last_updated: "2026-05-10T04:24:13.262Z"
+stopped_at: Completed 11-06-PLAN.md
+last_updated: "2026-05-10T04:31:18.954Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 12
   completed_phases: 10
   total_plans: 68
-  completed_plans: 66
-  percent: 97
+  completed_plans: 67
+  percent: 99
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 11 (Compatibility Warnings, Validation API, and Hardening) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-05-10
 
-Progress: [██████████] 97%
+Progress: [██████████] 99%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████████] 97%
 | Phase 11 P02 | 5 min | 2 tasks | 6 files |
 | Phase 11 P03 | 4 min | 2 tasks | 3 files |
 | Phase 11 P04 | 2 min | 2 tasks | 3 files |
+| Phase 11 P06 | 4 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 11]: Sound payload warning detection treats compressed entries under sound/ or with .wav, .xwm, or .fuz extensions as advisory compatibility risks. — Matches the locked representative warning scenario without adding public warning filters or logging callbacks.
 - [Phase 11]: Public compatibility warning evidence is cataloged by one section per warning code so the policy test can enforce local Rule and Evidence coverage. — Plan 11-04 needs machine-checked catalog entries with local Rule and Evidence text.
 - [Phase 11]: Optional local game or BSArchPro-derived checks remain smoke/compare-only, require requires-game-fixture, and skip when LIBBSA_GAME_FIXTURES is unset. — D-14, D-18, and D-19 keep optional corpus data out of default acceptance and committed fixtures.
+- [Phase 11]: The consolidated malformed matrix uses manifest evidence for generated archive rows and test evidence for the TES4 oversized arithmetic regression. — This keeps mandatory evidence legal while referencing the existing in-repo arithmetic regression.
+- [Phase 11]: Validation API matrix coverage runs each manifest-backed row through strict open or opt-in extractability validation according to the row phase. — This preserves fail-closed open behavior and exercises extraction/decompression failures through public validation reports.
+- [Phase 11]: The Python validator rejects unknown matrix families, categories, expected errors, phases, evidence types, and unresolved evidence references. — This prevents malformed coverage claims from drifting away from generated manifests or explicit tests.
 
 ### Pending Todos
 
@@ -129,6 +133,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T04:24:13.255Z
-Stopped at: Completed 11-04-PLAN.md
+Last session: 2026-05-10T04:31:18.947Z
+Stopped at: Completed 11-06-PLAN.md
 Resume file: None

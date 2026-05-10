@@ -366,7 +366,7 @@ Plans:
 
 **Wave 4** *(blocked on warning evidence, validation implementation, and strict malformed helper mapping)*
 - [x] 11-04-PLAN.md — Add machine-checked compatibility evidence catalog and fixture policy updates.
-- [ ] 11-06-PLAN.md — Add the consolidated malformed hardening matrix and validation-report coverage.
+- [x] 11-06-PLAN.md — Add the consolidated malformed hardening matrix and validation-report coverage.
 
 **Wave 5** *(blocked on Wave 4 evidence catalog completion)*
 - [ ] 11-07-PLAN.md — Add additive sanitizer-oriented preset, documentation, and policy preservation tests.
@@ -400,5 +400,5 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 8. BA2 GNRL Write-New Support | 6/6 | Complete | 2026-05-09 |
 | 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |
 | 10. TES3 Write Support and BSA Format Completeness | 6/6 | Complete    | 2026-05-10 |
-| 11. Compatibility Warnings, Validation API, and Hardening | 5/7 | In Progress|  |
+| 11. Compatibility Warnings, Validation API, and Hardening | 6/7 | In Progress|  |
 | 12. Performance, Concurrency, Documentation, and Polish | 0/TBD | Not started | - |
