@@ -13,6 +13,7 @@ add_executable(libbsa_tests
   unit/benchmark_policy_tests.cpp
   unit/docs_policy_tests.cpp
   unit/thread_safety_docs_policy_tests.cpp
+  unit/target_format_policy_tests.cpp
   unit/ba2_gnrl_writer_tests.cpp
   unit/tes3_bsa_writer_tests.cpp
   unit/tes4_bsa_writer_tests.cpp
