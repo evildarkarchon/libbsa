@@ -154,7 +154,7 @@ Validate exact target names against vcpkg usage files during implementation; kee
 
 ## CI / Toolchain Recommendation
 
-- Primary lane: Windows + MSVC 2022/VS 17.x, vcpkg manifest mode, Debug and Release.
+- Primary lane: Windows + Visual Studio 2026/VS 18.x, vcpkg manifest mode, Debug and Release.
 - Secondary lane: Windows + latest CMake `4.3.x` to expose policy warnings early.
 - Portability lane after foundation: Linux + Clang or GCC using vcpkg; initially build parser/compression tests, then validate DirectXTex DDS behavior.
 - Sanitizer lane: Linux Clang ASan/UBSan for parser, decompressor, and malformed fixture tests.

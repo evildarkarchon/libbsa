@@ -164,6 +164,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260510-46t | Close gaps and tech_debt from .planning/v1.0-MILESTONE-AUDIT.md | 2026-05-10 | f675b41 | [260510-46t-close-gaps-and-tech-debt-from-planning-v](./quick/260510-46t-close-gaps-and-tech-debt-from-planning-v/) |
+| 260510-62q | Update Visual Studio toolchain references to Visual Studio 2026 | 2026-05-10 | uncommitted | [260510-62q-update-visual-studio-2026-docs](./quick/260510-62q-update-visual-studio-2026-docs/) |
 
 ## Deferred Items
 

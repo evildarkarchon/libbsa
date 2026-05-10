@@ -192,7 +192,7 @@ The library reimplements BSArchPro-compatible behavior using clean, portable C++
 | DirectXTex `2026-03-31` | vcpkg Windows and Linux triplets; Windows primary | vcpkg lists support for `(windows & !arm32) | linux`. Treat Linux DirectXTex usage as a validation item and keep public API platform-neutral. | MEDIUM |
 | Catch2 `3.14.0` | CMake/CTest | vcpkg package supports all triplets; `catch_discover_tests` has recent fixes and is appropriate for fixture labels. | HIGH |
 ## CI / Toolchain Recommendation
-- Primary lane: Windows + MSVC 2022/VS 17.x, vcpkg manifest mode, Debug and Release.
+- Primary lane: Windows + Visual Studio 2026/VS 18.x, vcpkg manifest mode, Debug and Release.
 - Secondary lane: Windows + latest CMake `4.3.x` to expose policy warnings early.
 - Portability lane after foundation: Linux + Clang or GCC using vcpkg; initially build parser/compression tests, then validate DirectXTex DDS behavior.
 - Sanitizer lane: Linux Clang ASan/UBSan for parser, decompressor, and malformed fixture tests.
