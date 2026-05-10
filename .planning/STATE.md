@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 12 context gathered
-last_updated: "2026-05-10T07:38:15.466Z"
-last_activity: 2026-05-10 -- Phase 12 planning complete
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-05-10T07:52:27.482Z"
+last_activity: 2026-05-10
 progress:
   total_phases: 12
   completed_phases: 11
   total_plans: 75
-  completed_plans: 68
-  percent: 91
+  completed_plans: 69
+  percent: 92
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-10)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 11 — Compatibility Warnings, Validation API, and Hardening
+**Current focus:** Phase 12 — performance-concurrency-documentation-and-polish
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
+Phase: 12 (performance-concurrency-documentation-and-polish) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-05-10 -- Phase 12 planning complete
+Last activity: 2026-05-10
 
-Progress: [██████████] 100%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [██████████] 100%
 | Phase 11 P04 | 2 min | 2 tasks | 3 files |
 | Phase 11 P06 | 4 min | 2 tasks | 6 files |
 | Phase 11 P07 | 2 min | 2 tasks | 3 files |
+| Phase 12 P01 | 9min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 11]: The Python validator rejects unknown matrix families, categories, expected errors, phases, evidence types, and unresolved evidence references. — This prevents malformed coverage claims from drifting away from generated manifests or explicit tests.
 - [Phase 11]: The sanitizer hardening path is additive through linux-clang-asan-ubsan presets and is not added to the default Windows MSVC CI workflow. — Plan 11-07 preserves default Windows static/shared CI while adding an opt-in hardening path.
 - [Phase 11]: Fixture policy documents the exact CTest label selection for malformed, validation, and compression sanitizer runs. — Plan 11-07 makes the hardening command machine-checkable through validation policy tests.
+- [Phase 12]: Bulk extraction uses archive_reader::extract_entries with an explicit positive worker_count and request-order result records.
+- [Phase 12]: Bulk extraction sink factories must return distinct per-entry sinks and may be called concurrently when worker_count is greater than 1.
+- [Phase 12]: Raw extraction bounded-memory proof uses large synthetic TES3, TES4, BA2 GNRL, and generated raw BA2 DX10 archives plus reader source-policy checks.
 
 ### Pending Todos
 
@@ -136,6 +140,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T06:48:39.993Z
-Stopped at: Phase 12 context gathered
-Resume file: .planning/phases/12-performance-concurrency-documentation-and-polish/12-CONTEXT.md
+Last session: 2026-05-10T07:52:27.476Z
+Stopped at: Completed 12-01-PLAN.md
+Resume file: None

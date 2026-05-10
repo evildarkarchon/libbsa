@@ -386,7 +386,7 @@ Plans:
 Plans:
 
 **Wave 1**
-- [ ] 12-01-PLAN.md — Add deterministic bulk extraction and bounded extraction proof.
+- [x] 12-01-PLAN.md — Add deterministic bulk extraction and bounded extraction proof.
 
 **Wave 2** *(blocked on Wave 1 test/CMake registration ownership)*
 - [ ] 12-02-PLAN.md — Add call-time writer execution options and worker-count validation.
@@ -424,4 +424,4 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |
 | 10. TES3 Write Support and BSA Format Completeness | 6/6 | Complete    | 2026-05-10 |
 | 11. Compatibility Warnings, Validation API, and Hardening | 7/7 | Complete    | 2026-05-10 |
-| 12. Performance, Concurrency, Documentation, and Polish | 0/TBD | Not started | - |
+| 12. Performance, Concurrency, Documentation, and Polish | 1/7 | In Progress|  |

@@ -107,10 +107,10 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 
 ### Performance and Concurrency
 
-- [ ] **PERF-01**: Consumer can extract large archives using streaming I/O and bounded scratch buffers.
+- [x] **PERF-01**: Consumer can extract large archives using streaming I/O and bounded scratch buffers.
 - [ ] **PERF-02**: Consumer can pack large archives using streaming writer flows and bounded scratch buffers.
 - [ ] **PERF-03**: Consumer can opt into parallel compression during packing after single-threaded correctness is established.
-- [ ] **PERF-04**: Consumer can opt into parallel decompression during bulk extraction after single-threaded correctness is established.
+- [x] **PERF-04**: Consumer can opt into parallel decompression during bulk extraction after single-threaded correctness is established.
 - [ ] **PERF-05**: Maintainer can run benchmarks comparing single-threaded and multi-threaded packing/extraction for large archives.
 - [ ] **PERF-06**: Consumer can understand documented thread-safety guarantees for readers, writers, entries, callbacks, and sinks.
 
@@ -227,10 +227,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COMP-04 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Complete |
 | COMP-05 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Complete |
 | COMP-06 | Phase 11: Compatibility Warnings, Validation API, and Hardening | Complete |
-| PERF-01 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| PERF-01 | Phase 12: Performance, Concurrency, Documentation, and Polish | Complete |
 | PERF-02 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
 | PERF-03 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
-| PERF-04 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| PERF-04 | Phase 12: Performance, Concurrency, Documentation, and Polish | Complete |
 | PERF-05 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
 | PERF-06 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
 | DOC-01 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
