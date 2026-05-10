@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include "formats/ba2/ba2_gnrl_writer.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -9,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <sstream>
 #include <span>
 #include <string>
 #include <string_view>
@@ -46,6 +49,81 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
   }
   REQUIRE_FALSE(input.bad());
   return bytes;
+}
+
+TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
+          "[unit][ba2_gnrl_writer][stream]") {
+  const std::vector<std::byte> expected{std::byte{0x47}, std::byte{0x4E}, std::byte{0x52}, std::byte{0x4C}};
+
+  SECTION("source grows after preparation") {
+    auto grown = expected;
+    grown.push_back(std::byte{0x21});
+    const auto source = output_path("stream-source-grew.bin");
+    write_binary_file(source, grown);
+    std::ostringstream output;
+
+    auto streamed = libbsa::formats::ba2::gnrl_detail::stream_disk_payload(
+        source.string(), static_cast<std::uint32_t>(expected.size()), output);
+
+    REQUIRE_FALSE(streamed.has_value());
+    CHECK(streamed.error().code == libbsa::error_code::io_error);
+  }
+
+  SECTION("source shrinks after preparation") {
+    const std::vector<std::byte> truncated{expected.begin(), expected.end() - 1};
+    const auto source = output_path("stream-source-shrank.bin");
+    write_binary_file(source, truncated);
+    std::ostringstream output;
+
+    auto streamed = libbsa::formats::ba2::gnrl_detail::stream_disk_payload(
+        source.string(), static_cast<std::uint32_t>(expected.size()), output);
+
+    REQUIRE_FALSE(streamed.has_value());
+    CHECK(streamed.error().code == libbsa::error_code::io_error);
+  }
+}
+
+TEST_CASE("BA2 GNRL dedupe disk comparisons reject source size changes",
+          "[unit][ba2_gnrl_writer][dedupe]") {
+  const std::vector<std::byte> expected{std::byte{0x44}, std::byte{0x45}, std::byte{0x44}, std::byte{0x55}};
+
+  SECTION("disk-to-memory source grows beyond the prepared payload") {
+    auto grown = expected;
+    grown.push_back(std::byte{0x50});
+    const auto source = output_path("dedupe-source-grew.bin");
+    write_binary_file(source, grown);
+
+    auto equal = libbsa::formats::ba2::gnrl_detail::compare_disk_payload_to_bytes(source.string(), expected);
+
+    REQUIRE_FALSE(equal.has_value());
+    CHECK(equal.error().code == libbsa::error_code::io_error);
+  }
+
+  SECTION("disk-to-memory source shrinks below the prepared payload") {
+    const std::vector<std::byte> truncated{expected.begin(), expected.end() - 1};
+    const auto source = output_path("dedupe-source-shrank.bin");
+    write_binary_file(source, truncated);
+
+    auto equal = libbsa::formats::ba2::gnrl_detail::compare_disk_payload_to_bytes(source.string(), expected);
+
+    REQUIRE_FALSE(equal.has_value());
+    CHECK(equal.error().code == libbsa::error_code::io_error);
+  }
+
+  SECTION("disk-to-disk sources grow beyond the prepared payload") {
+    auto grown = expected;
+    grown.push_back(std::byte{0x50});
+    const auto lhs = output_path("dedupe-lhs-grew.bin");
+    const auto rhs = output_path("dedupe-rhs-grew.bin");
+    write_binary_file(lhs, grown);
+    write_binary_file(rhs, grown);
+
+    auto equal = libbsa::formats::ba2::gnrl_detail::compare_disk_payloads(
+        lhs.string(), rhs.string(), static_cast<std::uint32_t>(expected.size()));
+
+    REQUIRE_FALSE(equal.has_value());
+    CHECK(equal.error().code == libbsa::error_code::io_error);
+  }
 }
 
 std::uint16_t read_u16_le(std::span<const std::byte> bytes, std::size_t& offset) {
