@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 12-03-PLAN.md
-last_updated: "2026-05-10T08:16:08.191Z"
+stopped_at: Completed 12-04-PLAN.md
+last_updated: "2026-05-10T08:31:55.959Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 12
   completed_phases: 11
   total_plans: 75
-  completed_plans: 71
-  percent: 95
+  completed_plans: 72
+  percent: 96
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 12 (performance-concurrency-documentation-and-polish) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-05-10
 
-Progress: [██████████] 95%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [██████████] 95%
 | Phase 12 P01 | 9min | 3 tasks | 7 files |
 | Phase 12 P02 | 6min | 3 tasks | 8 files |
 | Phase 12 P03 | 10min | 3 tasks | 6 files |
+| Phase 12 P04 | 12.3min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 12]: BSA writers stream final archive publication through bounded scratch buffers instead of materializing final whole-archive byte vectors.
 - [Phase 12]: TES4 BSA writer worker_count prepares independent entries through detail::run_indexed_work before deterministic grouping, sorting, offsets, and publish.
 - [Phase 12]: TES4 BSA overwrite publish uses unique temporary directories and safe replace helpers so failed worker-count paths preserve readable destination archives.
+- [Phase 12]: BA2 GNRL raw disk payloads stream from caller-owned source files during final output while compressed entries remain bounded to per-entry codec buffers. — This satisfies PERF-02 bounded-memory finalization without changing the codec requirement for compressed payloads.
+- [Phase 12]: BA2 DX10 add_file stores writer-owned temp snapshots per subresource instead of retaining whole DDS source bytes in writer state. — This preserves add-time ownership and later source-mutation behavior while keeping long-lived writer memory bounded.
+- [Phase 12]: BA2 worker_count parallelism stores prepared results by deterministic entry/chunk index before sorting and offset assignment. — This keeps serial and parallel BA2 outputs compatible and deterministic.
 
 ### Pending Todos
 
@@ -148,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T08:16:03.392Z
-Stopped at: Completed 12-03-PLAN.md
+Last session: 2026-05-10T08:31:55.952Z
+Stopped at: Completed 12-04-PLAN.md
 Resume file: None
