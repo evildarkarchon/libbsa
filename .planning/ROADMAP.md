@@ -381,7 +381,30 @@ Plans:
   3. Maintainer can run benchmarks comparing single-threaded and multi-threaded packing/extraction for large archives.
   4. Consumer can understand documented thread-safety guarantees for readers, writers, entries, callbacks, and sinks.
   5. Consumer can read Doxygen API documentation, integration examples, and target-format guidance for supported variants, compression methods, and compatibility warnings.
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+
+**Wave 1**
+- [ ] 12-01-PLAN.md — Add deterministic bulk extraction and bounded extraction proof.
+
+**Wave 2** *(blocked on Wave 1 test/CMake registration ownership)*
+- [ ] 12-02-PLAN.md — Add call-time writer execution options and worker-count validation.
+
+**Wave 3** *(blocked on Wave 2 writer execution contract)*
+- [ ] 12-03-PLAN.md — Stream BSA writer disk publishing and add BSA parallel packing proof.
+
+**Wave 4** *(blocked on Wave 2 writer execution contract and Wave 3 shared bounded-memory policy tests)*
+- [ ] 12-04-PLAN.md — Stream BA2 writer disk publishing and add BA2 parallel packing proof.
+
+**Wave 5** *(blocked on bulk extraction and writer execution implementation)*
+- [ ] 12-05-PLAN.md — Add benchmark target and report policy validation.
+
+**Wave 6** *(blocked on public bulk/writer APIs and benchmark target names)*
+- [ ] 12-06-PLAN.md — Add Doxygen public API docs and thread-safety policy checks.
+
+**Wave 7** *(blocked on public APIs, docs target, and thread-safety guidance)*
+- [ ] 12-07-PLAN.md — Add compile-checked integration examples and target-format guidance.
 
 ## Progress
 
