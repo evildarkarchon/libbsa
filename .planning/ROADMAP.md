@@ -15,12 +15,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation, API Boundary, and Test Harness** - Consumers and maintainers can build, include, test, and evolve libbsa without dependency or TES5Edit leakage.
 - [x] **Phase 2: Binary I/O, Paths, Hashes, and Compression Services** - Parsers and writers share safe binary, virtual path, hash, streaming, and compression primitives.
 - [x] **Phase 3: Format Detection and TES4-Family BSA Read/Extract** - Consumers can detect, inspect, query, and extract TES4/FO3/FNV/Skyrim LE/SSE BSA archives.
-- [ ] **Phase 4: TES3 BSA Read/Extract** - Consumers can read and extract Morrowind BSA archives with TES3-specific offset semantics.
+- [x] **Phase 4: TES3 BSA Read/Extract** - Consumers can read and extract Morrowind BSA archives with TES3-specific offset semantics. (completed 2026-05-08)
 - [x] **Phase 5: BA2 GNRL Read/Extract** - Consumers can read and extract Fallout 4 and Starfield general BA2 archives.
 - [x] **Phase 6: DDS Boundary and BA2 DX10 Read/Reconstruction** - Consumers can inspect and extract BA2 texture archives as valid DDS files.
-- [ ] **Phase 7: TES4-Family BSA Write-New Support** - Consumers can create compatible TES4/FO3/FNV/Skyrim LE/SSE BSA archives.
-- [ ] **Phase 8: BA2 GNRL Write-New Support** - Consumers can create compatible Fallout 4 and Starfield general BA2 archives.
-- [ ] **Phase 9: BA2 DX10 Write-New Support** - Consumers can create compatible Fallout 4 and Starfield texture BA2 archives from DDS input.
+- [x] **Phase 7: TES4-Family BSA Write-New Support** - Consumers can create compatible TES4/FO3/FNV/Skyrim LE/SSE BSA archives. (completed 2026-05-09)
+- [x] **Phase 8: BA2 GNRL Write-New Support** - Consumers can create compatible Fallout 4 and Starfield general BA2 archives. (completed 2026-05-09)
+- [x] **Phase 9: BA2 DX10 Write-New Support** - Consumers can create compatible Fallout 4 and Starfield texture BA2 archives from DDS input. (completed 2026-05-09)
 - [x] **Phase 10: TES3 Write Support and BSA Format Completeness** - Consumers can create Morrowind BSA archives and complete BSA read/write coverage. (completed 2026-05-10)
 - [x] **Phase 11: Compatibility Warnings, Validation API, and Hardening** - Consumers receive structured validation results while malformed inputs are rejected safely. (completed 2026-05-10)
 - [x] **Phase 12: Performance, Concurrency, Documentation, and Polish** - Consumers can use bounded-memory, parallel-capable workflows with documented APIs and examples. (completed 2026-05-10)
@@ -159,7 +159,7 @@ Plans:
   2. Consumer can list BA2 names parsed from the length-prefixed filename table at `FileTableOffset`.
   3. Consumer can inspect raw/compressed status, sizes, offsets, compression method, and Starfield v2/v3 header fields in entry/archive metadata.
   4. Consumer can extract BA2 GNRL entries stored raw, deflate-compressed, or Starfield raw-LZ4-block-compressed when `CompressionMethod == 3`.
-**Plans**: 5 plans
+**Plans**: 6 plans
 
 Plans:
 
@@ -416,12 +416,12 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 1. Foundation, API Boundary, and Test Harness | 5/5 | Complete | 2026-05-08 |
 | 2. Binary I/O, Paths, Hashes, and Compression Services | 5/5 | Complete | 2026-05-08 |
 | 3. Format Detection and TES4-Family BSA Read/Extract | 6/6 | Complete | 2026-05-08 |
-| 4. TES3 BSA Read/Extract | 2/4 | In Progress|  |
-| 5. BA2 GNRL Read/Extract | 5/6 | In Progress |  |
+| 4. TES3 BSA Read/Extract | 5/5 | Complete | 2026-05-08 |
+| 5. BA2 GNRL Read/Extract | 6/6 | Complete | 2026-05-08 |
 | 6. DDS Boundary and BA2 DX10 Read/Reconstruction | 8/8 | Complete | 2026-05-09 |
-| 7. TES4-Family BSA Write-New Support | 0/TBD | Not started | - |
-| 8. BA2 GNRL Write-New Support | 6/6 | Complete | 2026-05-09 |
-| 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |
+| 7. TES4-Family BSA Write-New Support | 6/6 | Complete | 2026-05-09 |
+| 8. BA2 GNRL Write-New Support | 7/7 | Complete | 2026-05-09 |
+| 9. BA2 DX10 Write-New Support | 7/7 | Complete | 2026-05-09 |
 | 10. TES3 Write Support and BSA Format Completeness | 6/6 | Complete    | 2026-05-10 |
 | 11. Compatibility Warnings, Validation API, and Hardening | 7/7 | Complete    | 2026-05-10 |
 | 12. Performance, Concurrency, Documentation, and Polish | 7/7 | Complete    | 2026-05-10 |
