@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-05-10T03:57:41.873Z"
+stopped_at: Completed 11-05-PLAN.md
+last_updated: "2026-05-10T04:02:55.054Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 12
   completed_phases: 10
   total_plans: 68
-  completed_plans: 62
-  percent: 91
+  completed_plans: 63
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 11 (Compatibility Warnings, Validation API, and Hardening) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-05-10
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [█████████░] 91%
 | Phase 10 P05 | 28min | 3 tasks | 5 files |
 | Phase 10 P06 | 12min | 2 tasks | 2 files |
 | Phase 11 P01 | 4 min | 2 tasks | 4 files |
+| Phase 11 P05 | 2 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 10]: TES3 non-overwrite publish remains routed through publish_file_without_replace after a final destination existence check.
 - [Phase 11]: Plan 11-01 introduces the public validation contract only; validation behavior and the function definition remain for the later implementation plan. — Matches the plan boundary and leaves strict-open-backed behavior for Plan 11-02.
 - [Phase 11]: Public compatibility warnings expose stable code and severity values while keeping byte offsets, record indexes, and chunk indexes out of the public report model. — Satisfies the Phase 11 public/private boundary and D-09 information-disclosure mitigation.
+- [Phase 11]: Unknown malformed manifest expected_error values are treated as test-oracle failures instead of being remapped to invalid_argument. — Matches Phase 11 D-13 and D-17 by making manifest typos fail loudly while preserving stable public error-code assertions.
 
 ### Pending Todos
 
@@ -116,6 +118,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T03:57:41.867Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-05-10T04:02:55.048Z
+Stopped at: Completed 11-05-PLAN.md
 Resume file: None
