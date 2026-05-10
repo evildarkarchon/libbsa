@@ -4,12 +4,11 @@
 
 #include <nlohmann/json.hpp>
 
+#include <detail/atomic_file_ops.hpp>
 #include <detail/bethesda_hash.hpp>
 
 #include <algorithm>
 #include <array>
-#include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -18,7 +17,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 namespace {
@@ -564,44 +562,61 @@ TEST_CASE("tes3_bsa_writer refuses overwrite by default and preserves existing b
   CHECK(read_binary_file(archive) == sentinel);
 }
 
-TEST_CASE("tes3_bsa_writer refuses a destination created during non-overwrite publish", "[unit][tes3_bsa_writer]") {
-  const auto archive = output_path("overwrite-race-disabled.bsa");
+TEST_CASE("tes3_bsa_writer publish helper never replaces an existing destination", "[unit][tes3_bsa_writer]") {
+  const auto temp = output_path("no-replace-publish.tmp");
+  const auto archive = output_path("no-replace-publish.bsa");
+  const std::vector<std::byte> new_bytes{std::byte{0x4E}, std::byte{0x45}, std::byte{0x57}};
+  const std::vector<std::byte> sentinel{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
+  write_binary_file(temp, new_bytes);
+  write_binary_file(archive, sentinel);
+
+  auto published = libbsa::detail::publish_file_without_replace(temp, archive);
+
+  REQUIRE_FALSE(published.has_value());
+  REQUIRE(published.error().code == libbsa::error_code::io_error);
+  CHECK(read_binary_file(archive) == sentinel);
+  CHECK(read_binary_file(temp) == new_bytes);
+}
+
+TEST_CASE("tes3_bsa_writer publish helper moves output when destination is free", "[unit][tes3_bsa_writer]") {
+  const auto temp = output_path("free-publish.tmp");
+  const auto archive = output_path("free-publish.bsa");
   std::error_code fs_error;
   std::filesystem::remove(archive, fs_error);
-  const std::vector<std::byte> sentinel{std::byte{0x4E}, std::byte{0x45}, std::byte{0x57}};
-  std::atomic_bool watcher_started{false};
-  std::atomic_bool stop_watcher{false};
+  const std::vector<std::byte> new_bytes{std::byte{0x42}, std::byte{0x53}, std::byte{0x41}};
+  write_binary_file(temp, new_bytes);
 
-  std::thread watcher{[&] {
-    const auto parent = archive.parent_path();
-    const auto temp_prefix = archive.filename().string() + ".libbsa-tmp-";
-    watcher_started.store(true);
-    while (!stop_watcher.load()) {
-      for (const auto& entry : std::filesystem::directory_iterator{parent}) {
-        if (entry.is_directory() && entry.path().filename().string().rfind(temp_prefix, 0U) == 0U) {
-          write_binary_file(archive, sentinel);
-          stop_watcher.store(true);
-          return;
-        }
-      }
-      std::this_thread::sleep_for(std::chrono::milliseconds{1});
-    }
-  }};
-  while (!watcher_started.load()) {
-    std::this_thread::yield();
+  auto published = libbsa::detail::publish_file_without_replace(temp, archive);
+
+  REQUIRE(published.has_value());
+  CHECK(read_binary_file(archive) == new_bytes);
+  CHECK_FALSE(std::filesystem::exists(temp));
+}
+
+TEST_CASE("tes3_bsa_writer backup reservation uses a writer-owned directory", "[unit][tes3_bsa_writer]") {
+  const auto archive = output_path("atomic-backup.bsa");
+  const auto caller_owned_candidate = output_path("atomic-backup.bsa.libbsa-bakdir-0");
+  const std::vector<std::byte> archive_bytes{std::byte{0x42}, std::byte{0x53}, std::byte{0x41}};
+  const std::vector<std::byte> sentinel{std::byte{0x43}, std::byte{0x41}, std::byte{0x4C}};
+  std::error_code fs_error;
+  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
+    std::filesystem::remove_all(output_path("atomic-backup.bsa.libbsa-bakdir-" + std::to_string(counter)), fs_error);
   }
+  write_binary_file(archive, archive_bytes);
+  write_binary_file(caller_owned_candidate, sentinel);
 
-  libbsa::tes3_bsa_writer writer;
-  const std::vector<std::byte> large_payload(128U * 1024U * 1024U, std::byte{0x41});
-  REQUIRE(writer.add_bytes("Meshes/Race.NIF", large_payload).has_value());
+  auto backup_path = libbsa::detail::reserve_backup_path_in_unique_directory(archive);
 
-  auto written = writer.write_to(archive.string());
-  stop_watcher.store(true);
-  watcher.join();
+  REQUIRE(backup_path.has_value());
+  REQUIRE(std::filesystem::is_directory(backup_path.value().parent_path()));
+  CHECK(backup_path.value().filename() == archive.filename());
+  CHECK(backup_path.value().parent_path() != caller_owned_candidate);
+  CHECK(read_binary_file(caller_owned_candidate) == sentinel);
 
-  REQUIRE_FALSE(written.has_value());
-  REQUIRE(written.error().code == libbsa::error_code::io_error);
-  CHECK(read_binary_file(archive) == sentinel);
+  std::filesystem::rename(archive, backup_path.value(), fs_error);
+  REQUIRE_FALSE(fs_error);
+  CHECK(read_binary_file(backup_path.value()) == archive_bytes);
+  std::filesystem::remove_all(backup_path.value().parent_path(), fs_error);
 }
 
 TEST_CASE("tes3_bsa_writer replaces existing output only when overwrite is enabled", "[unit][tes3_bsa_writer]") {

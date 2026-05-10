@@ -53,6 +53,10 @@ inline result<std::filesystem::path> reserve_backup_path_in_unique_directory(con
       return candidate / filename;
     }
     if (fs_error) {
+      std::error_code exists_error;
+      if (std::filesystem::exists(candidate, exists_error) && !exists_error) {
+        continue;
+      }
       return error{error_code::io_error, "failed to reserve backup directory"};
     }
   }
