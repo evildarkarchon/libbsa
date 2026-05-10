@@ -39,12 +39,12 @@ target_compile_features(libbsa_tests PRIVATE cxx_std_20)
 
 target_include_directories(libbsa_tests
   PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src
 )
 
 target_compile_definitions(libbsa_tests
   PRIVATE
-    LIBBSA_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    LIBBSA_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
 )
 
 add_executable(generate_tes4_bsa_fixtures_tool
@@ -60,7 +60,7 @@ target_compile_features(generate_tes4_bsa_fixtures_tool PRIVATE cxx_std_20)
 
 target_include_directories(generate_tes4_bsa_fixtures_tool
   PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src
 )
 
 add_executable(generate_tes3_bsa_fixtures_tool
@@ -76,7 +76,7 @@ target_compile_features(generate_tes3_bsa_fixtures_tool PRIVATE cxx_std_20)
 
 target_include_directories(generate_tes3_bsa_fixtures_tool
   PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src
 )
 
 add_executable(generate_tes3_bsa_writer_fixtures_tool
@@ -92,7 +92,7 @@ target_compile_features(generate_tes3_bsa_writer_fixtures_tool PRIVATE cxx_std_2
 
 target_include_directories(generate_tes3_bsa_writer_fixtures_tool
   PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src
 )
 
 add_executable(generate_ba2_gnrl_fixtures_tool
@@ -108,7 +108,7 @@ target_compile_features(generate_ba2_gnrl_fixtures_tool PRIVATE cxx_std_20)
 
 target_include_directories(generate_ba2_gnrl_fixtures_tool
   PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src
 )
 
 add_executable(generate_ba2_dx10_fixtures_tool
@@ -124,100 +124,100 @@ target_compile_features(generate_ba2_dx10_fixtures_tool PRIVATE cxx_std_20)
 
 target_include_directories(generate_ba2_dx10_fixtures_tool
   PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src
 )
 
 add_custom_target(generate_tes4_bsa_fixtures
-  COMMAND generate_tes4_bsa_fixtures_tool --success --output ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives
+  COMMAND generate_tes4_bsa_fixtures_tool --success --output ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives
   DEPENDS generate_tes4_bsa_fixtures_tool
   BYPRODUCTS
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v103.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v103_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v104.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v104_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v105.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v105_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v103.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v103_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v104.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v104_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v105.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes4_v105_manifest.json
   COMMENT "Generating TES4-family BSA success fixtures"
   VERBATIM
 )
 
 add_custom_target(generate_tes3_bsa_fixtures
-  COMMAND generate_tes3_bsa_fixtures_tool --output ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives
+  COMMAND generate_tes3_bsa_fixtures_tool --output ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives
   DEPENDS generate_tes3_bsa_fixtures_tool
   BYPRODUCTS
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_success.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_success_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_malformed_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_truncated_header.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_truncated_records.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_invalid_name_span.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_invalid_payload_span.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_duplicate_canonical_path.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_inconsistent_counts_offsets.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_stored_hash_mismatch.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_hash_collision.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_unsorted_hash_records.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_raw_offset_absolute_regression.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_success.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_success_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_malformed_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_truncated_header.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_truncated_records.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_invalid_name_span.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_invalid_payload_span.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_duplicate_canonical_path.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_inconsistent_counts_offsets.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_stored_hash_mismatch.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_hash_collision.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_unsorted_hash_records.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_raw_offset_absolute_regression.bsa
   COMMENT "Generating TES3 BSA success and malformed fixtures"
   VERBATIM
 )
 
 add_custom_target(generate_tes3_bsa_writer_fixtures
-  COMMAND generate_tes3_bsa_writer_fixtures_tool --output ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives
+  COMMAND generate_tes3_bsa_writer_fixtures_tool --output ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives
   DEPENDS generate_tes3_bsa_writer_fixtures_tool
   BYPRODUCTS
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_writer_canonical.bsa
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_writer_canonical_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_writer_canonical.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_writer_canonical_manifest.json
   COMMENT "Generating TES3 public-writer BSA fixture"
   VERBATIM
 )
 
 add_custom_target(generate_ba2_gnrl_fixtures
-  COMMAND generate_ba2_gnrl_fixtures_tool --output ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives
+  COMMAND generate_ba2_gnrl_fixtures_tool --output ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives
   DEPENDS generate_ba2_gnrl_fixtures_tool
   BYPRODUCTS
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_fo4.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_fo4_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv2.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv2_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv3.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv3_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_malformed_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_unsupported.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_truncated_header.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_truncated_records.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_truncated_name_table.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_invalid_payload_span.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_duplicate_canonical_path.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_corrupt_compressed_payload.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_exact_size_mismatch.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_unsupported_v3_compression_method.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_fo4.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_fo4_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv2.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv2_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv3.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_sfv3_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_gnrl_malformed_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_unsupported.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_truncated_header.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_truncated_records.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_truncated_name_table.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_invalid_payload_span.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_duplicate_canonical_path.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_corrupt_compressed_payload.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_exact_size_mismatch.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_unsupported_v3_compression_method.ba2
   COMMENT "Generating BA2 GNRL success and malformed fixtures"
   VERBATIM
 )
 
 add_custom_target(generate_ba2_dx10_fixtures
-  COMMAND generate_ba2_dx10_fixtures_tool --output ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives
+  COMMAND generate_ba2_dx10_fixtures_tool --output ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives
   DEPENDS generate_ba2_dx10_fixtures_tool
   BYPRODUCTS
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_fo4.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_fo4_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_sfv3.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_sfv3_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_malformed_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_truncated_header.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_truncated_records.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_truncated_chunks.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_invalid_payload_span.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_inconsistent_chunk_sizes.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_bad_compressed_chunk.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_decoded_size_mismatch.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_mip_gap.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_duplicate_mip_face.ba2
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_writer_sources_manifest.json
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_multi_mip_bc7_unorm.dds
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_array_bc5_unorm_2slice.dds
-    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_cubemap_bc1_unorm_6face.dds
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_fo4.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_fo4_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_sfv3.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_sfv3_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_malformed_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_truncated_header.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_truncated_records.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_truncated_chunks.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_invalid_payload_span.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_inconsistent_chunk_sizes.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_bad_compressed_chunk.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_decoded_size_mismatch.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_mip_gap.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/ba2_dx10_duplicate_mip_face.ba2
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_writer_sources_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_multi_mip_bc7_unorm.dds
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_array_bc5_unorm_2slice.dds
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_cubemap_bc1_unorm_6face.dds
   COMMENT "Generating BA2 DX10 texture success and malformed fixtures"
   VERBATIM
 )
