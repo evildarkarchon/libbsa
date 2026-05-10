@@ -250,7 +250,10 @@ result<void> write_archive_bytes(std::span<const prepared_entry> entries, const 
 
   detail::binary_writer writer;
   auto written = writer.write_u32_le(tes3_magic_version);
-  if (!(written = written ? writer.write_u32_le(hash_offset_minus_header.value()) : written) ||
+  if (!written) {
+    return written.error();
+  }
+  if (!(written = writer.write_u32_le(hash_offset_minus_header.value())) ||
       !(written = writer.write_u32_le(file_count.value()))) {
     return written.error();
   }
@@ -390,6 +393,8 @@ result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
     return offsets.error();
   }
 
+  // D-08 requires all caller-controlled sources to be validated and loaded before
+  // any publish path is reserved, so missing disk files cannot leave partial output.
   auto temp_dir = make_unique_publish_directory(output_path);
   if (!temp_dir) {
     return temp_dir.error();
