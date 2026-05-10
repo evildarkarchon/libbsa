@@ -59,7 +59,8 @@ libbsa::error_code error_code_from_manifest(std::string_view value) {
   if (value == "unsupported") {
     return libbsa::error_code::unsupported;
   }
-  return libbsa::error_code::invalid_argument;
+  FAIL("unknown TES3 malformed expected_error: " << value);
+  return libbsa::error_code::format_error;
 }
 
 std::string archive_original_path_from_manifest(std::string value) {

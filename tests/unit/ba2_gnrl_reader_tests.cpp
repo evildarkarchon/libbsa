@@ -46,7 +46,8 @@ libbsa::error_code error_code_from_manifest(std::string_view value) {
   if (value == "unsupported") {
     return libbsa::error_code::unsupported;
   }
-  return libbsa::error_code::invalid_argument;
+  FAIL("unknown BA2 GNRL malformed expected_error: " << value);
+  return libbsa::error_code::format_error;
 }
 
 std::uint64_t hex_u64_from_manifest(const nlohmann::json& value) {
