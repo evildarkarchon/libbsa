@@ -168,6 +168,54 @@ class payload_sink {
   virtual result<std::size_t> write(std::span<const std::byte> bytes) = 0;
 };
 
+/// Options controlling a bulk extraction call.
+///
+/// The default is intentionally serial. Pass a positive value greater than one
+/// to opt into parallel extraction of independent entries.
+struct bulk_extract_options {
+  /// Number of worker threads to use; `0` is invalid and never means "auto".
+  std::uint32_t worker_count{1U};
+};
+
+/// A single archive path requested from `archive_reader::extract_entries`.
+struct bulk_extract_request {
+  /// Archive path to extract, using the same lookup rules as `archive_reader::extract`.
+  std::string path;
+};
+
+/// Factory used by bulk extraction to create one sink per requested entry.
+///
+/// Implementations must return a distinct sink for every successful `create`
+/// call. When `bulk_extract_options::worker_count` is greater than one, `create`
+/// may be called concurrently and the returned sinks may be written on worker
+/// threads. libbsa does not call user factory or sink methods while holding an
+/// internal mutex.
+class bulk_extract_sink_factory {
+ public:
+  virtual ~bulk_extract_sink_factory() = default;
+
+  /// Creates the sink that will receive the payload for `path`.
+  ///
+  /// Returning an error records a per-entry failure and does not abort
+  /// independent sibling entries.
+  virtual result<std::unique_ptr<payload_sink>> create(std::string_view path, const entry_metadata& entry) = 0;
+};
+
+/// Per-request result record returned by `archive_reader::extract_entries`.
+struct bulk_extract_entry_result {
+  /// Requested archive path in the same order supplied by the caller.
+  std::string path;
+
+  /// Entry metadata when lookup succeeded before extraction.
+  std::optional<entry_metadata> entry;
+
+  /// Per-entry failure, if lookup, sink creation, or extraction failed.
+  std::optional<error> failure;
+
+  /// Returns true when this record completed without a per-entry failure.
+  [[nodiscard]] bool succeeded() const noexcept { return !failure.has_value(); }
+};
+
 /// Public archive reader for supported Bethesda archive files.
 ///
 /// Use `open()` for fallible construction. A successfully opened reader exposes
@@ -204,6 +252,17 @@ class archive_reader {
 
   /// Extracts an entry into a bounded in-memory byte vector convenience result.
   [[nodiscard]] result<std::vector<std::byte>> extract_bytes(std::string_view path) const;
+
+  /// Extracts multiple entries into caller-created per-entry sinks.
+  ///
+  /// Setup failures such as an unopened reader or `worker_count == 0` fail the
+  /// outer result. Lookup, sink-creation, and extraction failures are recorded
+  /// on the corresponding request-order result record so independent sibling
+  /// entries can still complete.
+  [[nodiscard]] result<std::vector<bulk_extract_entry_result>> extract_entries(
+      std::span<const bulk_extract_request> requests,
+      bulk_extract_sink_factory& sink_factory,
+      bulk_extract_options options = {}) const;
 
  private:
   struct state;

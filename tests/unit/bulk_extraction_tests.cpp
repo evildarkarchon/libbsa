@@ -157,11 +157,11 @@ static_assert(std::is_same_v<decltype(std::declval<const libbsa::archive_reader&
                                  std::declval<libbsa::bulk_extract_sink_factory&>())),
                              libbsa::result<std::vector<libbsa::bulk_extract_entry_result>>>);
 
-TEST_CASE("bulk_extract_options defaults to serial extraction", "[unit][bulk_extraction]") {
+TEST_CASE("bulk_extraction options default to serial extraction", "[unit][bulk_extraction]") {
   CHECK(libbsa::bulk_extract_options{}.worker_count == 1U);
 }
 
-TEST_CASE("bulk extraction rejects zero workers as an outer argument error", "[unit][bulk_extraction]") {
+TEST_CASE("bulk_extraction rejects zero workers as an outer argument error", "[unit][bulk_extraction]") {
   const auto reader = create_bulk_test_reader();
   const auto requests = standard_requests();
   capturing_sink_factory sink_factory;
@@ -174,7 +174,7 @@ TEST_CASE("bulk extraction rejects zero workers as an outer argument error", "[u
   CHECK(extracted.error().code == libbsa::error_code::invalid_argument);
 }
 
-TEST_CASE("bulk extraction preserves request order and bytes in serial and parallel mode", "[unit][bulk_extraction]") {
+TEST_CASE("bulk_extraction preserves request order and bytes in serial and parallel mode", "[unit][bulk_extraction]") {
   const auto reader = create_bulk_test_reader();
   const auto requests = standard_requests();
 
@@ -200,7 +200,7 @@ TEST_CASE("bulk extraction preserves request order and bytes in serial and paral
   CHECK(serial.bytes_by_path.at("Textures/Beta.DDS") == bytes_from_text("beta texture bytes"));
 }
 
-TEST_CASE("bulk extraction records per-entry failures without aborting siblings", "[unit][bulk_extraction]") {
+TEST_CASE("bulk_extraction records per-entry failures without aborting siblings", "[unit][bulk_extraction]") {
   const auto reader = create_bulk_test_reader();
   const std::vector requests{libbsa::bulk_extract_request{.path = "Meshes/Alpha.NIF"},
                              libbsa::bulk_extract_request{.path = "Missing/Entry.bin"},
@@ -226,7 +226,7 @@ TEST_CASE("bulk extraction records per-entry failures without aborting siblings"
   CHECK(bytes.find("Missing/Entry.bin") == bytes.end());
 }
 
-TEST_CASE("bulk extraction records partial sink writes as per-entry I/O errors", "[unit][bulk_extraction]") {
+TEST_CASE("bulk_extraction records partial sink writes as per-entry I/O errors", "[unit][bulk_extraction]") {
   const auto reader = create_bulk_test_reader();
   const std::vector requests{libbsa::bulk_extract_request{.path = "Meshes/Alpha.NIF"}};
   partial_sink_factory sink_factory;

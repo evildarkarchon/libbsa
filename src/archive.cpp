@@ -12,6 +12,7 @@
 #include "formats/bsa/tes4_bsa_reader.hpp"
 
 #include <detail/byte_vector.hpp>
+#include <detail/parallel_work.hpp>
 
 #include <cstddef>
 #include <fstream>
@@ -265,6 +266,58 @@ result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view pa
     return extracted.error();
   }
   return std::move(sink).finish();
+}
+
+result<std::vector<bulk_extract_entry_result>> archive_reader::extract_entries(
+    std::span<const bulk_extract_request> requests,
+    bulk_extract_sink_factory& sink_factory,
+    bulk_extract_options options) const {
+  if (!state_) {
+    return error{error_code::unsupported, "archive reader is not open"};
+  }
+  if (options.worker_count == 0U) {
+    return error{error_code::invalid_argument, "worker_count must be greater than zero"};
+  }
+
+  std::vector<bulk_extract_entry_result> results(requests.size());
+  const auto work = [&](std::size_t index) -> result<void> {
+    const auto& request = requests[index];
+    auto& record = results[index];
+    record.path = request.path;
+
+    auto found = find(request.path);
+    if (!found) {
+      record.failure = found.error();
+      return {};
+    }
+    if (!found.value()) {
+      record.failure = error{error_code::not_found, "archive path was not found"};
+      return {};
+    }
+
+    record.entry = *found.value();
+    auto sink = sink_factory.create(request.path, *record.entry);
+    if (!sink) {
+      record.failure = sink.error();
+      return {};
+    }
+    if (!sink.value()) {
+      record.failure = error{error_code::invalid_argument, "bulk extraction sink factory returned no sink"};
+      return {};
+    }
+
+    auto extracted = extract(request.path, *sink.value());
+    if (!extracted) {
+      record.failure = extracted.error();
+    }
+    return {};
+  };
+
+  auto worked = detail::run_indexed_work(requests.size(), options.worker_count, work);
+  if (!worked) {
+    return worked.error();
+  }
+  return results;
 }
 
 } // namespace libbsa
