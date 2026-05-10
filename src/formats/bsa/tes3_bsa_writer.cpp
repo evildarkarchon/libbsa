@@ -179,6 +179,7 @@ result<std::vector<prepared_entry>> prepare_entries(std::span<const tes3_writer_
     }
     (void)payload_size;
 
+    // TES3 hashes are computed from the preserved serialized name, not the canonical lowercase lookup key.
     prepared.push_back(prepared_entry{entry.archive_path_original,
                                       std::move(payload.value()),
                                       detail::hash_tes3(entry.archive_path_original),
@@ -186,6 +187,7 @@ result<std::vector<prepared_entry>> prepare_entries(std::span<const tes3_writer_
   }
 
   std::sort(prepared.begin(), prepared.end(), [](const prepared_entry& lhs, const prepared_entry& rhs) {
+    // TES3 table order compares hash low32 first and high32 second; the helper packs that order for sorting.
     return detail::tes3_hash_sort_key(lhs.hash) < detail::tes3_hash_sort_key(rhs.hash);
   });
   return prepared;
@@ -194,6 +196,7 @@ result<std::vector<prepared_entry>> prepare_entries(std::span<const tes3_writer_
 result<void> assign_raw_offsets(std::span<prepared_entry> entries) {
   std::uint32_t cursor = 0;
   for (auto& entry : entries) {
+    // On disk TES3 stores data-section-relative raw offsets; readers add the computed data section start back.
     entry.raw_offset = cursor;
     auto payload_size = checked_u32(entry.payload.size(), "TES3 BSA payload size");
     if (!payload_size) {
