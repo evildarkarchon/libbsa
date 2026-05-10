@@ -12,6 +12,25 @@ find_package(directxtex CONFIG REQUIRED)
 option(LIBBSA_BUILD_TESTS "Build libbsa tests" ON)
 option(LIBBSA_BUILD_BENCHMARKS "Build libbsa benchmark tools" ON)
 
+find_package(Doxygen QUIET)
+
+if(DOXYGEN_FOUND)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in
+    ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+    @ONLY
+  )
+
+  add_custom_target(libbsa_docs
+    COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Generating libbsa public API documentation"
+    VERBATIM
+  )
+else()
+  message(STATUS "Doxygen not found; libbsa_docs target not available")
+endif()
+
 add_library(libbsa)
 add_library(libbsa::libbsa ALIAS libbsa)
 
