@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 11 context gathered
-last_updated: "2026-05-10T03:48:30.547Z"
-last_activity: 2026-05-10 -- Phase 11 planning complete
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-05-10T03:57:41.873Z"
+last_activity: 2026-05-10
 progress:
   total_phases: 12
   completed_phases: 10
   total_plans: 68
-  completed_plans: 61
-  percent: 90
+  completed_plans: 62
+  percent: 91
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 
 ## Current Position
 
-Phase: 11
-Plan: Not started
+Phase: 11 (Compatibility Warnings, Validation API, and Hardening) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-05-10 -- Phase 11 planning complete
+Last activity: 2026-05-10
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [█████████░] 92%
 | Phase 10 P04 | 3min | 3 tasks | 2 files |
 | Phase 10 P05 | 28min | 3 tasks | 5 files |
 | Phase 10 P06 | 12min | 2 tasks | 2 files |
+| Phase 11 P01 | 4 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 10]: TES3 writer fixture validation uses structural table facts and reader extraction instead of full archive golden equality. — This satisfies D-12 and avoids over-constraining non-semantic archive bytes.
 - [Phase 10]: Shared archive path normalization rejects embedded NUL bytes before separator normalization so all callers get stable invalid_argument behavior.
 - [Phase 10]: TES3 non-overwrite publish remains routed through publish_file_without_replace after a final destination existence check.
+- [Phase 11]: Plan 11-01 introduces the public validation contract only; validation behavior and the function definition remain for the later implementation plan. — Matches the plan boundary and leaves strict-open-backed behavior for Plan 11-02.
+- [Phase 11]: Public compatibility warnings expose stable code and severity values while keeping byte offsets, record indexes, and chunk indexes out of the public report model. — Satisfies the Phase 11 public/private boundary and D-09 information-disclosure mitigation.
 
 ### Pending Todos
 
@@ -113,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T02:56:58.908Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-compatibility-warnings-validation-api-and-hardening/11-CONTEXT.md
+Last session: 2026-05-10T03:57:41.867Z
+Stopped at: Completed 11-01-PLAN.md
+Resume file: None
