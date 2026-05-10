@@ -49,6 +49,7 @@ target_sources(libbsa
         include/libbsa/archive.hpp
         include/libbsa/libbsa.hpp
         include/libbsa/result.hpp
+        include/libbsa/validation.hpp
         include/libbsa/version.hpp
         include/libbsa/writer.hpp
   PRIVATE
