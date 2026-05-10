@@ -392,7 +392,7 @@ Plans:
 - [x] 12-02-PLAN.md — Add call-time writer execution options and worker-count validation.
 
 **Wave 3** *(blocked on Wave 2 writer execution contract)*
-- [ ] 12-03-PLAN.md — Stream BSA writer disk publishing and add BSA parallel packing proof.
+- [x] 12-03-PLAN.md — Stream BSA writer disk publishing and add BSA parallel packing proof.
 
 **Wave 4** *(blocked on Wave 2 writer execution contract and Wave 3 shared bounded-memory policy tests)*
 - [ ] 12-04-PLAN.md — Stream BA2 writer disk publishing and add BA2 parallel packing proof.
@@ -424,4 +424,4 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |
 | 10. TES3 Write Support and BSA Format Completeness | 6/6 | Complete    | 2026-05-10 |
 | 11. Compatibility Warnings, Validation API, and Hardening | 7/7 | Complete    | 2026-05-10 |
-| 12. Performance, Concurrency, Documentation, and Polish | 2/7 | In Progress|  |
+| 12. Performance, Concurrency, Documentation, and Polish | 3/7 | In Progress|  |

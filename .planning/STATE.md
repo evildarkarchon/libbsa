@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 12-02-PLAN.md
-last_updated: "2026-05-10T08:01:53.454Z"
+stopped_at: Completed 12-03-PLAN.md
+last_updated: "2026-05-10T08:16:08.191Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 12
   completed_phases: 11
   total_plans: 75
-  completed_plans: 70
-  percent: 93
+  completed_plans: 71
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 12 (performance-concurrency-documentation-and-polish) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-05-10
 
-Progress: [█████████░] 93%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [█████████░] 93%
 | Phase 11 P07 | 2 min | 2 tasks | 3 files |
 | Phase 12 P01 | 9min | 3 tasks | 7 files |
 | Phase 12 P02 | 6min | 3 tasks | 8 files |
+| Phase 12 P03 | 10min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -122,6 +123,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 12]: Writer packing controls are exposed through write_execution_options at write_to time, not through archive compatibility options.
 - [Phase 12]: Existing one-argument write_to overloads delegate to default write_execution_options so serial-default behavior remains observable.
 - [Phase 12]: worker_count == 0 is rejected as invalid before writer finalization touches output or disk source paths.
+- [Phase 12]: BSA writers stream final archive publication through bounded scratch buffers instead of materializing final whole-archive byte vectors.
+- [Phase 12]: TES4 BSA writer worker_count prepares independent entries through detail::run_indexed_work before deterministic grouping, sorting, offsets, and publish.
+- [Phase 12]: TES4 BSA overwrite publish uses unique temporary directories and safe replace helpers so failed worker-count paths preserve readable destination archives.
 
 ### Pending Todos
 
@@ -144,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T08:01:53.447Z
-Stopped at: Completed 12-02-PLAN.md
+Last session: 2026-05-10T08:16:03.392Z
+Stopped at: Completed 12-03-PLAN.md
 Resume file: None
