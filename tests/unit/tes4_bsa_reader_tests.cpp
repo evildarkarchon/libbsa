@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -135,6 +136,14 @@ void overwrite_u32_le(std::vector<std::byte>& bytes, std::size_t offset, std::ui
   for (std::uint32_t index = 0; index < 4U; ++index) {
     bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
   }
+}
+
+std::uint32_t read_u32_le(const std::vector<std::byte>& bytes, std::size_t offset) {
+  std::uint32_t value = 0;
+  for (std::uint32_t index = 0; index < 4U; ++index) {
+    value |= static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.at(offset + index))) << (index * 8U);
+  }
+  return value;
 }
 
 } // namespace
@@ -269,6 +278,23 @@ TEST_CASE("tes4_bsa_malformed_open rejects inconsistent table offsets",
     REQUIRE_FALSE(opened.has_value());
     REQUIRE(opened.error().code == libbsa::error_code::format_error);
   }
+}
+
+TEST_CASE("tes4_bsa_malformed_open rejects payload spans inside metadata",
+          "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
+  auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+  const auto folder_count = read_u32_le(bytes, 16U);
+  const auto folder_name_bytes = read_u32_le(bytes, 24U);
+  const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes;
+  overwrite_u32_le(bytes, first_file_record + 12U, 0U);
+
+  const auto mutated = std::filesystem::temp_directory_path() / "libbsa_payload_inside_metadata.bsa";
+  write_binary_file(mutated, bytes);
+
+  auto opened = libbsa::archive_reader::open(mutated.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
 
 TEST_CASE("tes4_bsa_entry_metadata materializes table paths, hashes, sizes, and embedded names",

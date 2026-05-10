@@ -81,6 +81,10 @@ bool span_fits(std::size_t start, std::size_t length, std::size_t total) noexcep
   return start <= total && length <= total - start;
 }
 
+bool non_empty_span_intersects_prefix(std::size_t start, std::size_t length, std::size_t prefix_size) noexcept {
+  return length != 0U && start < prefix_size;
+}
+
 result<std::vector<std::byte>> read_file_bytes_at(std::ifstream& input, std::uint64_t offset, std::size_t count,
                                                   std::string_view description) {
   if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
@@ -337,7 +341,8 @@ result<std::uint32_t> raw_size_for(std::size_t archive_size, const file_record& 
 }
 
 template <typename PayloadReader>
-result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size, const header_fields& header,
+result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size, std::size_t metadata_size,
+                                                        const header_fields& header,
                                                         std::span<const folder_block> folders,
                                                         std::span<const std::string> file_names,
                                                         PayloadReader& read_payload_bytes) {
@@ -365,6 +370,11 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
       const auto stored_size = record.size_flags & ~file_size_compression_toggle;
       if (!span_fits(record.offset, stored_size, archive_size)) {
         return error{error_code::format_error, "TES4 BSA entry payload span is outside the archive"};
+      }
+      // Payload offsets are archive-controlled; non-empty file bytes must not point back into the header or name
+      // tables.
+      if (non_empty_span_intersects_prefix(record.offset, stored_size, metadata_size)) {
+        return error{error_code::format_error, "TES4 BSA entry payload span overlaps metadata"};
       }
       const auto compression = compression_for(header, record.size_flags);
       std::uint32_t prefix_size = 0;
@@ -543,7 +553,11 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> 
   if (!file_names) {
     return file_names.error();
   }
-  auto entries = materialize_entries(archive_size, header.value(), folder_blocks.value(), file_names.value(),
+  auto entries = materialize_entries(archive_size,
+                                     table_size.value(),
+                                     header.value(),
+                                     folder_blocks.value(),
+                                     file_names.value(),
                                      read_payload_bytes);
   if (!entries) {
     return entries.error();
