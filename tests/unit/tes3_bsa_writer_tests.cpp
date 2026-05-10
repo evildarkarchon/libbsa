@@ -117,7 +117,7 @@ void require_extracts_bytes(const libbsa::archive_reader& reader,
   CHECK(sink.bytes() == expected);
 }
 
-libbsa::entry_metadata require_entry(const libbsa::archive_reader& reader, std::string_view path) {
+libbsa::entry_metadata require_finds_entry(const libbsa::archive_reader& reader, std::string_view path) {
   auto found = reader.find(path);
   REQUIRE(found.has_value());
   REQUIRE(found.value().has_value());
@@ -299,9 +299,9 @@ TEST_CASE("tes3_bsa_writer output reopens through reader lookup and extraction A
   require_extracts_bytes(opened.value(), "textures/Memory/Probe.dds", copied_memory_bytes);
   require_extracts_bytes(opened.value(), "Readme.txt", zero_bytes);
 
-  const auto disk_entry = require_entry(opened.value(), "Meshes/Disk/Probe.NIF");
-  const auto memory_entry = require_entry(opened.value(), "textures/Memory/Probe.dds");
-  const auto root_entry = require_entry(opened.value(), "Readme.txt");
+  const auto disk_entry = require_finds_entry(opened.value(), "Meshes/Disk/Probe.NIF");
+  const auto memory_entry = require_finds_entry(opened.value(), "textures/Memory/Probe.dds");
+  const auto root_entry = require_finds_entry(opened.value(), "Readme.txt");
   CHECK(disk_entry.original_path == "Meshes/Disk/Probe.NIF");
   CHECK(memory_entry.original_path == "textures/Memory/Probe.dds");
   CHECK(root_entry.original_path == "Readme.txt");
@@ -315,7 +315,7 @@ TEST_CASE("tes3_bsa_writer output reopens through reader lookup and extraction A
     const auto raw_record_offset = read_u32_le_at(archive_bytes, file_records_start + (index * 8U) + 4U);
     const auto name_offset = read_u32_le_at(archive_bytes, name_offsets_start + (index * 4U));
     const auto name = read_null_terminated_name_at(archive_bytes, name_table_start + name_offset, hash_table_start);
-    const auto entry = require_entry(opened.value(), name);
+    const auto entry = require_finds_entry(opened.value(), name);
     CHECK(entry.payload_offset == static_cast<std::uint64_t>(data_section_start) + raw_record_offset);
   }
 }
