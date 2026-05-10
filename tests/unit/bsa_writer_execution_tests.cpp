@@ -202,3 +202,37 @@ TEST_CASE("bsa_writer_execution missing disk source with worker_count preserves 
   REQUIRE(written.error().code == libbsa::error_code::io_error);
   CHECK(read_binary_file(archive) == sentinel);
 }
+
+TEST_CASE("bsa_writer_execution overwrite failure with worker_count preserves readable previous archive",
+          "[unit][bsa_writer_execution][tes4_bsa_writer][publish]") {
+  const auto archive = output_path("overwrite-failure-keeps-readable-archive.bsa");
+  const auto missing_source = output_path("overwrite-missing-source.nif");
+  const auto original_payload = bytes_from_text("original readable archive payload");
+
+  libbsa::tes4_bsa_writer_options original_options;
+  original_options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  original_options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer original_writer{libbsa::tes4_bsa_target::fallout3, original_options};
+  REQUIRE(original_writer.add_bytes("Meshes/Original/Readable.nif", original_payload).has_value());
+  REQUIRE(original_writer.write_to(archive.string()).has_value());
+  const auto sentinel = read_binary_file(archive);
+
+  std::error_code fs_error;
+  std::filesystem::remove(missing_source, fs_error);
+  libbsa::tes4_bsa_writer_options replacement_options;
+  replacement_options.compression_policy = libbsa::archive_compression_policy::all_compressed;
+  replacement_options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer replacement_writer{libbsa::tes4_bsa_target::fallout3, replacement_options};
+  REQUIRE(replacement_writer.add_file("Meshes/Missing/Replacement.nif", missing_source.string()).has_value());
+
+  libbsa::write_execution_options execution;
+  execution.worker_count = 4U;
+  auto written = replacement_writer.write_to(archive.string(), execution);
+
+  REQUIRE_FALSE(written.has_value());
+  REQUIRE(written.error().code == libbsa::error_code::io_error);
+  CHECK(read_binary_file(archive) == sentinel);
+  auto reopened = libbsa::archive_reader::open(archive.string());
+  REQUIRE(reopened.has_value());
+  require_extracted_bytes(reopened.value(), "Meshes/Original/Readable.nif", original_payload);
+}

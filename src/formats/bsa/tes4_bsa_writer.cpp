@@ -602,7 +602,7 @@ result<void> assign_offsets(std::span<prepared_folder> folders,
     }
     file_record_bytes = static_cast<std::uint64_t>(folder.entries.size()) * 16U;
 
-    // TES5Edit-compatible folder offsets include the later file-name table length,
+    // Reference-compatible folder offsets include the later file-name table length,
     // even though the folder block bytes are serialized before that table.
     if (!add_fits_u64(folder_block_cursor, file_names_length, folder.folder_block_offset)) {
       return error{error_code::format_error, "TES4 BSA folder offset overflows"};
