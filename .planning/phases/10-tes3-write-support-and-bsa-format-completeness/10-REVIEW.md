@@ -1,141 +1,96 @@
 ---
 phase: 10-tes3-write-support-and-bsa-format-completeness
-reviewed: 2026-05-10T00:52:00Z
+reviewed: 2026-05-09T00:00:00Z
 depth: standard
-files_reviewed: 10
+files_reviewed: 9
 files_reviewed_list:
   - CMakeLists.txt
   - include/libbsa/writer.hpp
   - src/formats/bsa/tes3_bsa_writer.cpp
   - src/formats/bsa/tes3_bsa_writer.hpp
   - tests/CMakeLists.txt
-  - tests/fixtures/generated/archives/tes3_writer_canonical.bsa
   - tests/fixtures/generated/archives/tes3_writer_canonical_manifest.json
   - tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp
   - tests/unit/public_include_boundary_tests.cpp
   - tests/unit/tes3_bsa_writer_tests.cpp
 findings:
   critical: 2
-  warning: 3
+  warning: 1
   info: 0
-  total: 5
+  total: 3
 status: issues_found
 ---
 
 # Phase 10: Code Review Report
 
-**Reviewed:** 2026-05-10T00:52:00Z
+**Reviewed:** 2026-05-09T00:00:00Z
 **Depth:** standard
-**Files Reviewed:** 10
+**Files Reviewed:** 9
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the TES3 public writer implementation, build integration, committed fixture/manifest provenance, fixture generator, and public/unit tests. The binary `.bsa` fixture was treated as a fixture artifact and assessed through its committed manifest, generator, and reader-backed validation rather than as source text. Two correctness/data-loss blockers were found in the writer path handling and publish logic, plus three test/build/fixture-generator robustness issues.
+Reviewed the TES3 writer public API, implementation, build wiring, generator, manifest, and unit tests after the prior fixes. The previous temp-file collision issue is improved by using a unique temporary directory, and source validation now happens before publish-path reservation. However, the publish logic still has non-atomic path reservation races that can overwrite or strand caller-owned files on platforms where `std::filesystem::rename` replaces existing destination files. One regression test also relies on timing and a 128 MiB payload, so it can pass without proving the race is closed.
 
 ## Critical Issues
 
-### CR-01: BLOCKER - `overwrite_existing=false` can still replace a concurrently-created output
+### CR-01: Non-overwrite publish can still replace a concurrently-created destination
 
-**File:** `src/formats/bsa/tes3_bsa_writer.cpp:389-396,467-470`
-
-**Issue:** The writer checks whether `output_path` exists before validating/loading sources and writing the temporary archive, but the non-overwrite publish path does not re-check before `std::filesystem::rename(temp_path, output_path)`. On platforms where rename replaces an existing regular file, a file created after the initial check can be overwritten even though `overwrite_existing` is false. That violates the public contract and creates a data-loss race.
-
-**Fix:** Re-check the destination immediately before the non-overwrite rename and refuse to publish if it now exists; preferably use a platform-specific no-replace publish primitive when available.
+**File:** `src/formats/bsa/tes3_bsa_writer.cpp:471-484`
+**Issue:** The non-overwrite path checks `exists(output_path)` and then calls `std::filesystem::rename(temp_path, output_path)`. That check/use pair is not atomic. If another process creates `output_path` after line 476 but before line 481, C++ permits `rename` to replace an existing non-directory destination on POSIX-like platforms. This violates `overwrite_existing == false` and can destroy caller-owned data despite the earlier existence checks.
+**Fix:** Publish with an atomic no-replace primitive instead of `exists` + `rename`. If the project keeps a portable C++20 surface, hide the platform-specific publish behind an internal helper and fail when the destination already exists.
 
 ```cpp
-auto final_exists = path_exists_noexcept(output_path);
-if (!final_exists) {
-  cleanup_publish_directory(temp_dir.value());
-  return final_exists.error();
+result<void> publish_without_replace(const std::filesystem::path& temp_path,
+                                     const std::filesystem::path& output_path) {
+#if defined(_WIN32)
+  if (!MoveFileExW(temp_path.c_str(), output_path.c_str(), 0)) {
+    return error{error_code::io_error, "TES3 BSA writer failed to publish output host path"};
+  }
+  return {};
+#else
+  // Prefer renameat2(..., RENAME_NOREPLACE) where available; otherwise use a
+  // documented link/unlink fallback that never replaces an existing output.
+#endif
 }
-if (final_exists.value()) {
-  cleanup_publish_directory(temp_dir.value());
-  return error{error_code::io_error, "TES3 BSA output host path already exists"};
-}
-
-std::filesystem::rename(temp_path, output_path, fs_error);
 ```
 
-### CR-02: BLOCKER - Archive paths containing NUL produce unreadable/self-inconsistent archives
+### CR-02: Backup path selection is not reserved atomically and can clobber caller files
 
-**File:** `src/formats/bsa/tes3_bsa_writer.cpp:35-44,214-221`
-
-**Issue:** `make_entry` accepts any path that `normalize_archive_path` accepts, and the current normalization path does not reject embedded `\0` bytes. `write_string_terminated` then serializes the name as a null-terminated string, so `"Meshes/A.nif\0Suffix"` is stored as a truncated visible name while the writer computes the TES3 hash from the full original string. The reader recomputes hashes from the parsed null-terminated name and will reject the writer's own archive as a stored-hash mismatch. This is caller-triggered incorrect output and can also hide duplicate/truncated names in the serialized name table.
-
-**Fix:** Reject embedded NULs before preserving/hashing/serializing the archive path. Ideally enforce this centrally in `normalize_archive_path`; at minimum guard the TES3 writer input path.
+**File:** `src/formats/bsa/tes3_bsa_writer.cpp:366-381,450-455`
+**Issue:** `reserve_backup_path` only checks that `<archive>.libbsa-bak-N` does not exist, then the caller later renames the original archive into that path. If another process creates the backup candidate between lines 377 and 451, `std::filesystem::rename(output_path, backup_path)` can replace that file on POSIX-like platforms. This is another caller-owned data loss path in overwrite mode.
+**Fix:** Reserve the backup namespace atomically, the same way the temp publish directory is reserved. For example, create a unique backup directory first, then move the old archive inside that directory.
 
 ```cpp
-result<formats::bsa::tes3_writer_entry> make_entry(std::string_view archive_path) {
-  if (archive_path.find('\0') != std::string_view::npos) {
-    return error{error_code::invalid_argument, "TES3 BSA archive path must not contain NUL bytes"};
+result<std::filesystem::path> make_unique_backup_directory(const std::filesystem::path& output_path) {
+  const auto parent = output_path.parent_path();
+  const auto filename = output_path.filename();
+  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
+    auto candidate_name = filename;
+    candidate_name += ".libbsa-bakdir-" + std::to_string(counter);
+    const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
+    std::error_code fs_error;
+    if (std::filesystem::create_directory(candidate, fs_error)) {
+      return candidate / filename;
+    }
+    if (fs_error) {
+      return error{error_code::io_error, "TES3 BSA writer failed to reserve backup directory"};
+    }
   }
-  auto canonical = detail::normalize_archive_path(archive_path);
-  // ...
+  return error{error_code::io_error, "TES3 BSA writer exhausted backup directory names"};
 }
 ```
 
 ## Warnings
 
-### WR-01: WARNING - Fixture generator does not verify writes completed successfully
+### WR-01: Race regression test is timing-dependent and can pass without covering the vulnerable window
 
-**File:** `tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp:127-143`
-
-**Issue:** `write_file` and `write_text` only check that the output stream opened. They do not check the stream after writing. A disk-full, permission, or flush error can leave a truncated source or manifest while the generator exits successfully, reducing fixture provenance reliability.
-
-**Fix:** Check stream state after each write and throw on failure.
-
-```cpp
-out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-if (!out) {
-  throw std::runtime_error("failed to write " + path.string());
-}
-
-out << text;
-if (!out) {
-  throw std::runtime_error("failed to write " + path.string());
-}
-```
-
-### WR-02: WARNING - Fixture generator uses `std::tolower` without including `<cctype>`
-
-**File:** `tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp:54-58`
-
-**Issue:** The generator calls `std::tolower` but does not include the standard header that declares it. This can compile only by relying on transitive includes, which is non-portable and may break on another standard library/toolchain.
-
-**Fix:** Add the required header explicitly.
-
-```cpp
-#include <cctype>
-```
-
-### WR-03: WARNING - Tests and fixture targets are anchored to the top-level source directory
-
-**File:** `tests/CMakeLists.txt:40-48,130-223`
-
-**Issue:** The test target include path, `LIBBSA_SOURCE_DIR`, and fixture generation outputs use `${CMAKE_SOURCE_DIR}`. That only works when libbsa is configured as the top-level project. If a downstream CMake project enables `LIBBSA_BUILD_TESTS` while adding libbsa via `add_subdirectory`, these paths resolve to the consumer's source root, causing private include lookup failures and fixture writes into the wrong repository tree.
-
-**Fix:** Anchor libbsa-owned paths to `${PROJECT_SOURCE_DIR}` (or an explicit libbsa root variable) instead of `${CMAKE_SOURCE_DIR}`.
-
-```cmake
-target_include_directories(libbsa_tests
-  PRIVATE
-    ${PROJECT_SOURCE_DIR}/src
-)
-
-target_compile_definitions(libbsa_tests
-  PRIVATE
-    LIBBSA_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
-)
-
-add_custom_target(generate_tes3_bsa_writer_fixtures
-  COMMAND generate_tes3_bsa_writer_fixtures_tool --output ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives
-  # ...
-)
-```
+**File:** `tests/unit/tes3_bsa_writer_tests.cpp:567-605`
+**Issue:** The watcher only creates the destination after it sees the temporary directory. The test depends on a 128 MiB payload making `write_archive_bytes` slow enough for the watcher to win before the implementation's second `exists` check. It does not cover the critical window after line 476 and before the final `rename`, and it can become flaky or falsely reassuring across machines and filesystems.
+**Fix:** Make the race deterministic by injecting a test hook/publish strategy into the internal writer path, or factor the publish operation into an internal helper that can be unit-tested with a fake filesystem/publisher. Avoid timing-based synchronization and large payloads for correctness tests.
 
 ---
 
-_Reviewed: 2026-05-10T00:52:00Z_
+_Reviewed: 2026-05-09T00:00:00Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
