@@ -1,8 +1,7 @@
 ---
 phase: 10-tes3-write-support-and-bsa-format-completeness
-reviewed: 2026-05-09T12:30:00Z
+reviewed: 2026-05-09T13:15:00Z
 depth: standard
-auto_rereview_iteration: final
 files_reviewed: 11
 files_reviewed_list:
   - CMakeLists.txt
@@ -26,16 +25,14 @@ status: issues_found
 
 # Phase 10: Code Review Report
 
-**Reviewed:** 2026-05-09T12:30:00Z
+**Reviewed:** 2026-05-09T13:15:00Z
 **Depth:** standard
 **Files Reviewed:** 11
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the final auto-fix state for the TES3 writer public API, atomic publish/replace helpers, TES3 writer implementation, build/test wiring, generated fixture manifest/generator, and unit tests. The previous overwrite-mode gap finding is resolved: overwrite now routes through `replace_file_atomically`, and no-replace publishing still uses an atomic destination-exists failure path.
-
-The final atomic replace fix did not reintroduce the prior backup-stranding issue. However, one remaining production correctness/security issue is still present in the host-path boundary, and one test reliability defect can cause false failures in reused temp directories.
+Reviewed the listed TES3 writer public API, atomic publish helpers, TES3 writer implementation, build/test wiring, generated fixture manifest/generator, and unit tests. The two open findings from the previous review are still present: public host paths still accept embedded NUL bytes, and tests still reuse deterministic temp filenames without cleanup. I did not find additional source-level regressions in the recent fixes.
 
 ## Critical Issues
 
@@ -43,8 +40,8 @@ The final atomic replace fix did not reintroduce the prior backup-stranding issu
 
 **Classification:** BLOCKER
 **File:** `src/formats/bsa/tes3_bsa_writer.cpp:61-64,372-376`
-**Issue:** `add_file` rejects only an empty disk source host path, and `write_tes3_bsa_archive` rejects only an empty output host path before constructing `std::filesystem::path`. Unlike archive-internal paths, host paths containing `\0` are not rejected. Native filesystem APIs treat NUL as a terminator, so a caller-provided `"safe.bsa\0suffix"` or source path with a NUL can be interpreted as `"safe.bsa"` by the OS. With `overwrite_existing = true`, this can overwrite an unintended host file; for disk sources, it can read a different file than the caller-visible string indicates.
-**Fix:** Validate every public host-path `std::string_view` before converting it to `std::filesystem::path` or storing it for later I/O. Apply the same rule to source and output host paths, and add regression tests for `add_file("valid/path.nif", "source\0suffix")` and `write_to("archive.bsa\0suffix")`.
+**Issue:** `add_file` rejects only an empty disk source host path, and `write_tes3_bsa_archive` rejects only an empty output host path before storing or converting host-path strings. Archive-internal paths explicitly reject NUL bytes, but source and output host paths do not. Native filesystem APIs treat NUL as a terminator at the C-string boundary, so caller input such as `"safe.bsa\0suffix"` or a disk source path with an embedded NUL can be interpreted as a different host path than the `std::string_view` appears to name. With `overwrite_existing = true`, this can overwrite an unintended host file; for disk sources, it can read an unintended file.
+**Fix:** Validate all public host paths before storing them or constructing `std::filesystem::path`, and add regression tests for both source and output paths containing embedded NUL bytes.
 
 ```cpp
 result<void> validate_host_path(std::string_view host_path, std::string_view description) {
@@ -64,8 +61,8 @@ result<void> validate_host_path(std::string_view host_path, std::string_view des
 
 **Classification:** WARNING
 **File:** `tests/unit/tes3_bsa_writer_tests.cpp:24-30,531-548`
-**Issue:** `writer_test_dir()` always returns the same directory and `output_path()` always uses fixed filenames. Several tests depend on a destination not already existing so they can assert validation-specific error codes, for example duplicate canonical paths and empty archives. If a previous interrupted run, parallel process, or local debugging leaves one of those fixed files behind, `write_to` checks destination existence first and returns `io_error` instead of the expected `format_error` or `invalid_argument`, causing false failures unrelated to the behavior under test.
-**Fix:** Give each test case a unique subdirectory or explicitly remove the destination before assertions that depend on non-existence.
+**Issue:** `writer_test_dir()` always returns the same temp directory, and `output_path()` always returns fixed filenames under that directory. Several tests expect the destination not to exist so they can assert validation-specific failures, such as duplicate canonical paths returning `format_error` and empty archives returning `invalid_argument`. If an interrupted run, parallel process, or local debugging leaves one of those files behind, `write_to` checks destination existence first and returns `io_error`, causing false failures unrelated to the behavior under test.
+**Fix:** Give each test case a unique subdirectory, or remove the destination before assertions that depend on a non-existing output path.
 
 ```cpp
 std::filesystem::path output_path(std::string name) {
@@ -79,6 +76,6 @@ std::filesystem::path output_path(std::string name) {
 
 ---
 
-_Reviewed: 2026-05-09T12:30:00Z_
+_Reviewed: 2026-05-09T13:15:00Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
