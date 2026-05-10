@@ -106,7 +106,7 @@ The highest-risk planning item is the reader/parser gap for end-of-archive name 
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
 | C++ | C++20 | Public writer API and private serialization implementation | Project mandate; existing writer and reader APIs are C++20 and use `libbsa::result`. [VERIFIED: `.planning/PROJECT.md`; `include/libbsa/writer.hpp`] |
-| CMake | 3.24 minimum; local 4.3.2 available | Build/test source registration | Existing root project uses CMake 3.24 and local tool reports 4.3.2. [VERIFIED: `CMakeLists.txt`; `cmake --version`] |
+| CMake | 4.0 minimum; local 4.3.2 available | Build/test source registration | Existing root project uses CMake 4.0 and local tool reports 4.3.2. [VERIFIED: `CMakeLists.txt`; `cmake --version`] |
 | vcpkg manifest mode | baseline `12dcccadfe573d0eaa6c67a968413ded7805d256` | Dependency acquisition | Project has committed `vcpkg.json` and `vcpkg-configuration.json`. [VERIFIED: `vcpkg.json`; `vcpkg-configuration.json`] |
 | libdeflate | vcpkg `1.25#0`, release v1.25 | BA2 deflate compression/decompression | vcpkg package is current at 1.25 and libdeflate supports whole-buffer raw DEFLATE compression/decompression. [CITED: https://vcpkg.io/en/package/libdeflate.html; CITED: https://raw.githubusercontent.com/ebiggers/libdeflate/v1.25/libdeflate.h] |
 | lz4 | vcpkg `1.10.0#0`, release v1.10.0 | Starfield v3 raw LZ4 block compression/decompression | Official `lz4.h` handles blocks, not frames, using `LZ4_compress_default` and `LZ4_decompress_safe`; Phase 8 method 3 needs raw blocks. [CITED: https://vcpkg.io/en/package/lz4.html; CITED: https://raw.githubusercontent.com/lz4/lz4/v1.10.0/lib/lz4.h; VERIFIED: Context7 `/lz4/lz4`] |
@@ -418,7 +418,7 @@ CHECK(extracted.value() == expected_bytes);
 
 | Dependency | Required By | Available | Version | Fallback |
 |------------|-------------|-----------|---------|----------|
-| CMake | Configure/build/source registration | ✓ | 4.3.2 | Existing minimum is 3.24. [VERIFIED: `cmake --version`; `CMakeLists.txt`] |
+| CMake | Configure/build/source registration | ✓ | 4.3.2 | Existing minimum is 4.0. [VERIFIED: `cmake --version`; `CMakeLists.txt`] |
 | CTest | Test execution | ✓ | 4.3.2 | Use CMake-bundled CTest. [VERIFIED: `ctest --version`] |
 | PowerShell | Local command execution | ✓ | 7.6.1 | — [VERIFIED: `pwsh --version`] |
 | vcpkg manifest files | Dependency specification | ✓ | baseline `12dcccad...` | Manifest exists even though `vcpkg` CLI is not on PATH. [VERIFIED: `vcpkg.json`; `vcpkg-configuration.json`; environment probe] |

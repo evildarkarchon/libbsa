@@ -106,7 +106,7 @@ The implementation should reuse Phase 8's safe publish, Starfield header option,
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
 | C++ | C++20 | Public API and implementation language. [VERIFIED: `CMakeLists.txt`; `AGENTS.md`] | Project constraint; avoids C++23-only `std::expected` in public headers. [VERIFIED: `AGENTS.md`; `include/libbsa/result.hpp`] |
-| CMake | Minimum 3.24; local CLI 4.3.2 | Build registration, CTest, installed headers. [VERIFIED: `CMakeLists.txt`; command `cmake --version`] | Existing project build system and presets require CMake. [VERIFIED: `CMakePresets.json`] |
+| CMake | Minimum 4.0; local CLI 4.3.2 | Build registration, CTest, installed headers. [VERIFIED: `CMakeLists.txt`; command `cmake --version`] | Existing project build system and presets require CMake. [VERIFIED: `CMakePresets.json`] |
 | vcpkg manifest mode | Baseline `12dcccadfe573d0eaa6c67a968413ded7805d256` | Dependency acquisition. [VERIFIED: `vcpkg.json`] | Existing project policy and manifest already provide required dependencies. [VERIFIED: `AGENTS.md`; `vcpkg.json`] |
 | DirectXTex | vcpkg `2026-03-31#0`, last updated 2026-04-01 | DDS metadata and validation behind private boundary. [CITED: https://vcpkg.io/en/package/directxtex.html] | Official DDS library supports `GetMetadataFromDDSMemory`, `LoadFromDDSMemory`, `TexMetadata`, and `ScratchImage`. [CITED: Context7 `/microsoft/directxtex`] |
 | libdeflate | vcpkg `1.25#0`, last updated 2025-11-03 | FO4 DX10 deflate chunk compression. [CITED: https://vcpkg.io/en/package/libdeflate.html] | Project requires libdeflate and existing router already supports deflate compression/decompression. [VERIFIED: `AGENTS.md`; `src/detail/compression_router.cpp`] |

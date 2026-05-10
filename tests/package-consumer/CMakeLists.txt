@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 4.0)
 
 project(libbsa_package_consumer LANGUAGES CXX)
 
@@ -10,8 +10,11 @@ target_link_libraries(libbsa_package_consumer PRIVATE libbsa::libbsa)
 
 # Keep the consumer test runnable for shared installs without relying on source-tree paths.
 add_custom_command(TARGET libbsa_package_consumer POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:libbsa_package_consumer> $<TARGET_FILE_DIR:libbsa_package_consumer>
-  COMMAND_EXPAND_LISTS
+  COMMAND ${CMAKE_COMMAND}
+    "-DRUNTIME_DLLS=$<TARGET_RUNTIME_DLLS:libbsa_package_consumer>"
+    "-DTARGET_DIR=$<TARGET_FILE_DIR:libbsa_package_consumer>"
+    -P "${CMAKE_CURRENT_LIST_DIR}/copy-runtime-dlls.cmake"
+  VERBATIM
 )
 
 enable_testing()

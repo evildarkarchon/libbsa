@@ -131,7 +131,7 @@ The planner should split work into API/boundary, private writer state and valida
 |---------------------|---------|---------|--------------|
 | C++ | C++20 | Public API and implementation language | Project requires C++20 and dependency-light public headers. [VERIFIED: CMakeLists.txt; VERIFIED: AGENTS.md] |
 | libbsa internal primitives | Current repo state | Path validation, hash calculation, binary writes, result errors | Required helpers already exist and avoid new dependencies. [VERIFIED: src/detail/archive_path.cpp; VERIFIED: src/detail/bethesda_hash.cpp; VERIFIED: src/detail/binary_io.hpp; VERIFIED: include/libbsa/result.hpp] |
-| CMake | 3.24 minimum; local tool `4.3.2` | Source registration, test target registration, CTest orchestration | Project CMake minimum is 3.24 and local CMake is available. [VERIFIED: CMakeLists.txt; VERIFIED: environment audit] |
+| CMake | 4.0 minimum; local tool `4.3.2` | Source registration, test target registration, CTest orchestration | Project CMake minimum is 4.0 and local CMake is available. [VERIFIED: CMakeLists.txt; VERIFIED: environment audit] |
 | Catch2 | vcpkg manifest dependency; existing stack records `3.14.0#0` | Unit, fixture, byte-level, and round-trip tests | Existing test target uses Catch2 and `catch_discover_tests`. [VERIFIED: vcpkg.json; VERIFIED: tests/CMakeLists.txt; CITED: /catchorg/catch2 docs] |
 | CTest | Bundled with CMake; local tool `4.3.2` | Running focused and full test suites | Existing test integration uses `catch_discover_tests(... ADD_TAGS_AS_LABELS DISCOVERY_MODE PRE_TEST)`. [VERIFIED: tests/CMakeLists.txt; VERIFIED: environment audit; CITED: /catchorg/catch2 docs] |
 | nlohmann-json | vcpkg manifest dependency | Test-only manifest validation | Existing tests link `nlohmann_json::nlohmann_json`; keep it test-only. [VERIFIED: vcpkg.json; VERIFIED: tests/CMakeLists.txt] |
@@ -479,7 +479,7 @@ CHECK(opened.value().extract_bytes("textures/memory/probe.dds").value() == memor
 
 | Dependency | Required By | Available | Version | Fallback |
 |------------|-------------|-----------|---------|----------|
-| CMake | Configure/build and CTest integration | ✓ | 4.3.2 local; project minimum 3.24 | — [VERIFIED: environment audit; VERIFIED: CMakeLists.txt] |
+| CMake | Configure/build and CTest integration | ✓ | 4.3.2 local; project minimum 4.0 | — [VERIFIED: environment audit; VERIFIED: CMakeLists.txt] |
 | CTest | Focused/full test runs | ✓ | 4.3.2 | — [VERIFIED: environment audit] |
 | Git | TES5Edit status check and repository verification | ✓ | 2.54.0.windows.1 | — [VERIFIED: environment audit] |
 | vcpkg manifest | Dependency acquisition | ✓ manifest exists | baseline `12dcccadfe573d0eaa6c67a968413ded7805d256`; no global `vcpkg` command found | Use configured toolchain/environment already used by project builds; planner should not require global `vcpkg` unless current presets do. [VERIFIED: environment audit; VERIFIED: vcpkg.json; VERIFIED: vcpkg-configuration.json] |

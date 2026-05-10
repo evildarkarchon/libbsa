@@ -27,7 +27,7 @@ Phase 1 must turn the repository into a buildable C++20 library foundation witho
 
 ### Build and Package Foundation
 
-- Use CMake minimum `3.24` and `project(libbsa VERSION 0.1.0 LANGUAGES CXX)`.
+- Use CMake minimum `4.0` and `project(libbsa VERSION 0.1.0 LANGUAGES CXX)`.
 - Create a real `libbsa` library target with `target_compile_features(libbsa PUBLIC cxx_std_20)`.
 - Keep public include directories limited to `include/` through generator expressions:
   - `$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>`

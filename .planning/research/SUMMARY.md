@@ -17,13 +17,13 @@ The main risks are compatibility corruption hidden behind superficially successf
 
 ### Recommended Stack
 
-Use C++20 with CMake and vcpkg manifest mode. C++20 satisfies the project constraint and gives modern value-oriented APIs without exposing C++23-only `std::expected`; use a project-owned result/error type instead. CMake 3.24+ with latest-CMake CI, committed vcpkg baseline, Catch2/CTest tests, and sanitizer lanes provides the right reusable-library foundation.
+Use C++20 with CMake and vcpkg manifest mode. C++20 satisfies the project constraint and gives modern value-oriented APIs without exposing C++23-only `std::expected`; use a project-owned result/error type instead. CMake 4.0+ with latest-CMake CI, committed vcpkg baseline, Catch2/CTest tests, and sanitizer lanes provides the right reusable-library foundation.
 
 Runtime dependencies are justified and should be narrowly wrapped: `libdeflate` for DEFLATE payloads, official `lz4` for both SSE frame LZ4 and Starfield raw block LZ4, and DirectXTex for BA2 DDS metadata/header reconstruction. All three should link privately where possible and never leak through installed public headers.
 
 **Core technologies:**
 - **C++20:** implementation and public API — aligns with requirements while avoiding C++23 public API drift.
-- **CMake 3.24+:** build, install/export, CTest orchestration — standard C++ library distribution path.
+- **CMake 4.0+:** build, install/export, CTest orchestration — standard C++ library distribution path.
 - **vcpkg manifest mode:** dependency acquisition — reproducible libdeflate/lz4/DirectXTex/Catch2 graph without vendoring.
 - **TES5Edit/BSArchPro:** read-only behavioral oracle — compatibility reference only; never edit, stage, compile, or vendor it.
 - **libdeflate:** DEFLATE compression/decompression — exact-size whole-buffer payload/chunk operations.

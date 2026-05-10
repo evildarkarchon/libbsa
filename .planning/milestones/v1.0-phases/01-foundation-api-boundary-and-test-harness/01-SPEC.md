@@ -80,7 +80,7 @@ The repository currently contains planning documents, `docs/PRD.md`, project age
 - The public library surface must remain C++20-compatible and must not expose C++23-only library types such as `std::expected`.
 - Public headers must not leak `libdeflate`, `lz4`, `DirectXTex`, platform SDK, or `TES5Edit/` headers.
 - Runtime dependencies must be acquired through vcpkg manifest mode and linked privately when possible.
-- CMake should use a modern minimum compatible with the project stack guidance (`3.24+`).
+- CMake should use a modern minimum compatible with the project stack guidance (`4.0+`).
 - `TES5Edit/` must remain read-only and must not be edited, formatted, compiled into libbsa, staged, or used as mutable test data.
 - Tests must be runnable through CTest and organized so future fixture, compatibility, malformed, slow, and local-game-data tests can be selected independently.
 - No additional external dependencies are introduced beyond the project-approved CMake, vcpkg, Catch2, libdeflate, lz4, and DirectXTex stack.

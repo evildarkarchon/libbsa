@@ -9,7 +9,7 @@
 - C++20 is required by `CMakeLists.txt` through `target_compile_features(libbsa PUBLIC cxx_std_20)` and by `CMakePresets.json` through `CMAKE_CXX_STANDARD=20`.
 
 **Secondary:**
-- CMake 3.24+ - Build, install/export packaging, docs target, tests, fixture generators, and package-consumer smoke tests are defined in `CMakeLists.txt`, `tests/CMakeLists.txt`, `tests/package-consumer/CMakeLists.txt`, `tests/package-consumer/smoke.cmake`, and `cmake/libbsaConfig.cmake.in`.
+- CMake 4.0+ - Build, install/export packaging, docs target, tests, fixture generators, and package-consumer smoke tests are defined in `CMakeLists.txt`, `tests/CMakeLists.txt`, `tests/package-consumer/CMakeLists.txt`, `tests/package-consumer/smoke.cmake`, and `cmake/libbsaConfig.cmake.in`.
 - Python 3 - Test-only manifest validation uses `tests/fixtures/generated/validate_fixture_manifests.py` and is wired with `find_package(Python3 COMPONENTS Interpreter REQUIRED)` in `tests/CMakeLists.txt`.
 - Markdown - Public documentation and policy evidence live in `docs/api-mainpage.md`, `docs/thread-safety.md`, `docs/target-format-guide.md`, `docs/integration-examples.md`, `docs/compatibility-evidence.md`, `tests/fixtures/README.md`, and `benchmarks/README.md`.
 - YAML - GitHub Actions CI is defined in `.github/workflows/ci.yml`.
@@ -30,7 +30,7 @@
 ## Frameworks
 
 **Core:**
-- CMake 3.24+ - `CMakeLists.txt` owns project configuration, C++20 compile features, install/export packaging, optional docs, optional benchmarks, and test subdirectory wiring.
+- CMake 4.0+ - `CMakeLists.txt` owns project configuration, C++20 compile features, install/export packaging, optional docs, optional benchmarks, and test subdirectory wiring.
 - vcpkg manifest mode - `vcpkg.json` owns dependency declaration for `libdeflate`, `lz4`, `directxtex`, `catch2`, and `nlohmann-json`.
 - CMake package exports - `CMakeLists.txt` installs `libbsaTargets`, writes `libbsaConfigVersion.cmake`, and configures `cmake/libbsaConfig.cmake.in` with transitive dependency discovery for consumers.
 
@@ -85,7 +85,7 @@
 ## Platform Requirements
 
 **Development:**
-- CMake 3.24+ and a C++20 compiler are required by `CMakeLists.txt` and `CMakePresets.json`.
+- CMake 4.0+ and a C++20 compiler are required by `CMakeLists.txt` and `CMakePresets.json`.
 - Windows/MSVC is the primary configured CI path through `.github/workflows/ci.yml` and the `windows-msvc-debug-static` plus `windows-msvc-debug-shared` presets in `CMakePresets.json`.
 - vcpkg must be available through `VCPKG_ROOT` for preset-based dependency resolution in `CMakePresets.json`.
 - Python3 is required when building tests because `tests/CMakeLists.txt` adds `validate_fixture_manifests`.

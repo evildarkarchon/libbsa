@@ -115,7 +115,7 @@ The largest implementation risk is writer memory behavior. [VERIFIED: source ins
 | Library / Tool | Version | Purpose | Why Standard |
 |----------------|---------|---------|--------------|
 | C++ standard library concurrency | C++20; MSVC has `<stop_token>` and `std::jthread` support from VS 2019 16.9 | Scoped workers, positive worker-count validation, result aggregation | Keeps public/runtime dependencies unchanged and matches the C++20 constraint. [CITED: learn.microsoft.com/cpp/overview/visual-cpp-language-conformance; VERIFIED: AGENTS.md] |
-| CMake | Minimum 3.24 in repo; local tool is 4.3.2 | Add benchmark/docs targets, presets, and optional docs checks | Repo already uses CMake presets and install/export package targets. [VERIFIED: CMakeLists.txt; VERIFIED: CMakePresets.json; VERIFIED: environment probe] |
+| CMake | Minimum 4.0 in repo; local tool is 4.3.2 | Add benchmark/docs targets, presets, and optional docs checks | Repo already uses CMake presets and install/export package targets. [VERIFIED: CMakeLists.txt; VERIFIED: CMakePresets.json; VERIFIED: environment probe] |
 | CTest | Local tool is 4.3.2 | Test orchestration, non-default benchmark/docs policy gates | Existing test suite is Catch2-discovered through CTest labels. [VERIFIED: tests/CMakeLists.txt; VERIFIED: environment probe] |
 | libdeflate | vcpkg registry reports 1.25 | Deflate compression/decompression for BSA/BA2 routes | Existing project dependency; do not replace or expose publicly. [VERIFIED: vcpkg x-package-info libdeflate; VERIFIED: vcpkg.json] |
 | lz4 | vcpkg registry reports 1.10.0 | LZ4 frame/raw-block compression/decompression | Existing project dependency; frame-vs-block route remains private. [VERIFIED: vcpkg x-package-info lz4; VERIFIED: vcpkg.json] |
@@ -526,7 +526,7 @@ Set warning behavior intentionally; a missing local Doxygen CLI should not block
 
 | Dependency | Required By | Available | Version | Fallback |
 |------------|-------------|-----------|---------|----------|
-| CMake | Configure/build/docs/benchmark targets | yes | 4.3.2 | Repo minimum is 3.24. [VERIFIED: environment probe; VERIFIED: CMakePresets.json] |
+| CMake | Configure/build/docs/benchmark targets | yes | 4.3.2 | Repo minimum is 4.0. [VERIFIED: environment probe; VERIFIED: CMakePresets.json] |
 | CTest | Test execution | yes | 4.3.2 | None needed. [VERIFIED: environment probe] |
 | vcpkg | Dependency acquisition | yes | 2026-04-08 program version | Use `C:\vcpkg\vcpkg.exe`; `VCPKG_ROOT` may need to be set for presets. [VERIFIED: environment probe; VERIFIED: CMakePresets.json] |
 | Python | Manifest/report validation scripts | yes | 3.14.4 | Existing CMake finds `Python3::Interpreter`. [VERIFIED: environment probe; VERIFIED: tests/CMakeLists.txt] |

@@ -254,6 +254,12 @@ add_test(
 )
 
 add_test(
+  NAME package_consumer_runtime_dll_copy
+  COMMAND ${CMAKE_COMMAND}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/package-consumer/verify-runtime-dll-copy.cmake
+)
+
+add_test(
   NAME validate_fixture_manifests
   COMMAND Python3::Interpreter
     ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/validate_fixture_manifests.py

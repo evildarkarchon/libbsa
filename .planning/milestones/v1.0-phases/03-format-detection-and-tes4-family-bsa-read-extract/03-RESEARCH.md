@@ -114,7 +114,7 @@ The parser needs to read BSA bytes from the host path, validate `BSA\0` magic, a
 | Library / Component | Version | Purpose | Why Standard |
 |---------------------|---------|---------|--------------|
 | C++20 public API | C++20 mode | Public value types, reader facade, result/error handling | Project and installed-boundary tests require C++20 and reject C++23-only `std::expected`. [VERIFIED: `AGENTS.md` lines 103-113; `tests/unit/public_include_boundary_tests.cpp` lines 12-25] |
-| CMake | 3.24 minimum; 4.3.2 available locally | Build, target sources, tests, install/export | Existing project uses CMake target file sets and CTest; local `cmake --version` returned 4.3.2. [VERIFIED: `CMakeLists.txt` lines 1-98; environment probe 2026-05-07] |
+| CMake | 4.0 minimum; 4.3.2 available locally | Build, target sources, tests, install/export | Existing project uses CMake target file sets and CTest; local `cmake --version` returned 4.3.2. [VERIFIED: `CMakeLists.txt` lines 1-98; environment probe 2026-05-07] |
 | vcpkg manifest mode | Baseline `12dcccadfe573d0eaa6c67a968413ded7805d256` | Dependency acquisition | Existing `vcpkg.json` declares libdeflate, lz4, DirectXTex, and Catch2; CMake presets use `$env{VCPKG_ROOT}`. [VERIFIED: `vcpkg.json` lines 1-17; `CMakePresets.json` lines 8-34] |
 | Phase 2 binary/path/hash/compression primitives | Current repo state | Safe reads, normalization, hashes, bounded payload transfer, exact-size decompression | Phase 3 should consume these internals instead of reimplementing them. [VERIFIED: `src/detail/binary_io.hpp` lines 12-50; `src/detail/archive_path.cpp` lines 24-57; `src/detail/bethesda_hash.cpp` lines 79-130; `src/detail/compression_router.cpp` lines 32-48] |
 | TES5Edit / BSArchPro source | Read-only submodule | Behavioral reference | Project explicitly uses `TES5Edit/Core/wbBSArchive.pas` and `TES5Edit/Core/wbBSA.pas` as compatibility reference while forbidding edits. [VERIFIED: `AGENTS.md` lines 3-29] |
@@ -415,7 +415,7 @@ Source: Context7 nlohmann/json file parse examples. [CITED: Context7 `/nlohmann/
 
 | Dependency | Required By | Available | Version | Fallback |
 |------------|------------|-----------|---------|----------|
-| CMake | Configure/build/test | ✓ | 4.3.2 | Project minimum is 3.24. [VERIFIED: environment probe 2026-05-07; `CMakePresets.json` lines 1-7] |
+| CMake | Configure/build/test | ✓ | 4.3.2 | Project minimum is 4.0. [VERIFIED: environment probe 2026-05-07; `CMakePresets.json` lines 1-7] |
 | vcpkg executable on PATH | Dependency install commands | ✗ | — | `VCPKG_ROOT=C:\vcpkg` exists and contains `scripts/buildsystems/vcpkg.cmake`; use explicit path or ensure PATH if invoking `vcpkg`. [VERIFIED: environment probe 2026-05-07; `CMakePresets.json` lines 17-30] |
 | vcpkg toolchain file | CMake presets | ✓ | `C:\vcpkg\scripts\buildsystems\vcpkg.cmake` | — [VERIFIED: environment probe 2026-05-07] |
 | Git | Submodule boundary checks | ✓ | 2.54.0.windows.1 | — [VERIFIED: environment probe 2026-05-07] |
