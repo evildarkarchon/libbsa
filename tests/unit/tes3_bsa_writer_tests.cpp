@@ -5,6 +5,7 @@
 #include <detail/bethesda_hash.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -84,12 +85,58 @@ std::vector<std::byte> bytes_from_text(std::string_view text) {
   return bytes;
 }
 
+class collecting_sink final : public libbsa::payload_sink {
+ public:
+  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
+    bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
+    return bytes.size();
+  }
+
+  [[nodiscard]] const std::vector<std::byte>& bytes() const noexcept { return bytes_; }
+
+ private:
+  std::vector<std::byte> bytes_;
+};
+
 void require_extracted_bytes(const libbsa::archive_reader& reader,
                              std::string_view path,
                              const std::vector<std::byte>& expected) {
   auto extracted = reader.extract_bytes(path);
   REQUIRE(extracted.has_value());
   CHECK(extracted.value() == expected);
+}
+
+void require_extracts_bytes(const libbsa::archive_reader& reader,
+                            std::string_view path,
+                            const std::vector<std::byte>& expected) {
+  require_extracted_bytes(reader, path, expected);
+
+  collecting_sink sink;
+  auto streamed = reader.extract(path, sink);
+  REQUIRE(streamed.has_value());
+  CHECK(sink.bytes() == expected);
+}
+
+libbsa::entry_metadata require_entry(const libbsa::archive_reader& reader, std::string_view path) {
+  auto found = reader.find(path);
+  REQUIRE(found.has_value());
+  REQUIRE(found.value().has_value());
+  return *found.value();
+}
+
+void require_contains_lookup_variants(const libbsa::archive_reader& reader,
+                                      std::string_view expected_canonical_path,
+                                      std::span<const std::string_view> lookup_variants) {
+  for (const auto lookup : lookup_variants) {
+    auto contained = reader.contains(lookup);
+    REQUIRE(contained.has_value());
+    CHECK(contained.value());
+
+    auto found = reader.find(lookup);
+    REQUIRE(found.has_value());
+    REQUIRE(found.value().has_value());
+    CHECK(found.value()->path == expected_canonical_path);
+  }
 }
 
 struct expected_tes3_layout_entry {
@@ -118,6 +165,12 @@ std::vector<expected_tes3_layout_entry> expected_hash_sorted_layout() {
     raw_offset += static_cast<std::uint32_t>(entry.payload.size());
   }
   return entries;
+}
+
+std::uint32_t data_section_start_from_tes3_bytes(const std::vector<std::byte>& bytes) {
+  const auto file_count = read_u32_le_at(bytes, 8U);
+  const auto hash_table_start = 12U + read_u32_le_at(bytes, 4U);
+  return hash_table_start + (file_count * 8U);
 }
 
 } // namespace
@@ -176,6 +229,94 @@ TEST_CASE("tes3_bsa_writer emits byte-accurate raw TES3 tables in hash order", "
     REQUIRE(payload_start + entry.payload.size() <= bytes.size());
     CHECK(std::vector<std::byte>{bytes.begin() + payload_start, bytes.begin() + payload_start + entry.payload.size()} ==
           entry.payload);
+  }
+}
+
+TEST_CASE("tes3_bsa_writer output reopens through reader lookup and extraction APIs", "[unit][tes3_bsa_writer]") {
+  const auto root = writer_test_dir() / "reader-backed-round-trip";
+  std::filesystem::create_directories(root);
+  const auto disk_source = root / "disk-probe.nif";
+  const auto archive = output_path("reader-backed-round-trip.bsa");
+
+  const auto disk_bytes = bytes_from_text("disk payload from host file");
+  auto memory_bytes = bytes_from_text("copied memory payload");
+  const auto copied_memory_bytes = memory_bytes;
+  const std::vector<std::byte> zero_bytes;
+  write_binary_file(disk_source, disk_bytes);
+
+  libbsa::tes3_bsa_writer_options options;
+  options.overwrite_existing = true;
+  libbsa::tes3_bsa_writer writer{options};
+  REQUIRE(writer.add_file("Meshes/Disk/Probe.NIF", disk_source.string()).has_value());
+  REQUIRE(writer.add_bytes("textures\\Memory\\Probe.dds", memory_bytes).has_value());
+  REQUIRE(writer.add_bytes("Readme.txt", std::span<const std::byte>{}).has_value());
+  memory_bytes.assign({std::byte{0x00}, std::byte{0x01}, std::byte{0x02}});
+
+  REQUIRE(writer.write_to(archive.string()).has_value());
+  const auto archive_bytes = read_binary_file(archive);
+  const auto data_section_start = data_section_start_from_tes3_bytes(archive_bytes);
+
+  auto opened = libbsa::archive_reader::open(archive.string());
+  REQUIRE(opened.has_value());
+  auto metadata = opened.value().metadata();
+  REQUIRE(metadata.has_value());
+  CHECK(metadata.value().type == libbsa::archive_type::bsa);
+  CHECK(metadata.value().variant == libbsa::archive_variant::tes3);
+  CHECK(metadata.value().version == 0x00000100U);
+  CHECK(metadata.value().file_count == 3U);
+  CHECK(metadata.value().default_compression == libbsa::entry_compression::none);
+
+  auto entries = opened.value().entries();
+  REQUIRE(entries.has_value());
+  REQUIRE(entries.value().size() == 3U);
+  for (const auto& entry : entries.value()) {
+    CHECK(entry.compression == libbsa::entry_compression::none);
+  }
+
+  const std::array<std::string_view, 3U> disk_lookups{"Meshes/Disk/Probe.NIF", "meshes/disk/probe.nif",
+                                                       "MESHES\\DISK\\PROBE.NIF"};
+  require_contains_lookup_variants(opened.value(), "meshes/disk/probe.nif", disk_lookups);
+  const std::array<std::string_view, 3U> memory_lookups{"textures/Memory/Probe.dds", "textures/memory/probe.dds",
+                                                         "TEXTURES\\MEMORY\\PROBE.DDS"};
+  require_contains_lookup_variants(opened.value(), "textures/memory/probe.dds", memory_lookups);
+  const std::array<std::string_view, 2U> root_lookups{"Readme.txt", "readme.txt"};
+  require_contains_lookup_variants(opened.value(), "readme.txt", root_lookups);
+
+  auto missing = opened.value().find("valid/missing/path.txt");
+  REQUIRE(missing.has_value());
+  CHECK_FALSE(missing.value().has_value());
+  auto missing_contains = opened.value().contains("valid/missing/path.txt");
+  REQUIRE(missing_contains.has_value());
+  CHECK_FALSE(missing_contains.value());
+  auto invalid_find = opened.value().find("../invalid.txt");
+  REQUIRE_FALSE(invalid_find.has_value());
+  CHECK(invalid_find.error().code == libbsa::error_code::invalid_argument);
+  auto invalid_contains = opened.value().contains("../invalid.txt");
+  REQUIRE_FALSE(invalid_contains.has_value());
+  CHECK(invalid_contains.error().code == libbsa::error_code::invalid_argument);
+
+  require_extracts_bytes(opened.value(), "Meshes/Disk/Probe.NIF", disk_bytes);
+  require_extracts_bytes(opened.value(), "textures/Memory/Probe.dds", copied_memory_bytes);
+  require_extracts_bytes(opened.value(), "Readme.txt", zero_bytes);
+
+  const auto disk_entry = require_entry(opened.value(), "Meshes/Disk/Probe.NIF");
+  const auto memory_entry = require_entry(opened.value(), "textures/Memory/Probe.dds");
+  const auto root_entry = require_entry(opened.value(), "Readme.txt");
+  CHECK(disk_entry.original_path == "Meshes/Disk/Probe.NIF");
+  CHECK(memory_entry.original_path == "textures/Memory/Probe.dds");
+  CHECK(root_entry.original_path == "Readme.txt");
+
+  const auto file_count = read_u32_le_at(archive_bytes, 8U);
+  const auto hash_table_start = 12U + read_u32_le_at(archive_bytes, 4U);
+  const auto file_records_start = 12U;
+  const auto name_offsets_start = file_records_start + (file_count * 8U);
+  const auto name_table_start = name_offsets_start + (file_count * 4U);
+  for (std::uint32_t index = 0; index < file_count; ++index) {
+    const auto raw_record_offset = read_u32_le_at(archive_bytes, file_records_start + (index * 8U) + 4U);
+    const auto name_offset = read_u32_le_at(archive_bytes, name_offsets_start + (index * 4U));
+    const auto name = read_null_terminated_name_at(archive_bytes, name_table_start + name_offset, hash_table_start);
+    const auto entry = require_entry(opened.value(), name);
+    CHECK(entry.payload_offset == static_cast<std::uint64_t>(data_section_start) + raw_record_offset);
   }
 }
 
