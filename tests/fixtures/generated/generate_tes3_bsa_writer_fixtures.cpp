@@ -131,6 +131,9 @@ void write_file(const std::filesystem::path& path, std::span<const std::byte> by
     throw std::runtime_error("failed to open " + path.string());
   }
   out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  if (!out) {
+    throw std::runtime_error("failed to write " + path.string());
+  }
 }
 
 void write_text(const std::filesystem::path& path, const std::string& text) {
@@ -140,6 +143,9 @@ void write_text(const std::filesystem::path& path, const std::string& text) {
     throw std::runtime_error("failed to open " + path.string());
   }
   out << text;
+  if (!out) {
+    throw std::runtime_error("failed to write " + path.string());
+  }
 }
 
 std::vector<std::byte> read_file(const std::filesystem::path& path) {
