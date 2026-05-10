@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -27,7 +28,12 @@ std::filesystem::path writer_test_dir() {
   return path;
 }
 
-std::filesystem::path output_path(std::string name) { return writer_test_dir() / std::move(name); }
+std::filesystem::path output_path(std::string name) {
+  static std::atomic_uint64_t counter{0};
+  auto path = writer_test_dir() / std::to_string(counter.fetch_add(1, std::memory_order_relaxed));
+  std::filesystem::create_directories(path);
+  return path / std::move(name);
+}
 
 void write_binary_file(const std::filesystem::path& path, const std::vector<std::byte>& bytes) {
   std::ofstream output{path, std::ios::binary | std::ios::trunc};
