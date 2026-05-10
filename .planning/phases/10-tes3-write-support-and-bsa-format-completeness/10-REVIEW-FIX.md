@@ -1,56 +1,44 @@
 ---
 phase: 10-tes3-write-support-and-bsa-format-completeness
-fixed_at: 2026-05-10T01:52:13Z
+fixed_at: 2026-05-10T02:02:32Z
 review_path: .planning/phases/10-tes3-write-support-and-bsa-format-completeness/10-REVIEW.md
-iteration: 1
-findings_in_scope: 5
-fixed: 5
+iteration: 2
+findings_in_scope: 3
+fixed: 3
 skipped: 0
 status: all_fixed
 ---
 
 # Phase 10: Code Review Fix Report
 
-**Fixed at:** 2026-05-10T01:52:13Z
+**Fixed at:** 2026-05-10T02:02:32Z
 **Source review:** .planning/phases/10-tes3-write-support-and-bsa-format-completeness/10-REVIEW.md
-**Iteration:** 1
+**Iteration:** 2
 
 **Summary:**
-- Findings in scope: 5
-- Fixed: 5
+- Findings in scope: 3
+- Fixed: 3
 - Skipped: 0
 
 ## Fixed Issues
 
-### CR-01: BLOCKER - `overwrite_existing=false` can still replace a concurrently-created output
+### CR-01: Non-overwrite publish can still replace a concurrently-created destination
 
-**Files modified:** `src/formats/bsa/tes3_bsa_writer.cpp`, `tests/unit/tes3_bsa_writer_tests.cpp`
-**Commit:** a2f034e, 6d7517b
-**Applied fix:** Rechecked the destination immediately before the non-overwrite publish rename and added a regression test that creates the destination while the writer is staging its temporary archive.
+**Files modified:** `src/detail/atomic_file_ops.hpp`, `src/formats/bsa/tes3_bsa_writer.cpp`
+**Commit:** dce8878
+**Applied fix:** Added an internal no-replace publish helper and routed non-overwrite final publication through it so an existing destination fails instead of being replaced.
 
-### CR-02: BLOCKER - Archive paths containing NUL produce unreadable/self-inconsistent archives
+### CR-02: Backup path selection is not reserved atomically and can clobber caller files
 
-**Files modified:** `src/formats/bsa/tes3_bsa_writer.cpp`, `tests/unit/tes3_bsa_writer_tests.cpp`
-**Commit:** 36a1b08
-**Applied fix:** Rejected embedded NUL bytes at TES3 writer entry creation for both memory and disk entries, with unit coverage for the invalid path case.
+**Files modified:** `src/formats/bsa/tes3_bsa_writer.cpp`
+**Commit:** 30a000a
+**Applied fix:** Moved overwrite backups into a writer-owned unique backup directory and used the same no-replace publish path for replacement publication.
 
-### WR-01: WARNING - Fixture generator does not verify writes completed successfully
+### WR-01: Race regression test is timing-dependent and can pass without covering the vulnerable window
 
-**Files modified:** `tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp`
-**Commit:** 7f97f18
-**Applied fix:** Checked output stream state after binary and text fixture writes and throw a provenance-generation error on write failure.
-
-### WR-02: WARNING - Fixture generator uses `std::tolower` without including `<cctype>`
-
-**Files modified:** `tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp`
-**Commit:** 4da851a
-**Applied fix:** Added the explicit `<cctype>` include required for `std::tolower`.
-
-### WR-03: WARNING - Tests and fixture targets are anchored to the top-level source directory
-
-**Files modified:** `tests/CMakeLists.txt`
-**Commit:** c7dc42f
-**Applied fix:** Replaced libbsa-owned `${CMAKE_SOURCE_DIR}` test include, definition, fixture output, and byproduct paths with `${PROJECT_SOURCE_DIR}`.
+**Files modified:** `src/detail/atomic_file_ops.hpp`, `tests/unit/tes3_bsa_writer_tests.cpp`
+**Commit:** adcba6f
+**Applied fix:** Removed the watcher/large-payload race test and replaced it with deterministic coverage for no-replace publishing and writer-owned backup-directory reservation.
 
 ## Skipped Issues
 
@@ -58,13 +46,12 @@ None.
 
 ## Verification
 
-- `cmake --preset windows-msvc-debug-static && cmake --build --preset windows-msvc-debug-static --target libbsa_tests generate_tes3_bsa_writer_fixtures_tool` — passed; MSBuild emitted only temporary-directory incremental-build warnings for the isolated worktree location.
-- `build/windows-msvc-debug-static/tests/Debug/libbsa_tests.exe "tes3_bsa_writer refuses a destination created during non-overwrite publish"` — passed after stabilizing the race regression test.
-- `build/windows-msvc-debug-static/tests/Debug/libbsa_tests.exe "[tes3_bsa_writer]"` — passed, 323 assertions in 13 test cases.
-- `build/windows-msvc-debug-static/tests/Debug/generate_tes3_bsa_writer_fixtures_tool.exe --output build/windows-msvc-debug-static/tes3-writer-fixture-check` — passed after creating the output directory.
+- `cmake --preset windows-msvc-debug-static && cmake --build --preset windows-msvc-debug-static --target libbsa_tests` — passed; MSBuild emitted only temporary-directory incremental-build warnings for the isolated worktree location.
+- `cmake --build --preset windows-msvc-debug-static --target libbsa_tests --clean-first && build/windows-msvc-debug-static/tests/Debug/libbsa_tests.exe "[tes3_bsa_writer]"` — passed, 345 assertions in 15 test cases.
+- `build/windows-msvc-debug-static/tests/Debug/libbsa_tests.exe "[tes3_bsa_writer]"` — passed after commits, 345 assertions in 15 test cases.
 
 ---
 
-_Fixed: 2026-05-10T01:52:13Z_
+_Fixed: 2026-05-10T02:02:32Z_
 _Fixer: the agent (gsd-code-fixer)_
-_Iteration: 1_
+_Iteration: 2_
