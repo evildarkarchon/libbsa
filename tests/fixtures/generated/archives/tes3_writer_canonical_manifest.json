@@ -1,0 +1,42 @@
+{
+  "variant": "tes3",
+  "version": 256,
+  "file_count": 2,
+  "data_section_start": 112,
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp",
+    "source": "synthetic repository-owned bytes; no game or TES5Edit bytes copied"
+  },
+  "entries": [
+    {
+      "source_kind": "disk",
+      "original_path": "Meshes/Writer/DiskProbe.NIF",
+      "canonical_path": "meshes/writer/diskprobe.nif",
+      "archive_hash": "0x7a287f08656b32b0",
+      "hash_low32": "0x656b32b0",
+      "hash_high32": "0x7a287f08",
+      "raw_tes3_data_offset": 0,
+      "payload_offset": 112,
+      "raw_size": 35,
+      "stored_size": 35,
+      "expected": {
+        "bytes_hex": "73796e746865746963205445533320777269746572206469736b207061796c6f61640a"
+      }
+    },
+    {
+      "source_kind": "memory",
+      "original_path": "Textures/Writer/MemoryProbe.dds",
+      "canonical_path": "textures/writer/memoryprobe.dds",
+      "archive_hash": "0x6e1d055a657a598d",
+      "hash_low32": "0x657a598d",
+      "hash_high32": "0x6e1d055a",
+      "raw_tes3_data_offset": 35,
+      "payload_offset": 147,
+      "raw_size": 37,
+      "stored_size": 37,
+      "expected": {
+        "bytes_hex": "73796e746865746963205445533320777269746572206d656d6f7279207061796c6f61640a"
+      }
+    }
+  ]
+}

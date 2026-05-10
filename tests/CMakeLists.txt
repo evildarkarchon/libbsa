@@ -79,6 +79,22 @@ target_include_directories(generate_tes3_bsa_fixtures_tool
     ${CMAKE_SOURCE_DIR}/src
 )
 
+add_executable(generate_tes3_bsa_writer_fixtures_tool
+  fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp
+)
+
+target_link_libraries(generate_tes3_bsa_writer_fixtures_tool
+  PRIVATE
+    libbsa::libbsa
+)
+
+target_compile_features(generate_tes3_bsa_writer_fixtures_tool PRIVATE cxx_std_20)
+
+target_include_directories(generate_tes3_bsa_writer_fixtures_tool
+  PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
 add_executable(generate_ba2_gnrl_fixtures_tool
   fixtures/generated/generate_ba2_gnrl_fixtures.cpp
 )
@@ -143,6 +159,16 @@ add_custom_target(generate_tes3_bsa_fixtures
     ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_unsorted_hash_records.bsa
     ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_raw_offset_absolute_regression.bsa
   COMMENT "Generating TES3 BSA success and malformed fixtures"
+  VERBATIM
+)
+
+add_custom_target(generate_tes3_bsa_writer_fixtures
+  COMMAND generate_tes3_bsa_writer_fixtures_tool --output ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives
+  DEPENDS generate_tes3_bsa_writer_fixtures_tool
+  BYPRODUCTS
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_writer_canonical.bsa
+    ${CMAKE_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_writer_canonical_manifest.json
+  COMMENT "Generating TES3 public-writer BSA fixture"
   VERBATIM
 )
 
