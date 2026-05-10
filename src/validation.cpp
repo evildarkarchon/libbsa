@@ -1,7 +1,11 @@
 #include <libbsa/validation.hpp>
 
+#include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <string>
+#include <string_view>
+#include <vector>
 
 namespace libbsa {
 namespace {
@@ -38,14 +42,81 @@ validation_report report_from_open_error(const error& err) {
   return report;
 }
 
-void validate_extractability(const archive_reader& reader, validation_report& report) {
-  auto entries = reader.entries();
-  if (!entries) {
-    append_fatal(report, entries.error().code);
+/// Appends a public compatibility warning while keeping parser coordinates private.
+void append_warning(validation_report& report,
+                    compatibility_warning_code code,
+                    compatibility_warning_severity severity,
+                    std::string message,
+                    std::optional<std::string> archive_path = std::nullopt) {
+  // Public warnings intentionally omit offsets and record/chunk indexes; those
+  // parser details are not stable compatibility evidence for consumers.
+  report.warnings.push_back(compatibility_warning{code, severity, std::move(message), std::move(archive_path)});
+}
+
+/// Returns an ASCII-lowercase copy for archive virtual path policy checks.
+std::string ascii_lowercase(std::string_view value) {
+  std::string lowered{value};
+  std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char ch) {
+    return static_cast<char>(std::tolower(ch));
+  });
+  return lowered;
+}
+
+/// Returns true when `path` uses a sound payload extension covered by the warning policy.
+bool has_sound_like_extension(std::string_view path) {
+  return path.ends_with(".wav") || path.ends_with(".xwm") || path.ends_with(".fuz");
+}
+
+/// Returns true when a normalized archive path is sound-like enough to warn if compressed.
+bool is_sound_like_path(std::string_view path) {
+  const auto normalized = ascii_lowercase(path);
+  return normalized.starts_with("sound/") || has_sound_like_extension(normalized);
+}
+
+/// Appends a target-family warning when caller expectations disagree with parsed metadata.
+void append_target_family_warning(const archive_metadata& metadata,
+                                  const validation_options& options,
+                                  validation_report& report) {
+  const bool type_mismatch = options.expected_type.has_value() && *options.expected_type != metadata.type;
+  const bool variant_mismatch = options.expected_variant.has_value() && *options.expected_variant != metadata.variant;
+  if (!type_mismatch && !variant_mismatch) {
     return;
   }
 
-  for (const auto& entry : entries.value()) {
+  append_warning(report,
+                 compatibility_warning_code::target_family_mismatch,
+                 compatibility_warning_severity::risky,
+                 "archive metadata does not match the requested target family");
+}
+
+/// Appends entry-level compatibility warnings that can be derived from public metadata.
+void append_entry_warnings(const archive_metadata& metadata,
+                           const std::vector<entry_metadata>& entries,
+                           validation_report& report) {
+  for (const auto& entry : entries) {
+    if (metadata.type == archive_type::bsa && entry.has_embedded_name) {
+      append_warning(report,
+                     compatibility_warning_code::bsa_embedded_name_compatibility_risk,
+                     compatibility_warning_severity::risky,
+                     "BSA entry uses an embedded file-name payload prefix",
+                     entry.path);
+    }
+
+    if (entry.compression != entry_compression::none && is_sound_like_path(entry.path)) {
+      append_warning(report,
+                     compatibility_warning_code::compressed_sound_payload,
+                     compatibility_warning_severity::advisory,
+                     "compressed sound payload may be incompatible with some toolchains",
+                     entry.path);
+    }
+  }
+}
+
+/// Validates every parsed entry through the public extraction convenience API.
+void validate_extractability(const archive_reader& reader,
+                             const std::vector<entry_metadata>& entries,
+                             validation_report& report) {
+  for (const auto& entry : entries) {
     auto extracted = reader.extract_bytes(entry.path);
     if (!extracted) {
       append_fatal(report, extracted.error().code);
@@ -84,8 +155,18 @@ result<validation_report> validate_archive(std::string_view host_path, validatio
   report.metadata = metadata.value();
   report.valid = true;
 
+  append_target_family_warning(metadata.value(), options, report);
+
+  auto entries = opened.value().entries();
+  if (!entries) {
+    append_fatal(report, entries.error().code);
+    report.valid = false;
+    return report;
+  }
+  append_entry_warnings(metadata.value(), entries.value(), report);
+
   if (options.validate_entry_extractability) {
-    validate_extractability(opened.value(), report);
+    validate_extractability(opened.value(), entries.value(), report);
   }
 
   report.valid = report.errors.empty();
