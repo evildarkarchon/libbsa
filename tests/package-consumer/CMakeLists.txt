@@ -10,7 +10,7 @@ target_link_libraries(libbsa_package_consumer PRIVATE libbsa::libbsa)
 
 # Keep the consumer test runnable for shared installs without relying on source-tree paths.
 add_custom_command(TARGET libbsa_package_consumer POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:libbsa_package_consumer> $<TARGET_RUNTIME_DLLS:libbsa_package_consumer>
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:libbsa_package_consumer> $<TARGET_FILE_DIR:libbsa_package_consumer>
   COMMAND_EXPAND_LISTS
 )
 

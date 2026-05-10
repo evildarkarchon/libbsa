@@ -13,6 +13,14 @@ find_package(directxtex CONFIG REQUIRED)
 option(LIBBSA_BUILD_TESTS "Build libbsa tests" ${BUILD_TESTING})
 option(LIBBSA_BUILD_BENCHMARKS "Build libbsa benchmark tools" ON)
 
+if(TARGET LZ4::lz4_static)
+  set(libbsa_lz4_target LZ4::lz4_static)
+elseif(TARGET LZ4::lz4_shared)
+  set(libbsa_lz4_target LZ4::lz4_shared)
+else()
+  set(libbsa_lz4_target lz4::lz4)
+endif()
+
 find_package(Doxygen QUIET)
 
 if(DOXYGEN_FOUND)
@@ -58,7 +66,8 @@ target_compile_options(libbsa
 target_link_libraries(libbsa
   PRIVATE
     $<IF:$<TARGET_EXISTS:libdeflate::libdeflate_static>,libdeflate::libdeflate_static,libdeflate::libdeflate_shared>
-    lz4::lz4
+    # Use the concrete vcpkg target when available so installed shared exports retain the LZ4 runtime DLL.
+    ${libbsa_lz4_target}
     Microsoft::DirectXTex
 )
 

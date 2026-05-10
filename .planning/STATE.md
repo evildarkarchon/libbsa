@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: Complete Library
 status: Awaiting next milestone
 stopped_at: Completed 12-07-PLAN.md
-last_updated: "2026-05-10T12:31:10.645Z"
-last_activity: 2026-05-10 — Completed quick task 260510-7if: Declare libbsa Windows-only and remove Linux CMake presets
+last_updated: "2026-05-10T12:47:00.167Z"
+last_activity: 2026-05-10 — Completed quick task 260510-7x3: Fix package consumer smoke CMake runtime DLL copy syntax
 progress:
   total_phases: 12
   completed_phases: 12
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 Phase: Milestone v1.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-05-10 — Completed quick task 260510-7if: Declare libbsa Windows-only and remove Linux CMake presets
+Last activity: 2026-05-10 — Completed quick task 260510-7x3: Fix package consumer smoke CMake runtime DLL copy syntax
 
 ## Performance Metrics
 
@@ -168,6 +168,7 @@ None yet.
 | 260510-6by | Fix vcpkg registry baseline CI failure | 2026-05-10 | ee0ca39 | [260510-6by-fix-vcpkg-registry-baseline-ci-failure](./quick/260510-6by-fix-vcpkg-registry-baseline-ci-failure/) |
 | 260510-6n7 | Route BA2 DX10 no-overwrite publish through no-replace helper | 2026-05-10 | uncommitted | [260510-6n7-route-ba2-dx10-no-overwrite-publish-thro](./quick/260510-6n7-route-ba2-dx10-no-overwrite-publish-thro/) |
 | 260510-7if | Declare libbsa Windows-only and remove Linux CMake presets | 2026-05-10 | uncommitted | [260510-7if-declare-libbsa-windows-only-and-remove-l](./quick/260510-7if-declare-libbsa-windows-only-and-remove-l/) |
+| 260510-7x3 | Fix package consumer smoke CMake runtime DLL copy syntax | 2026-05-10 | uncommitted | [260510-7x3-fix-package-consumer-smoke-cmake-runtime](./quick/260510-7x3-fix-package-consumer-smoke-cmake-runtime/) |
 
 ## Deferred Items
 
