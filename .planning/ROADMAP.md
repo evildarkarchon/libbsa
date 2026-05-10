@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 7: TES4-Family BSA Write-New Support** - Consumers can create compatible TES4/FO3/FNV/Skyrim LE/SSE BSA archives.
 - [ ] **Phase 8: BA2 GNRL Write-New Support** - Consumers can create compatible Fallout 4 and Starfield general BA2 archives.
 - [ ] **Phase 9: BA2 DX10 Write-New Support** - Consumers can create compatible Fallout 4 and Starfield texture BA2 archives from DDS input.
-- [ ] **Phase 10: TES3 Write Support and BSA Format Completeness** - Consumers can create Morrowind BSA archives and complete BSA read/write coverage.
+- [x] **Phase 10: TES3 Write Support and BSA Format Completeness** - Consumers can create Morrowind BSA archives and complete BSA read/write coverage. (completed 2026-05-10)
 - [ ] **Phase 11: Compatibility Warnings, Validation API, and Hardening** - Consumers receive structured validation results while malformed inputs are rejected safely.
 - [ ] **Phase 12: Performance, Concurrency, Documentation, and Polish** - Consumers can use bounded-memory, parallel-capable workflows with documented APIs and examples.
 
@@ -335,7 +335,7 @@ Plans:
 - [x] 10-04-PLAN.md — Prove writer output through archive_reader round-trip, lookup, and extraction APIs.
 
 **Wave 5** *(blocked on Wave 4 reader-backed writer output)*
-- [ ] 10-05-PLAN.md — Add public-writer fixture evidence and final BSA completeness regression gates.
+- [x] 10-05-PLAN.md — Add public-writer fixture evidence and final BSA completeness regression gates.
 
 ### Phase 11: Compatibility Warnings, Validation API, and Hardening
 **Goal**: Consumers and maintainers can validate archives and compatibility quirks with structured warnings/errors while malformed inputs are rejected safely.
@@ -377,6 +377,6 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 7. TES4-Family BSA Write-New Support | 0/TBD | Not started | - |
 | 8. BA2 GNRL Write-New Support | 6/6 | Complete | 2026-05-09 |
 | 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |
-| 10. TES3 Write Support and BSA Format Completeness | 4/5 | In Progress|  |
+| 10. TES3 Write Support and BSA Format Completeness | 5/5 | Complete   | 2026-05-10 |
 | 11. Compatibility Warnings, Validation API, and Hardening | 0/TBD | Not started | - |
 | 12. Performance, Concurrency, Documentation, and Polish | 0/TBD | Not started | - |
