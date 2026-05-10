@@ -95,6 +95,21 @@ TEST_CASE("benchmark_policy README documents commands schema and data policy", "
                       "does not gate"});
 }
 
+TEST_CASE("benchmark_policy keeps report generation out of default CTest timing gates", "[unit][benchmark_policy]") {
+  const auto root = source_root();
+  const auto cmake = read_text_file(root / "CMakeLists.txt");
+  const auto tests_cmake = read_text_file(root / "tests" / "CMakeLists.txt");
+
+  REQUIRE(cmake.find("add_custom_target(libbsa_benchmark_report") != std::string_view::npos);
+  REQUIRE(cmake.find("add_test") == std::string_view::npos);
+  require_no_tokens(tests_cmake,
+                    {"libbsa_benchmark_report",
+                     "libbsa_benchmarks",
+                     "libbsa-benchmark.json",
+                     "libbsa-benchmark.md",
+                     "elapsed_ms"});
+}
+
 TEST_CASE("benchmark_policy rejects fixed speedup threshold gates", "[unit][benchmark_policy]") {
   const auto root = source_root();
   const std::array files{
