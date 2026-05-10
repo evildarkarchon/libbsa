@@ -91,6 +91,19 @@ Game-derived archives must not be committed to this repository.
 - Tests that require local game data must be tagged `requires-game-fixture` and
   skipped by default when no local fixture path is configured.
 
+## Compatibility evidence
+
+`docs/compatibility-evidence.md` is the machine-checked compatibility evidence
+catalog for public validation warning codes. It links each warning rule to
+generated fixtures, writer-output archives, read-only reference notes, or
+optional local corpus checks.
+
+Phase 11 compatibility evidence must keep committed generated fixtures and
+writer-output archives as the mandatory path. Optional game archives or
+BSArchPro-derived compare output are smoke/compare only: tests must use the
+`requires-game-fixture` label, skip when `LIBBSA_GAME_FIXTURES` is unset, and
+must not commit copyrighted bytes or use `TES5Edit/` as a fixture workspace.
+
 ## Provenance requirements
 
 Each committed generated fixture must document:
