@@ -170,6 +170,10 @@ TEST_CASE("CI and presets preserve static shared and TES5Edit build boundaries",
 
   REQUIRE(workflow.find("windows-msvc-debug-static") != std::string::npos);
   REQUIRE(workflow.find("windows-msvc-debug-shared") != std::string::npos);
+  REQUIRE(workflow.find("LIBBSA_CMAKE_VERSION: 4.3.2") != std::string::npos);
+  REQUIRE(workflow.find("cmake-$cmakeVersion-windows-x86_64.zip") != std::string::npos);
+  REQUIRE(workflow.find("https://github.com/Kitware/CMake/releases/download") != std::string::npos);
+  REQUIRE(workflow.find("cmake --version") != std::string::npos);
   REQUIRE(workflow.find("cmake --preset ${{ matrix.preset }}") != std::string::npos);
   REQUIRE(workflow.find("cmake --build --preset ${{ matrix.preset }}") != std::string::npos);
   REQUIRE(workflow.find("ctest --preset ${{ matrix.preset }} --output-on-failure") != std::string::npos);
