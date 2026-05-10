@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
-status: milestone_complete
+milestone_name: Complete Library
+status: Awaiting next milestone
 stopped_at: Completed 12-07-PLAN.md
-last_updated: "2026-05-10T09:28:23.470Z"
-last_activity: 2026-05-10
+last_updated: "2026-05-10T10:24:16.885Z"
+last_activity: 2026-05-10 — Milestone v1.0 completed and archived
 progress:
   total_phases: 12
   completed_phases: 12
@@ -21,16 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-10)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 12 — performance-concurrency-documentation-and-polish
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-05-10 - Completed quick task 260510-46t: Close gaps and tech_debt from .planning/v1.0-MILESTONE-AUDIT.md
-
-Progress: [██████████] 100%
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-10 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -153,7 +151,13 @@ None yet.
 - Starfield BA2 v2/v3 fields and compression behavior need fixture-backed policy before future writer variants.
 - BA2 DDS reconstruction, cubemaps, mip ordering, and chunk limits should remain covered during hardening.
 - Public C++20 error/result API should avoid exposing C++23 `std::expected` until the project intentionally raises the language standard.
-- Phase 10 verification found two TES3 writer gaps: embedded NUL archive paths can produce self-inconsistent archives, and non-overwrite publish lacks a final no-replace check before rename.
+- v2 scope is not yet defined. Start with `$gsd-new-milestone` before adding new phases.
+
+## Milestone Archives
+
+| Milestone | Roadmap | Requirements | Audit | Phase Artifacts |
+|-----------|---------|--------------|-------|-----------------|
+| v1.0 Complete Library | [v1.0-ROADMAP.md](./milestones/v1.0-ROADMAP.md) | [v1.0-REQUIREMENTS.md](./milestones/v1.0-REQUIREMENTS.md) | [v1.0-MILESTONE-AUDIT.md](./milestones/v1.0-MILESTONE-AUDIT.md) | [v1.0-phases](./milestones/v1.0-phases/) |
 
 ### Quick Tasks Completed
 
@@ -174,3 +178,7 @@ None yet.
 Last session: 2026-05-10T08:59:27.146Z
 Stopped at: Completed 12-07-PLAN.md
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
