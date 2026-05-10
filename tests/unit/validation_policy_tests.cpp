@@ -128,3 +128,22 @@ TEST_CASE("CI and presets preserve static shared and TES5Edit build boundaries",
   REQUIRE(workflow.find("git status --short TES5Edit") != std::string::npos);
   REQUIRE(workflow.find("TES5Edit submodule changed during CI") != std::string::npos);
 }
+
+TEST_CASE("sanitizer validation path is additive and documented", "[unit][validation_policy]") {
+  const auto root = source_root();
+  const auto presets = read_text_file(root / "CMakePresets.json");
+  const auto workflow = read_text_file(root / ".github/workflows/ci.yml");
+  const auto fixture_policy = read_text_file(root / "tests/fixtures/README.md");
+
+  REQUIRE(presets.find("linux-clang-asan-ubsan") != std::string::npos);
+  REQUIRE(presets.find("-fsanitize=address,undefined") != std::string::npos);
+  REQUIRE(presets.find("windows-msvc-debug-static") != std::string::npos);
+  REQUIRE(presets.find("windows-msvc-debug-shared") != std::string::npos);
+
+  REQUIRE(workflow.find("windows-msvc-debug-static") != std::string::npos);
+  REQUIRE(workflow.find("windows-msvc-debug-shared") != std::string::npos);
+  REQUIRE(workflow.find("git status --short TES5Edit") != std::string::npos);
+
+  REQUIRE(fixture_policy.find("ctest --preset linux-clang-asan-ubsan -L \"malformed|validation|compression\" "
+                              "--output-on-failure") != std::string::npos);
+}
