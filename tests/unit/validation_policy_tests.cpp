@@ -60,6 +60,30 @@ TEST_CASE("requires-game-fixture label is selectable without local archives", "[
   REQUIRE(readme.find("LIBBSA_GAME_FIXTURES") != std::string::npos);
 }
 
+TEST_CASE("compatibility evidence catalog documents public warning codes", "[unit][compat][validation_policy]") {
+  const auto catalog = read_text_file(source_root() / "docs/compatibility-evidence.md");
+  constexpr std::array<std::string_view, 3> warning_codes{
+    "compressed_sound_payload",
+    "bsa_embedded_name_compatibility_risk",
+    "target_family_mismatch",
+  };
+
+  for (const auto code : warning_codes) {
+    const auto heading = "### `" + std::string{code} + "`";
+    const auto entry_start = catalog.find(heading);
+    INFO("Missing compatibility evidence entry: " << code);
+    REQUIRE(entry_start != std::string::npos);
+
+    const auto next_entry = catalog.find("\n### `", entry_start + heading.size());
+    const auto entry = catalog.substr(entry_start, next_entry - entry_start);
+    REQUIRE(entry.find("Rule:") != std::string::npos);
+    REQUIRE(entry.find("Evidence:") != std::string::npos);
+  }
+
+  REQUIRE(catalog.find("generated") != std::string::npos);
+  REQUIRE(catalog.find("writer-output") != std::string::npos);
+}
+
 TEST_CASE("local fixture policy keeps game archives ignored and provenance documented", "[unit][fixture]") {
   const auto root = source_root();
   const auto readme = read_text_file(root / "tests/fixtures/README.md");
