@@ -4,6 +4,7 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/compression_router.hpp>
+#include <detail/parallel_work.hpp>
 
 #include <algorithm>
 #include <array>
@@ -14,6 +15,8 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -118,7 +121,7 @@ result<void> ba2_gnrl_writer::write_to(std::string_view host_path, write_executi
   if (execution.worker_count == 0U) {
     return error{error_code::invalid_argument, "BA2 GNRL writer worker_count must be positive"};
   }
-  return formats::ba2::write_ba2_gnrl_archive(state_->target, state_->options, state_->entries, host_path);
+  return formats::ba2::write_ba2_gnrl_archive(state_->target, state_->options, state_->entries, host_path, execution.worker_count);
 }
 
 } // namespace libbsa
@@ -141,6 +144,7 @@ constexpr std::size_t gnrl_record_size = 36U;
 struct prepared_entry {
   std::string archive_path_original;
   std::string archive_path_canonical;
+  std::string source_path;
   std::array<std::byte, 4> extension{};
   std::uint32_t name_hash{};
   std::uint32_t directory_hash{};
@@ -148,6 +152,8 @@ struct prepared_entry {
   std::uint64_t payload_offset{};
   std::uint32_t packed_size{};
   std::uint32_t raw_size{};
+  std::uint64_t payload_hash{};
+  bool stream_from_disk{false};
   bool owns_payload_bytes{true};
   std::vector<std::byte> stored_payload;
 };
@@ -155,6 +161,64 @@ struct prepared_entry {
 struct payload_assignment {
   std::uint64_t offset{};
   std::uint32_t stored_size{};
+  std::size_t entry_index{};
+};
+
+struct dedupe_identity {
+  std::uint32_t stored_size{};
+  std::uint64_t hash{};
+
+  bool operator<(const dedupe_identity& other) const noexcept {
+    if (stored_size != other.stored_size) {
+      return stored_size < other.stored_size;
+    }
+    return hash < other.hash;
+  }
+};
+
+class stream_writer {
+ public:
+  explicit stream_writer(std::ostream& output) : output_(output) {}
+
+  result<void> write_bytes(std::span<const std::byte> bytes) {
+    if (bytes.empty()) {
+      return {};
+    }
+    output_.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    if (!output_) {
+      return error{error_code::io_error, "BA2 GNRL writer failed while streaming archive bytes"};
+    }
+    return {};
+  }
+
+  result<void> write_u8(std::uint8_t value) {
+    const std::byte byte{value};
+    return write_bytes(std::span<const std::byte>{&byte, 1U});
+  }
+
+  result<void> write_u16_le(std::uint16_t value) {
+    const std::array bytes{static_cast<std::byte>(value & 0xFFU), static_cast<std::byte>((value >> 8U) & 0xFFU)};
+    return write_bytes(std::span<const std::byte>{bytes.data(), bytes.size()});
+  }
+
+  result<void> write_u32_le(std::uint32_t value) {
+    const std::array bytes{static_cast<std::byte>(value & 0xFFU),
+                           static_cast<std::byte>((value >> 8U) & 0xFFU),
+                           static_cast<std::byte>((value >> 16U) & 0xFFU),
+                           static_cast<std::byte>((value >> 24U) & 0xFFU)};
+    return write_bytes(std::span<const std::byte>{bytes.data(), bytes.size()});
+  }
+
+  result<void> write_u64_le(std::uint64_t value) {
+    std::array<std::byte, 8U> bytes{};
+    for (std::size_t index = 0; index < bytes.size(); ++index) {
+      bytes[index] = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
+    }
+    return write_bytes(std::span<const std::byte>{bytes.data(), bytes.size()});
+  }
+
+ private:
+  std::ostream& output_;
 };
 
 bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept {
@@ -228,6 +292,133 @@ result<std::vector<std::byte>> read_source_bytes(const ba2_gnrl_writer_entry& en
   return bytes;
 }
 
+result<std::uint64_t> disk_file_size(const std::string& host_path) {
+  std::error_code fs_error;
+  const auto size = std::filesystem::file_size(host_path, fs_error);
+  if (fs_error) {
+    return error{error_code::io_error, "BA2 GNRL writer failed to inspect disk source size"};
+  }
+  return size;
+}
+
+std::uint64_t hash_bytes(std::span<const std::byte> bytes) noexcept {
+  std::uint64_t hash = 14695981039346656037ULL;
+  for (const auto byte : bytes) {
+    hash ^= std::to_integer<std::uint8_t>(byte);
+    hash *= 1099511628211ULL;
+  }
+  return hash;
+}
+
+result<std::uint64_t> hash_disk_payload(const std::string& host_path) {
+  std::ifstream input{host_path, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
+  }
+
+  std::uint64_t hash = 14695981039346656037ULL;
+  std::array<char, 64U * 1024U> scratch{};
+  while (input) {
+    input.read(scratch.data(), static_cast<std::streamsize>(scratch.size()));
+    const auto count = input.gcount();
+    for (std::streamsize index = 0; index < count; ++index) {
+      hash ^= static_cast<std::uint8_t>(static_cast<unsigned char>(scratch[static_cast<std::size_t>(index)]));
+      hash *= 1099511628211ULL;
+    }
+  }
+  if (input.bad()) {
+    return error{error_code::io_error, "BA2 GNRL writer failed while hashing disk source"};
+  }
+  return hash;
+}
+
+result<bool> compare_disk_payload_to_bytes(const std::string& host_path, std::span<const std::byte> expected) {
+  std::ifstream input{host_path, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
+  }
+
+  std::array<char, 64U * 1024U> scratch{};
+  std::size_t offset = 0;
+  while (offset < expected.size()) {
+    const auto requested = std::min<std::size_t>(scratch.size(), expected.size() - offset);
+    input.read(scratch.data(), static_cast<std::streamsize>(requested));
+    const auto count = input.gcount();
+    if (count != static_cast<std::streamsize>(requested)) {
+      return error{error_code::io_error, "BA2 GNRL writer failed while comparing disk source"};
+    }
+    for (std::size_t index = 0; index < requested; ++index) {
+      if (static_cast<std::byte>(static_cast<unsigned char>(scratch[index])) != expected[offset + index]) {
+        return false;
+      }
+    }
+    offset += requested;
+  }
+  return true;
+}
+
+result<bool> compare_disk_payloads(const std::string& lhs_path, const std::string& rhs_path, std::uint32_t size) {
+  std::ifstream lhs{lhs_path, std::ios::binary};
+  std::ifstream rhs{rhs_path, std::ios::binary};
+  if (!lhs || !rhs) {
+    return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
+  }
+
+  std::array<char, 64U * 1024U> lhs_scratch{};
+  std::array<char, 64U * 1024U> rhs_scratch{};
+  std::uint32_t remaining = size;
+  while (remaining > 0U) {
+    const auto requested = std::min<std::size_t>(lhs_scratch.size(), remaining);
+    lhs.read(lhs_scratch.data(), static_cast<std::streamsize>(requested));
+    rhs.read(rhs_scratch.data(), static_cast<std::streamsize>(requested));
+    if (lhs.gcount() != static_cast<std::streamsize>(requested) ||
+        rhs.gcount() != static_cast<std::streamsize>(requested)) {
+      return error{error_code::io_error, "BA2 GNRL writer failed while comparing disk sources"};
+    }
+    if (!std::equal(lhs_scratch.begin(), lhs_scratch.begin() + static_cast<std::ptrdiff_t>(requested), rhs_scratch.begin())) {
+      return false;
+    }
+    remaining -= static_cast<std::uint32_t>(requested);
+  }
+  return true;
+}
+
+result<bool> payloads_equal(const prepared_entry& lhs, const prepared_entry& rhs) {
+  if (lhs.stream_from_disk && rhs.stream_from_disk) {
+    return compare_disk_payloads(lhs.source_path, rhs.source_path, lhs.raw_size);
+  }
+  if (lhs.stream_from_disk) {
+    return compare_disk_payload_to_bytes(lhs.source_path, rhs.stored_payload);
+  }
+  if (rhs.stream_from_disk) {
+    return compare_disk_payload_to_bytes(rhs.source_path, lhs.stored_payload);
+  }
+  return lhs.stored_payload == rhs.stored_payload;
+}
+
+result<void> stream_disk_payload(const std::string& host_path, std::ostream& output) {
+  std::ifstream input{host_path, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
+  }
+
+  std::array<char, 64U * 1024U> scratch{};
+  while (input) {
+    input.read(scratch.data(), static_cast<std::streamsize>(scratch.size()));
+    const auto count = input.gcount();
+    if (count > 0) {
+      output.write(scratch.data(), count);
+      if (!output) {
+        return error{error_code::io_error, "BA2 GNRL writer failed while streaming disk source"};
+      }
+    }
+  }
+  if (input.bad()) {
+    return error{error_code::io_error, "BA2 GNRL writer failed while reading disk source"};
+  }
+  return {};
+}
+
 bool archive_default_compressed(archive_compression_policy policy) noexcept {
   switch (policy) {
   case archive_compression_policy::target_default:
@@ -271,26 +462,35 @@ result<detail::compression_method> compression_method_for_compressed_entry(ba2_g
 
 result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view archive_path);
 
-result<std::vector<prepared_entry>> prepare_entries(ba2_gnrl_target target,
-                                                    const ba2_gnrl_writer_options& options,
-                                                    std::span<const ba2_gnrl_writer_entry> entries) {
+result<prepared_entry> prepare_entry(ba2_gnrl_target target,
+                                     const ba2_gnrl_writer_options& options,
+                                     const ba2_gnrl_writer_entry& entry) {
   const bool archive_compressed = archive_default_compressed(options.compression);
-  std::vector<prepared_entry> prepared;
-  prepared.reserve(entries.size());
+  std::vector<std::byte> stored_payload;
+  std::uint64_t source_size = entry.from_memory ? entry.memory_bytes.size() : 0U;
+  if (!entry.from_memory) {
+    auto disk_size = disk_file_size(entry.host_path);
+    if (!disk_size) {
+      return disk_size.error();
+    }
+    source_size = disk_size.value();
+  }
 
-  for (const auto& entry : entries) {
+  const bool entry_compressed =
+      source_size != 0U && requested_entry_compression(archive_compressed, entry.options.compression);
+  auto raw_size = checked_u32(source_size, "BA2 GNRL raw payload size");
+  if (!raw_size) {
+    return raw_size.error();
+  }
+
+  std::uint32_t packed_size = 0U;
+  bool stream_from_disk = !entry.from_memory && !entry_compressed;
+  std::uint64_t payload_hash = 0U;
+  if (entry_compressed || entry.from_memory) {
     auto payload = read_source_bytes(entry);
     if (!payload) {
       return payload.error();
     }
-    const bool entry_compressed = !payload.value().empty() &&
-                                  requested_entry_compression(archive_compressed, entry.options.compression);
-    auto raw_size = checked_u32(payload.value().size(), "BA2 GNRL raw payload size");
-    if (!raw_size) {
-      return raw_size.error();
-    }
-    std::vector<std::byte> stored_payload;
-    std::uint32_t packed_size = 0U;
     if (entry_compressed) {
       auto method = compression_method_for_compressed_entry(target, options.starfield_compression_method);
       if (!method) {
@@ -309,27 +509,67 @@ result<std::vector<prepared_entry>> prepare_entries(ba2_gnrl_target target,
     } else {
       stored_payload = std::move(payload.value());
     }
-    auto extension = extension_fourcc_for(entry.archive_path_original);
-    if (!extension) {
-      return extension.error();
+    payload_hash = hash_bytes(stored_payload);
+  } else {
+    auto hash = hash_disk_payload(entry.host_path);
+    if (!hash) {
+      return hash.error();
     }
+    payload_hash = hash.value();
+  }
 
-    const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
-    if (file_name.empty()) {
-      return error{error_code::invalid_argument, "BA2 GNRL archive path must include a file name"};
+  auto extension = extension_fourcc_for(entry.archive_path_original);
+  if (!extension) {
+    return extension.error();
+  }
+
+  const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
+  if (file_name.empty()) {
+    return error{error_code::invalid_argument, "BA2 GNRL archive path must include a file name"};
+  }
+
+  return prepared_entry{entry.archive_path_original,
+                        entry.archive_path_canonical,
+                        entry.host_path,
+                        extension.value(),
+                        detail::hash_fo4(file_name),
+                        detail::hash_fo4(directory),
+                        entry.options.record_flags.value_or(0U),
+                        0U,
+                        packed_size,
+                        raw_size.value(),
+                        payload_hash,
+                        stream_from_disk,
+                        true,
+                        std::move(stored_payload)};
+}
+
+result<std::vector<prepared_entry>> prepare_entries(ba2_gnrl_target target,
+                                                    const ba2_gnrl_writer_options& options,
+                                                    std::span<const ba2_gnrl_writer_entry> entries,
+                                                    std::uint32_t worker_count) {
+  std::vector<std::optional<prepared_entry>> prepared_by_index(entries.size());
+  auto work = [&](std::size_t index) -> result<void> {
+    auto prepared = prepare_entry(target, options, entries[index]);
+    if (!prepared) {
+      return prepared.error();
     }
+    prepared_by_index[index] = std::move(prepared.value());
+    return {};
+  };
 
-    prepared.push_back(prepared_entry{entry.archive_path_original,
-                                      entry.archive_path_canonical,
-                                      extension.value(),
-                                      detail::hash_fo4(file_name),
-                                      detail::hash_fo4(directory),
-                                       entry.options.record_flags.value_or(0U),
-                                       0U,
-                                       packed_size,
-                                       raw_size.value(),
-                                       true,
-                                       std::move(stored_payload)});
+  auto prepared_work = detail::run_indexed_work(entries.size(), worker_count, work);
+  if (!prepared_work) {
+    return prepared_work.error();
+  }
+
+  std::vector<prepared_entry> prepared;
+  prepared.reserve(entries.size());
+  for (auto& entry : prepared_by_index) {
+    if (!entry.has_value()) {
+      return error{error_code::io_error, "BA2 GNRL worker did not prepare an entry"};
+    }
+    prepared.push_back(std::move(entry.value()));
   }
 
   // D-17 keeps Phase 8 deterministic with a canonical-path fallback because traced BA2 writer evidence does not
@@ -356,31 +596,48 @@ result<void> assign_payload_offsets(std::span<prepared_entry> entries,
   }
   const auto first_payload_offset = cursor;
 
-  std::map<std::vector<std::byte>, payload_assignment> deduplicated_payloads;
-  for (auto& entry : entries) {
+  std::map<dedupe_identity, std::vector<payload_assignment>> deduplicated_payloads;
+  for (std::size_t index = 0; index < entries.size(); ++index) {
+    auto& entry = entries[index];
+    auto stored_size = checked_u32(entry.stream_from_disk ? entry.raw_size : entry.stored_payload.size(),
+                                   "BA2 GNRL stored payload size");
+    if (!stored_size) {
+      return stored_size.error();
+    }
     if (deduplicate_payloads) {
       // D-23 requires dedupe after raw-vs-compressed routing, so this key is the exact byte span
       // the writer would store in the BA2 payload area rather than the caller's source bytes.
-      const auto duplicate = deduplicated_payloads.find(entry.stored_payload);
+      const dedupe_identity identity{stored_size.value(), entry.payload_hash};
+      auto duplicate = deduplicated_payloads.find(identity);
+      bool reused_payload = false;
       if (duplicate != deduplicated_payloads.end()) {
-        entry.payload_offset = duplicate->second.offset;
-        entry.owns_payload_bytes = false;
+        for (const auto& candidate : duplicate->second) {
+          auto equal = payloads_equal(entry, entries[candidate.entry_index]);
+          if (!equal) {
+            return equal.error();
+          }
+          if (equal.value()) {
+            entry.payload_offset = candidate.offset;
+            entry.owns_payload_bytes = false;
+            reused_payload = true;
+            break;
+          }
+        }
+      }
+      if (reused_payload) {
         continue;
       }
     }
 
     // Empty BA2 GNRL entries do not own a physical payload span. Point them at the first payload byte so
     // FileTableOffset remains after every real payload while readers validate the zero-length span safely.
-    entry.payload_offset = entry.stored_payload.empty() ? first_payload_offset : cursor;
+    entry.payload_offset = stored_size.value() == 0U ? first_payload_offset : cursor;
     entry.owns_payload_bytes = true;
-    auto stored_size = checked_u32(entry.stored_payload.size(), "BA2 GNRL stored payload size");
-    if (!stored_size) {
-      return stored_size.error();
-    }
     if (deduplicate_payloads) {
-      deduplicated_payloads.emplace(entry.stored_payload, payload_assignment{entry.payload_offset, stored_size.value()});
+      deduplicated_payloads[dedupe_identity{stored_size.value(), entry.payload_hash}].push_back(
+          payload_assignment{entry.payload_offset, stored_size.value(), index});
     }
-    if (!add_fits_u64(cursor, entry.stored_payload.size(), cursor)) {
+    if (!add_fits_u64(cursor, stored_size.value(), cursor)) {
       return error{error_code::format_error, "BA2 GNRL payload span overflows"};
     }
   }
@@ -389,7 +646,7 @@ result<void> assign_payload_offsets(std::span<prepared_entry> entries,
   return {};
 }
 
-result<void> write_name(detail::binary_writer& writer, std::string_view name) {
+result<void> write_name(stream_writer& writer, std::string_view name) {
   auto length = checked_u16(name.size(), "BA2 GNRL filename-table entry length");
   if (!length) {
     return length.error();
@@ -412,7 +669,12 @@ result<void> write_archive_bytes(ba2_gnrl_target target,
                                  std::uint32_t version,
                                  std::uint64_t file_table_offset,
                                  const std::filesystem::path& output_path) {
-  detail::binary_writer writer;
+  std::ofstream output{output_path, std::ios::binary | std::ios::trunc};
+  if (!output) {
+    return error{error_code::io_error, "BA2 GNRL writer failed to create temporary output"};
+  }
+
+  stream_writer writer{output};
   auto written = writer.write_u32_le(ba2_btdx_magic);
   if (!(written = writer.write_u32_le(version)) || !(written = writer.write_u32_le(ba2_gnrl_magic))) {
     return written.error();
@@ -453,8 +715,15 @@ result<void> write_archive_bytes(ba2_gnrl_target target,
     if (!entry.owns_payload_bytes) {
       continue;
     }
-    if (!(written = writer.write_bytes(entry.stored_payload))) {
-      return written.error();
+    if (entry.stream_from_disk) {
+      auto streamed = stream_disk_payload(entry.source_path, output);
+      if (!streamed) {
+        return streamed.error();
+      }
+    } else {
+      if (!(written = writer.write_bytes(entry.stored_payload))) {
+        return written.error();
+      }
     }
   }
 
@@ -465,12 +734,6 @@ result<void> write_archive_bytes(ba2_gnrl_target target,
   }
 
   (void)target;
-  std::ofstream output{output_path, std::ios::binary | std::ios::trunc};
-  if (!output) {
-    return error{error_code::io_error, "BA2 GNRL writer failed to create temporary output"};
-  }
-  const auto bytes = writer.bytes();
-  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
   if (!output) {
     return error{error_code::io_error, "BA2 GNRL writer failed while writing temporary output"};
   }
@@ -602,7 +865,8 @@ result<void> validate_entries(std::span<const ba2_gnrl_writer_entry> entries) {
 result<void> write_ba2_gnrl_archive(ba2_gnrl_target target,
                                     const ba2_gnrl_writer_options& options,
                                     std::span<const ba2_gnrl_writer_entry> entries,
-                                    std::string_view output_host_path) {
+                                    std::string_view output_host_path,
+                                    std::uint32_t worker_count) {
   if (output_host_path.empty()) {
     return error{error_code::invalid_argument, "BA2 GNRL output host path must not be empty"};
   }
@@ -627,7 +891,7 @@ result<void> write_ba2_gnrl_archive(ba2_gnrl_target target,
   }
 
   const auto version = version_for(target);
-  auto prepared = prepare_entries(target, options, entries);
+  auto prepared = prepare_entries(target, options, entries, worker_count);
   if (!prepared) {
     return prepared.error();
   }

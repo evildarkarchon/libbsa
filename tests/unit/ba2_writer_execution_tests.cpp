@@ -296,11 +296,14 @@ TEST_CASE("ba2_writer_execution DX10 worker_count preserves Fallout 4 deflate te
   const auto serial_output = root / "dx10-fo4-serial.ba2";
   const auto parallel_output = root / "dx10-fo4-parallel.ba2";
 
-  libbsa::ba2_dx10_writer serial_writer{libbsa::ba2_dx10_target::fallout4};
+  libbsa::ba2_dx10_writer_options options;
+  options.overwrite_existing = true;
+
+  libbsa::ba2_dx10_writer serial_writer{libbsa::ba2_dx10_target::fallout4, options};
   add_dx10_sources(serial_writer, entries);
   REQUIRE(serial_writer.write_to(serial_output.string()).has_value());
 
-  libbsa::ba2_dx10_writer parallel_writer{libbsa::ba2_dx10_target::fallout4};
+  libbsa::ba2_dx10_writer parallel_writer{libbsa::ba2_dx10_target::fallout4, options};
   add_dx10_sources(parallel_writer, entries);
   libbsa::write_execution_options execution;
   execution.worker_count = 4U;
@@ -325,11 +328,14 @@ TEST_CASE("ba2_writer_execution DX10 worker_count preserves starfield v3 raw LZ4
   const auto serial_output = root / "dx10-starfield-serial.ba2";
   const auto parallel_output = root / "dx10-starfield-parallel.ba2";
 
-  libbsa::ba2_dx10_writer serial_writer{libbsa::ba2_dx10_target::starfield_v3};
+  libbsa::ba2_dx10_writer_options options;
+  options.overwrite_existing = true;
+
+  libbsa::ba2_dx10_writer serial_writer{libbsa::ba2_dx10_target::starfield_v3, options};
   add_dx10_sources(serial_writer, entries);
   REQUIRE(serial_writer.write_to(serial_output.string()).has_value());
 
-  libbsa::ba2_dx10_writer parallel_writer{libbsa::ba2_dx10_target::starfield_v3};
+  libbsa::ba2_dx10_writer parallel_writer{libbsa::ba2_dx10_target::starfield_v3, options};
   add_dx10_sources(parallel_writer, entries);
   libbsa::write_execution_options execution;
   execution.worker_count = 4U;

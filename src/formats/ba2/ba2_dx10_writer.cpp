@@ -6,9 +6,11 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/compression_router.hpp>
+#include <detail/parallel_work.hpp>
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -16,12 +18,15 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "texture/directxtex_analyzer.hpp"
 #include "texture/dds_layout.hpp"
 
 namespace libbsa {
@@ -30,6 +35,18 @@ struct ba2_dx10_writer::state {
   ba2_dx10_target target;
   ba2_dx10_writer_options options;
   std::vector<formats::ba2::ba2_dx10_writer_entry> entries;
+  std::filesystem::path snapshot_dir;
+
+  state(ba2_dx10_target selected_target, ba2_dx10_writer_options selected_options)
+      : target(selected_target), options(selected_options) {}
+
+  ~state() {
+    std::error_code fs_error;
+    // Snapshot cleanup is best-effort; write_to returns the primary result before state teardown runs.
+    if (!snapshot_dir.empty()) {
+      std::filesystem::remove_all(snapshot_dir, fs_error);
+    }
+  }
 };
 
 namespace {
@@ -56,8 +73,51 @@ result<std::vector<std::byte>> read_dds_file(std::string_view dds_host_path) {
   return bytes;
 }
 
+result<std::filesystem::path> make_unique_snapshot_directory() {
+  static std::atomic_uint64_t counter{0U};
+  const auto root = std::filesystem::temp_directory_path();
+  for (std::uint32_t attempt = 0; attempt < 1024U; ++attempt) {
+    const auto id = counter.fetch_add(1U, std::memory_order_relaxed);
+    const auto candidate = root / ("libbsa-dx10-snapshot-" + std::to_string(id));
+    std::error_code fs_error;
+    if (std::filesystem::create_directory(candidate, fs_error)) {
+      return candidate;
+    }
+    if (fs_error) {
+      return error{error_code::io_error, "BA2 DX10 writer failed to reserve snapshot temp directory"};
+    }
+  }
+  return error{error_code::io_error, "BA2 DX10 writer exhausted snapshot temp directory names"};
+}
+
+result<void> ensure_snapshot_directory(std::filesystem::path& snapshot_dir_path) {
+  if (!snapshot_dir_path.empty()) {
+    return {};
+  }
+  auto snapshot_dir = make_unique_snapshot_directory();
+  if (!snapshot_dir) {
+    return snapshot_dir.error();
+  }
+  snapshot_dir_path = std::move(snapshot_dir.value());
+  return {};
+}
+
+result<void> write_snapshot_file(const std::filesystem::path& snapshot_path, std::span<const std::byte> bytes) {
+  std::ofstream output{snapshot_path, std::ios::binary | std::ios::trunc};
+  if (!output) {
+    return error{error_code::io_error, "BA2 DX10 writer failed to create snapshot temp file"};
+  }
+  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  if (!output) {
+    return error{error_code::io_error, "BA2 DX10 writer failed while writing snapshot temp file"};
+  }
+  return {};
+}
+
 result<formats::ba2::ba2_dx10_writer_entry> make_entry(std::string_view archive_path,
-                                                        std::string_view dds_host_path) {
+                                                        std::string_view dds_host_path,
+                                                        const std::filesystem::path& snapshot_dir,
+                                                        std::size_t entry_index) {
   auto canonical = detail::normalize_archive_path(archive_path);
   if (!canonical) {
     return canonical.error();
@@ -76,8 +136,19 @@ result<formats::ba2::ba2_dx10_writer_entry> make_entry(std::string_view archive_
   formats::ba2::ba2_dx10_writer_entry entry;
   entry.archive_path_original = preserved_archive_path(archive_path);
   entry.archive_path_canonical = std::move(canonical.value().value);
-  entry.dds_bytes = std::move(dds_bytes.value());
-  entry.source = std::move(source.value());
+  entry.metadata = source.value().metadata;
+  entry.subresources.reserve(source.value().subresources.size());
+  for (std::size_t index = 0; index < source.value().subresources.size(); ++index) {
+    const auto& subresource = source.value().subresources[index];
+    auto snapshot_path = snapshot_dir / ("entry-" + std::to_string(entry_index) + "-subresource-" +
+                                         std::to_string(index) + ".bin");
+    auto written = write_snapshot_file(snapshot_path, subresource.bytes);
+    if (!written) {
+      return written.error();
+    }
+    entry.subresources.push_back(formats::ba2::ba2_dx10_subresource_snapshot{
+        subresource.array_index, subresource.face_index, subresource.mip, subresource.bytes.size(), std::move(snapshot_path)});
+  }
   return entry;
 }
 
@@ -86,7 +157,7 @@ result<formats::ba2::ba2_dx10_writer_entry> make_entry(std::string_view archive_
 ba2_dx10_writer::ba2_dx10_writer(ba2_dx10_target target) : ba2_dx10_writer(target, ba2_dx10_writer_options{}) {}
 
 ba2_dx10_writer::ba2_dx10_writer(ba2_dx10_target target, ba2_dx10_writer_options options)
-    : state_(std::make_shared<state>(state{target, options, {}})) {}
+    : state_(std::make_shared<state>(target, options)) {}
 
 ba2_dx10_target ba2_dx10_writer::target() const noexcept { return state_->target; }
 
@@ -97,12 +168,17 @@ result<void> ba2_dx10_writer::add_file(std::string_view archive_path, std::strin
     return error{error_code::invalid_argument, "BA2 DX10 DDS source host path must not be empty"};
   }
 
-  auto entry = make_entry(archive_path, dds_host_path);
+  auto snapshot_dir = ensure_snapshot_directory(state_->snapshot_dir);
+  if (!snapshot_dir) {
+    return snapshot_dir.error();
+  }
+
+  auto entry = make_entry(archive_path, dds_host_path, state_->snapshot_dir, state_->entries.size());
   if (!entry) {
     return entry.error();
   }
 
-  // D-03 requires add-time ownership so later source file changes or deletion cannot affect output.
+  // D-17 keeps add-time ownership while avoiding a long-lived full DDS byte vector in writer state.
   state_->entries.push_back(std::move(entry.value()));
   return {};
 }
@@ -115,7 +191,7 @@ result<void> ba2_dx10_writer::write_to(std::string_view host_path, write_executi
   if (execution.worker_count == 0U) {
     return error{error_code::invalid_argument, "BA2 DX10 writer worker_count must be positive"};
   }
-  return formats::ba2::write_ba2_dx10_archive(state_->target, state_->options, state_->entries, host_path);
+  return formats::ba2::write_ba2_dx10_archive(state_->target, state_->options, state_->entries, host_path, execution.worker_count);
 }
 
 } // namespace libbsa
@@ -190,6 +266,51 @@ struct dedupe_key {
     }
     return static_cast<int>(compression) < static_cast<int>(other.compression);
   }
+};
+
+class stream_writer {
+ public:
+  explicit stream_writer(std::ostream& output) : output_(output) {}
+
+  result<void> write_bytes(std::span<const std::byte> bytes) {
+    if (bytes.empty()) {
+      return {};
+    }
+    output_.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    if (!output_) {
+      return error{error_code::io_error, "BA2 DX10 writer failed while streaming archive bytes"};
+    }
+    return {};
+  }
+
+  result<void> write_u8(std::uint8_t value) {
+    const std::byte byte{value};
+    return write_bytes(std::span<const std::byte>{&byte, 1U});
+  }
+
+  result<void> write_u16_le(std::uint16_t value) {
+    const std::array bytes{static_cast<std::byte>(value & 0xFFU), static_cast<std::byte>((value >> 8U) & 0xFFU)};
+    return write_bytes(std::span<const std::byte>{bytes.data(), bytes.size()});
+  }
+
+  result<void> write_u32_le(std::uint32_t value) {
+    const std::array bytes{static_cast<std::byte>(value & 0xFFU),
+                           static_cast<std::byte>((value >> 8U) & 0xFFU),
+                           static_cast<std::byte>((value >> 16U) & 0xFFU),
+                           static_cast<std::byte>((value >> 24U) & 0xFFU)};
+    return write_bytes(std::span<const std::byte>{bytes.data(), bytes.size()});
+  }
+
+  result<void> write_u64_le(std::uint64_t value) {
+    std::array<std::byte, 8U> bytes{};
+    for (std::size_t index = 0; index < bytes.size(); ++index) {
+      bytes[index] = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
+    }
+    return write_bytes(std::span<const std::byte>{bytes.data(), bytes.size()});
+  }
+
+ private:
+  std::ostream& output_;
 };
 
 bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept {
@@ -285,27 +406,53 @@ result<detail::compression_method> compression_method_for(ba2_dx10_target target
   return error{error_code::invalid_argument, "BA2 DX10 writer target profile is not supported"};
 }
 
+result<void> append_snapshot_bytes(std::vector<std::byte>& bytes, const ba2_dx10_subresource_snapshot& snapshot) {
+  std::ifstream input{snapshot.snapshot_path, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "BA2 DX10 writer failed to open snapshot temp file"};
+  }
+
+  std::array<char, 64U * 1024U> scratch{};
+  std::uint64_t remaining = snapshot.size;
+  while (remaining > 0U) {
+    const auto requested = std::min<std::size_t>(scratch.size(), static_cast<std::size_t>(remaining));
+    input.read(scratch.data(), static_cast<std::streamsize>(requested));
+    const auto count = input.gcount();
+    if (count != static_cast<std::streamsize>(requested)) {
+      return error{error_code::io_error, "BA2 DX10 writer failed while reading snapshot temp file"};
+    }
+    for (std::size_t index = 0; index < requested; ++index) {
+      bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(scratch[index])));
+    }
+    remaining -= requested;
+  }
+  return {};
+}
+
 result<void> append_subresource_bytes(std::vector<std::byte>& bytes,
-                                      const texture::dds_source_analysis& source,
+                                      const ba2_dx10_writer_entry& source,
                                       const texture::planned_texture_chunk& chunk) {
   // The writer does not transform DDS image data: it copies existing subresource bytes in the
   // BA2-required chunk layout without resizing, transcoding, mip generation, repair, or reordering.
   for (std::uint32_t mip = chunk.start_mip; mip <= chunk.end_mip; ++mip) {
-    const auto found = std::ranges::find_if(source.subresources, [&](const texture::dds_source_subresource& subresource) {
+    const auto found = std::ranges::find_if(source.subresources, [&](const ba2_dx10_subresource_snapshot& subresource) {
       return subresource.array_index == chunk.array_index && subresource.face_index == chunk.face_index &&
              subresource.mip == mip;
     });
     if (found == source.subresources.end()) {
       return error{error_code::format_error, "BA2 DX10 source DDS is missing a planned subresource"};
     }
-    bytes.insert(bytes.end(), found->bytes.begin(), found->bytes.end());
+    auto appended = append_snapshot_bytes(bytes, *found);
+    if (!appended) {
+      return appended.error();
+    }
   }
   return {};
 }
 
 result<prepared_chunk> prepare_chunk(ba2_dx10_target target,
                                      const ba2_dx10_writer_options& options,
-                                     const texture::dds_source_analysis& source,
+                                     const ba2_dx10_writer_entry& source,
                                      const texture::planned_texture_chunk& planned) {
   std::vector<std::byte> raw_bytes;
   auto appended = append_subresource_bytes(raw_bytes, source, planned);
@@ -352,13 +499,14 @@ result<prepared_chunk> prepare_chunk(ba2_dx10_target target,
 
 result<prepared_entry> prepare_entry(ba2_dx10_target target,
                                      const ba2_dx10_writer_options& options,
-                                     const ba2_dx10_writer_entry& entry) {
-  texture::dds_texture_layout layout{entry.source.metadata.width,
-                                     entry.source.metadata.height,
-                                     entry.source.metadata.mip_count,
-                                     entry.source.metadata.dxgi_format,
-                                     entry.source.metadata.array_size,
-                                     entry.source.metadata.is_cubemap};
+                                     const ba2_dx10_writer_entry& entry,
+                                     std::uint32_t worker_count) {
+  texture::dds_texture_layout layout{entry.metadata.width,
+                                     entry.metadata.height,
+                                     entry.metadata.mip_count,
+                                     entry.metadata.dxgi_format,
+                                     entry.metadata.array_size,
+                                     entry.metadata.is_cubemap};
   auto planned_chunks = texture::plan_dx10_chunks(layout, options.max_decoded_chunk_bytes);
   if (!planned_chunks) {
     return planned_chunks.error();
@@ -378,10 +526,10 @@ result<prepared_entry> prepare_entry(ba2_dx10_target target,
   }
 
   auto chunk_count = checked_u8(planned_chunks.value().size(), "BA2 DX10 chunk count");
-  auto height = checked_u16(entry.source.metadata.height, "BA2 DX10 texture height");
-  auto width = checked_u16(entry.source.metadata.width, "BA2 DX10 texture width");
-  auto mip_count = checked_u8(entry.source.metadata.mip_count, "BA2 DX10 mip count");
-  auto dxgi_format = checked_u8(entry.source.metadata.dxgi_format, "BA2 DX10 DXGI format");
+  auto height = checked_u16(entry.metadata.height, "BA2 DX10 texture height");
+  auto width = checked_u16(entry.metadata.width, "BA2 DX10 texture width");
+  auto mip_count = checked_u8(entry.metadata.mip_count, "BA2 DX10 mip count");
+  auto dxgi_format = checked_u8(entry.metadata.dxgi_format, "BA2 DX10 DXGI format");
   if (!chunk_count || !height || !width || !mip_count || !dxgi_format) {
     return !chunk_count ? chunk_count.error()
                         : (!height ? height.error() : (!width ? width.error() : (!mip_count ? mip_count.error() : dxgi_format.error())));
@@ -398,13 +546,25 @@ result<prepared_entry> prepare_entry(ba2_dx10_target target,
                           width.value(),
                           mip_count.value(),
                           dxgi_format.value(),
-                          entry.source.metadata.is_cubemap ? ba2_dx10_cubemap_raw : ba2_dx10_non_cubemap_raw,
+                          entry.metadata.is_cubemap ? ba2_dx10_cubemap_raw : ba2_dx10_non_cubemap_raw,
                           {}};
-  prepared.chunks.reserve(planned_chunks.value().size());
-  for (const auto& planned : planned_chunks.value()) {
-    auto chunk = prepare_chunk(target, options, entry.source, planned);
+  std::vector<std::optional<prepared_chunk>> chunks_by_index(planned_chunks.value().size());
+  auto work = [&](std::size_t index) -> result<void> {
+    auto chunk = prepare_chunk(target, options, entry, planned_chunks.value()[index]);
     if (!chunk) {
       return chunk.error();
+    }
+    chunks_by_index[index] = std::move(chunk.value());
+    return {};
+  };
+  auto prepared_chunks = detail::run_indexed_work(planned_chunks.value().size(), worker_count, work);
+  if (!prepared_chunks) {
+    return prepared_chunks.error();
+  }
+  prepared.chunks.reserve(planned_chunks.value().size());
+  for (auto& chunk : chunks_by_index) {
+    if (!chunk.has_value()) {
+      return error{error_code::io_error, "BA2 DX10 worker did not prepare a texture chunk"};
     }
     prepared.chunks.push_back(std::move(chunk.value()));
   }
@@ -413,11 +573,12 @@ result<prepared_entry> prepare_entry(ba2_dx10_target target,
 
 result<std::vector<prepared_entry>> prepare_entries(ba2_dx10_target target,
                                                     const ba2_dx10_writer_options& options,
-                                                    std::span<const ba2_dx10_writer_entry> entries) {
+                                                    std::span<const ba2_dx10_writer_entry> entries,
+                                                    std::uint32_t worker_count) {
   std::vector<prepared_entry> prepared;
   prepared.reserve(entries.size());
   for (const auto& entry : entries) {
-    auto next = prepare_entry(target, options, entry);
+    auto next = prepare_entry(target, options, entry, worker_count);
     if (!next) {
       return next.error();
     }
@@ -484,7 +645,7 @@ result<void> assign_payload_offsets(std::span<prepared_entry> entries,
   return {};
 }
 
-result<void> write_name(detail::binary_writer& writer, std::string_view name) {
+result<void> write_name(stream_writer& writer, std::string_view name) {
   auto length = checked_u16(name.size(), "BA2 DX10 filename-table entry length");
   if (!length) {
     return length.error();
@@ -506,7 +667,12 @@ result<void> write_archive_bytes(const ba2_dx10_writer_options& options,
                                  std::uint32_t version,
                                  std::uint64_t file_table_offset,
                                  const std::filesystem::path& output_path) {
-  detail::binary_writer writer;
+  std::ofstream output{output_path, std::ios::binary | std::ios::trunc};
+  if (!output) {
+    return error{error_code::io_error, "BA2 DX10 writer failed to create temporary output"};
+  }
+
+  stream_writer writer{output};
   auto written = writer.write_u32_le(ba2_btdx_magic);
   if (!(written = writer.write_u32_le(version)) || !(written = writer.write_u32_le(ba2_dx10_magic))) {
     return written.error();
@@ -558,12 +724,6 @@ result<void> write_archive_bytes(const ba2_dx10_writer_options& options,
     }
   }
 
-  std::ofstream output{output_path, std::ios::binary | std::ios::trunc};
-  if (!output) {
-    return error{error_code::io_error, "BA2 DX10 writer failed to create temporary output"};
-  }
-  const auto bytes = writer.bytes();
-  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
   if (!output) {
     return error{error_code::io_error, "BA2 DX10 writer failed while writing temporary output"};
   }
@@ -657,7 +817,7 @@ result<void> validate_entries(std::span<const ba2_dx10_writer_entry> entries) {
     if (!fourcc) {
       return fourcc.error();
     }
-    if (entry.source.subresources.empty() || entry.source.image_payload_bytes.empty()) {
+    if (entry.subresources.empty()) {
       return error{error_code::format_error, "BA2 DX10 writer entry has no DDS image payload"};
     }
   }
@@ -669,7 +829,8 @@ result<void> validate_entries(std::span<const ba2_dx10_writer_entry> entries) {
 result<void> write_ba2_dx10_archive(ba2_dx10_target target,
                                     const ba2_dx10_writer_options& options,
                                     std::span<const ba2_dx10_writer_entry> entries,
-                                    std::string_view output_host_path) {
+                                    std::string_view output_host_path,
+                                    std::uint32_t worker_count) {
   if (output_host_path.empty()) {
     return error{error_code::invalid_argument, "BA2 DX10 output host path must not be empty"};
   }
@@ -694,7 +855,7 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target,
   }
 
   const auto version = version_for(target);
-  auto prepared = prepare_entries(target, options, entries);
+  auto prepared = prepare_entries(target, options, entries, worker_count);
   if (!prepared) {
     return prepared.error();
   }
