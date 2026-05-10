@@ -111,7 +111,7 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 - [x] **PERF-02**: Consumer can pack large archives using streaming writer flows and bounded scratch buffers.
 - [x] **PERF-03**: Consumer can opt into parallel compression during packing after single-threaded correctness is established.
 - [x] **PERF-04**: Consumer can opt into parallel decompression during bulk extraction after single-threaded correctness is established.
-- [ ] **PERF-05**: Maintainer can run benchmarks comparing single-threaded and multi-threaded packing/extraction for large archives.
+- [x] **PERF-05**: Maintainer can run benchmarks comparing single-threaded and multi-threaded packing/extraction for large archives.
 - [ ] **PERF-06**: Consumer can understand documented thread-safety guarantees for readers, writers, entries, callbacks, and sinks.
 
 ### Documentation and Examples
@@ -231,7 +231,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERF-02 | Phase 12: Performance, Concurrency, Documentation, and Polish | Complete |
 | PERF-03 | Phase 12: Performance, Concurrency, Documentation, and Polish | Complete |
 | PERF-04 | Phase 12: Performance, Concurrency, Documentation, and Polish | Complete |
-| PERF-05 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
+| PERF-05 | Phase 12: Performance, Concurrency, Documentation, and Polish | Complete |
 | PERF-06 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
 | DOC-01 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |
 | DOC-02 | Phase 12: Performance, Concurrency, Documentation, and Polish | Pending |

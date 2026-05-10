@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 12-04-PLAN.md
-last_updated: "2026-05-10T08:31:55.959Z"
+stopped_at: Completed 12-05-PLAN.md
+last_updated: "2026-05-10T08:42:02.084Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 12
   completed_phases: 11
   total_plans: 75
-  completed_plans: 72
-  percent: 96
+  completed_plans: 73
+  percent: 97
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 12 (performance-concurrency-documentation-and-polish) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-05-10
 
-Progress: [██████████] 96%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████████] 96%
 | Phase 12 P02 | 6min | 3 tasks | 8 files |
 | Phase 12 P03 | 10min | 3 tasks | 6 files |
 | Phase 12 P04 | 12.3min | 3 tasks | 7 files |
+| Phase 12 P05 | 7min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 12]: BA2 GNRL raw disk payloads stream from caller-owned source files during final output while compressed entries remain bounded to per-entry codec buffers. — This satisfies PERF-02 bounded-memory finalization without changing the codec requirement for compressed payloads.
 - [Phase 12]: BA2 DX10 add_file stores writer-owned temp snapshots per subresource instead of retaining whole DDS source bytes in writer state. — This preserves add-time ownership and later source-mutation behavior while keeping long-lived writer memory bounded.
 - [Phase 12]: BA2 worker_count parallelism stores prepared results by deterministic entry/chunk index before sorting and offset assignment. — This keeps serial and parallel BA2 outputs compatible and deterministic.
+- [Phase ?]: Benchmark evidence uses a custom C++20 runner with no new benchmark dependency. — Plan 12-05 keeps benchmark tooling lightweight and avoids adding a benchmark library dependency.
+- [Phase ?]: Benchmark data is generated legal synthetic temp data and never uses TES5Edit or game archives. — Preserves D-26 and D-27 fixture legality and reference-boundary rules.
+- [Phase ?]: Benchmark timing is report-only; correctness, report generation, and explicit target wiring are the automated contract. — Default tests must not fail on host-dependent speedup values.
 
 ### Pending Todos
 
@@ -152,6 +156,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T08:31:55.952Z
-Stopped at: Completed 12-04-PLAN.md
+Last session: 2026-05-10T08:42:01.831Z
+Stopped at: Completed 12-05-PLAN.md
 Resume file: None
