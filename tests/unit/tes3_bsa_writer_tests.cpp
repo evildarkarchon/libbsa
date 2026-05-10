@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <nlohmann/json.hpp>
+
 #include <detail/bethesda_hash.hpp>
 
 #include <algorithm>
@@ -40,6 +42,12 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
     bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
   }
   return bytes;
+}
+
+nlohmann::json read_json_file(const std::filesystem::path& path) {
+  std::ifstream input{path, std::ios::binary};
+  REQUIRE(input.good());
+  return nlohmann::json::parse(input);
 }
 
 std::vector<std::byte> sample_bytes() {
@@ -173,7 +181,18 @@ std::uint32_t data_section_start_from_tes3_bytes(const std::vector<std::byte>& b
   return hash_table_start + (file_count * 8U);
 }
 
+std::filesystem::path generated_archive_dir() {
+  return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" / "archives";
+}
+
 } // namespace
+
+TEST_CASE("tes3_bsa_writer committed fixture manifest records canonical writer evidence",
+          "[unit][fixture][tes3_bsa_writer]") {
+  const auto manifest = read_json_file(generated_archive_dir() / "tes3_writer_canonical_manifest.json");
+
+  REQUIRE(manifest.at("manifest_kind").get<std::string>() == "tes3_writer_canonical");
+}
 
 TEST_CASE("tes3_bsa_writer emits byte-accurate raw TES3 tables in hash order", "[unit][tes3_bsa_writer]") {
   const auto archive = output_path("byte-accurate-layout.bsa");
