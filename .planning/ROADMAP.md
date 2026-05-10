@@ -323,7 +323,7 @@ Plans:
 Plans:
 
 **Wave 1**
-- [ ] 10-01-PLAN.md — Define the dependency-light public TES3 writer contract and private bridge.
+- [x] 10-01-PLAN.md — Define the dependency-light public TES3 writer contract and private bridge.
 
 **Wave 2** *(blocked on Wave 1 public TES3 writer contract)*
 - [ ] 10-02-PLAN.md — Implement source ownership, validation, and safe publish behavior.
@@ -377,6 +377,6 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 7. TES4-Family BSA Write-New Support | 0/TBD | Not started | - |
 | 8. BA2 GNRL Write-New Support | 6/6 | Complete | 2026-05-09 |
 | 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |
-| 10. TES3 Write Support and BSA Format Completeness | 0/TBD | Not started | - |
+| 10. TES3 Write Support and BSA Format Completeness | 1/5 | In Progress|  |
 | 11. Compatibility Warnings, Validation API, and Hardening | 0/TBD | Not started | - |
 | 12. Performance, Concurrency, Documentation, and Polish | 0/TBD | Not started | - |

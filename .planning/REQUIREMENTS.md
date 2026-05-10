@@ -74,7 +74,7 @@ Requirements for the initial complete library scope. Each maps to roadmap phases
 - [x] **WBSA-01**: Consumer can create new TES4/Oblivion BSA v103 archives from disk files or memory buffers.
 - [x] **WBSA-02**: Consumer can create new FO3/FNV/Skyrim LE BSA v104 archives from disk files or memory buffers.
 - [x] **WBSA-03**: Consumer can create new Skyrim SE/AE BSA v105 archives from disk files or memory buffers.
-- [ ] **WBSA-04**: Consumer can create new TES3/Morrowind BSA archives from disk files or memory buffers.
+- [x] **WBSA-04**: Consumer can create new TES3/Morrowind BSA archives from disk files or memory buffers.
 - [x] **WBSA-05**: Writer can generate folder and file indexes sorted by format-compatible hash order.
 - [x] **WBSA-06**: Writer can derive archive flags and file flags from content using compatible behavior.
 - [x] **WBSA-07**: Writer can apply per-file compression overrides while respecting target archive defaults.
@@ -203,7 +203,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WBSA-01 | Phase 7: TES4-Family BSA Write-New Support | Complete |
 | WBSA-02 | Phase 7: TES4-Family BSA Write-New Support | Complete |
 | WBSA-03 | Phase 7: TES4-Family BSA Write-New Support | Complete |
-| WBSA-04 | Phase 10: TES3 Write Support and BSA Format Completeness | Pending |
+| WBSA-04 | Phase 10: TES3 Write Support and BSA Format Completeness | Complete |
 | WBSA-05 | Phase 7: TES4-Family BSA Write-New Support | Complete |
 | WBSA-06 | Phase 7: TES4-Family BSA Write-New Support | Complete |
 | WBSA-07 | Phase 7: TES4-Family BSA Write-New Support | Complete |
