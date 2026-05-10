@@ -31,6 +31,9 @@ result<archive_path_key> normalize_archive_path(std::string_view input) {
   std::string segment;
 
   for (const char raw : input) {
+    if (raw == '\0') {
+      return invalid_path_error();
+    }
     const char normalized = raw == '\\' ? '/' : lower_ascii(raw);
     if (normalized == '/') {
       if (segment.empty() || segment == "." || segment == "..") {
