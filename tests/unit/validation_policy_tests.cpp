@@ -1,12 +1,16 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <array>
+#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace {
 
@@ -29,6 +33,50 @@ bool command_succeeds(const std::string& command) {
 
 std::string quoted_path(const std::filesystem::path& path) {
   return '"' + path.string() + '"';
+}
+
+std::string trim_copy(std::string value) {
+  const auto first = std::find_if(value.begin(), value.end(), [](unsigned char ch) {
+    return !std::isspace(ch);
+  });
+  const auto last = std::find_if(value.rbegin(), value.rend(), [](unsigned char ch) {
+                      return !std::isspace(ch);
+                    }).base();
+
+  if (first >= last) {
+    return {};
+  }
+  return std::string{first, last};
+}
+
+std::vector<std::string> compatibility_warning_codes_from_public_header() {
+  const auto header = read_text_file(source_root() / "include/libbsa/validation.hpp");
+  const auto enum_name = std::string{"enum class compatibility_warning_code"};
+  const auto enum_start = header.find(enum_name);
+  REQUIRE(enum_start != std::string::npos);
+
+  const auto body_start = header.find('{', enum_start);
+  REQUIRE(body_start != std::string::npos);
+  const auto body_end = header.find("};", body_start);
+  REQUIRE(body_end != std::string::npos);
+
+  std::vector<std::string> codes;
+  std::istringstream lines{header.substr(body_start + 1, body_end - body_start - 1)};
+  std::string line;
+  while (std::getline(lines, line)) {
+    if (const auto comment = line.find("//"); comment != std::string::npos) {
+      line.erase(comment);
+    }
+    if (const auto comma = line.find(','); comma != std::string::npos) {
+      line.erase(comma);
+    }
+
+    auto code = trim_copy(line);
+    if (!code.empty()) {
+      codes.push_back(std::move(code));
+    }
+  }
+  return codes;
 }
 
 } // namespace
@@ -62,14 +110,11 @@ TEST_CASE("requires-game-fixture label is selectable without local archives", "[
 
 TEST_CASE("compatibility evidence catalog documents public warning codes", "[unit][compat][validation_policy]") {
   const auto catalog = read_text_file(source_root() / "docs/compatibility-evidence.md");
-  constexpr std::array<std::string_view, 3> warning_codes{
-    "compressed_sound_payload",
-    "bsa_embedded_name_compatibility_risk",
-    "target_family_mismatch",
-  };
+  const auto warning_codes = compatibility_warning_codes_from_public_header();
+  REQUIRE_FALSE(warning_codes.empty());
 
   for (const auto code : warning_codes) {
-    const auto heading = "### `" + std::string{code} + "`";
+    const auto heading = "### `" + code + "`";
     const auto entry_start = catalog.find(heading);
     INFO("Missing compatibility evidence entry: " << code);
     REQUIRE(entry_start != std::string::npos);
@@ -82,6 +127,15 @@ TEST_CASE("compatibility evidence catalog documents public warning codes", "[uni
 
   REQUIRE(catalog.find("generated") != std::string::npos);
   REQUIRE(catalog.find("writer-output") != std::string::npos);
+}
+
+TEST_CASE("extractability validation streams payloads instead of materializing byte vectors",
+          "[unit][validation_policy]") {
+  const auto validation_source = read_text_file(source_root() / "src/validation.cpp");
+
+  REQUIRE(validation_source.find("class discard_payload_sink final : public payload_sink") != std::string::npos);
+  REQUIRE(validation_source.find("reader.extract(entry.path, sink)") != std::string::npos);
+  REQUIRE(validation_source.find("reader.extract_bytes(entry.path)") == std::string::npos);
 }
 
 TEST_CASE("local fixture policy keeps game archives ignored and provenance documented", "[unit][fixture]") {

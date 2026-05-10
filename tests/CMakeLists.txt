@@ -1,5 +1,6 @@
 find_package(Catch2 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 add_executable(libbsa_tests
   unit/result_tests.cpp
@@ -241,4 +242,15 @@ add_test(
     -DCONSUMER_BUILD_DIR=${CMAKE_BINARY_DIR}/package-consumer-build
     -DCONFIG=$<CONFIG>
     -P ${CMAKE_CURRENT_SOURCE_DIR}/package-consumer/smoke.cmake
+)
+
+add_test(
+  NAME validate_fixture_manifests
+  COMMAND Python3::Interpreter
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/validate_fixture_manifests.py
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+)
+
+set_tests_properties(validate_fixture_manifests PROPERTIES
+  LABELS "unit;fixture;malformed;compatibility_matrix"
 )
