@@ -33,6 +33,10 @@ std::string preserved_archive_path(std::string_view archive_path) {
 }
 
 result<formats::bsa::tes3_writer_entry> make_entry(std::string_view archive_path) {
+  if (archive_path.find('\0') != std::string_view::npos) {
+    return error{error_code::invalid_argument, "TES3 BSA archive path must not contain NUL bytes"};
+  }
+
   auto canonical = detail::normalize_archive_path(archive_path);
   if (!canonical) {
     return canonical.error();

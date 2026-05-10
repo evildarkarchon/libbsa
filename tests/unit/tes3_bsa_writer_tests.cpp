@@ -503,7 +503,8 @@ TEST_CASE("tes3_bsa_writer reports missing disk sources from write_to", "[unit][
 }
 
 TEST_CASE("tes3_bsa_writer rejects invalid archive paths", "[unit][tes3_bsa_writer]") {
-  for (const std::string invalid_path : {"/rooted/file.txt", "C:/drive/file.txt", "folder/../file.txt", ""}) {
+  const std::array invalid_paths{"/rooted/file.txt", "C:/drive/file.txt", "folder/../file.txt", ""};
+  for (const std::string invalid_path : invalid_paths) {
     libbsa::tes3_bsa_writer writer;
 
     auto added_memory = writer.add_bytes(invalid_path, sample_bytes());
@@ -514,6 +515,19 @@ TEST_CASE("tes3_bsa_writer rejects invalid archive paths", "[unit][tes3_bsa_writ
     REQUIRE_FALSE(added_file.has_value());
     REQUIRE(added_file.error().code == libbsa::error_code::invalid_argument);
   }
+}
+
+TEST_CASE("tes3_bsa_writer rejects archive paths containing NUL bytes", "[unit][tes3_bsa_writer]") {
+  const std::string invalid_path{"Meshes/A.nif\0Suffix", 19U};
+  libbsa::tes3_bsa_writer writer;
+
+  auto added_memory = writer.add_bytes(invalid_path, sample_bytes());
+  REQUIRE_FALSE(added_memory.has_value());
+  REQUIRE(added_memory.error().code == libbsa::error_code::invalid_argument);
+
+  auto added_file = writer.add_file(invalid_path, "source.bin");
+  REQUIRE_FALSE(added_file.has_value());
+  REQUIRE(added_file.error().code == libbsa::error_code::invalid_argument);
 }
 
 TEST_CASE("tes3_bsa_writer rejects duplicate canonical archive paths at write time", "[unit][tes3_bsa_writer]") {
