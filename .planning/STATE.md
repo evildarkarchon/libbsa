@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 11-02-PLAN.md
-last_updated: "2026-05-10T04:10:49.986Z"
+stopped_at: Completed 11-03-PLAN.md
+last_updated: "2026-05-10T04:18:35.628Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 12
   completed_phases: 10
   total_plans: 68
-  completed_plans: 64
-  percent: 94
+  completed_plans: 65
+  percent: 96
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 ## Current Position
 
 Phase: 11 (Compatibility Warnings, Validation API, and Hardening) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-05-10
 
-Progress: [█████████░] 94%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [█████████░] 94%
 | Phase 11 P01 | 4 min | 2 tasks | 4 files |
 | Phase 11 P05 | 2 min | 2 tasks | 3 files |
 | Phase 11 P02 | 5 min | 2 tasks | 6 files |
+| Phase 11 P03 | 4 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 11]: validate_archive reuses archive_reader::open as the single strict parser source of truth — Prevents the validation facade from becoming a lenient second reader.
 - [Phase 11]: validate_archive keeps empty and unreadable host paths as result-level setup failures — Readable unsupported or malformed archive bytes are instead reported as fatal validation diagnostics.
 - [Phase 11]: Entry extractability validation remains opt-in and uses public reader APIs — validation_report does not expose archive_reader, entry listings, or extraction bytes.
+- [Phase 11]: Target-family mismatch warnings compare caller expectations against parsed archive metadata only. — Prevents validation warnings from depending on host file extensions or private parser guesses.
+- [Phase 11]: Entry-level warning records include optional normalized archive paths but no byte offsets, record indexes, or chunk indexes. — Preserves the Phase 11 public/private diagnostic boundary and keeps parser coordinates out of the stable API.
+- [Phase 11]: Sound payload warning detection treats compressed entries under sound/ or with .wav, .xwm, or .fuz extensions as advisory compatibility risks. — Matches the locked representative warning scenario without adding public warning filters or logging callbacks.
 
 ### Pending Todos
 
@@ -122,6 +126,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T04:10:49.980Z
-Stopped at: Completed 11-02-PLAN.md
+Last session: 2026-05-10T04:18:35.621Z
+Stopped at: Completed 11-03-PLAN.md
 Resume file: None
