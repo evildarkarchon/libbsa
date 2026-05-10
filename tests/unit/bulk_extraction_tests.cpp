@@ -383,6 +383,20 @@ TEST_CASE("bulk_extraction rejects zero workers as an outer argument error", "[u
   CHECK(extracted.error().code == libbsa::error_code::invalid_argument);
 }
 
+TEST_CASE("bulk_extraction rejects unsupported large worker counts as an outer argument error",
+          "[unit][bulk_extraction]") {
+  const auto reader = create_bulk_test_reader();
+  const auto requests = standard_requests();
+  capturing_sink_factory sink_factory;
+  libbsa::bulk_extract_options options;
+  options.worker_count = 1025U;
+
+  auto extracted = reader.extract_entries(requests, sink_factory, options);
+
+  REQUIRE_FALSE(extracted.has_value());
+  CHECK(extracted.error().code == libbsa::error_code::invalid_argument);
+}
+
 TEST_CASE("bulk_extraction preserves request order and bytes in serial and parallel mode", "[unit][bulk_extraction]") {
   const auto reader = create_bulk_test_reader();
   const auto requests = standard_requests();

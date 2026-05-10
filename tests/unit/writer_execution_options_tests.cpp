@@ -144,6 +144,40 @@ TEST_CASE("writer_execution_options rejects zero worker count before creating ou
   }
 }
 
+TEST_CASE("writer_execution_options rejects unsupported large worker counts before creating output",
+          "[unit][writer_execution_options]") {
+  libbsa::write_execution_options execution;
+  execution.worker_count = 1025U;
+
+  SECTION("TES4-family writer") {
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+    REQUIRE(writer.add_bytes("Meshes/LargeWorker.NIF", bytes_from_text("tes4 payload")).has_value());
+    const auto output = output_path("large-worker-tes4.bsa");
+
+    auto written = writer.write_to(output.string(), execution);
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::invalid_argument);
+    CHECK_FALSE(std::filesystem::exists(output));
+  }
+
+  SECTION("BA2 GNRL writer") {
+    libbsa::ba2_gnrl_writer_options options;
+    options.compression = libbsa::archive_compression_policy::all_raw;
+    libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, options};
+    REQUIRE(writer.add_bytes("Meshes/LargeWorker.nif", bytes_from_text("ba2 gnrl payload")).has_value());
+    const auto output = output_path("large-worker-gnrl.ba2");
+
+    auto written = writer.write_to(output.string(), execution);
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::invalid_argument);
+    CHECK_FALSE(std::filesystem::exists(output));
+  }
+}
+
 TEST_CASE("writer_execution_options worker count one preserves serial writer behavior",
           "[unit][writer_execution_options]") {
   libbsa::write_execution_options execution;

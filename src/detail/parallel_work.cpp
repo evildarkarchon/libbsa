@@ -1,18 +1,30 @@
 #include <detail/parallel_work.hpp>
 
+#include <algorithm>
 #include <atomic>
 #include <mutex>
+#include <new>
 #include <optional>
+#include <system_error>
 #include <thread>
 #include <vector>
 
 namespace libbsa::detail {
+
+namespace {
+
+constexpr std::uint32_t max_worker_count = 1024U;
+
+} // namespace
 
 result<void> run_indexed_work(std::size_t task_count,
                               std::uint32_t worker_count,
                               const std::function<result<void>(std::size_t)>& work) {
   if (worker_count == 0U) {
     return error{error_code::invalid_argument, "worker_count must be greater than zero"};
+  }
+  if (worker_count > max_worker_count) {
+    return error{error_code::invalid_argument, "worker_count exceeds the supported maximum"};
   }
   if (task_count == 0U) {
     return {};
@@ -54,12 +66,21 @@ result<void> run_indexed_work(std::size_t task_count,
     }
   };
 
-  std::vector<std::jthread> workers;
-  workers.reserve(worker_count);
-  for (std::uint32_t worker = 0; worker < worker_count; ++worker) {
-    workers.emplace_back(run_worker);
+  const auto actual_worker_count =
+      static_cast<std::uint32_t>(std::min<std::size_t>(task_count, worker_count));
+
+  try {
+    std::vector<std::jthread> workers;
+    workers.reserve(actual_worker_count);
+    for (std::uint32_t worker = 0; worker < actual_worker_count; ++worker) {
+      workers.emplace_back(run_worker);
+    }
+    workers.clear();
+  } catch (const std::system_error&) {
+    return error{error_code::io_error, "failed to start worker thread"};
+  } catch (const std::bad_alloc&) {
+    return error{error_code::io_error, "failed to allocate worker state"};
   }
-  workers.clear();
 
   if (first_error.has_value()) {
     return *first_error;
