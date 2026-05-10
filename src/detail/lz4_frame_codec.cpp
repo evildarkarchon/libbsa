@@ -1,8 +1,11 @@
 #include <detail/lz4_frame_codec.hpp>
 
+#include <detail/byte_vector.hpp>
+
 #include <lz4frame.h>
 
 #include <memory>
+#include <utility>
 
 namespace libbsa::detail {
 namespace {
@@ -38,14 +41,17 @@ result<std::vector<std::byte>> decompress_lz4_frame_exact(std::span<const std::b
   }
   frame_context_ptr context{raw_context};
 
-  std::vector<std::byte> output(expected_size);
+  auto output = make_byte_vector(expected_size, "LZ4 frame output");
+  if (!output) {
+    return output.error();
+  }
   std::size_t source_offset = 0;
   std::size_t output_offset = 0;
   std::size_t status = 0;
   do {
     std::size_t source_size = compressed.size() - source_offset;
-    std::size_t output_size = output.size() - output_offset;
-    status = LZ4F_decompress(context.get(), output.data() + output_offset, &output_size, compressed.data() + source_offset,
+    std::size_t output_size = output.value().size() - output_offset;
+    status = LZ4F_decompress(context.get(), output.value().data() + output_offset, &output_size, compressed.data() + source_offset,
                              &source_size, nullptr);
     if (LZ4F_isError(status)) {
       return frame_error();
@@ -60,7 +66,7 @@ result<std::vector<std::byte>> decompress_lz4_frame_exact(std::span<const std::b
   if (status != 0 || output_offset != expected_size || source_offset != compressed.size()) {
     return frame_error();
   }
-  return output;
+  return std::move(output).value();
 }
 
 } // namespace libbsa::detail

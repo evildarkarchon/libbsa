@@ -1,12 +1,14 @@
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 
 #include <detail/archive_path.hpp>
+#include <detail/byte_vector.hpp>
 #include <detail/compression_router.hpp>
 
 #include <algorithm>
 #include <fstream>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace libbsa::formats::ba2 {
@@ -112,15 +114,18 @@ result<std::vector<std::byte>> read_stored_payload(std::string_view host_path, c
     return error{error_code::io_error, "failed to seek to BA2 GNRL payload"};
   }
 
-  std::vector<std::byte> payload(stored_size.value());
-  input.read(reinterpret_cast<char*>(payload.data()), static_cast<std::streamsize>(payload.size()));
+  auto payload = detail::make_byte_vector(stored_size.value(), "BA2 GNRL stored payload");
+  if (!payload) {
+    return payload.error();
+  }
+  input.read(reinterpret_cast<char*>(payload.value().data()), static_cast<std::streamsize>(payload.value().size()));
   if (input.bad()) {
     return error{error_code::io_error, "failed while reading BA2 GNRL payload"};
   }
-  if (static_cast<std::size_t>(input.gcount()) != payload.size()) {
+  if (static_cast<std::size_t>(input.gcount()) != payload.value().size()) {
     return error{error_code::format_error, "BA2 GNRL entry payload span is outside the archive"};
   }
-  return payload;
+  return std::move(payload).value();
 }
 
 result<detail::compression_method> compression_method_for(const entry_metadata& entry) {

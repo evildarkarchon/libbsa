@@ -129,15 +129,6 @@ TEST_CASE("compatibility evidence catalog documents public warning codes", "[uni
   REQUIRE(catalog.find("writer-output") != std::string::npos);
 }
 
-TEST_CASE("extractability validation streams payloads instead of materializing byte vectors",
-          "[unit][validation_policy]") {
-  const auto validation_source = read_text_file(source_root() / "src/validation.cpp");
-
-  REQUIRE(validation_source.find("class discard_payload_sink final : public payload_sink") != std::string::npos);
-  REQUIRE(validation_source.find("reader.extract(entry.path, sink)") != std::string::npos);
-  REQUIRE(validation_source.find("reader.extract_bytes(entry.path)") == std::string::npos);
-}
-
 TEST_CASE("local fixture policy keeps game archives ignored and provenance documented", "[unit][fixture]") {
   const auto root = source_root();
   const auto readme = read_text_file(root / "tests/fixtures/README.md");

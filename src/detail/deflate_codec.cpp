@@ -1,8 +1,11 @@
 #include <detail/deflate_codec.hpp>
 
+#include <detail/byte_vector.hpp>
+
 #include <libdeflate.h>
 
 #include <memory>
+#include <utility>
 
 namespace libbsa::detail {
 namespace {
@@ -46,14 +49,21 @@ result<std::vector<std::byte>> decompress_deflate_exact(std::span<const std::byt
     return libbsa::error{libbsa::error_code::io_error, "failed to allocate deflate decompressor"};
   }
 
-  std::vector<std::byte> output(expected_size);
+  auto output = make_byte_vector(expected_size, "raw deflate output");
+  if (!output) {
+    return output.error();
+  }
   std::size_t actual_out = 0;
-  const auto status = libdeflate_deflate_decompress(decompressor.get(), compressed.data(), compressed.size(), output.data(),
-                                                   output.size(), &actual_out);
+  const auto status = libdeflate_deflate_decompress(decompressor.get(),
+                                                   compressed.data(),
+                                                   compressed.size(),
+                                                   output.value().data(),
+                                                   output.value().size(),
+                                                   &actual_out);
   if (status != LIBDEFLATE_SUCCESS || actual_out != expected_size) {
     return codec_error();
   }
-  return output;
+  return std::move(output).value();
 }
 
 } // namespace libbsa::detail

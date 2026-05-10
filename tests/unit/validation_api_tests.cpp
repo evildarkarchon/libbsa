@@ -12,6 +12,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -59,6 +60,48 @@ std::vector<std::byte> bytes_from_text(std::string_view text) {
   }
   return bytes;
 }
+
+/// Appends a little-endian UInt16 value to a synthetic binary fixture buffer.
+void append_u16_le(std::vector<std::byte>& bytes, std::uint16_t value) {
+  bytes.push_back(static_cast<std::byte>(value & 0xFFU));
+  bytes.push_back(static_cast<std::byte>((value >> 8U) & 0xFFU));
+}
+
+/// Appends a little-endian UInt32 value to a synthetic binary fixture buffer.
+void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
+  for (unsigned shift = 0; shift < 32U; shift += 8U) {
+    bytes.push_back(static_cast<std::byte>((value >> shift) & 0xFFU));
+  }
+}
+
+/// Appends a little-endian UInt64 value to a synthetic binary fixture buffer.
+void append_u64_le(std::vector<std::byte>& bytes, std::uint64_t value) {
+  for (unsigned shift = 0; shift < 64U; shift += 8U) {
+    bytes.push_back(static_cast<std::byte>((value >> shift) & 0xFFU));
+  }
+}
+
+/// Appends raw ASCII bytes, including embedded NULs when present in the view.
+void append_ascii(std::vector<std::byte>& bytes, std::string_view value) {
+  for (const char ch : value) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+}
+
+class temp_file_cleanup final {
+ public:
+  /// Owns cleanup for a temporary validation fixture path.
+  explicit temp_file_cleanup(std::filesystem::path path) : path_{std::move(path)} {}
+
+  /// Best-effort cleanup keeps sparse validation fixtures from surviving failed tests.
+  ~temp_file_cleanup() {
+    std::error_code ignored;
+    std::filesystem::remove(path_, ignored);
+  }
+
+ private:
+  std::filesystem::path path_;
+};
 
 nlohmann::json read_json_file(const std::filesystem::path& path) {
   std::ifstream stream{path};
@@ -208,6 +251,66 @@ TEST_CASE("validation_api reports result-level setup errors", "[unit][validation
 
   const auto missing = unique_output_path("validation-api-missing", ".bsa");
   require_validation_setup_error(missing.string(), libbsa::error_code::io_error);
+}
+
+TEST_CASE("validation_api caps extractability before reading sparse payload bytes",
+          "[unit][fixture][malformed][validation_api]") {
+  const auto output = unique_output_path("validation-api-sparse-extractability-cap", ".ba2");
+  temp_file_cleanup cleanup{output};
+
+  constexpr std::uint64_t payload_offset = 0x0000000200000000ULL;
+  constexpr std::uint32_t payload_size = 32U;
+  constexpr std::uint32_t validation_cap = 16U;
+  const std::string archive_path = "meshes/validation/sparse_payload.bin";
+
+  std::vector<std::byte> bytes;
+  append_ascii(bytes, "BTDX");
+  append_u32_le(bytes, 1U);
+  append_ascii(bytes, "GNRL");
+  append_u32_le(bytes, 1U);
+  append_u64_le(bytes, 60U);
+
+  append_u32_le(bytes, 0x12345678U);
+  append_ascii(bytes, std::string_view{"BIN\0", 4U});
+  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, 0x0000002AU);
+  append_u64_le(bytes, payload_offset);
+  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, payload_size);
+  append_u32_le(bytes, 0xBAADF00DU);
+
+  append_u16_le(bytes, static_cast<std::uint16_t>(archive_path.size()));
+  append_ascii(bytes, archive_path);
+
+  {
+    std::ofstream archive{output, std::ios::binary | std::ios::trunc};
+    REQUIRE(archive.good());
+    archive.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(archive.good());
+  }
+
+  std::error_code resize_error;
+  std::filesystem::resize_file(output, payload_offset + payload_size, resize_error);
+  if (resize_error) {
+    SKIP("filesystem does not support sparse validation fixture");
+  }
+
+  libbsa::validation_options options;
+  options.validate_entry_extractability = true;
+  options.max_extractability_entry_bytes = validation_cap;
+
+  auto opened = libbsa::archive_reader::open(output.string());
+  REQUIRE(opened.has_value());
+
+  auto validated = libbsa::validate_archive(output.string(), options);
+  REQUIRE(validated.has_value());
+  const auto& report = validated.value();
+  CHECK_FALSE(report.valid);
+  CHECK_FALSE(report.is_valid());
+  CHECK(report.metadata.has_value());
+  REQUIRE(report.errors.size() == 1U);
+  CHECK(report.errors.front().code == libbsa::error_code::format_error);
+  CHECK(report.errors.front().message.find("extractability size limit") != std::string::npos);
 }
 
 TEST_CASE("validation_api accepts generated fixture archives", "[unit][fixture][validation_api]") {

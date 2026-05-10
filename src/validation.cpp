@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <new>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -38,6 +40,11 @@ std::string diagnostic_message_for(error_code code) {
 void append_fatal(validation_report& report, error_code code) {
   report.valid = false;
   report.errors.push_back(validation_diagnostic{code, diagnostic_message_for(code)});
+}
+
+void append_fatal(validation_report& report, error err) {
+  report.valid = false;
+  report.errors.push_back(validation_diagnostic{err.code, std::move(err.message)});
 }
 
 bool host_path_can_be_opened(std::string_view host_path) {
@@ -121,17 +128,45 @@ void append_entry_warnings(const archive_metadata& metadata,
   }
 }
 
+result<void> validate_extractability_size_bounds(const entry_metadata& entry, std::uint64_t max_entry_bytes) {
+  if (entry.stored_size > max_entry_bytes || entry.raw_size > max_entry_bytes) {
+    return error{error_code::format_error, "archive entry exceeds validation extractability size limit"};
+  }
+  if (entry.texture.has_value()) {
+    for (const auto& chunk : entry.texture->chunks) {
+      if (chunk.stored_size > max_entry_bytes || chunk.raw_size > max_entry_bytes) {
+        return error{error_code::format_error, "archive texture chunk exceeds validation extractability size limit"};
+      }
+    }
+  }
+  return {};
+}
+
 /// Validates every parsed entry through the streaming extraction API.
 void validate_extractability(const archive_reader& reader,
                              const std::vector<entry_metadata>& entries,
+                             std::uint64_t max_entry_bytes,
                              validation_report& report) {
   discard_payload_sink sink;
   for (const auto& entry : entries) {
+    auto bounded = validate_extractability_size_bounds(entry, max_entry_bytes);
+    if (!bounded) {
+      append_fatal(report, bounded.error());
+      continue;
+    }
+
     // Validation must not retain archive-controlled payload bytes; extraction
     // is streamed only to prove payload decode and sink delivery succeed.
-    auto extracted = reader.extract(entry.path, sink);
+    result<void> extracted{};
+    try {
+      extracted = reader.extract(entry.path, sink);
+    } catch (const std::bad_alloc&) {
+      extracted = error{error_code::format_error, "archive entry exceeded validation memory limits"};
+    } catch (const std::length_error&) {
+      extracted = error{error_code::format_error, "archive entry exceeded validation memory limits"};
+    }
     if (!extracted) {
-      append_fatal(report, extracted.error().code);
+      append_fatal(report, extracted.error());
     }
   }
 }
@@ -178,7 +213,7 @@ result<validation_report> validate_archive(std::string_view host_path, validatio
   append_entry_warnings(metadata.value(), entries.value(), report);
 
   if (options.validate_entry_extractability) {
-    validate_extractability(opened.value(), entries.value(), report);
+    validate_extractability(opened.value(), entries.value(), options.max_extractability_entry_bytes, report);
   }
 
   report.valid = report.errors.empty();

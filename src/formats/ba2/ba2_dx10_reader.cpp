@@ -1,6 +1,7 @@
 #include "formats/ba2/ba2_dx10_reader.hpp"
 
 #include <detail/archive_path.hpp>
+#include <detail/byte_vector.hpp>
 #include <detail/compression_router.hpp>
 
 #include "texture/dds_layout.hpp"
@@ -9,6 +10,7 @@
 #include <fstream>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace libbsa::formats::ba2 {
@@ -108,15 +110,18 @@ result<std::vector<std::byte>> read_stored_chunk(std::ifstream& input, const tex
     return error{error_code::io_error, "failed to seek to BA2 DX10 chunk payload"};
   }
 
-  std::vector<std::byte> payload(stored_size.value());
-  input.read(reinterpret_cast<char*>(payload.data()), static_cast<std::streamsize>(payload.size()));
+  auto payload = detail::make_byte_vector(stored_size.value(), "BA2 DX10 stored chunk");
+  if (!payload) {
+    return payload.error();
+  }
+  input.read(reinterpret_cast<char*>(payload.value().data()), static_cast<std::streamsize>(payload.value().size()));
   if (input.bad()) {
     return error{error_code::io_error, "failed while reading BA2 DX10 chunk payload"};
   }
-  if (static_cast<std::size_t>(input.gcount()) != payload.size()) {
+  if (static_cast<std::size_t>(input.gcount()) != payload.value().size()) {
     return error{error_code::format_error, "BA2 DX10 chunk payload span is outside the archive"};
   }
-  return payload;
+  return std::move(payload).value();
 }
 
 result<detail::compression_method> compression_method_for(const texture_chunk_metadata& chunk) {

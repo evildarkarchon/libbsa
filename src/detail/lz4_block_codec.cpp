@@ -1,9 +1,12 @@
 #include <detail/lz4_block_codec.hpp>
 
+#include <detail/byte_vector.hpp>
+
 #include <lz4.h>
 
 #include <limits>
 #include <string>
+#include <utility>
 
 namespace libbsa::detail {
 namespace {
@@ -46,13 +49,16 @@ result<std::vector<std::byte>> decompress_lz4_block_exact(std::span<const std::b
   if (!output_size) {
     return output_size.error();
   }
-  std::vector<std::byte> output(expected_size);
-  const auto actual = LZ4_decompress_safe(reinterpret_cast<const char*>(compressed.data()), reinterpret_cast<char*>(output.data()),
+  auto output = make_byte_vector(expected_size, "raw LZ4 block output");
+  if (!output) {
+    return output.error();
+  }
+  const auto actual = LZ4_decompress_safe(reinterpret_cast<const char*>(compressed.data()), reinterpret_cast<char*>(output.value().data()),
                                          compressed_size.value(), output_size.value());
   if (actual < 0 || static_cast<std::size_t>(actual) != expected_size) {
     return block_error();
   }
-  return output;
+  return std::move(output).value();
 }
 
 } // namespace libbsa::detail

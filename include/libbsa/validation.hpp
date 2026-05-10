@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -75,6 +76,13 @@ struct validation_options {
 
   /// True to validate entry extraction in addition to archive structure.
   bool validate_entry_extractability{false};
+
+  /// Maximum declared stored or decoded bytes extracted per entry during validation.
+  ///
+  /// This limit applies only when `validate_entry_extractability` is true. Entries
+  /// above the limit become structured validation diagnostics instead of causing
+  /// validation to allocate archive-controlled payload sizes.
+  std::uint64_t max_extractability_entry_bytes{64U * 1024U * 1024U};
 };
 
 /// Structured validation result for an archive host path.

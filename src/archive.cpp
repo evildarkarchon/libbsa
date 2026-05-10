@@ -11,10 +11,14 @@
 #include "formats/bsa/tes4_bsa_parser.hpp"
 #include "formats/bsa/tes4_bsa_reader.hpp"
 
+#include <detail/byte_vector.hpp>
+
 #include <cstddef>
 #include <fstream>
 #include <limits>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace libbsa {
@@ -35,15 +39,23 @@ class vector_payload_sink final : public payload_sink {
  public:
   explicit vector_payload_sink(std::uint64_t expected_size) {
     if (expected_size <= static_cast<std::uint64_t>(std::vector<std::byte>{}.max_size())) {
-      bytes_.reserve(static_cast<std::size_t>(expected_size));
+      auto reserved = detail::reserve_byte_vector(bytes_, static_cast<std::size_t>(expected_size), "extracted payload");
+      if (!reserved) {
+        allocation_error_ = reserved.error();
+      }
+    } else {
+      allocation_error_ = detail::byte_vector_allocation_error("extracted payload");
     }
   }
 
   result<std::size_t> write(std::span<const std::byte> bytes) override {
-    if (bytes.size() > bytes_.max_size() - bytes_.size()) {
-      return error{error_code::format_error, "extracted payload exceeds platform vector limits"};
+    if (allocation_error_.has_value()) {
+      return *allocation_error_;
     }
-    bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
+    auto appended = detail::append_byte_vector(bytes_, bytes, "extracted payload");
+    if (!appended) {
+      return appended.error();
+    }
     return bytes.size();
   }
 
@@ -51,6 +63,7 @@ class vector_payload_sink final : public payload_sink {
 
  private:
   std::vector<std::byte> bytes_;
+  std::optional<error> allocation_error_;
 };
 
 result<std::vector<std::byte>> read_detection_prefix(std::string_view host_path) {
@@ -95,19 +108,22 @@ result<std::vector<std::byte>> read_stored_payload(std::string_view host_path, c
     return error{error_code::format_error, "BSA stored payload exceeds stream limits"};
   }
 
-  std::vector<std::byte> payload(static_cast<std::size_t>(entry.stored_size));
+  auto payload = detail::make_byte_vector(static_cast<std::size_t>(entry.stored_size), "BSA stored payload");
+  if (!payload) {
+    return payload.error();
+  }
   input.seekg(static_cast<std::streamoff>(entry.payload_offset), std::ios::beg);
   if (!input) {
     return error{error_code::io_error, "failed to seek to archive payload"};
   }
-  input.read(reinterpret_cast<char*>(payload.data()), static_cast<std::streamsize>(payload.size()));
+  input.read(reinterpret_cast<char*>(payload.value().data()), static_cast<std::streamsize>(payload.value().size()));
   if (input.bad()) {
     return error{error_code::io_error, "failed while reading archive payload"};
   }
-  if (static_cast<std::size_t>(input.gcount()) != payload.size()) {
+  if (static_cast<std::size_t>(input.gcount()) != payload.value().size()) {
     return error{error_code::format_error, "BSA entry payload span is outside the archive"};
   }
-  return payload;
+  return std::move(payload).value();
 }
 
 } // namespace
@@ -260,11 +276,7 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
     return state_->is_ba2_dx10 ? formats::ba2::extract_ba2_dx10_payload(state_->host_path, *found.value(), sink)
                                : formats::ba2::extract_ba2_gnrl_payload(state_->host_path, *found.value(), sink);
   }
-  auto payload = read_stored_payload(state_->host_path, *found.value());
-  if (!payload) {
-    return payload.error();
-  }
-  return formats::bsa::extract_tes4_bsa_payload(payload.value(), *found.value(), sink);
+  return formats::bsa::extract_tes4_bsa_payload_from_file(state_->host_path, *found.value(), sink);
 }
 
 result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view path) const {

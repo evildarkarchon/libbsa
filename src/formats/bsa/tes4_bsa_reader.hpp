@@ -23,4 +23,8 @@ result<bool> contains_tes4_bsa_entry(std::span<const entry_metadata> entries, st
 result<void> extract_tes4_bsa_payload(std::span<const std::byte> stored_payload, const entry_metadata& entry,
                                       payload_sink& sink);
 
+/// Extracts one TES4-family entry directly from its host archive into a caller-owned sink.
+result<void> extract_tes4_bsa_payload_from_file(std::string_view host_path, const entry_metadata& entry,
+                                                payload_sink& sink);
+
 } // namespace libbsa::formats::bsa
