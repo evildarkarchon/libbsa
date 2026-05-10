@@ -60,7 +60,7 @@ void require_extracted_bytes(const libbsa::archive_reader& reader,
 
 } // namespace
 
-TEST_CASE("TES3 BSA writer copies memory entries into writer-owned state", "[unit][tes3_bsa_writer]") {
+TEST_CASE("tes3_bsa_writer copies memory entries into writer-owned state", "[unit][tes3_bsa_writer]") {
   libbsa::tes3_bsa_writer_options options;
   options.overwrite_existing = true;
   libbsa::tes3_bsa_writer writer{options};
@@ -78,7 +78,7 @@ TEST_CASE("TES3 BSA writer copies memory entries into writer-owned state", "[uni
   require_extracted_bytes(opened.value(), "meshes/copy.nif", copied);
 }
 
-TEST_CASE("TES3 BSA writer reports missing disk sources from write_to", "[unit][tes3_bsa_writer]") {
+TEST_CASE("tes3_bsa_writer reports missing disk sources from write_to", "[unit][tes3_bsa_writer]") {
   libbsa::tes3_bsa_writer writer;
   const auto missing_source = output_path("missing-source-input.nif");
   std::error_code fs_error;
@@ -92,7 +92,7 @@ TEST_CASE("TES3 BSA writer reports missing disk sources from write_to", "[unit][
   REQUIRE(written.error().code == libbsa::error_code::io_error);
 }
 
-TEST_CASE("TES3 BSA writer rejects invalid archive paths", "[unit][tes3_bsa_writer]") {
+TEST_CASE("tes3_bsa_writer rejects invalid archive paths", "[unit][tes3_bsa_writer]") {
   for (const std::string invalid_path : {"/rooted/file.txt", "C:/drive/file.txt", "folder/../file.txt", ""}) {
     libbsa::tes3_bsa_writer writer;
 
@@ -106,7 +106,7 @@ TEST_CASE("TES3 BSA writer rejects invalid archive paths", "[unit][tes3_bsa_writ
   }
 }
 
-TEST_CASE("TES3 BSA writer rejects duplicate canonical archive paths at write time", "[unit][tes3_bsa_writer]") {
+TEST_CASE("tes3_bsa_writer rejects duplicate canonical archive paths at write time", "[unit][tes3_bsa_writer]") {
   libbsa::tes3_bsa_writer writer;
   REQUIRE(writer.add_bytes("Meshes/Duplicate.NIF", sample_bytes()).has_value());
   REQUIRE(writer.add_bytes("meshes/duplicate.nif", bytes_from_text("duplicate")).has_value());
@@ -117,7 +117,7 @@ TEST_CASE("TES3 BSA writer rejects duplicate canonical archive paths at write ti
   REQUIRE(written.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("TES3 BSA writer rejects empty archives", "[unit][tes3_bsa_writer]") {
+TEST_CASE("tes3_bsa_writer rejects empty archives", "[unit][tes3_bsa_writer]") {
   libbsa::tes3_bsa_writer writer;
 
   auto written = writer.write_to(output_path("empty-archive.bsa").string());
@@ -126,7 +126,7 @@ TEST_CASE("TES3 BSA writer rejects empty archives", "[unit][tes3_bsa_writer]") {
   REQUIRE(written.error().code == libbsa::error_code::invalid_argument);
 }
 
-TEST_CASE("TES3 BSA writer refuses overwrite by default and preserves existing bytes", "[unit][tes3_bsa_writer]") {
+TEST_CASE("tes3_bsa_writer refuses overwrite by default and preserves existing bytes", "[unit][tes3_bsa_writer]") {
   const auto archive = output_path("overwrite-disabled.bsa");
   const std::vector<std::byte> sentinel{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
   write_binary_file(archive, sentinel);
@@ -140,7 +140,7 @@ TEST_CASE("TES3 BSA writer refuses overwrite by default and preserves existing b
   CHECK(read_binary_file(archive) == sentinel);
 }
 
-TEST_CASE("TES3 BSA writer replaces existing output only when overwrite is enabled", "[unit][tes3_bsa_writer]") {
+TEST_CASE("tes3_bsa_writer replaces existing output only when overwrite is enabled", "[unit][tes3_bsa_writer]") {
   const auto archive = output_path("overwrite-enabled.bsa");
   const std::vector<std::byte> sentinel{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
   write_binary_file(archive, sentinel);
@@ -155,7 +155,7 @@ TEST_CASE("TES3 BSA writer replaces existing output only when overwrite is enabl
   CHECK(read_binary_file(archive) != sentinel);
 }
 
-TEST_CASE("TES3 BSA writer preserves caller-owned temp-name sibling files", "[unit][tes3_bsa_writer]") {
+TEST_CASE("tes3_bsa_writer preserves caller-owned temp-name sibling files", "[unit][tes3_bsa_writer]") {
   const auto archive = output_path("safe-temp-collision.bsa");
   const auto collision = archive.string() + ".tmp";
   const std::vector<std::byte> sentinel{std::byte{0x54}, std::byte{0x4D}, std::byte{0x50}};
