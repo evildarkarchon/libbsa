@@ -3,6 +3,7 @@
 #include <detail/archive_path.hpp>
 
 #include <array>
+#include <string>
 #include <string_view>
 
 TEST_CASE("archive_path normalizes separators and ASCII case", "[unit][archive-path]") {
@@ -27,4 +28,13 @@ TEST_CASE("archive_path rejects obvious invalid virtual paths", "[unit][archive-
     REQUIRE_FALSE(key);
     REQUIRE(key.error().code == libbsa::error_code::invalid_argument);
   }
+}
+
+TEST_CASE("archive_path rejects embedded-NUL virtual paths", "[unit][archive-path][malformed]") {
+  const std::string input{"Meshes/A.nif\0Suffix", 19U};
+
+  auto key = libbsa::detail::normalize_archive_path(input);
+
+  REQUIRE_FALSE(key.has_value());
+  REQUIRE(key.error().code == libbsa::error_code::invalid_argument);
 }
