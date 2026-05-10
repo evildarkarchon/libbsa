@@ -18,9 +18,9 @@ result<void> restore_backup_after_publish_failure(const std::filesystem::path& b
   std::error_code rollback_error;
   std::forward<RenameFile>(rename_file)(backup_path, output_path, rollback_error);
   if (rollback_error) {
-    return error{error_code::io_error, "BA2 DX10 writer failed to publish output host path and failed to restore backup"};
+    return error{error_code::io_error, "BA2 writer failed to publish output host path and failed to restore backup"};
   }
-  return error{error_code::io_error, "BA2 DX10 writer failed to publish output host path"};
+  return error{error_code::io_error, "BA2 writer failed to publish output host path"};
 }
 
 } // namespace libbsa::formats::ba2::publish_detail

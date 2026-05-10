@@ -3,6 +3,9 @@
 #include <libbsa/libbsa.hpp>
 
 #include "formats/ba2/ba2_gnrl_writer.hpp"
+#include "formats/ba2/ba2_publish.hpp"
+
+#include <detail/atomic_file_ops.hpp>
 
 #include <algorithm>
 #include <array>
@@ -15,6 +18,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -49,6 +53,14 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
   }
   REQUIRE_FALSE(input.bad());
   return bytes;
+}
+
+std::string read_text_file(const std::filesystem::path& path) {
+  std::ifstream input{path};
+  REQUIRE(input.good());
+  std::ostringstream buffer;
+  buffer << input.rdbuf();
+  return buffer.str();
 }
 
 TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
@@ -390,6 +402,56 @@ TEST_CASE("BA2 GNRL writer refuses to overwrite existing output when overwrite_e
   REQUIRE_FALSE(written.has_value());
   REQUIRE(written.error().code == libbsa::error_code::io_error);
   CHECK(read_binary_file(existing) == std::vector<std::byte>{std::byte{0x01}});
+}
+
+TEST_CASE("BA2 GNRL no-overwrite publish preserves a raced destination",
+          "[unit][ba2_gnrl_writer][publish]") {
+  const auto temp = output_path("no-replace-race-temp.ba2");
+  const auto destination = output_path("no-replace-race-output.ba2");
+  const std::vector<std::byte> temp_bytes{std::byte{0x4E}, std::byte{0x45}, std::byte{0x57}};
+  const std::vector<std::byte> raced_bytes{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
+  write_binary_file(temp, temp_bytes);
+  write_binary_file(destination, raced_bytes);
+
+  auto published = libbsa::detail::publish_file_without_replace(temp, destination);
+
+  REQUIRE_FALSE(published.has_value());
+  CHECK(published.error().code == libbsa::error_code::io_error);
+  CHECK(read_binary_file(destination) == raced_bytes);
+  CHECK(std::filesystem::exists(temp));
+}
+
+TEST_CASE("BA2 GNRL overwrite rollback reports failed backup restoration",
+          "[unit][ba2_gnrl_writer][publish][overwrite]") {
+  const auto backup = output_path("gnrl-rollback-backup.ba2");
+  const auto output = output_path("gnrl-rollback-output.ba2");
+  const std::vector<std::byte> backup_sentinel{std::byte{0x42}, std::byte{0x41}, std::byte{0x4B}};
+  const std::vector<std::byte> output_sentinel{std::byte{0x4F}, std::byte{0x55}, std::byte{0x54}};
+  write_binary_file(backup, backup_sentinel);
+  write_binary_file(output, output_sentinel);
+
+  auto restored = libbsa::formats::ba2::publish_detail::restore_backup_after_publish_failure(
+      backup,
+      output,
+      [](const std::filesystem::path&, const std::filesystem::path&, std::error_code& error) {
+        error = std::make_error_code(std::errc::permission_denied);
+      });
+
+  REQUIRE_FALSE(restored.has_value());
+  CHECK(restored.error().code == libbsa::error_code::io_error);
+  CHECK(restored.error().message.find("failed to restore backup") != std::string::npos);
+  CHECK(read_binary_file(backup) == backup_sentinel);
+  CHECK(read_binary_file(output) == output_sentinel);
+}
+
+TEST_CASE("BA2 GNRL writer routes publish races through no-replace and rollback helpers",
+          "[unit][ba2_gnrl_writer][publish][policy]") {
+  const auto source = read_text_file(std::filesystem::path{LIBBSA_SOURCE_DIR} / "src" / "formats" / "ba2" /
+                                     "ba2_gnrl_writer.cpp");
+
+  CHECK(source.find("detail::publish_file_without_replace(temp_path, output_path)") != std::string::npos);
+  CHECK(source.find("publish_detail::restore_backup_after_publish_failure") != std::string::npos);
+  CHECK(source.find("BA2 GNRL writer failed to publish output host path without overwrite") != std::string::npos);
 }
 
 TEST_CASE("BA2 GNRL writer preserves pre-existing deterministic temp-name siblings",

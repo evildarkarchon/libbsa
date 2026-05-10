@@ -1,5 +1,8 @@
 #include "formats/ba2/ba2_gnrl_writer.hpp"
 
+#include "formats/ba2/ba2_publish.hpp"
+
+#include <detail/atomic_file_ops.hpp>
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
@@ -980,16 +983,37 @@ result<void> write_ba2_gnrl_archive(ba2_gnrl_target target,
 
       std::filesystem::rename(temp_path, output_path, fs_error);
       if (fs_error) {
-        std::error_code rollback_error;
-        std::filesystem::rename(backup_path.value(), output_path, rollback_error);
         cleanup_publish_directory(temp_dir.value());
-        return error{error_code::io_error, "BA2 GNRL writer failed to publish output host path"};
+        return publish_detail::restore_backup_after_publish_failure(
+            backup_path.value(), output_path, [](const std::filesystem::path& from, const std::filesystem::path& to, std::error_code& error) {
+              std::filesystem::rename(from, to, error);
+            });
       }
 
       std::filesystem::remove(backup_path.value(), fs_error);
       cleanup_publish_directory(temp_dir.value());
       return {};
     }
+  }
+
+  if (!options.overwrite_existing) {
+    output_exists = path_exists_noexcept(output_path);
+    if (!output_exists) {
+      cleanup_publish_directory(temp_dir.value());
+      return output_exists.error();
+    }
+    if (output_exists.value()) {
+      cleanup_publish_directory(temp_dir.value());
+      return error{error_code::io_error, "BA2 GNRL output host path already exists"};
+    }
+
+    auto published = detail::publish_file_without_replace(temp_path, output_path);
+    if (!published) {
+      cleanup_publish_directory(temp_dir.value());
+      return error{error_code::io_error, "BA2 GNRL writer failed to publish output host path without overwrite"};
+    }
+    cleanup_publish_directory(temp_dir.value());
+    return {};
   }
 
   std::filesystem::rename(temp_path, output_path, fs_error);
