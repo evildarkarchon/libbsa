@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 #include <span>
 #include <string>
 #include <string_view>
@@ -93,6 +95,29 @@ std::vector<std::byte> bytes_from_text(std::string_view text) {
   return bytes;
 }
 
+std::vector<std::byte> bytes_from_hex(std::string_view hex) {
+  REQUIRE((hex.size() % 2U) == 0U);
+  std::vector<std::byte> bytes;
+  bytes.reserve(hex.size() / 2U);
+  for (std::size_t index = 0; index < hex.size(); index += 2U) {
+    const auto byte_text = std::string{hex.substr(index, 2U)};
+    bytes.push_back(static_cast<std::byte>(std::stoul(byte_text, nullptr, 16)));
+  }
+  return bytes;
+}
+
+std::string hex_u32(std::uint32_t value) {
+  std::ostringstream out;
+  out << "0x" << std::hex << std::setfill('0') << std::setw(8) << value;
+  return out.str();
+}
+
+std::string hex_u64(std::uint64_t value) {
+  std::ostringstream out;
+  out << "0x" << std::hex << std::setfill('0') << std::setw(16) << value;
+  return out.str();
+}
+
 class collecting_sink final : public libbsa::payload_sink {
  public:
   libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
@@ -154,6 +179,16 @@ struct expected_tes3_layout_entry {
   std::uint32_t raw_tes3_data_offset{0};
 };
 
+struct direct_tes3_layout_entry {
+  std::string original_path;
+  std::uint64_t archive_hash{0};
+  std::uint32_t raw_tes3_data_offset{0};
+  std::uint32_t payload_offset{0};
+  std::uint32_t raw_size{0};
+  std::uint32_t stored_size{0};
+  std::vector<std::byte> payload;
+};
+
 std::vector<expected_tes3_layout_entry> expected_hash_sorted_layout() {
   std::vector<expected_tes3_layout_entry> entries{
       {.serialized_name = "Meshes/Mixed/Probe.NIF", .payload = bytes_from_text("nif-data")},
@@ -185,13 +220,106 @@ std::filesystem::path generated_archive_dir() {
   return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" / "archives";
 }
 
+std::vector<direct_tes3_layout_entry> direct_tes3_entries_from_bytes(const std::vector<std::byte>& bytes) {
+  const auto file_count = read_u32_le_at(bytes, 8U);
+  const auto hash_table_start = 12U + read_u32_le_at(bytes, 4U);
+  const auto data_section_start = hash_table_start + (file_count * 8U);
+  const auto file_records_start = 12U;
+  const auto name_offsets_start = file_records_start + (file_count * 8U);
+  const auto name_table_start = name_offsets_start + (file_count * 4U);
+
+  std::vector<direct_tes3_layout_entry> entries;
+  entries.reserve(file_count);
+  for (std::uint32_t index = 0; index < file_count; ++index) {
+    const auto file_record_offset = file_records_start + (index * 8U);
+    const auto raw_size = read_u32_le_at(bytes, file_record_offset);
+    const auto raw_offset = read_u32_le_at(bytes, file_record_offset + 4U);
+    const auto name_offset = read_u32_le_at(bytes, name_offsets_start + (index * 4U));
+    const auto payload_offset = data_section_start + raw_offset;
+    REQUIRE(payload_offset + raw_size <= bytes.size());
+    entries.push_back(direct_tes3_layout_entry{
+        .original_path = read_null_terminated_name_at(bytes, name_table_start + name_offset, hash_table_start),
+        .archive_hash = read_u64_le_at(bytes, hash_table_start + (index * 8U)),
+        .raw_tes3_data_offset = raw_offset,
+        .payload_offset = payload_offset,
+        .raw_size = raw_size,
+        .stored_size = raw_size,
+        .payload = {bytes.begin() + payload_offset, bytes.begin() + payload_offset + raw_size}});
+  }
+  return entries;
+}
+
+const direct_tes3_layout_entry& require_direct_entry(std::span<const direct_tes3_layout_entry> entries,
+                                                     std::string_view original_path) {
+  const auto found = std::find_if(entries.begin(), entries.end(), [&](const auto& entry) {
+    return entry.original_path == original_path;
+  });
+  REQUIRE(found != entries.end());
+  return *found;
+}
+
 } // namespace
 
 TEST_CASE("tes3_bsa_writer committed fixture manifest records canonical writer evidence",
           "[unit][fixture][tes3_bsa_writer]") {
+  const auto archive_path = generated_archive_dir() / "tes3_writer_canonical.bsa";
   const auto manifest = read_json_file(generated_archive_dir() / "tes3_writer_canonical_manifest.json");
+  const auto archive_bytes = read_binary_file(archive_path);
+  const auto direct_entries = direct_tes3_entries_from_bytes(archive_bytes);
 
-  REQUIRE(manifest.at("manifest_kind").get<std::string>() == "tes3_writer_canonical");
+  REQUIRE(manifest.at("variant").get<std::string>() == "tes3");
+  REQUIRE(manifest.at("version").get<std::uint32_t>() == 0x00000100U);
+  REQUIRE(manifest.at("file_count").get<std::uint32_t>() == 2U);
+  CHECK(manifest.at("data_section_start").get<std::uint32_t>() == data_section_start_from_tes3_bytes(archive_bytes));
+  CHECK(manifest.at("provenance").at("generator").get<std::string>() ==
+        "tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp");
+  const auto provenance = manifest.at("provenance").at("source").get<std::string>();
+  CHECK(provenance.find("synthetic") != std::string::npos);
+  CHECK(provenance.find("no game or TES5Edit bytes copied") != std::string::npos);
+
+  auto opened = libbsa::archive_reader::open(archive_path.string());
+  REQUIRE(opened.has_value());
+  auto metadata = opened.value().metadata();
+  REQUIRE(metadata.has_value());
+  CHECK(metadata.value().type == libbsa::archive_type::bsa);
+  CHECK(metadata.value().variant == libbsa::archive_variant::tes3);
+  CHECK(metadata.value().file_count == manifest.at("file_count").get<std::uint32_t>());
+
+  const auto& manifest_entries = manifest.at("entries");
+  REQUIRE(manifest_entries.is_array());
+  REQUIRE(manifest_entries.size() == direct_entries.size());
+  for (const auto& manifest_entry : manifest_entries) {
+    for (const auto* key : {"source_kind", "original_path", "canonical_path", "archive_hash", "hash_low32",
+                           "hash_high32", "raw_tes3_data_offset", "payload_offset", "raw_size", "stored_size"}) {
+      CAPTURE(key);
+      REQUIRE(manifest_entry.contains(key));
+    }
+    REQUIRE(manifest_entry.at("expected").contains("bytes_hex"));
+
+    const auto original_path = manifest_entry.at("original_path").get<std::string>();
+    const auto expected_bytes = bytes_from_hex(manifest_entry.at("expected").at("bytes_hex").get<std::string>());
+    const auto& direct_entry = require_direct_entry(direct_entries, original_path);
+    const auto expected_hash = libbsa::detail::hash_tes3(original_path);
+
+    CHECK(manifest_entry.at("archive_hash").get<std::string>() == hex_u64(direct_entry.archive_hash));
+    CHECK(manifest_entry.at("hash_low32").get<std::string>() ==
+          hex_u32(libbsa::detail::tes3_hash_low32(direct_entry.archive_hash)));
+    CHECK(manifest_entry.at("hash_high32").get<std::string>() ==
+          hex_u32(libbsa::detail::tes3_hash_high32(direct_entry.archive_hash)));
+    CHECK(direct_entry.archive_hash == expected_hash);
+    CHECK(manifest_entry.at("raw_tes3_data_offset").get<std::uint32_t>() == direct_entry.raw_tes3_data_offset);
+    CHECK(manifest_entry.at("payload_offset").get<std::uint32_t>() == direct_entry.payload_offset);
+    CHECK(manifest_entry.at("raw_size").get<std::uint32_t>() == direct_entry.raw_size);
+    CHECK(manifest_entry.at("stored_size").get<std::uint32_t>() == direct_entry.stored_size);
+    CHECK(direct_entry.payload == expected_bytes);
+
+    const auto found = require_finds_entry(opened.value(), original_path);
+    CHECK(found.path == manifest_entry.at("canonical_path").get<std::string>());
+    CHECK(found.payload_offset == direct_entry.payload_offset);
+    CHECK(found.raw_size == expected_bytes.size());
+    CHECK(found.stored_size == expected_bytes.size());
+    require_extracts_bytes(opened.value(), original_path, expected_bytes);
+  }
 }
 
 TEST_CASE("tes3_bsa_writer emits byte-accurate raw TES3 tables in hash order", "[unit][tes3_bsa_writer]") {
