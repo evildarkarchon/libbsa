@@ -1,36 +1,37 @@
 ---
 phase: 10-tes3-write-support-and-bsa-format-completeness
-reviewed: 2026-05-10T00:33:13Z
+reviewed: 2026-05-10T00:52:00Z
 depth: standard
-files_reviewed: 9
+files_reviewed: 10
 files_reviewed_list:
   - CMakeLists.txt
   - include/libbsa/writer.hpp
   - src/formats/bsa/tes3_bsa_writer.cpp
   - src/formats/bsa/tes3_bsa_writer.hpp
   - tests/CMakeLists.txt
+  - tests/fixtures/generated/archives/tes3_writer_canonical.bsa
   - tests/fixtures/generated/archives/tes3_writer_canonical_manifest.json
   - tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp
   - tests/unit/public_include_boundary_tests.cpp
   - tests/unit/tes3_bsa_writer_tests.cpp
 findings:
   critical: 2
-  warning: 2
+  warning: 3
   info: 0
-  total: 4
+  total: 5
 status: issues_found
 ---
 
 # Phase 10: Code Review Report
 
-**Reviewed:** 2026-05-10T00:33:13Z
+**Reviewed:** 2026-05-10T00:52:00Z
 **Depth:** standard
-**Files Reviewed:** 9
+**Files Reviewed:** 10
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the TES3 public writer implementation, build integration, committed manifest provenance, fixture generator, and public/unit tests. The raw `.bsa` fixture was intentionally not read as source; its provenance and validation coverage were reviewed through the generator, manifest, and tests. Two correctness/data-loss blockers were found in the writer path handling and publish logic, plus two test/fixture-generator robustness issues.
+Reviewed the TES3 public writer implementation, build integration, committed fixture/manifest provenance, fixture generator, and public/unit tests. The binary `.bsa` fixture was treated as a fixture artifact and assessed through its committed manifest, generator, and reader-backed validation rather than as source text. Two correctness/data-loss blockers were found in the writer path handling and publish logic, plus three test/build/fixture-generator robustness issues.
 
 ## Critical Issues
 
@@ -108,8 +109,33 @@ if (!out) {
 #include <cctype>
 ```
 
+### WR-03: WARNING - Tests and fixture targets are anchored to the top-level source directory
+
+**File:** `tests/CMakeLists.txt:40-48,130-223`
+
+**Issue:** The test target include path, `LIBBSA_SOURCE_DIR`, and fixture generation outputs use `${CMAKE_SOURCE_DIR}`. That only works when libbsa is configured as the top-level project. If a downstream CMake project enables `LIBBSA_BUILD_TESTS` while adding libbsa via `add_subdirectory`, these paths resolve to the consumer's source root, causing private include lookup failures and fixture writes into the wrong repository tree.
+
+**Fix:** Anchor libbsa-owned paths to `${PROJECT_SOURCE_DIR}` (or an explicit libbsa root variable) instead of `${CMAKE_SOURCE_DIR}`.
+
+```cmake
+target_include_directories(libbsa_tests
+  PRIVATE
+    ${PROJECT_SOURCE_DIR}/src
+)
+
+target_compile_definitions(libbsa_tests
+  PRIVATE
+    LIBBSA_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+)
+
+add_custom_target(generate_tes3_bsa_writer_fixtures
+  COMMAND generate_tes3_bsa_writer_fixtures_tool --output ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives
+  # ...
+)
+```
+
 ---
 
-_Reviewed: 2026-05-10T00:33:13Z_
+_Reviewed: 2026-05-10T00:52:00Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
