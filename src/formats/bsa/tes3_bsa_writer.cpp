@@ -364,22 +364,10 @@ void cleanup_publish_directory(const std::filesystem::path& temp_dir) noexcept {
   std::filesystem::remove_all(temp_dir, fs_error);
 }
 
-result<std::filesystem::path> reserve_backup_path(const std::filesystem::path& output_path) {
-  const auto parent = output_path.parent_path();
-  const auto filename = output_path.filename();
-  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
-    auto candidate_name = filename;
-    candidate_name += ".libbsa-bak-" + std::to_string(counter);
-    const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
-    auto exists = path_exists_noexcept(candidate);
-    if (!exists) {
-      return exists.error();
-    }
-    if (!exists.value()) {
-      return candidate;
-    }
-  }
-  return error{error_code::io_error, "TES3 BSA writer exhausted backup output path names"};
+void cleanup_reserved_backup(const std::filesystem::path& backup_path) noexcept {
+  std::error_code fs_error;
+  // The backup path lives inside a writer-created unique directory, so removing the parent is caller-safe.
+  std::filesystem::remove_all(backup_path.parent_path(), fs_error);
 }
 
 } // namespace
@@ -442,28 +430,35 @@ result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
         return error{error_code::io_error, "TES3 BSA writer refuses to replace non-regular output host path"};
       }
 
-      auto backup_path = reserve_backup_path(output_path);
+      auto backup_path = detail::reserve_backup_path_in_unique_directory(output_path);
       if (!backup_path) {
         cleanup_publish_directory(temp_dir.value());
-        return backup_path.error();
+        return error{error_code::io_error, "TES3 BSA writer failed to reserve output backup"};
       }
 
       // Move the old archive aside before publish so a failed replacement can roll back to the last good file.
       std::filesystem::rename(output_path, backup_path.value(), fs_error);
       if (fs_error) {
+        cleanup_reserved_backup(backup_path.value());
         cleanup_publish_directory(temp_dir.value());
         return error{error_code::io_error, "TES3 BSA writer failed to reserve output backup"};
       }
 
-      std::filesystem::rename(temp_path, output_path, fs_error);
-      if (fs_error) {
-        std::error_code rollback_error;
-        std::filesystem::rename(backup_path.value(), output_path, rollback_error);
+      auto published = detail::publish_file_without_replace(temp_path, output_path);
+      if (!published) {
+        auto rollback_target_exists = path_exists_noexcept(output_path);
+        if (rollback_target_exists && !rollback_target_exists.value()) {
+          std::error_code rollback_error;
+          std::filesystem::rename(backup_path.value(), output_path, rollback_error);
+          if (!rollback_error) {
+            cleanup_reserved_backup(backup_path.value());
+          }
+        }
         cleanup_publish_directory(temp_dir.value());
         return error{error_code::io_error, "TES3 BSA writer failed to publish output host path"};
       }
 
-      std::filesystem::remove(backup_path.value(), fs_error);
+      cleanup_reserved_backup(backup_path.value());
       cleanup_publish_directory(temp_dir.value());
       return {};
     }
