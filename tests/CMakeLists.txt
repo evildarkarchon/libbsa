@@ -6,6 +6,7 @@ add_executable(libbsa_tests
   unit/result_tests.cpp
   unit/archive_reader_tests.cpp
   unit/bulk_extraction_tests.cpp
+  unit/writer_execution_options_tests.cpp
   unit/ba2_gnrl_writer_tests.cpp
   unit/tes3_bsa_writer_tests.cpp
   unit/tes4_bsa_writer_tests.cpp

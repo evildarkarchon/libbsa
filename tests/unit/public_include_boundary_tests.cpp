@@ -21,6 +21,8 @@ static_assert(std::is_enum_v<libbsa::tes4_bsa_target>);
 static_assert(std::is_enum_v<libbsa::archive_compression_policy>);
 static_assert(std::is_enum_v<libbsa::entry_compression_policy>);
 static_assert(std::is_class_v<libbsa::tes3_bsa_writer_options>);
+static_assert(std::is_class_v<libbsa::write_execution_options>);
+static_assert(std::is_default_constructible_v<libbsa::write_execution_options>);
 static_assert(std::is_class_v<libbsa::tes3_bsa_writer>);
 static_assert(std::is_enum_v<libbsa::ba2_gnrl_target>);
 static_assert(std::is_class_v<libbsa::ba2_gnrl_writer_options>);
@@ -55,10 +57,12 @@ static_assert(std::is_constructible_v<libbsa::tes3_bsa_writer, libbsa::tes3_bsa_
 
 // BEGIN tes3_bsa_public_contract_assertions
 static_assert(requires(libbsa::tes3_bsa_writer& writer, std::span<const std::byte> bytes) {
+  libbsa::write_execution_options{}.worker_count;
   { writer.options() } -> std::same_as<const libbsa::tes3_bsa_writer_options&>;
   { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
   { writer.add_file("Textures/Disk.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.bsa") } -> std::same_as<libbsa::result<void>>;
+  { writer.write_to("out.bsa", libbsa::write_execution_options{}) } -> std::same_as<libbsa::result<void>>;
 });
 // END tes3_bsa_public_contract_assertions
 
@@ -66,6 +70,7 @@ static_assert(requires(libbsa::tes4_bsa_writer& writer, std::span<const std::byt
   { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
   { writer.add_file("Textures/Disk.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.bsa") } -> std::same_as<libbsa::result<void>>;
+  { writer.write_to("out.bsa", libbsa::write_execution_options{}) } -> std::same_as<libbsa::result<void>>;
 });
 
 static_assert(requires(libbsa::ba2_gnrl_writer& writer,
@@ -85,6 +90,7 @@ static_assert(requires(libbsa::ba2_gnrl_writer& writer,
       -> std::same_as<libbsa::result<void>>;
   { writer.add_file("Meshes/Disk.nif", "source.nif", entry_options) } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
+  { writer.write_to("out.ba2", libbsa::write_execution_options{}) } -> std::same_as<libbsa::result<void>>;
 });
 
 // BEGIN ba2_dx10_public_contract_assertions
@@ -95,8 +101,13 @@ static_assert(requires(libbsa::ba2_dx10_writer& writer) {
   { writer.options() } -> std::same_as<const libbsa::ba2_dx10_writer_options&>;
   { writer.add_file("Textures/Diffuse.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
+  { writer.write_to("out.ba2", libbsa::write_execution_options{}) } -> std::same_as<libbsa::result<void>>;
 });
 // END ba2_dx10_public_contract_assertions
+
+static_assert(requires(libbsa::write_execution_options execution) {
+  { execution.worker_count } -> std::same_as<std::uint32_t&>;
+});
 
 static_assert(requires(libbsa::validation_report report,
                        libbsa::validation_options options,
@@ -146,6 +157,7 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
   [[maybe_unused]] auto reader = libbsa::archive_reader::open("boundary-smoke.bsa");
   [[maybe_unused]] libbsa::tes4_bsa_writer_options writer_options{
       libbsa::archive_compression_policy::target_default, false, false, false};
+  [[maybe_unused]] libbsa::write_execution_options execution_options{};
   [[maybe_unused]] libbsa::tes3_bsa_writer_options tes3_writer_options{};
   [[maybe_unused]] auto target = libbsa::tes4_bsa_target::oblivion;
   [[maybe_unused]] auto ba2_target = libbsa::ba2_gnrl_target::starfield_v3;
