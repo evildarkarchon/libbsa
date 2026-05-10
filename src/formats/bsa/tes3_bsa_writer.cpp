@@ -464,6 +464,16 @@ result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
     }
   }
 
+  output_exists = path_exists_noexcept(output_path);
+  if (!output_exists) {
+    cleanup_publish_directory(temp_dir.value());
+    return output_exists.error();
+  }
+  if (output_exists.value()) {
+    cleanup_publish_directory(temp_dir.value());
+    return error{error_code::io_error, "TES3 BSA output host path already exists"};
+  }
+
   std::filesystem::rename(temp_path, output_path, fs_error);
   if (fs_error) {
     cleanup_publish_directory(temp_dir.value());

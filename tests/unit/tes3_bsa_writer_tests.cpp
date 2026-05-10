@@ -8,6 +8,8 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -16,6 +18,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -541,6 +544,41 @@ TEST_CASE("tes3_bsa_writer refuses overwrite by default and preserves existing b
   REQUIRE(writer.add_bytes("Meshes/Unique.NIF", sample_bytes()).has_value());
 
   auto written = writer.write_to(archive.string());
+
+  REQUIRE_FALSE(written.has_value());
+  REQUIRE(written.error().code == libbsa::error_code::io_error);
+  CHECK(read_binary_file(archive) == sentinel);
+}
+
+TEST_CASE("tes3_bsa_writer refuses a destination created during non-overwrite publish", "[unit][tes3_bsa_writer]") {
+  const auto archive = output_path("overwrite-race-disabled.bsa");
+  std::error_code fs_error;
+  std::filesystem::remove(archive, fs_error);
+  const std::vector<std::byte> sentinel{std::byte{0x4E}, std::byte{0x45}, std::byte{0x57}};
+  std::atomic_bool stop_watcher{false};
+
+  std::thread watcher{[&] {
+    const auto parent = archive.parent_path();
+    const auto temp_prefix = archive.filename().string() + ".libbsa-tmp-";
+    while (!stop_watcher.load()) {
+      for (const auto& entry : std::filesystem::directory_iterator{parent}) {
+        if (entry.is_directory() && entry.path().filename().string().rfind(temp_prefix, 0U) == 0U) {
+          write_binary_file(archive, sentinel);
+          stop_watcher.store(true);
+          return;
+        }
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds{1});
+    }
+  }};
+
+  libbsa::tes3_bsa_writer writer;
+  const std::vector<std::byte> large_payload(16U * 1024U * 1024U, std::byte{0x41});
+  REQUIRE(writer.add_bytes("Meshes/Race.NIF", large_payload).has_value());
+
+  auto written = writer.write_to(archive.string());
+  stop_watcher.store(true);
+  watcher.join();
 
   REQUIRE_FALSE(written.has_value());
   REQUIRE(written.error().code == libbsa::error_code::io_error);
