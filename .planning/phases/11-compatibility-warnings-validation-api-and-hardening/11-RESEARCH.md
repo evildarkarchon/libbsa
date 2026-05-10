@@ -522,25 +522,22 @@ CMake presets support `cacheVariables`, and GCC documents AddressSanitizer, Unde
 | A1 | C++ enum catalog drift needs an explicit list or source scan because C++20 does not provide reflection-style enum iteration. | Common Pitfalls | A weaker catalog check could miss undocumented warning codes. |
 | A2 | Implementers may accidentally make sanitizer flags default because sanitizer hardening is valuable. | Common Pitfalls | Default Windows CI or local MSVC builds could break. |
 | A3 | A catalog check that only verifies file existence is insufficient. | Common Pitfalls | Warning coverage could appear complete while public warning codes remain undocumented. |
-| A4 | The consolidated malformed matrix format is not locked and could be JSON, Markdown, or both. | Open Questions | Planner may choose a format that is hard to validate by machine or hard for maintainers to read. |
+| A4 | The consolidated malformed matrix format was resolved during planning as JSON with manifest-backed and test-backed row types. | Resolved Open Questions | If implementers drift from the resolved schema, machine validation could become weak or hard to maintain. |
 | A5 | Research freshness estimate is 30 days for repo-local architecture and 7 days for dependency/tool versions. | Metadata | Planner could rely on stale tool/package versions if implementation starts later. |
 
-## Open Questions
+## Open Questions (All RESOLVED)
 
-1. **Which three warning scenarios should be first?**
+1. **RESOLVED 2026-05-10: Which three warning scenarios should be first?**
    - What we know: The phase requires at least three warning-producing valid archive scenarios spanning BSA and BA2 families, and project docs mention sound compression risk, embedded-name target risk, and target-family compatibility checks as relevant compatibility areas. [VERIFIED: .planning/phases/11-compatibility-warnings-validation-api-and-hardening/11-CONTEXT.md; VERIFIED: docs/PRD.md; VERIFIED: include/libbsa/writer.hpp]
-   - What's unclear: Exact code names and generated/writer-output fixture shape remain discretionary. [VERIFIED: .planning/phases/11-compatibility-warnings-validation-api-and-hardening/11-CONTEXT.md]
-   - Recommendation: Use `compressed_sound_payload`, `embedded_name_target_risk`, and `ba2_target_family_mismatch` or equivalent names, then require catalog and generated/writer-output evidence before implementation is considered complete. [VERIFIED: .planning/phases/11-compatibility-warnings-validation-api-and-hardening/11-CONTEXT.md]
+   - Resolution: Plans 11-01 and 11-03 lock the initial public warning codes to `compressed_sound_payload`, `bsa_embedded_name_compatibility_risk`, and `target_family_mismatch`. Warning tests use generated or writer-output evidence, assert code/severity/path presence only, and Plan 11-04 catalogs the warning evidence after Plan 11-03 creates `tests/unit/compatibility_warning_tests.cpp`. [VERIFIED: .planning/phases/11-compatibility-warnings-validation-api-and-hardening/11-01-PLAN.md; VERIFIED: .planning/phases/11-compatibility-warnings-validation-api-and-hardening/11-03-PLAN.md; VERIFIED: .planning/phases/11-compatibility-warnings-validation-api-and-hardening/11-04-PLAN.md]
 
-2. **Should the sanitizer path be preset-only or also a CI lane?**
+2. **RESOLVED 2026-05-10: Should the sanitizer path be preset-only or also a CI lane?**
    - What we know: Phase 11 requires a sanitizer-oriented preset or documented command path and locks default Windows MSVC CI unchanged. [VERIFIED: .planning/phases/11-compatibility-warnings-validation-api-and-hardening/11-CONTEXT.md]
-   - What's unclear: Whether this phase should add a non-default GitHub Actions job. [VERIFIED: .planning/phases/11-compatibility-warnings-validation-api-and-hardening/11-SPEC.md]
-   - Recommendation: Add a preset and README/fixture policy command first; make a CI lane optional unless the repo already has a Linux/vcpkg job ready. [VERIFIED: CMakePresets.json; VERIFIED: .github/workflows/ci.yml]
+   - Resolution: Plan 11-07 adds configure/build/test presets named `linux-clang-asan-ubsan`, documents `ctest --preset linux-clang-asan-ubsan -L "malformed|validation|compression" --output-on-failure`, and explicitly does not add the sanitizer path to `.github/workflows/ci.yml`. Default Windows MSVC static/shared CI remains unchanged. [VERIFIED: .planning/phases/11-compatibility-warnings-validation-api-and-hardening/11-07-PLAN.md; VERIFIED: CMakePresets.json; VERIFIED: .github/workflows/ci.yml]
 
-3. **Where should malformed matrix data live?**
+3. **RESOLVED 2026-05-10: Where should malformed matrix data live?**
    - What we know: Existing manifests live under `tests/fixtures/generated/archives`, and `validate_fixture_manifests.py` already validates some manifest schema. [VERIFIED: tests/fixtures/generated/archives/*_malformed_manifest.json; VERIFIED: tests/fixtures/generated/validate_fixture_manifests.py]
-   - What's unclear: Whether the consolidated matrix should be JSON, Markdown, or both. [ASSUMED]
-   - Recommendation: Use JSON for machine checks and summarize it from `docs/compatibility-evidence.md` or `tests/fixtures/README.md` for human traceability. [VERIFIED: tests/fixtures/generated/validate_fixture_manifests.py; VERIFIED: tests/fixtures/README.md]
+   - Resolution: Plan 11-06 stores the machine-readable matrix at `tests/fixtures/generated/compatibility_matrix.json`, validates it from `tests/fixtures/generated/validate_fixture_manifests.py` and `tests/unit/compatibility_matrix_tests.cpp`, and supports two explicit row shapes: `evidence_type: "manifest"` for generated archive/manifest/case rows and `evidence_type: "test"` for in-repo test-backed rows. The oversized TES4-family arithmetic row uses the test-backed path against `tests/unit/tes4_bsa_reader_tests.cpp`; all other malformed archive rows remain generated/legal manifest-backed evidence outside `TES5Edit/`. [VERIFIED: .planning/phases/11-compatibility-warnings-validation-api-and-hardening/11-06-PLAN.md; VERIFIED: tests/fixtures/generated/validate_fixture_manifests.py; VERIFIED: tests/unit/tes4_bsa_reader_tests.cpp]
 
 ## Environment Availability
 

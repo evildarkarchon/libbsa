@@ -1,9 +1,9 @@
 ---
 phase: 11
 slug: compatibility-warnings-validation-api-and-hardening
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: ready
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-10
 ---
 
@@ -38,26 +38,34 @@ created: 2026-05-10
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 11-W0-COMP-01 | TBD | TBD | COMP-01 | T-11-01 / T-11-06 | Fixture/evidence comparisons stay legal and do not require mutable TES5Edit or copyrighted game archives. | fixture/compat | `ctest --preset windows-msvc-debug-static -L "fixture|compat" --output-on-failure` | Partial; fixture tests exist, Phase 11 compatibility catalog is missing | pending |
-| 11-W0-COMP-02 | TBD | TBD | COMP-02 | T-11-02 / T-11-03 | Writer-produced archives validate through the public facade and strict open remains authoritative. | unit/roundtrip/compat | `ctest --preset windows-msvc-debug-static -R "validation|writer" --output-on-failure` | Missing `tests/unit/validation_api_tests.cpp` | pending |
-| 11-W0-COMP-03 | TBD | TBD | COMP-03 | T-11-05 | Warnings expose stable code/severity/path records without logger ownership or exact message assertions. | unit/compat | `ctest --preset windows-msvc-debug-static -R "compatibility_warning" --output-on-failure` | Missing warning tests | pending |
-| 11-W0-COMP-04 | TBD | TBD | COMP-04 | T-11-01 / T-11-02 / T-11-03 / T-11-04 | Malformed archives produce fatal validation diagnostics and never return a usable reader. | malformed/unit | `ctest --preset windows-msvc-debug-static -L malformed --output-on-failure` | Partial; per-family malformed tests exist, consolidated matrix is missing | pending |
-| 11-W0-COMP-05 | TBD | TBD | COMP-05 | T-11-01 / T-11-02 / T-11-03 | Parser/decompressor/validation hardening has an additive Clang/GCC sanitizer path. | build/test | `ctest --preset <sanitize-preset> -L "malformed|validation|compression" --output-on-failure` | Missing sanitizer preset or documented command path | pending |
-| 11-W0-COMP-06 | TBD | TBD | COMP-06 | T-11-05 / T-11-06 | Every public warning code has a documented compatibility rule and evidence reference. | docs/unit/script | `ctest --preset windows-msvc-debug-static -R "compatibility_evidence" --output-on-failure` | Missing evidence catalog and machine check | pending |
+| 11-01-T1 | 11-01 | 1 | COMP-03 | T-11-01 / T-11-03 | Public validation/warning symbols are asserted before implementation and public headers keep forbidden dependency tokens out. | public-api | `cmake --build --preset windows-msvc-debug-static --target libbsa_tests` | Existing boundary file extended by task | planned |
+| 11-01-T2 | 11-01 | 1 | COMP-03 | T-11-01 / T-11-03 | Public validation contract compiles through dependency-light installed headers. | public-api | `cmake --build --preset windows-msvc-debug-static --target libbsa_tests && ctest --preset windows-msvc-debug-static -R public_include_boundary --output-on-failure` | Planned `include/libbsa/validation.hpp` | planned |
+| 11-05-T1 | 11-05 | 1 | COMP-04 | T-11-13 / T-11-14 | Malformed manifest typo paths fail loudly instead of silently remapping public error codes. | malformed/unit | `cmake --build --preset windows-msvc-debug-static --target libbsa_tests && ctest --preset windows-msvc-debug-static -R "tes3_bsa_malformed|tes4_bsa_malformed|ba2_gnrl_malformed|ba2_dx10_malformed" --output-on-failure` | Existing reader tests modified by task | planned |
+| 11-05-T2 | 11-05 | 1 | COMP-04 | T-11-14 / T-11-15 | Existing malformed suites still pass after strict manifest oracle hardening. | malformed/unit | `ctest --preset windows-msvc-debug-static -L malformed --output-on-failure` | Existing malformed tests | planned |
+| 11-02-T1 | 11-02 | 2 | COMP-02 / COMP-04 | T-11-04 / T-11-05 | Generated fixtures, writer outputs, and malformed cases define validation facade behavior before implementation. | validation/unit | `cmake --build --preset windows-msvc-debug-static --target libbsa_tests` | Planned `tests/unit/validation_api_tests.cpp` | planned |
+| 11-02-T2 | 11-02 | 2 | COMP-02 / COMP-04 | T-11-04 / T-11-06 | `validate_archive` reports fatal diagnostics for inspectable malformed archives without weakening strict open. | validation/unit | `cmake --build --preset windows-msvc-debug-static --target libbsa_tests && ctest --preset windows-msvc-debug-static -R "validation_api|package_consumer|public_include_boundary" --output-on-failure` | Planned `src/validation.cpp` | planned |
+| 11-03-T1 | 11-03 | 3 | COMP-02 / COMP-03 | T-11-07 / T-11-08 | Warning scenarios assert stable code/severity/path facts without exact message coupling. | compat/unit | `cmake --build --preset windows-msvc-debug-static --target libbsa_tests` | Planned `tests/unit/compatibility_warning_tests.cpp` | planned |
+| 11-03-T2 | 11-03 | 3 | COMP-02 / COMP-03 | T-11-07 / T-11-09 | BSA and BA2 warning policy emits stable records from generated or writer-output evidence. | compat/unit | `cmake --build --preset windows-msvc-debug-static --target libbsa_tests && ctest --preset windows-msvc-debug-static -R "compatibility_warning|validation_api" --output-on-failure` | Planned private warning policy in `src/validation.cpp` | planned |
+| 11-04-T1 | 11-04 | 4 | COMP-01 / COMP-03 / COMP-06 | T-11-10 | Missing or incomplete warning catalog coverage fails machine checks. | docs/unit | `cmake --build --preset windows-msvc-debug-static --target libbsa_tests && ctest --preset windows-msvc-debug-static -R "compatibility evidence|validation_policy" --output-on-failure` | Existing policy test file extended by task | planned |
+| 11-04-T2 | 11-04 | 4 | COMP-01 / COMP-03 / COMP-06 | T-11-10 / T-11-11 / T-11-12 | Every public warning code is cataloged after warning tests exist, and optional corpus checks remain skipped by default. | docs/unit | `cmake --build --preset windows-msvc-debug-static --target libbsa_tests && ctest --preset windows-msvc-debug-static -R "compatibility evidence|validation_policy|requires-game-fixture" --output-on-failure` | Planned `docs/compatibility-evidence.md` | planned |
+| 11-06-T1 | 11-06 | 4 | COMP-04 / COMP-05 | T-11-16 / T-11-17 | Matrix tests require each row to have manifest-backed or explicit test-backed evidence before matrix content exists. | matrix/unit | `cmake --build --preset windows-msvc-debug-static --target libbsa_tests` | Planned `tests/unit/compatibility_matrix_tests.cpp` | planned |
+| 11-06-T2 | 11-06 | 4 | COMP-04 / COMP-05 | T-11-16 / T-11-17 / T-11-18 | Consolidated malformed matrix covers families/categories, validates manifest rows and test-backed oversized arithmetic evidence, and drives validation-report checks. | matrix/malformed | `python tests/fixtures/generated/validate_fixture_manifests.py && cmake --build --preset windows-msvc-debug-static --target libbsa_tests && ctest --preset windows-msvc-debug-static -R "compatibility_matrix|validation_api" --output-on-failure` | Planned `tests/fixtures/generated/compatibility_matrix.json` | planned |
+| 11-07-T1 | 11-07 | 5 | COMP-05 / COMP-06 | T-11-19 / T-11-20 / T-11-21 | Policy tests prove the sanitizer path is additive and Windows static/shared CI plus TES5Edit checks remain intact. | policy/unit | `cmake --build --preset windows-msvc-debug-static --target libbsa_tests && ctest --preset windows-msvc-debug-static -R "sanitizer validation path|validation_policy" --output-on-failure` | Existing policy test file extended by task | planned |
+| 11-07-T2 | 11-07 | 5 | COMP-05 / COMP-06 | T-11-19 / T-11-20 / T-11-21 | Additive sanitizer preset/docs exist without changing default Windows CI. | build/policy | `cmake --list-presets=all && cmake --build --preset windows-msvc-debug-static --target libbsa_tests && ctest --preset windows-msvc-debug-static -R "sanitizer validation path|validation_policy|public_include_boundary" --output-on-failure` | Planned `linux-clang-asan-ubsan` preset/docs | planned |
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `include/libbsa/validation.hpp` - public validation API types and Doxygen comments.
-- [ ] `src/validation.cpp` - strict-open-backed validation report assembly.
-- [ ] `tests/unit/validation_api_tests.cpp` - public API and writer-output validation coverage.
-- [ ] `tests/unit/compatibility_warning_tests.cpp` - stable warning-code/severity/path coverage without exact message assertions.
-- [ ] `docs/compatibility-evidence.md` plus a CTest-discovered check - warning-code catalog coverage.
-- [ ] `tests/fixtures/generated/compatibility_matrix.json` or equivalent - consolidated malformed compatibility matrix.
-- [ ] Per-family malformed manifest helpers reject unknown `expected_error` values instead of silently defaulting.
-- [ ] Additive sanitizer preset or documented command path for malformed/parser/compression/validation labels.
-- [ ] Reconfigure local build tree before validation if CTest still references stale paths from another checkout.
+- [x] `include/libbsa/validation.hpp` - planned in 11-01-T2 with public validation API types and Doxygen comments.
+- [x] `src/validation.cpp` - planned in 11-02-T2 with strict-open-backed validation report assembly, then extended in 11-03-T2 for private warning policy.
+- [x] `tests/unit/validation_api_tests.cpp` - planned in 11-02-T1/T2 and extended in 11-06-T1/T2 for writer-output and malformed matrix coverage.
+- [x] `tests/unit/compatibility_warning_tests.cpp` - planned in 11-03-T1/T2 with stable warning-code/severity/path coverage and no exact message assertions.
+- [x] `docs/compatibility-evidence.md` plus CTest-discovered checks - planned in 11-04-T1/T2 after warning tests exist.
+- [x] `tests/fixtures/generated/compatibility_matrix.json` - planned in 11-06-T1/T2 as a consolidated matrix with manifest-backed and explicit test-backed evidence rows.
+- [x] Per-family malformed manifest helpers reject unknown `expected_error` values instead of silently defaulting - planned in 11-05-T1/T2.
+- [x] Additive sanitizer preset and documented command path for malformed/parser/compression/validation labels - planned in 11-07-T1/T2.
+- [x] Reconfigure local build tree before validation if CTest still references stale paths from another checkout - retained in quick/full validation commands through configure/build presets.
 
 ---
 
@@ -71,12 +79,12 @@ created: 2026-05-10
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify commands or Wave 0 dependencies.
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify.
-- [ ] Wave 0 covers all missing references above.
-- [ ] No watch-mode flags.
-- [ ] Full static/shared Windows suites are green before phase closeout.
-- [ ] Sanitizer-oriented malformed/validation path exists and is documented or preset-backed.
-- [ ] `nyquist_compliant: true` set in frontmatter after the final plan maps every task to automated coverage.
+- [x] All tasks have `<automated>` verify commands.
+- [x] Sampling continuity: no 3 consecutive tasks lack automated verification.
+- [x] Wave 0 planning covers all missing references above through concrete plan/task mappings.
+- [x] No watch-mode flags.
+- [x] Full static/shared Windows suites remain required before phase closeout.
+- [x] Sanitizer-oriented malformed/validation path is documented and preset-backed in 11-07.
+- [x] `nyquist_compliant: true` is set in frontmatter after every task was mapped to automated coverage.
 
-**Approval:** pending
+**Approval:** ready for Phase 11 execution

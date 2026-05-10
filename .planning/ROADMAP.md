@@ -360,14 +360,16 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 public validation contract where applicable)*
 - [ ] 11-02-PLAN.md — Implement strict-open-backed validation reports for fixtures and writer output.
-- [ ] 11-04-PLAN.md — Add machine-checked compatibility evidence catalog and fixture policy updates.
 
-**Wave 3** *(blocked on Wave 2 validation implementation/catalog where applicable)*
+**Wave 3** *(blocked on Wave 2 validation implementation where applicable)*
 - [ ] 11-03-PLAN.md — Implement representative typed compatibility warning scenarios across BSA and BA2.
-- [ ] 11-07-PLAN.md — Add additive sanitizer-oriented preset, documentation, and policy preservation tests.
 
-**Wave 4** *(blocked on validation implementation and strict malformed helper mapping)*
+**Wave 4** *(blocked on warning evidence, validation implementation, and strict malformed helper mapping)*
+- [ ] 11-04-PLAN.md — Add machine-checked compatibility evidence catalog and fixture policy updates.
 - [ ] 11-06-PLAN.md — Add the consolidated malformed hardening matrix and validation-report coverage.
+
+**Wave 5** *(blocked on Wave 4 evidence catalog completion)*
+- [ ] 11-07-PLAN.md — Add additive sanitizer-oriented preset, documentation, and policy preservation tests.
 
 ### Phase 12: Performance, Concurrency, Documentation, and Polish
 **Goal**: Consumers can use bounded-memory, documented, parallel-capable archive workflows, and maintainers can measure performance and publish integration guidance.
