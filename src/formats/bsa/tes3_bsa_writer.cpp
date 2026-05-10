@@ -119,6 +119,14 @@ result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view descript
   return static_cast<std::uint32_t>(value);
 }
 
+result<std::uint32_t> checked_add_u32(std::uint32_t lhs, std::uint32_t rhs, std::string_view description) {
+  return checked_u32(static_cast<std::uint64_t>(lhs) + rhs, description);
+}
+
+result<std::uint32_t> checked_mul_u32(std::uint32_t lhs, std::uint32_t rhs, std::string_view description) {
+  return checked_u32(static_cast<std::uint64_t>(lhs) * rhs, description);
+}
+
 result<void> validate_entries(std::span<const tes3_writer_entry> entries) {
   if (entries.empty()) {
     return error{error_code::invalid_argument, "TES3 BSA writer requires at least one file entry"};
@@ -184,16 +192,18 @@ result<std::vector<prepared_entry>> prepare_entries(std::span<const tes3_writer_
 }
 
 result<void> assign_raw_offsets(std::span<prepared_entry> entries) {
-  std::uint64_t cursor = 0;
+  std::uint32_t cursor = 0;
   for (auto& entry : entries) {
-    auto offset = checked_u32(cursor, "TES3 BSA payload offset");
-    if (!offset) {
-      return offset.error();
+    entry.raw_offset = cursor;
+    auto payload_size = checked_u32(entry.payload.size(), "TES3 BSA payload size");
+    if (!payload_size) {
+      return payload_size.error();
     }
-    entry.raw_offset = offset.value();
-    if (!add_fits_u64(cursor, entry.payload.size(), cursor)) {
-      return error{error_code::format_error, "TES3 BSA payload span overflows"};
+    auto next = checked_add_u32(cursor, payload_size.value(), "TES3 BSA payload span");
+    if (!next) {
+      return next.error();
     }
+    cursor = next.value();
   }
   return {};
 }
@@ -223,30 +233,33 @@ result<void> write_archive_bytes(std::span<const prepared_entry> entries, const 
     return !file_count ? file_count.error() : name_table_size.error();
   }
 
-  std::uint64_t records_size64 = 0;
-  std::uint64_t name_offsets_size64 = 0;
-  std::uint64_t hash_records_size64 = 0;
-  if (!add_fits_u64(0U, static_cast<std::uint64_t>(file_count.value()) * file_record_size, records_size64) ||
-      !add_fits_u64(0U, static_cast<std::uint64_t>(file_count.value()) * name_offset_size, name_offsets_size64) ||
-      !add_fits_u64(0U, static_cast<std::uint64_t>(file_count.value()) * hash_record_size, hash_records_size64)) {
-    return error{error_code::format_error, "TES3 BSA table size overflows"};
+  const auto records_size = checked_mul_u32(file_count.value(), file_record_size, "TES3 BSA file records");
+  const auto name_offsets_size = checked_mul_u32(file_count.value(), name_offset_size, "TES3 BSA name offsets");
+  const auto hash_records_size = checked_mul_u32(file_count.value(), hash_record_size, "TES3 BSA hash records");
+  if (!records_size || !name_offsets_size || !hash_records_size) {
+    return !records_size ? records_size.error() : (!name_offsets_size ? name_offsets_size.error() : hash_records_size.error());
   }
 
-  std::uint64_t hash_table_start64 = fixed_header_size;
-  if (!add_fits_u64(hash_table_start64, records_size64, hash_table_start64) ||
-      !add_fits_u64(hash_table_start64, name_offsets_size64, hash_table_start64) ||
-      !add_fits_u64(hash_table_start64, name_table_size.value(), hash_table_start64)) {
-    return error{error_code::format_error, "TES3 BSA metadata size overflows"};
+  auto hash_table_start = checked_add_u32(fixed_header_size, records_size.value(), "TES3 BSA hash table offset");
+  if (hash_table_start) {
+    hash_table_start = checked_add_u32(hash_table_start.value(), name_offsets_size.value(), "TES3 BSA hash table offset");
   }
-  const auto hash_table_start = checked_u32(hash_table_start64, "TES3 BSA hash table offset");
+  if (hash_table_start) {
+    hash_table_start = checked_add_u32(hash_table_start.value(), name_table_size.value(), "TES3 BSA hash table offset");
+  }
   if (!hash_table_start) {
     return hash_table_start.error();
+  }
+  auto data_section_start = checked_add_u32(hash_table_start.value(), hash_records_size.value(), "TES3 BSA data section offset");
+  if (!data_section_start) {
+    return data_section_start.error();
   }
   const auto hash_offset_minus_header = checked_u32(hash_table_start.value() - fixed_header_size,
                                                     "TES3 BSA hash table relative offset");
   if (!hash_offset_minus_header) {
     return hash_offset_minus_header.error();
   }
+  (void)data_section_start;
 
   detail::binary_writer writer;
   auto written = writer.write_u32_le(tes3_magic_version);
