@@ -294,7 +294,9 @@ std::vector<source_dds_spec> source_dds_valid_specs() {
           {"array_bc5_unorm_2slice", "ba2_dx10_array_bc5_unorm_2slice.dds", 83U, "BC5_UNORM", 64U, 64U, 1U, 2U, false,
            "textures/structural/array_bc5_unorm_2slice.dds", "array"},
           {"cubemap_bc1_unorm_6face", "ba2_dx10_cubemap_bc1_unorm_6face.dds", 71U, "BC1_UNORM", 32U, 32U, 1U, 1U, true,
-           "textures/structural/cubemap_bc1_unorm_6face.dds", "cubemap"}};
+           "textures/structural/cubemap_bc1_unorm_6face.dds", "cubemap"},
+          {"cubemap_array_bc1_unorm_12face", "ba2_dx10_cubemap_array_bc1_unorm_12face.dds", 71U, "BC1_UNORM", 32U, 32U, 1U, 2U,
+           true, "textures/structural/cubemap_array_bc1_unorm_12face.dds", "cubemap_array"}};
 }
 
 std::vector<std::byte> build_source_dds(const source_dds_spec& spec) {
@@ -355,14 +357,15 @@ std::string writer_sources_manifest(const std::vector<source_dds_spec>& specs) {
   }
   out << "  ],\n";
   out << "  \"structural_cases\": {\n";
-  for (const auto key : {"multi_mip_bc7_unorm", "array_bc5_unorm_2slice", "cubemap_bc1_unorm_6face"}) {
+  for (const auto key :
+       {"multi_mip_bc7_unorm", "array_bc5_unorm_2slice", "cubemap_bc1_unorm_6face", "cubemap_array_bc1_unorm_12face"}) {
     const auto found = std::find_if(specs.begin(), specs.end(), [&](const source_dds_spec& spec) { return spec.id == key; });
     if (found == specs.end()) {
       throw std::runtime_error("missing structural DDS source case");
     }
     out << "    \"" << key << "\": ";
     write_source_case_json(out, *found, "");
-    out << (std::string_view{key} == "cubemap_bc1_unorm_6face" ? "\n" : ",\n");
+    out << (std::string_view{key} == "cubemap_array_bc1_unorm_12face" ? "\n" : ",\n");
   }
   out << "  },\n";
   out << "  \"invalid_cases\": [\n";

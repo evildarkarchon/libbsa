@@ -338,14 +338,16 @@ result<std::uint64_t> first_payload_offset_for(std::span<const dx10_record> reco
 std::uint32_t inferred_array_size(const dx10_record& record) noexcept {
   // TES5Edit treats CubeMaps == 2049 as the cubemap signal. Preserve cube_maps_raw separately so
   // future compatibility work can revisit broader Bethesda-specific flag meanings without data loss.
-  if (record.cube_maps_raw == ba2_dx10_cubemap_raw) {
-    return 1U;
-  }
   std::uint32_t slices = 0;
   for (const auto& chunk : record.chunks) {
     if (chunk.start_mip == 0U) {
       ++slices;
     }
+  }
+  if (record.cube_maps_raw == ba2_dx10_cubemap_raw) {
+    // BA2 stores one start-mip sequence per cubemap face, so logical cube-array count is face
+    // groups divided by the six DDS cubemap faces rather than a value encoded in CubeMaps.
+    return std::max(1U, slices / 6U);
   }
   return std::max(1U, slices);
 }

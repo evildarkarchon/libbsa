@@ -404,7 +404,8 @@ void require_structural_writer_round_trip() {
   const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
   libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::starfield_v3};
   std::vector<const nlohmann::json*> added_cases;
-  for (const auto id : {"multi_mip_bc7_unorm", "array_bc5_unorm_2slice", "cubemap_bc1_unorm_6face"}) {
+  for (const auto id :
+       {"multi_mip_bc7_unorm", "array_bc5_unorm_2slice", "cubemap_bc1_unorm_6face", "cubemap_array_bc1_unorm_12face"}) {
     const auto& source_case = valid_source_case(manifest, id);
     auto added = writer.add_file(source_case.at("archive_path").get<std::string>(),
                                  (generated_source_dir() / source_case.at("file").get<std::string>()).string());
@@ -433,6 +434,13 @@ void require_structural_writer_round_trip() {
   REQUIRE(array.value().has_value());
   REQUIRE(array.value()->texture.has_value());
   CHECK(array.value()->texture->array_size == 2U);
+
+  const auto cubemap_array = opened.value().find("textures/structural/cubemap_array_bc1_unorm_12face.dds");
+  REQUIRE(cubemap_array.has_value());
+  REQUIRE(cubemap_array.value().has_value());
+  REQUIRE(cubemap_array.value()->texture.has_value());
+  CHECK(cubemap_array.value()->texture->is_cubemap);
+  CHECK(cubemap_array.value()->texture->array_size == 2U);
 
   const auto multi = opened.value().find("textures/structural/multi_mip_bc7_unorm.dds");
   REQUIRE(multi.has_value());
@@ -517,6 +525,20 @@ TEST_CASE("BA2 DX10 writer DDS source manifest exposes dedicated structural case
   CHECK(cubemap.at("archive_path").get<std::string>() == "textures/structural/cubemap_bc1_unorm_6face.dds");
   CHECK(cubemap.at("structural_case").get<std::string>() == "cubemap");
   require_analyzes_valid_source_case(cubemap);
+
+  const auto& cubemap_array = structural_case(manifest, "cubemap_array_bc1_unorm_12face");
+  CHECK(cubemap_array.at("file").get<std::string>() == "ba2_dx10_cubemap_array_bc1_unorm_12face.dds");
+  CHECK(cubemap_array.at("format_id").get<std::uint32_t>() == 71U);
+  CHECK(cubemap_array.at("format_name").get<std::string>() == "BC1_UNORM");
+  CHECK(cubemap_array.at("width").get<std::uint32_t>() == 32U);
+  CHECK(cubemap_array.at("height").get<std::uint32_t>() == 32U);
+  CHECK(cubemap_array.at("mip_count").get<std::uint32_t>() == 1U);
+  CHECK(cubemap_array.at("array_size").get<std::uint32_t>() == 2U);
+  CHECK(cubemap_array.at("is_cubemap").get<bool>());
+  CHECK(cubemap_array.at("archive_path").get<std::string>() ==
+        "textures/structural/cubemap_array_bc1_unorm_12face.dds");
+  CHECK(cubemap_array.at("structural_case").get<std::string>() == "cubemap_array");
+  require_analyzes_valid_source_case(cubemap_array);
 }
 
 TEST_CASE("BA2 DX10 writer DDS source manifest rejects malformed and unsupported DDS sources", "[unit][fixture][ba2_dx10_writer][dds]") {

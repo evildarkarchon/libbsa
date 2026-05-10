@@ -231,6 +231,7 @@ add_custom_target(generate_ba2_dx10_fixtures
     ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_multi_mip_bc7_unorm.dds
     ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_array_bc5_unorm_2slice.dds
     ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_cubemap_bc1_unorm_6face.dds
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/source/ba2_dx10_cubemap_array_bc1_unorm_12face.dds
   COMMENT "Generating BA2 DX10 texture success and malformed fixtures"
   VERBATIM
 )
