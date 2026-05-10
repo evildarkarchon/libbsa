@@ -49,6 +49,16 @@ result<formats::bsa::tes3_writer_entry> make_entry(std::string_view archive_path
   return entry;
 }
 
+result<void> validate_host_path(std::string_view host_path, std::string_view description) {
+  if (host_path.empty()) {
+    return error{error_code::invalid_argument, std::string{description} + " must not be empty"};
+  }
+  if (host_path.find('\0') != std::string_view::npos) {
+    return error{error_code::invalid_argument, std::string{description} + " must not contain NUL bytes"};
+  }
+  return {};
+}
+
 } // namespace
 
 tes3_bsa_writer::tes3_bsa_writer() : tes3_bsa_writer(tes3_bsa_writer_options{}) {}
@@ -59,8 +69,9 @@ tes3_bsa_writer::tes3_bsa_writer(tes3_bsa_writer_options options)
 const tes3_bsa_writer_options& tes3_bsa_writer::options() const noexcept { return state_->options; }
 
 result<void> tes3_bsa_writer::add_file(std::string_view archive_path, std::string_view host_path) {
-  if (host_path.empty()) {
-    return error{error_code::invalid_argument, "TES3 BSA disk source host path must not be empty"};
+  auto validated_host_path = validate_host_path(host_path, "TES3 BSA disk source host path");
+  if (!validated_host_path) {
+    return validated_host_path.error();
   }
 
   auto entry = make_entry(archive_path);
@@ -369,8 +380,9 @@ void cleanup_publish_directory(const std::filesystem::path& temp_dir) noexcept {
 result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
                                     std::span<const tes3_writer_entry> entries,
                                     std::string_view output_host_path) {
-  if (output_host_path.empty()) {
-    return error{error_code::invalid_argument, "TES3 BSA output host path must not be empty"};
+  auto validated_host_path = validate_host_path(output_host_path, "TES3 BSA output host path");
+  if (!validated_host_path) {
+    return validated_host_path.error();
   }
 
   const auto output_path = std::filesystem::path{output_host_path};

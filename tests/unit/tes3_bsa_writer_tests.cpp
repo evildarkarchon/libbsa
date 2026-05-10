@@ -528,6 +528,27 @@ TEST_CASE("tes3_bsa_writer rejects archive paths containing NUL bytes", "[unit][
   REQUIRE(added_file.error().code == libbsa::error_code::invalid_argument);
 }
 
+TEST_CASE("tes3_bsa_writer rejects source host paths containing NUL bytes", "[unit][tes3_bsa_writer]") {
+  const std::string invalid_host_path{"safe-source.bin\0suffix", 22U};
+  libbsa::tes3_bsa_writer writer;
+
+  auto added = writer.add_file("Meshes/Disk.NIF", invalid_host_path);
+
+  REQUIRE_FALSE(added.has_value());
+  REQUIRE(added.error().code == libbsa::error_code::invalid_argument);
+}
+
+TEST_CASE("tes3_bsa_writer rejects output host paths containing NUL bytes", "[unit][tes3_bsa_writer]") {
+  const std::string invalid_output_path{"safe-output.bsa\0suffix", 22U};
+  libbsa::tes3_bsa_writer writer;
+  REQUIRE(writer.add_bytes("Meshes/Output.NIF", sample_bytes()).has_value());
+
+  auto written = writer.write_to(invalid_output_path);
+
+  REQUIRE_FALSE(written.has_value());
+  REQUIRE(written.error().code == libbsa::error_code::invalid_argument);
+}
+
 TEST_CASE("tes3_bsa_writer rejects duplicate canonical archive paths at write time", "[unit][tes3_bsa_writer]") {
   libbsa::tes3_bsa_writer writer;
   REQUIRE(writer.add_bytes("Meshes/Duplicate.NIF", sample_bytes()).has_value());
