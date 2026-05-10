@@ -71,6 +71,7 @@ target_sources(libbsa
     src/formats/bsa/bsa_format_detector.cpp
     src/formats/bsa/tes3_bsa_parser.cpp
     src/formats/bsa/tes3_bsa_reader.cpp
+    src/formats/bsa/tes3_bsa_writer.cpp
     src/formats/bsa/tes4_bsa_parser.cpp
     src/formats/bsa/tes4_bsa_reader.cpp
     src/formats/bsa/tes4_bsa_writer.cpp

@@ -76,6 +76,12 @@ struct tes4_bsa_writer_options {
   bool overwrite_existing{false};
 };
 
+/// Options controlling TES3/Morrowind write-new archive finalization.
+struct tes3_bsa_writer_options {
+  /// Allows `write_to` to replace an existing host-path archive when true.
+  bool overwrite_existing{false};
+};
+
 /// Options controlling BA2 GNRL write-new archive finalization.
 struct ba2_gnrl_writer_options {
   /// Archive-wide compression behavior used by entries whose policy is `inherit`.
@@ -183,6 +189,46 @@ class tes4_bsa_writer {
   ///
   /// Existing destinations fail unless `tes4_bsa_writer_options::overwrite_existing`
   /// was enabled, and compression or I/O failures are returned as structured errors.
+  result<void> write_to(std::string_view host_path) const;
+
+ private:
+  struct state;
+
+  std::shared_ptr<state> state_;
+};
+
+/// Public writer for creating new TES3/Morrowind BSA archives.
+///
+/// TES3 writer output is raw/uncompressed. The public surface intentionally has
+/// no compression, dedupe, or embedded-name controls because Morrowind BSA
+/// archives in this phase are one raw payload per archive entry.
+class tes3_bsa_writer {
+ public:
+  /// Creates a raw/uncompressed TES3 writer using default writer options.
+  tes3_bsa_writer();
+
+  /// Creates a raw/uncompressed TES3 writer using explicit finalization options.
+  explicit tes3_bsa_writer(tes3_bsa_writer_options options);
+
+  /// Returns the immutable TES3 writer options selected at construction time.
+  [[nodiscard]] const tes3_bsa_writer_options& options() const noexcept;
+
+  /// Adds a host-file payload with an explicit TES3 archive-internal path.
+  ///
+  /// The archive path and non-empty host path are validated at add time; source
+  /// file existence is checked when `write_to` finalizes the archive.
+  result<void> add_file(std::string_view archive_path, std::string_view host_path);
+
+  /// Adds bytes copied from caller memory with an explicit TES3 archive-internal path.
+  ///
+  /// The writer owns an independent copy after this call, so callers may release
+  /// or mutate the original memory before `write_to` is called.
+  result<void> add_bytes(std::string_view archive_path, std::span<const std::byte> bytes);
+
+  /// Finalizes the writer state into a raw/uncompressed TES3 archive at `host_path`.
+  ///
+  /// Existing destinations fail unless `tes3_bsa_writer_options::overwrite_existing`
+  /// was enabled, and validation or I/O failures are returned as structured errors.
   result<void> write_to(std::string_view host_path) const;
 
  private:
