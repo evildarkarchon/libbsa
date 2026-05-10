@@ -29,6 +29,12 @@ static_assert(std::is_class_v<libbsa::ba2_gnrl_writer>);
 static_assert(std::is_enum_v<libbsa::ba2_dx10_target>);
 static_assert(std::is_class_v<libbsa::ba2_dx10_writer_options>);
 static_assert(std::is_class_v<libbsa::ba2_dx10_writer>);
+static_assert(std::is_enum_v<libbsa::compatibility_warning_code>);
+static_assert(std::is_enum_v<libbsa::compatibility_warning_severity>);
+static_assert(std::is_class_v<libbsa::validation_options>);
+static_assert(std::is_class_v<libbsa::validation_report>);
+static_assert(std::is_class_v<libbsa::validation_diagnostic>);
+static_assert(std::is_class_v<libbsa::compatibility_warning>);
 static_assert(std::is_default_constructible_v<libbsa::ba2_archive_metadata>);
 static_assert(std::is_constructible_v<libbsa::tes4_bsa_writer, libbsa::tes4_bsa_target>);
 static_assert(std::is_constructible_v<libbsa::tes4_bsa_writer,
@@ -91,6 +97,29 @@ static_assert(requires(libbsa::ba2_dx10_writer& writer) {
   { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
 });
 // END ba2_dx10_public_contract_assertions
+
+static_assert(requires(libbsa::validation_report report,
+                       libbsa::validation_options options,
+                       libbsa::validation_diagnostic diagnostic,
+                       libbsa::compatibility_warning warning) {
+  { options.expected_type } -> std::same_as<std::optional<libbsa::archive_type>&>;
+  { options.expected_variant } -> std::same_as<std::optional<libbsa::archive_variant>&>;
+  { options.validate_entry_extractability } -> std::same_as<bool&>;
+  { diagnostic.code } -> std::same_as<libbsa::error_code&>;
+  { diagnostic.message } -> std::same_as<std::string&>;
+  { warning.code } -> std::same_as<libbsa::compatibility_warning_code&>;
+  { warning.severity } -> std::same_as<libbsa::compatibility_warning_severity&>;
+  { warning.message } -> std::same_as<std::string&>;
+  { warning.archive_path } -> std::same_as<std::optional<std::string>&>;
+  { report.valid } -> std::same_as<bool&>;
+  { report.metadata } -> std::same_as<std::optional<libbsa::archive_metadata>&>;
+  { report.errors } -> std::same_as<std::vector<libbsa::validation_diagnostic>&>;
+  { report.warnings } -> std::same_as<std::vector<libbsa::compatibility_warning>&>;
+  { report.is_valid() } -> std::same_as<bool>;
+  { libbsa::compatibility_warning_severity::advisory } -> std::same_as<libbsa::compatibility_warning_severity>;
+  { libbsa::compatibility_warning_severity::risky } -> std::same_as<libbsa::compatibility_warning_severity>;
+  { libbsa::validate_archive("archive.bsa") } -> std::same_as<libbsa::result<libbsa::validation_report>>;
+});
 
 TEST_CASE("public_include_boundary umbrella header exposes public boundary types", "[unit][public-api]") {
   [[maybe_unused]] libbsa::result<int> result{1};
