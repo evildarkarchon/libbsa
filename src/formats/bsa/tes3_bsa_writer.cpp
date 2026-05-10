@@ -11,10 +11,12 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 namespace libbsa {
 
@@ -119,12 +121,16 @@ constexpr std::uint32_t fixed_header_size = 12U;
 constexpr std::uint32_t file_record_size = 8U;
 constexpr std::uint32_t name_offset_size = 4U;
 constexpr std::uint32_t hash_record_size = 8U;
+constexpr std::size_t payload_stream_chunk_size = 64U * 1024U;
 
 struct prepared_entry {
   std::string archive_path_original;
   std::vector<std::byte> payload;
+  std::string host_path;
   std::uint64_t hash{0};
   std::uint32_t raw_offset{0};
+  std::uint32_t payload_size{0};
+  bool from_memory{false};
 };
 
 bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept {
@@ -165,25 +171,18 @@ result<void> validate_entries(std::span<const tes3_writer_entry> entries) {
   return {};
 }
 
-result<std::vector<std::byte>> read_source_bytes(const tes3_writer_entry& entry) {
-  if (entry.from_memory) {
-    return entry.memory_bytes;
+result<std::uint32_t> disk_payload_size(const std::string& host_path) {
+  const auto path = std::filesystem::path{host_path};
+  std::error_code fs_error;
+  const bool regular_file = std::filesystem::is_regular_file(path, fs_error);
+  if (fs_error || !regular_file) {
+    return error{error_code::io_error, "TES3 BSA writer failed to inspect disk source"};
   }
-
-  // Disk sources stay path-backed until finalization so repeated write_to calls
-  // can observe the current source bytes without making add_file consume I/O.
-  std::ifstream input{entry.host_path, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "TES3 BSA writer failed to open disk source"};
+  const auto size = std::filesystem::file_size(path, fs_error);
+  if (fs_error) {
+    return error{error_code::io_error, "TES3 BSA writer failed to size disk source"};
   }
-  std::vector<std::byte> bytes;
-  for (char ch = 0; input.get(ch);) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
-  }
-  if (input.bad()) {
-    return error{error_code::io_error, "TES3 BSA writer failed while reading disk source"};
-  }
-  return bytes;
+  return checked_u32(size, "TES3 BSA disk source size");
 }
 
 result<std::vector<prepared_entry>> prepare_entries(std::span<const tes3_writer_entry> entries) {
@@ -191,22 +190,28 @@ result<std::vector<prepared_entry>> prepare_entries(std::span<const tes3_writer_
   prepared.reserve(entries.size());
 
   for (const auto& entry : entries) {
-    auto payload = read_source_bytes(entry);
-    if (!payload) {
-      return payload.error();
+    prepared_entry prepared_entry;
+    prepared_entry.archive_path_original = entry.archive_path_original;
+    prepared_entry.hash = detail::hash_tes3(entry.archive_path_original);
+    prepared_entry.from_memory = entry.from_memory;
+    if (entry.from_memory) {
+      auto payload_size = checked_u32(entry.memory_bytes.size(), "TES3 BSA payload size");
+      if (!payload_size) {
+        return payload_size.error();
+      }
+      prepared_entry.payload = entry.memory_bytes;
+      prepared_entry.payload_size = payload_size.value();
+    } else {
+      auto payload_size = disk_payload_size(entry.host_path);
+      if (!payload_size) {
+        return payload_size.error();
+      }
+      prepared_entry.host_path = entry.host_path;
+      prepared_entry.payload_size = payload_size.value();
     }
-
-    auto payload_size = checked_u32(payload.value().size(), "TES3 BSA payload size");
-    if (!payload_size) {
-      return payload_size.error();
-    }
-    (void)payload_size;
 
     // TES3 hashes are computed from the preserved serialized name, not the canonical lowercase lookup key.
-    prepared.push_back(prepared_entry{entry.archive_path_original,
-                                      std::move(payload.value()),
-                                      detail::hash_tes3(entry.archive_path_original),
-                                      0U});
+    prepared.push_back(std::move(prepared_entry));
   }
 
   std::sort(prepared.begin(), prepared.end(), [](const prepared_entry& lhs, const prepared_entry& rhs) {
@@ -221,11 +226,7 @@ result<void> assign_raw_offsets(std::span<prepared_entry> entries) {
   for (auto& entry : entries) {
     // On disk TES3 stores data-section-relative raw offsets; readers add the computed data section start back.
     entry.raw_offset = cursor;
-    auto payload_size = checked_u32(entry.payload.size(), "TES3 BSA payload size");
-    if (!payload_size) {
-      return payload_size.error();
-    }
-    auto next = checked_add_u32(cursor, payload_size.value(), "TES3 BSA payload span");
+    auto next = checked_add_u32(cursor, entry.payload_size, "TES3 BSA payload span");
     if (!next) {
       return next.error();
     }
@@ -242,6 +243,56 @@ result<void> write_string_terminated(detail::binary_writer& writer, std::string_
     }
   }
   return writer.write_u8(0U);
+}
+
+result<void> write_span_to_stream(std::ofstream& output,
+                                  std::span<const std::byte> bytes,
+                                  std::string_view description) {
+  while (!bytes.empty()) {
+    const auto chunk_size = std::min<std::size_t>(bytes.size(), payload_stream_chunk_size);
+    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(chunk_size));
+    if (!output) {
+      return error{error_code::io_error, std::string{description} + " failed while writing temporary output"};
+    }
+    bytes = bytes.subspan(chunk_size);
+  }
+  return {};
+}
+
+result<void> stream_disk_payload_to_output(const std::string& host_path,
+                                           std::uint32_t expected_size,
+                                           std::ofstream& output) {
+  std::ifstream input{host_path, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "TES3 BSA writer failed to open disk source"};
+  }
+
+  std::vector<std::byte> scratch(payload_stream_chunk_size);
+  std::uint64_t remaining = expected_size;
+  while (remaining > 0U) {
+    const auto requested = static_cast<std::size_t>(
+        std::min<std::uint64_t>(remaining, static_cast<std::uint64_t>(scratch.size())));
+    input.read(reinterpret_cast<char*>(scratch.data()), static_cast<std::streamsize>(requested));
+    if (input.gcount() != static_cast<std::streamsize>(requested)) {
+      return error{error_code::io_error, "TES3 BSA writer failed while streaming disk source"};
+    }
+    auto written = write_span_to_stream(output, std::span<const std::byte>{scratch.data(), requested},
+                                        "TES3 BSA writer");
+    if (!written) {
+      return written.error();
+    }
+    remaining -= requested;
+  }
+
+  // The metadata was sized before reserving a publish path. Fail if a caller mutates the source during finalization.
+  char extra = '\0';
+  if (input.get(extra)) {
+    return error{error_code::io_error, "TES3 BSA disk source changed during finalization"};
+  }
+  if (input.bad()) {
+    return error{error_code::io_error, "TES3 BSA writer failed while reading disk source"};
+  }
+  return {};
 }
 
 result<void> write_archive_bytes(std::span<const prepared_entry> entries, const std::filesystem::path& output_path) {
@@ -298,11 +349,7 @@ result<void> write_archive_bytes(std::span<const prepared_entry> entries, const 
   }
 
   for (const auto& entry : entries) {
-    const auto payload_size = checked_u32(entry.payload.size(), "TES3 BSA file size");
-    if (!payload_size) {
-      return payload_size.error();
-    }
-    if (!(written = writer.write_u32_le(payload_size.value())) || !(written = writer.write_u32_le(entry.raw_offset))) {
+    if (!(written = writer.write_u32_le(entry.payload_size)) || !(written = writer.write_u32_le(entry.raw_offset))) {
       return written.error();
     }
   }
@@ -330,20 +377,28 @@ result<void> write_archive_bytes(std::span<const prepared_entry> entries, const 
       return written.error();
     }
   }
-  for (const auto& entry : entries) {
-    if (!(written = writer.write_bytes(entry.payload))) {
-      return written.error();
-    }
-  }
 
   std::ofstream output{output_path, std::ios::binary | std::ios::trunc};
   if (!output) {
     return error{error_code::io_error, "TES3 BSA writer failed to create temporary output"};
   }
-  const auto bytes = writer.bytes();
-  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-  if (!output) {
-    return error{error_code::io_error, "TES3 BSA writer failed while writing temporary output"};
+  auto metadata_written = write_span_to_stream(output, writer.bytes(), "TES3 BSA writer metadata");
+  if (!metadata_written) {
+    return metadata_written.error();
+  }
+  for (const auto& entry : entries) {
+    if (entry.from_memory) {
+      auto payload_written = write_span_to_stream(output, entry.payload, "TES3 BSA writer memory payload");
+      if (!payload_written) {
+        return payload_written.error();
+      }
+      continue;
+    }
+
+    auto payload_written = stream_disk_payload_to_output(entry.host_path, entry.payload_size, output);
+    if (!payload_written) {
+      return payload_written.error();
+    }
   }
   return {};
 }
@@ -415,8 +470,8 @@ result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
     return offsets.error();
   }
 
-  // D-08 requires all caller-controlled sources to be validated and loaded before
-  // any publish path is reserved, so missing disk files cannot leave partial output.
+  // D-16 keeps disk-backed source bytes path-backed until this point, but sizes
+  // and source readability are validated before any publish path is reserved.
   auto temp_dir = make_unique_publish_directory(output_path);
   if (!temp_dir) {
     return temp_dir.error();

@@ -1,9 +1,11 @@
 #include "formats/bsa/tes4_bsa_writer.hpp"
 
 #include <detail/archive_path.hpp>
+#include <detail/atomic_file_ops.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/compression_router.hpp>
+#include <detail/parallel_work.hpp>
 
 #include <algorithm>
 #include <cctype>
@@ -13,10 +15,13 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 namespace libbsa {
 
@@ -100,7 +105,8 @@ result<void> tes4_bsa_writer::write_to(std::string_view host_path, write_executi
   if (execution.worker_count == 0U) {
     return error{error_code::invalid_argument, "TES4 BSA writer worker_count must be positive"};
   }
-  return formats::bsa::write_tes4_bsa_archive(state_->target, state_->options, state_->entries, host_path);
+  return formats::bsa::write_tes4_bsa_archive(state_->target, state_->options, state_->entries, host_path,
+                                              execution.worker_count);
 }
 
 } // namespace libbsa
@@ -125,6 +131,7 @@ constexpr std::uint32_t file_flag_sounds = 0x0004U;
 constexpr std::uint32_t file_flag_scripts = 0x0008U;
 constexpr std::uint32_t file_flag_menus = 0x0010U;
 constexpr std::uint32_t file_flag_misc = 0x0100U;
+constexpr std::size_t payload_stream_chunk_size = 64U * 1024U;
 
 struct prepared_entry {
   std::string folder;
@@ -134,7 +141,10 @@ struct prepared_entry {
   std::uint32_t record_flags{0};
   std::uint32_t payload_offset{0};
   bool owns_payload_bytes{true};
+  bool stream_raw_disk{false};
+  std::uint32_t raw_disk_size{0};
   std::vector<std::byte> stored_payload;
+  std::string raw_disk_host_path;
 };
 
 struct prepared_folder {
@@ -142,6 +152,11 @@ struct prepared_folder {
   std::uint64_t hash{0};
   std::uint64_t folder_block_offset{0};
   std::vector<prepared_entry> entries;
+};
+
+struct prepared_entry_result {
+  prepared_entry entry;
+  std::uint32_t file_flags{0};
 };
 
 result<std::uint32_t> version_for(tes4_bsa_target target) {
@@ -231,12 +246,8 @@ std::uint32_t file_flag_for_extension(std::string_view extension, std::uint32_t 
   return 0U;
 }
 
-result<std::vector<std::byte>> read_source_bytes(const tes4_writer_entry& entry) {
-  if (entry.from_memory) {
-    return entry.memory_bytes;
-  }
-
-  std::ifstream input{entry.host_path, std::ios::binary};
+result<std::vector<std::byte>> read_disk_source_bytes(const std::string& host_path) {
+  std::ifstream input{host_path, std::ios::binary};
   if (!input) {
     return error{error_code::io_error, "TES4 BSA writer failed to open disk source"};
   }
@@ -248,6 +259,27 @@ result<std::vector<std::byte>> read_source_bytes(const tes4_writer_entry& entry)
     return error{error_code::io_error, "TES4 BSA writer failed while reading disk source"};
   }
   return bytes;
+}
+
+result<std::vector<std::byte>> read_source_bytes(const tes4_writer_entry& entry) {
+  if (entry.from_memory) {
+    return entry.memory_bytes;
+  }
+  return read_disk_source_bytes(entry.host_path);
+}
+
+result<std::uint32_t> disk_payload_size(const std::string& host_path) {
+  const auto path = std::filesystem::path{host_path};
+  std::error_code fs_error;
+  const bool regular_file = std::filesystem::is_regular_file(path, fs_error);
+  if (fs_error || !regular_file) {
+    return error{error_code::io_error, "TES4 BSA writer failed to inspect disk source"};
+  }
+  const auto size = std::filesystem::file_size(path, fs_error);
+  if (fs_error) {
+    return error{error_code::io_error, "TES4 BSA writer failed to size disk source"};
+  }
+  return checked_u32(size, "TES4 BSA disk source size");
 }
 
 bool archive_default_compressed(tes4_bsa_target target, archive_compression_policy policy) noexcept {
@@ -292,27 +324,38 @@ void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
   bytes.push_back(static_cast<std::byte>((value >> 24U) & 0xFFU));
 }
 
+result<std::vector<std::byte>> make_embedded_name_prefix(bool emit_embedded_name, std::string_view file_name) {
+  std::vector<std::byte> stored;
+  if (!emit_embedded_name) {
+    return stored;
+  }
+
+  auto embedded_name_length = checked_name_size(file_name.size(), "TES4 BSA embedded file name");
+  if (!embedded_name_length) {
+    return embedded_name_length.error();
+  }
+  stored.reserve(1U + file_name.size());
+  stored.push_back(static_cast<std::byte>(embedded_name_length.value()));
+  for (const char ch : file_name) {
+    stored.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+  return stored;
+}
+
 result<std::vector<std::byte>> encode_stored_payload(tes4_bsa_target target,
                                                       std::span<const std::byte> raw_payload,
                                                       bool effective_compressed,
                                                       bool emit_embedded_name,
                                                       std::string_view file_name) {
-  std::vector<std::byte> stored;
-  if (emit_embedded_name) {
-    auto embedded_name_length = checked_name_size(file_name.size(), "TES4 BSA embedded file name");
-    if (!embedded_name_length) {
-      return embedded_name_length.error();
-    }
-    stored.reserve(1U + file_name.size() + raw_payload.size());
-    stored.push_back(static_cast<std::byte>(embedded_name_length.value()));
-    for (const char ch : file_name) {
-      stored.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
-    }
+  auto stored = make_embedded_name_prefix(emit_embedded_name, file_name);
+  if (!stored) {
+    return stored.error();
   }
 
   if (!effective_compressed) {
-    stored.insert(stored.end(), raw_payload.begin(), raw_payload.end());
-    return stored;
+    stored.value().reserve(stored.value().size() + raw_payload.size());
+    stored.value().insert(stored.value().end(), raw_payload.begin(), raw_payload.end());
+    return stored.value();
   }
 
   auto raw_size = checked_u32(raw_payload.size(), "TES4 BSA compressed raw payload size");
@@ -328,10 +371,10 @@ result<std::vector<std::byte>> encode_stored_payload(tes4_bsa_target target,
     return compressed.error();
   }
 
-  stored.reserve(stored.size() + 4U + compressed.value().size());
-  append_u32_le(stored, raw_size.value());
-  stored.insert(stored.end(), compressed.value().begin(), compressed.value().end());
-  return stored;
+  stored.value().reserve(stored.value().size() + 4U + compressed.value().size());
+  append_u32_le(stored.value(), raw_size.value());
+  stored.value().insert(stored.value().end(), compressed.value().begin(), compressed.value().end());
+  return stored.value();
 }
 
 result<void> write_string_terminated(detail::binary_writer& writer, std::string_view value) {
@@ -364,53 +407,116 @@ std::pair<std::string, std::string> split_folder_file(std::string_view path) {
   return {std::string{path.substr(0, separator)}, std::string{path.substr(separator + 1U)}};
 }
 
+result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
+                                                tes4_bsa_target target,
+                                                bool archive_default_is_compressed,
+                                                bool emit_embedded_names,
+                                                std::uint32_t version) {
+  auto [folder, file_name] = split_folder_file(entry.archive_path_original);
+  if (folder.empty() || file_name.empty()) {
+    return error{error_code::invalid_argument, "TES4 BSA writer archive paths must include folder and file names"};
+  }
+
+  const auto entry_file_flags = file_flag_for_extension(extension_of(file_name), version);
+  const bool entry_wants_compression = requested_entry_compression(archive_default_is_compressed, entry.compression);
+
+  std::uint32_t raw_size = 0U;
+  if (entry.from_memory) {
+    auto memory_size = checked_u32(entry.memory_bytes.size(), "TES4 BSA raw payload size");
+    if (!memory_size) {
+      return memory_size.error();
+    }
+    raw_size = memory_size.value();
+  } else {
+    auto file_size = disk_payload_size(entry.host_path);
+    if (!file_size) {
+      return file_size.error();
+    }
+    raw_size = file_size.value();
+  }
+
+  const bool effective_compressed = entry_wants_compression && raw_size != 0U;
+  std::uint32_t record_flags = 0U;
+  if (archive_default_is_compressed != effective_compressed) {
+    // Zero-byte entries are forced raw, so they still need the XOR toggle when
+    // the archive default is compressed or readers will expect a size prefix.
+    record_flags |= file_size_compression_toggle;
+  }
+
+  prepared_entry prepared;
+  prepared.folder = folder;
+  prepared.file_name = std::move(file_name);
+  prepared.file_hash = file_hash_for(prepared.file_name);
+  prepared.record_flags = record_flags;
+
+  if (!entry.from_memory && !effective_compressed) {
+    auto prefix = make_embedded_name_prefix(emit_embedded_names, prepared.file_name);
+    if (!prefix) {
+      return prefix.error();
+    }
+    const auto stored_size64 = static_cast<std::uint64_t>(prefix.value().size()) + raw_size;
+    auto stored_size = checked_size_flags_payload_size(stored_size64, "TES4 BSA stored payload size");
+    if (!stored_size) {
+      return stored_size.error();
+    }
+    prepared.stored_size = stored_size.value();
+    prepared.stored_payload = std::move(prefix.value());
+    prepared.raw_disk_host_path = entry.host_path;
+    prepared.raw_disk_size = raw_size;
+    prepared.stream_raw_disk = true;
+    return prepared_entry_result{std::move(prepared), entry_file_flags};
+  }
+
+  auto payload = read_source_bytes(entry);
+  if (!payload) {
+    return payload.error();
+  }
+  if (!entry.from_memory && payload.value().size() != raw_size) {
+    return error{error_code::io_error, "TES4 BSA disk source changed during finalization"};
+  }
+
+  auto stored_payload = encode_stored_payload(target, payload.value(), effective_compressed, emit_embedded_names,
+                                              prepared.file_name);
+  if (!stored_payload) {
+    return stored_payload.error();
+  }
+  auto stored_size = checked_size_flags_payload_size(stored_payload.value().size(), "TES4 BSA stored payload size");
+  if (!stored_size) {
+    return stored_size.error();
+  }
+  prepared.stored_size = stored_size.value();
+  prepared.stored_payload = std::move(stored_payload.value());
+  return prepared_entry_result{std::move(prepared), entry_file_flags};
+}
+
 result<std::vector<prepared_folder>> prepare_folders(std::span<const tes4_writer_entry> entries,
                                                       tes4_bsa_target target,
                                                       bool archive_default_is_compressed,
                                                       bool emit_embedded_names,
                                                       std::uint32_t version,
+                                                      std::uint32_t worker_count,
                                                       std::uint32_t& file_flags) {
+  std::vector<std::optional<prepared_entry_result>> prepared_by_index(entries.size());
+  auto prepared_work = detail::run_indexed_work(entries.size(), worker_count, [&](std::size_t index) -> result<void> {
+    auto prepared = prepare_one_entry(entries[index], target, archive_default_is_compressed, emit_embedded_names, version);
+    if (!prepared) {
+      return prepared.error();
+    }
+    prepared_by_index[index] = std::move(prepared.value());
+    return {};
+  });
+  if (!prepared_work) {
+    return prepared_work.error();
+  }
+
   std::map<std::string, std::vector<prepared_entry>> grouped;
   file_flags = 0U;
-
-  for (const auto& entry : entries) {
-    auto payload = read_source_bytes(entry);
-    if (!payload) {
-      return payload.error();
+  for (auto& prepared : prepared_by_index) {
+    if (!prepared.has_value()) {
+      return error{error_code::io_error, "TES4 BSA writer failed to prepare an entry"};
     }
-
-    auto [folder, file_name] = split_folder_file(entry.archive_path_original);
-    if (folder.empty() || file_name.empty()) {
-      return error{error_code::invalid_argument, "TES4 BSA writer archive paths must include folder and file names"};
-    }
-
-    file_flags |= file_flag_for_extension(extension_of(file_name), version);
-    const bool entry_wants_compression = requested_entry_compression(archive_default_is_compressed, entry.compression);
-    const bool effective_compressed = entry_wants_compression && !payload.value().empty();
-    auto stored_payload = encode_stored_payload(target, payload.value(), effective_compressed, emit_embedded_names, file_name);
-    if (!stored_payload) {
-      return stored_payload.error();
-    }
-    auto stored_size = checked_size_flags_payload_size(stored_payload.value().size(), "TES4 BSA stored payload size");
-    if (!stored_size) {
-      return stored_size.error();
-    }
-    std::uint32_t record_flags = 0U;
-    if (archive_default_is_compressed != effective_compressed) {
-      // Zero-byte entries are forced raw, so they still need the XOR toggle when
-      // the archive default is compressed or readers will expect a size prefix.
-      record_flags |= file_size_compression_toggle;
-    }
-
-    const auto file_hash = file_hash_for(file_name);
-    grouped[folder].push_back(prepared_entry{folder,
-                                              std::move(file_name),
-                                              file_hash,
-                                               stored_size.value(),
-                                               record_flags,
-                                               0U,
-                                               true,
-                                               std::move(stored_payload.value())});
+    file_flags |= prepared->file_flags;
+    grouped[prepared->entry.folder].push_back(std::move(prepared->entry));
   }
 
   std::vector<prepared_folder> folders;
@@ -431,6 +537,50 @@ struct payload_assignment {
   std::uint32_t offset{0};
   std::uint32_t stored_size{0};
 };
+
+struct assigned_payload {
+  const prepared_entry* entry{nullptr};
+  payload_assignment assignment;
+};
+
+result<std::vector<std::byte>> materialize_stored_payload(const prepared_entry& entry) {
+  if (!entry.stream_raw_disk) {
+    return entry.stored_payload;
+  }
+
+  auto raw_payload = read_disk_source_bytes(entry.raw_disk_host_path);
+  if (!raw_payload) {
+    return raw_payload.error();
+  }
+  if (raw_payload.value().size() != entry.raw_disk_size) {
+    return error{error_code::io_error, "TES4 BSA disk source changed during dedupe preparation"};
+  }
+
+  std::vector<std::byte> bytes;
+  bytes.reserve(entry.stored_payload.size() + raw_payload.value().size());
+  bytes.insert(bytes.end(), entry.stored_payload.begin(), entry.stored_payload.end());
+  bytes.insert(bytes.end(), raw_payload.value().begin(), raw_payload.value().end());
+  return bytes;
+}
+
+result<bool> stored_payloads_equal(const prepared_entry& lhs, const prepared_entry& rhs) {
+  if (lhs.stored_size != rhs.stored_size) {
+    return false;
+  }
+  if (!lhs.stream_raw_disk && !rhs.stream_raw_disk) {
+    return lhs.stored_payload == rhs.stored_payload;
+  }
+
+  auto lhs_bytes = materialize_stored_payload(lhs);
+  if (!lhs_bytes) {
+    return lhs_bytes.error();
+  }
+  auto rhs_bytes = materialize_stored_payload(rhs);
+  if (!rhs_bytes) {
+    return rhs_bytes.error();
+  }
+  return lhs_bytes.value() == rhs_bytes.value();
+}
 
 result<void> assign_offsets(std::span<prepared_folder> folders,
                             std::uint32_t version,
@@ -472,17 +622,25 @@ result<void> assign_offsets(std::span<prepared_folder> folders,
     return error{error_code::format_error, "TES4 BSA metadata size overflows"};
   }
 
-  std::map<std::vector<std::byte>, payload_assignment> deduplicated_payloads;
+  std::vector<assigned_payload> deduplicated_payloads;
   for (auto& folder : folders) {
     for (auto& entry : folder.entries) {
       if (deduplicate_payloads) {
-        // D-19 requires dedupe after the complete stored encoding is built, so
-        // the key includes embedded-name prefixes, raw-size prefixes, and codec bytes.
-        const auto duplicate = deduplicated_payloads.find(entry.stored_payload);
-        if (duplicate != deduplicated_payloads.end()) {
-          entry.payload_offset = duplicate->second.offset;
-          entry.stored_size = duplicate->second.stored_size;
-          entry.owns_payload_bytes = false;
+        // Dedupe compares the complete final stored byte stream. Raw disk sources
+        // are compared on demand so the publish path can still stream unique files.
+        for (const auto& candidate : deduplicated_payloads) {
+          auto duplicate = stored_payloads_equal(entry, *candidate.entry);
+          if (!duplicate) {
+            return duplicate.error();
+          }
+          if (duplicate.value()) {
+            entry.payload_offset = candidate.assignment.offset;
+            entry.stored_size = candidate.assignment.stored_size;
+            entry.owns_payload_bytes = false;
+            break;
+          }
+        }
+        if (!entry.owns_payload_bytes) {
           continue;
         }
       }
@@ -494,9 +652,9 @@ result<void> assign_offsets(std::span<prepared_folder> folders,
       entry.payload_offset = offset.value();
       entry.owns_payload_bytes = true;
       if (deduplicate_payloads) {
-        deduplicated_payloads.emplace(entry.stored_payload, payload_assignment{entry.payload_offset, entry.stored_size});
+        deduplicated_payloads.push_back(assigned_payload{&entry, payload_assignment{entry.payload_offset, entry.stored_size}});
       }
-      if (!add_fits_u64(payload_cursor, entry.stored_payload.size(), payload_cursor)) {
+      if (!add_fits_u64(payload_cursor, entry.stored_size, payload_cursor)) {
         return error{error_code::format_error, "TES4 BSA payload span overflows"};
       }
     }
@@ -523,6 +681,57 @@ result<void> validate_entries(std::span<const tes4_writer_entry> entries) {
     }
   }
 
+  return {};
+}
+
+result<void> write_span_to_stream(std::ofstream& output,
+                                  std::span<const std::byte> bytes,
+                                  std::string_view description) {
+  while (!bytes.empty()) {
+    const auto chunk_size = std::min<std::size_t>(bytes.size(), payload_stream_chunk_size);
+    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(chunk_size));
+    if (!output) {
+      return error{error_code::io_error, std::string{description} + " failed while writing temporary output"};
+    }
+    bytes = bytes.subspan(chunk_size);
+  }
+  return {};
+}
+
+result<void> stream_disk_payload_to_output(const std::string& host_path,
+                                           std::uint32_t expected_size,
+                                           std::ofstream& output) {
+  std::ifstream input{host_path, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "TES4 BSA writer failed to open disk source"};
+  }
+
+  std::vector<std::byte> scratch(payload_stream_chunk_size);
+  std::uint64_t remaining = expected_size;
+  while (remaining > 0U) {
+    const auto requested = static_cast<std::size_t>(
+        std::min<std::uint64_t>(remaining, static_cast<std::uint64_t>(scratch.size())));
+    input.read(reinterpret_cast<char*>(scratch.data()), static_cast<std::streamsize>(requested));
+    if (input.gcount() != static_cast<std::streamsize>(requested)) {
+      return error{error_code::io_error, "TES4 BSA writer failed while streaming disk source"};
+    }
+    auto written = write_span_to_stream(output, std::span<const std::byte>{scratch.data(), requested},
+                                        "TES4 BSA writer");
+    if (!written) {
+      return written.error();
+    }
+    remaining -= requested;
+  }
+
+  // Metadata offsets are assigned before publishing; fail if the caller mutates
+  // a disk source while finalization is streaming it into the temporary archive.
+  char extra = '\0';
+  if (input.get(extra)) {
+    return error{error_code::io_error, "TES4 BSA disk source changed during finalization"};
+  }
+  if (input.bad()) {
+    return error{error_code::io_error, "TES4 BSA writer failed while reading disk source"};
+  }
   return {};
 }
 
@@ -588,27 +797,66 @@ result<void> write_archive_bytes(std::span<const prepared_folder> folders,
       }
     }
   }
+  std::ofstream output{output_path, std::ios::binary | std::ios::trunc};
+  if (!output) {
+    return error{error_code::io_error, "TES4 BSA writer failed to create temporary output"};
+  }
+  auto metadata_written = write_span_to_stream(output, writer.bytes(), "TES4 BSA writer metadata");
+  if (!metadata_written) {
+    return metadata_written.error();
+  }
   for (const auto& folder : folders) {
     for (const auto& entry : folder.entries) {
       if (!entry.owns_payload_bytes) {
         continue;
       }
-      if (!(written = writer.write_bytes(entry.stored_payload))) {
-        return written.error();
+      auto prefix_written = write_span_to_stream(output, entry.stored_payload, "TES4 BSA writer payload");
+      if (!prefix_written) {
+        return prefix_written.error();
+      }
+      if (entry.stream_raw_disk) {
+        auto streamed = stream_disk_payload_to_output(entry.raw_disk_host_path, entry.raw_disk_size, output);
+        if (!streamed) {
+          return streamed.error();
+        }
       }
     }
   }
-
-  std::ofstream output{output_path, std::ios::binary | std::ios::trunc};
-  if (!output) {
-    return error{error_code::io_error, "TES4 BSA writer failed to create temporary output"};
-  }
-  const auto bytes = writer.bytes();
-  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-  if (!output) {
-    return error{error_code::io_error, "TES4 BSA writer failed while writing temporary output"};
-  }
   return {};
+}
+
+result<bool> path_exists_noexcept(const std::filesystem::path& path) {
+  std::error_code fs_error;
+  const bool exists = std::filesystem::exists(path, fs_error);
+  if (fs_error) {
+    return error{error_code::io_error, "TES4 BSA writer failed to inspect output host path"};
+  }
+  return exists;
+}
+
+result<std::filesystem::path> make_unique_publish_directory(const std::filesystem::path& output_path) {
+  const auto parent = output_path.parent_path();
+  const auto filename = output_path.filename();
+  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
+    auto candidate_name = filename;
+    candidate_name += ".libbsa-tmp-" + std::to_string(counter);
+    const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
+    std::error_code fs_error;
+    // Keep temporary archives isolated from caller-owned deterministic siblings such as `<archive>.tmp`.
+    if (std::filesystem::create_directory(candidate, fs_error)) {
+      return candidate;
+    }
+    if (fs_error) {
+      return error{error_code::io_error, "TES4 BSA writer failed to reserve temporary output directory"};
+    }
+  }
+  return error{error_code::io_error, "TES4 BSA writer exhausted temporary output directory names"};
+}
+
+void cleanup_publish_directory(const std::filesystem::path& temp_dir) noexcept {
+  std::error_code fs_error;
+  // Cleanup is best-effort because callers should receive the primary write/publish failure, not cleanup noise.
+  std::filesystem::remove_all(temp_dir, fs_error);
 }
 
 } // namespace
@@ -616,13 +864,21 @@ result<void> write_archive_bytes(std::span<const prepared_folder> folders,
 result<void> write_tes4_bsa_archive(tes4_bsa_target target,
                                     const tes4_bsa_writer_options& options,
                                     std::span<const tes4_writer_entry> entries,
-                                    std::string_view output_host_path) {
+                                    std::string_view output_host_path,
+                                    std::uint32_t worker_count) {
   if (output_host_path.empty()) {
     return error{error_code::invalid_argument, "TES4 BSA output host path must not be empty"};
   }
+  if (worker_count == 0U) {
+    return error{error_code::invalid_argument, "TES4 BSA writer worker_count must be positive"};
+  }
 
   const auto output_path = std::filesystem::path{output_host_path};
-  if (!options.overwrite_existing && std::filesystem::exists(output_path)) {
+  auto output_exists = path_exists_noexcept(output_path);
+  if (!output_exists) {
+    return output_exists.error();
+  }
+  if (!options.overwrite_existing && output_exists.value()) {
     return error{error_code::io_error, "TES4 BSA output host path already exists"};
   }
 
@@ -640,7 +896,8 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target,
   const bool emit_embedded_names = options.embed_file_names && version.value() != oblivion_version;
 
   std::uint32_t file_flags = 0U;
-  auto folders = prepare_folders(entries, target, archive_default_is_compressed, emit_embedded_names, version.value(), file_flags);
+  auto folders = prepare_folders(entries, target, archive_default_is_compressed, emit_embedded_names, version.value(),
+                                 worker_count, file_flags);
   if (!folders) {
     return folders.error();
   }
@@ -692,30 +949,62 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target,
     archive_flags |= archive_embed_names;
   }
 
-  auto temp_path = output_path;
-  temp_path += ".tmp";
-  std::error_code fs_error;
-  std::filesystem::remove(temp_path, fs_error);
+  // D-11 keeps overwrite publishing in the same no-gap contract as other writer families.
+  auto temp_dir = make_unique_publish_directory(output_path);
+  if (!temp_dir) {
+    return temp_dir.error();
+  }
+  const auto temp_path = temp_dir.value() / output_path.filename();
+
   auto written = write_archive_bytes(folders.value(), version.value(), archive_flags, file_flags,
                                      total_folder_name_length.value(), total_file_name_length.value(), file_count.value(),
                                      temp_path);
   if (!written) {
-    std::filesystem::remove(temp_path, fs_error);
+    cleanup_publish_directory(temp_dir.value());
     return written.error();
   }
 
+  std::error_code fs_error;
   if (options.overwrite_existing) {
-    std::filesystem::remove(output_path, fs_error);
-    if (fs_error) {
-      std::filesystem::remove(temp_path, fs_error);
-      return error{error_code::io_error, "TES4 BSA writer failed to replace output host path"};
+    output_exists = path_exists_noexcept(output_path);
+    if (!output_exists) {
+      cleanup_publish_directory(temp_dir.value());
+      return output_exists.error();
+    }
+    if (output_exists.value()) {
+      const bool is_regular = std::filesystem::is_regular_file(output_path, fs_error);
+      if (fs_error || !is_regular) {
+        cleanup_publish_directory(temp_dir.value());
+        return error{error_code::io_error, "TES4 BSA writer refuses to replace non-regular output host path"};
+      }
+
+      auto published = detail::replace_file_atomically(temp_path, output_path);
+      if (!published) {
+        cleanup_publish_directory(temp_dir.value());
+        return error{error_code::io_error, "TES4 BSA writer failed to publish output host path"};
+      }
+
+      cleanup_publish_directory(temp_dir.value());
+      return {};
     }
   }
-  std::filesystem::rename(temp_path, output_path, fs_error);
-  if (fs_error) {
-    std::filesystem::remove(temp_path, fs_error);
+
+  output_exists = path_exists_noexcept(output_path);
+  if (!output_exists) {
+    cleanup_publish_directory(temp_dir.value());
+    return output_exists.error();
+  }
+  if (output_exists.value()) {
+    cleanup_publish_directory(temp_dir.value());
+    return error{error_code::io_error, "TES4 BSA output host path already exists"};
+  }
+
+  auto published = detail::publish_file_without_replace(temp_path, output_path);
+  if (!published) {
+    cleanup_publish_directory(temp_dir.value());
     return error{error_code::io_error, "TES4 BSA writer failed to publish output host path"};
   }
+  cleanup_publish_directory(temp_dir.value());
   return {};
 }
 
