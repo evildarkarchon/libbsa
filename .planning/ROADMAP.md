@@ -332,7 +332,7 @@ Plans:
 - [x] 10-03-PLAN.md — Serialize byte-accurate TES3 header, table, hash, offset, and payload layout.
 
 **Wave 4** *(blocked on Wave 3 byte-level serializer)*
-- [ ] 10-04-PLAN.md — Prove writer output through archive_reader round-trip, lookup, and extraction APIs.
+- [x] 10-04-PLAN.md — Prove writer output through archive_reader round-trip, lookup, and extraction APIs.
 
 **Wave 5** *(blocked on Wave 4 reader-backed writer output)*
 - [ ] 10-05-PLAN.md — Add public-writer fixture evidence and final BSA completeness regression gates.
@@ -377,6 +377,6 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 7. TES4-Family BSA Write-New Support | 0/TBD | Not started | - |
 | 8. BA2 GNRL Write-New Support | 6/6 | Complete | 2026-05-09 |
 | 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |
-| 10. TES3 Write Support and BSA Format Completeness | 3/5 | In Progress|  |
+| 10. TES3 Write Support and BSA Format Completeness | 4/5 | In Progress|  |
 | 11. Compatibility Warnings, Validation API, and Hardening | 0/TBD | Not started | - |
 | 12. Performance, Concurrency, Documentation, and Polish | 0/TBD | Not started | - |
