@@ -104,6 +104,22 @@ BSArchPro-derived compare output are smoke/compare only: tests must use the
 `requires-game-fixture` label, skip when `LIBBSA_GAME_FIXTURES` is unset, and
 must not commit copyrighted bytes or use `TES5Edit/` as a fixture workspace.
 
+## Sanitizer hardening path
+
+Maintainers on supported non-Windows Clang/GCC-style toolchains can run the
+additive sanitizer preset against malformed parser, compression, and validation
+coverage:
+
+```powershell
+cmake --preset linux-clang-asan-ubsan
+cmake --build --preset linux-clang-asan-ubsan
+ctest --preset linux-clang-asan-ubsan -L "malformed|validation|compression" --output-on-failure
+```
+
+The default Windows MSVC static/shared CI presets remain unchanged; sanitizer
+support is an opt-in hardening path rather than a default acceptance
+requirement.
+
 ## Provenance requirements
 
 Each committed generated fixture must document:
