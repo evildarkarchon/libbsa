@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 8: BA2 GNRL Write-New Support** - Consumers can create compatible Fallout 4 and Starfield general BA2 archives.
 - [ ] **Phase 9: BA2 DX10 Write-New Support** - Consumers can create compatible Fallout 4 and Starfield texture BA2 archives from DDS input.
 - [x] **Phase 10: TES3 Write Support and BSA Format Completeness** - Consumers can create Morrowind BSA archives and complete BSA read/write coverage. (completed 2026-05-10)
-- [ ] **Phase 11: Compatibility Warnings, Validation API, and Hardening** - Consumers receive structured validation results while malformed inputs are rejected safely.
+- [x] **Phase 11: Compatibility Warnings, Validation API, and Hardening** - Consumers receive structured validation results while malformed inputs are rejected safely. (completed 2026-05-10)
 - [ ] **Phase 12: Performance, Concurrency, Documentation, and Polish** - Consumers can use bounded-memory, parallel-capable workflows with documented APIs and examples.
 
 ## Phase Details
@@ -369,7 +369,7 @@ Plans:
 - [x] 11-06-PLAN.md — Add the consolidated malformed hardening matrix and validation-report coverage.
 
 **Wave 5** *(blocked on Wave 4 evidence catalog completion)*
-- [ ] 11-07-PLAN.md — Add additive sanitizer-oriented preset, documentation, and policy preservation tests.
+- [x] 11-07-PLAN.md — Add additive sanitizer-oriented preset, documentation, and policy preservation tests.
 
 ### Phase 12: Performance, Concurrency, Documentation, and Polish
 **Goal**: Consumers can use bounded-memory, documented, parallel-capable archive workflows, and maintainers can measure performance and publish integration guidance.
@@ -400,5 +400,5 @@ Phases execute sequentially in numeric order: 1 → 2 → 3 → 4 → 5 → 6 �
 | 8. BA2 GNRL Write-New Support | 6/6 | Complete | 2026-05-09 |
 | 9. BA2 DX10 Write-New Support | 0/TBD | Not started | - |
 | 10. TES3 Write Support and BSA Format Completeness | 6/6 | Complete    | 2026-05-10 |
-| 11. Compatibility Warnings, Validation API, and Hardening | 6/7 | In Progress|  |
+| 11. Compatibility Warnings, Validation API, and Hardening | 7/7 | Complete   | 2026-05-10 |
 | 12. Performance, Concurrency, Documentation, and Polish | 0/TBD | Not started | - |

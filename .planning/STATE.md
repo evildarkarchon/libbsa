@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 11-06-PLAN.md
-last_updated: "2026-05-10T04:31:18.954Z"
+status: verifying
+stopped_at: Completed 11-07-PLAN.md
+last_updated: "2026-05-10T04:36:16.075Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 12
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 68
-  completed_plans: 67
-  percent: 99
+  completed_plans: 68
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-10)
 
 Phase: 11 (Compatibility Warnings, Validation API, and Hardening) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-10
 
-Progress: [██████████] 99%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [██████████] 99%
 | Phase 11 P03 | 4 min | 2 tasks | 3 files |
 | Phase 11 P04 | 2 min | 2 tasks | 3 files |
 | Phase 11 P06 | 4 min | 2 tasks | 6 files |
+| Phase 11 P07 | 2 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 11]: The consolidated malformed matrix uses manifest evidence for generated archive rows and test evidence for the TES4 oversized arithmetic regression. — This keeps mandatory evidence legal while referencing the existing in-repo arithmetic regression.
 - [Phase 11]: Validation API matrix coverage runs each manifest-backed row through strict open or opt-in extractability validation according to the row phase. — This preserves fail-closed open behavior and exercises extraction/decompression failures through public validation reports.
 - [Phase 11]: The Python validator rejects unknown matrix families, categories, expected errors, phases, evidence types, and unresolved evidence references. — This prevents malformed coverage claims from drifting away from generated manifests or explicit tests.
+- [Phase 11]: The sanitizer hardening path is additive through linux-clang-asan-ubsan presets and is not added to the default Windows MSVC CI workflow. — Plan 11-07 preserves default Windows static/shared CI while adding an opt-in hardening path.
+- [Phase 11]: Fixture policy documents the exact CTest label selection for malformed, validation, and compression sanitizer runs. — Plan 11-07 makes the hardening command machine-checkable through validation policy tests.
 
 ### Pending Todos
 
@@ -133,6 +136,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T04:31:18.947Z
-Stopped at: Completed 11-06-PLAN.md
+Last session: 2026-05-10T04:36:16.068Z
+Stopped at: Completed 11-07-PLAN.md
 Resume file: None
