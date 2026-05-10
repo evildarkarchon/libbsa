@@ -10,6 +10,7 @@ find_package(lz4 CONFIG REQUIRED)
 find_package(directxtex CONFIG REQUIRED)
 
 option(LIBBSA_BUILD_TESTS "Build libbsa tests" ON)
+option(LIBBSA_BUILD_BENCHMARKS "Build libbsa benchmark tools" ON)
 
 add_library(libbsa)
 add_library(libbsa::libbsa ALIAS libbsa)
@@ -82,6 +83,29 @@ target_sources(libbsa
     src/texture/directxtex_analyzer.cpp
     src/libbsa.cpp
 )
+
+if(LIBBSA_BUILD_BENCHMARKS)
+  add_executable(libbsa_benchmarks
+    benchmarks/libbsa_benchmarks.cpp
+  )
+
+  target_link_libraries(libbsa_benchmarks
+    PRIVATE
+      libbsa::libbsa
+  )
+
+  target_compile_features(libbsa_benchmarks PRIVATE cxx_std_20)
+
+  add_custom_target(libbsa_benchmark_report
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/benchmarks"
+    COMMAND $<TARGET_FILE:libbsa_benchmarks>
+      --output-json "${CMAKE_BINARY_DIR}/benchmarks/libbsa-benchmark.json"
+      --output-markdown "${CMAKE_BINARY_DIR}/benchmarks/libbsa-benchmark.md"
+    DEPENDS libbsa_benchmarks
+    COMMENT "Generating libbsa synthetic benchmark report"
+    VERBATIM
+  )
+endif()
 
 install(TARGETS libbsa
   EXPORT libbsaTargets
