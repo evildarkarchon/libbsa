@@ -33,6 +33,7 @@ bool is_supported_writer_source_format(DXGI_FORMAT format) noexcept {
   case 84U: // BC5_SNORM
   case 95U: // BC6H_UF16
   case 98U: // BC7_UNORM
+  case 99U: // BC7_UNORM_SRGB
   case 29U: // R8G8B8A8_UNORM_SRGB
   case 87U: // B8G8R8A8_UNORM
   case 61U: // R8_UNORM
@@ -41,6 +42,20 @@ bool is_supported_writer_source_format(DXGI_FORMAT format) noexcept {
   default:
     return false;
   }
+}
+
+/// Rejects DDS shapes the BA2 DX10 writer cannot round-trip without changing resource dimension.
+result<void> validate_writer_source_shape(const DirectX::TexMetadata& metadata) {
+  if (metadata.dimension != DirectX::TEX_DIMENSION_TEXTURE2D) {
+    return error{error_code::format_error, "DDS source shape is unsupported by the BA2 DX10 writer"};
+  }
+  if (metadata.depth > 1U) {
+    return error{error_code::format_error, "DDS source depth is unsupported by the BA2 DX10 writer"};
+  }
+  if (metadata.IsCubemap() && (metadata.arraySize % 6U) != 0U) {
+    return error{error_code::format_error, "DDS cubemap source does not contain complete face groups"};
+  }
+  return {};
 }
 
 result<texture_metadata> translate_source_metadata(const DirectX::TexMetadata& metadata) {
@@ -118,6 +133,10 @@ result<dds_source_analysis> analyze_dds_source(std::span<const std::byte> dds_by
   const HRESULT hr = DirectX::LoadFromDDSMemory(dds_bytes.data(), dds_bytes.size(), DirectX::DDS_FLAGS_NONE, &metadata, image);
   if (hr < 0) {
     return error{error_code::format_error, "DDS source could not be loaded by the texture analyzer"};
+  }
+  auto shape = validate_writer_source_shape(metadata);
+  if (!shape) {
+    return shape.error();
   }
   if (!is_supported_writer_source_format(metadata.format)) {
     return error{error_code::format_error, "DDS source format is unsupported by the BA2 DX10 writer"};

@@ -10,6 +10,7 @@
     {"id": "bc5_snorm", "file": "ba2_dx10_bc5_snorm.dds", "format_id": 84, "format_name": "BC5_SNORM", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc5_snorm.dds", "structural_case": "format"},
     {"id": "bc6h_uf16", "file": "ba2_dx10_bc6h_uf16.dds", "format_id": 95, "format_name": "BC6H_UF16", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc6h_uf16.dds", "structural_case": "format"},
     {"id": "bc7_unorm", "file": "ba2_dx10_bc7_unorm.dds", "format_id": 98, "format_name": "BC7_UNORM", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc7_unorm.dds", "structural_case": "format"},
+    {"id": "bc7_unorm_srgb", "file": "ba2_dx10_bc7_unorm_srgb.dds", "format_id": 99, "format_name": "BC7_UNORM_SRGB", "width": 16, "height": 16, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/bc7_unorm_srgb.dds", "structural_case": "format"},
     {"id": "r8g8b8a8_unorm", "file": "ba2_dx10_r8g8b8a8_unorm.dds", "format_id": 28, "format_name": "R8G8B8A8_UNORM", "width": 8, "height": 8, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/r8g8b8a8_unorm.dds", "structural_case": "format"},
     {"id": "r8g8b8a8_unorm_srgb", "file": "ba2_dx10_r8g8b8a8_unorm_srgb.dds", "format_id": 29, "format_name": "R8G8B8A8_UNORM_SRGB", "width": 8, "height": 8, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/r8g8b8a8_unorm_srgb.dds", "structural_case": "format"},
     {"id": "b8g8r8a8_unorm", "file": "ba2_dx10_b8g8r8a8_unorm.dds", "format_id": 87, "format_name": "B8G8R8A8_UNORM", "width": 8, "height": 8, "mip_count": 1, "array_size": 1, "is_cubemap": false, "archive_path": "textures/formats/b8g8r8a8_unorm.dds", "structural_case": "format"},
@@ -28,6 +29,8 @@
   },
   "invalid_cases": [
     {"id": "malformed_truncated_dds", "file": "ba2_dx10_malformed_truncated.dds", "expected_error": "format_error"},
-    {"id": "unsupported_r32g32b32a32_float", "file": "ba2_dx10_unsupported_r32g32b32a32_float.dds", "expected_error": "format_error"}
+    {"id": "unsupported_r32g32b32a32_float", "file": "ba2_dx10_unsupported_r32g32b32a32_float.dds", "expected_error": "format_error"},
+    {"id": "unsupported_r8_unorm_1d", "file": "ba2_dx10_unsupported_r8_unorm_1d.dds", "expected_error": "format_error"},
+    {"id": "unsupported_r8g8b8a8_unorm_3d", "file": "ba2_dx10_unsupported_r8g8b8a8_unorm_3d.dds", "expected_error": "format_error"}
   ]
 }

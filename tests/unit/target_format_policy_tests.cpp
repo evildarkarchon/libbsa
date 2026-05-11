@@ -133,6 +133,7 @@ TEST_CASE("target_format_policy guide covers every supported target format and c
 
   REQUIRE(guide.find("DX10 DDS data is not resized, transcoded, mip-generated, repaired, or otherwise transformed") !=
           std::string::npos);
+  REQUIRE(guide.find("BC6, SRGB, or SNORM") != std::string::npos);
   REQUIRE(guide.find("CompressionMethod == 3") != std::string::npos);
   REQUIRE(guide.find("tes4_bsa_target::skyrim_se") != std::string::npos);
   REQUIRE(guide.find("ba2_gnrl_target::starfield_v3") != std::string::npos);

@@ -28,11 +28,16 @@ constexpr std::uint16_t ba2_dx10_cubemap_raw = 2049U;
 constexpr std::uint32_t dxgi_format_r8g8b8a8_unorm = 28U;
 constexpr std::uint32_t dds_dxt10_header_size = 148U;
 constexpr std::uint32_t dds_fourcc_dx10 = 0x30315844U;
+constexpr std::uint32_t dds_header_flags_volume = 0x00800000U;
 constexpr std::uint32_t dds_caps_texture = 0x00001000U;
 constexpr std::uint32_t dds_caps_complex = 0x00000008U;
 constexpr std::uint32_t dds_caps_mipmap = 0x00400000U;
 constexpr std::uint32_t dds_caps2_cubemap = 0x00000200U;
 constexpr std::uint32_t dds_caps2_cubemap_all_faces = 0x0000FC00U;
+constexpr std::uint32_t dds_caps2_volume = 0x00200000U;
+constexpr std::uint32_t dds_resource_dimension_texture1d = 2U;
+constexpr std::uint32_t dds_resource_dimension_texture2d = 3U;
+constexpr std::uint32_t dds_resource_dimension_texture3d = 4U;
 
 struct byte_buffer {
   std::vector<std::byte> bytes;
@@ -138,6 +143,8 @@ struct source_dds_spec {
   bool is_cubemap{false};
   std::string archive_path;
   std::string structural_case{"format"};
+  std::uint32_t resource_dimension{dds_resource_dimension_texture2d};
+  std::uint32_t depth{1};
 };
 
 std::vector<std::byte> bytes(std::initializer_list<unsigned int> values) {
@@ -223,6 +230,7 @@ std::uint32_t bytes_per_block(std::uint32_t format) {
   case 84U:
   case 95U:
   case 98U:
+  case 99U:
     return 16U;
   case 28U:
   case 29U:
@@ -248,6 +256,7 @@ bool is_block_compressed(std::uint32_t format) noexcept {
   case 84U:
   case 95U:
   case 98U:
+  case 99U:
     return true;
   default:
     return false;
@@ -279,6 +288,8 @@ std::vector<source_dds_spec> source_dds_valid_specs() {
             "textures/formats/bc6h_uf16.dds", "format"},
            {"bc7_unorm", "ba2_dx10_bc7_unorm.dds", 98U, "BC7_UNORM", 16U, 16U, 1U, 1U, false,
             "textures/formats/bc7_unorm.dds", "format"},
+           {"bc7_unorm_srgb", "ba2_dx10_bc7_unorm_srgb.dds", 99U, "BC7_UNORM_SRGB", 16U, 16U, 1U, 1U, false,
+            "textures/formats/bc7_unorm_srgb.dds", "format"},
            {"r8g8b8a8_unorm", "ba2_dx10_r8g8b8a8_unorm.dds", 28U, "R8G8B8A8_UNORM", 8U, 8U, 1U, 1U, false,
             "textures/formats/r8g8b8a8_unorm.dds", "format"},
            {"r8g8b8a8_unorm_srgb", "ba2_dx10_r8g8b8a8_unorm_srgb.dds", 29U, "R8G8B8A8_UNORM_SRGB", 8U, 8U, 1U, 1U,
@@ -302,10 +313,19 @@ std::vector<source_dds_spec> source_dds_valid_specs() {
 std::vector<std::byte> build_source_dds(const source_dds_spec& spec) {
   byte_buffer writer;
   writer.ascii4("DDS ");
+  const auto header_flags =
+      0x0002100FU | (spec.resource_dimension == dds_resource_dimension_texture3d ? dds_header_flags_volume : 0U);
   const auto caps = dds_caps_texture | (spec.mip_count > 1U ? dds_caps_complex | dds_caps_mipmap : 0U) |
                     (spec.is_cubemap ? dds_caps_complex : 0U);
-  const auto caps2 = spec.is_cubemap ? dds_caps2_cubemap | dds_caps2_cubemap_all_faces : 0U;
-  for (const auto value : {124U, 0x0002100FU, spec.height, spec.width, 0U, 0U, spec.mip_count}) {
+  std::uint32_t caps2 = 0U;
+  if (spec.is_cubemap) {
+    caps2 = dds_caps2_cubemap | dds_caps2_cubemap_all_faces;
+  } else if (spec.resource_dimension == dds_resource_dimension_texture3d) {
+    caps2 = dds_caps2_volume;
+  }
+  for (const auto value : {124U, header_flags, spec.height, spec.width, 0U,
+                           spec.resource_dimension == dds_resource_dimension_texture3d ? spec.depth : 0U,
+                           spec.mip_count}) {
     writer.u32(value);
   }
   for (std::uint32_t index = 0; index < 11U; ++index) {
@@ -314,21 +334,35 @@ std::vector<std::byte> build_source_dds(const source_dds_spec& spec) {
   for (const auto value : {32U, 0x00000004U, dds_fourcc_dx10, 0U, 0U, 0U, 0U, 0U, caps, caps2, 0U, 0U, 0U}) {
     writer.u32(value);
   }
-  for (const auto value : {spec.format_id, 3U, spec.is_cubemap ? 4U : 0U, spec.array_size, 0U}) {
+  for (const auto value : {spec.format_id, spec.resource_dimension, spec.is_cubemap ? 4U : 0U, spec.array_size, 0U}) {
     writer.u32(value);
   }
   if (writer.bytes.size() != dds_dxt10_header_size) {
     throw std::runtime_error("internal DDS DXT10 header size mismatch");
   }
 
-  const auto faces = spec.is_cubemap ? 6U : 1U;
-  for (std::uint32_t array = 0; array < spec.array_size; ++array) {
-    for (std::uint32_t face = 0; face < faces; ++face) {
-      for (std::uint32_t mip = 0; mip < spec.mip_count; ++mip) {
-        const auto width = mip_dimension(spec.width, mip);
-        const auto height = mip_dimension(spec.height, mip);
-        const auto size = dds_mip_size(spec.format_id, width, height);
-        writer.raw(repeated_bytes(static_cast<std::uint8_t>(0x11U + spec.format_id + array + face + mip), size));
+  if (spec.resource_dimension == dds_resource_dimension_texture3d) {
+    std::uint32_t depth = spec.depth;
+    for (std::uint32_t mip = 0; mip < spec.mip_count; ++mip) {
+      const auto width = mip_dimension(spec.width, mip);
+      const auto height = mip_dimension(spec.height, mip);
+      const auto size = dds_mip_size(spec.format_id, width, height);
+      // 3D DDS payloads store each depth slice per mip so DirectXTex can load the file before writer-shape rejection.
+      for (std::uint32_t slice = 0; slice < depth; ++slice) {
+        writer.raw(repeated_bytes(static_cast<std::uint8_t>(0x11U + spec.format_id + slice + mip), size));
+      }
+      depth = std::max(1U, depth >> 1U);
+    }
+  } else {
+    const auto faces = spec.is_cubemap ? 6U : 1U;
+    for (std::uint32_t array = 0; array < spec.array_size; ++array) {
+      for (std::uint32_t face = 0; face < faces; ++face) {
+        for (std::uint32_t mip = 0; mip < spec.mip_count; ++mip) {
+          const auto width = mip_dimension(spec.width, mip);
+          const auto height = mip_dimension(spec.height, mip);
+          const auto size = dds_mip_size(spec.format_id, width, height);
+          writer.raw(repeated_bytes(static_cast<std::uint8_t>(0x11U + spec.format_id + array + face + mip), size));
+        }
       }
     }
   }
@@ -370,7 +404,9 @@ std::string writer_sources_manifest(const std::vector<source_dds_spec>& specs) {
   out << "  },\n";
   out << "  \"invalid_cases\": [\n";
   out << "    {\"id\": \"malformed_truncated_dds\", \"file\": \"ba2_dx10_malformed_truncated.dds\", \"expected_error\": \"format_error\"},\n";
-  out << "    {\"id\": \"unsupported_r32g32b32a32_float\", \"file\": \"ba2_dx10_unsupported_r32g32b32a32_float.dds\", \"expected_error\": \"format_error\"}\n";
+  out << "    {\"id\": \"unsupported_r32g32b32a32_float\", \"file\": \"ba2_dx10_unsupported_r32g32b32a32_float.dds\", \"expected_error\": \"format_error\"},\n";
+  out << "    {\"id\": \"unsupported_r8_unorm_1d\", \"file\": \"ba2_dx10_unsupported_r8_unorm_1d.dds\", \"expected_error\": \"format_error\"},\n";
+  out << "    {\"id\": \"unsupported_r8g8b8a8_unorm_3d\", \"file\": \"ba2_dx10_unsupported_r8g8b8a8_unorm_3d.dds\", \"expected_error\": \"format_error\"}\n";
   out << "  ]\n";
   out << "}\n";
   return out.str();
@@ -766,6 +802,34 @@ void generate_writer_sources(const std::filesystem::path& source_dir) {
                                     "textures/unsupported/r32g32b32a32_float.dds",
                                     "unsupported"};
   write_file(source_dir / unsupported.file, build_source_dds(unsupported));
+  const source_dds_spec unsupported_1d{"unsupported_r8_unorm_1d",
+                                       "ba2_dx10_unsupported_r8_unorm_1d.dds",
+                                       61U,
+                                       "R8_UNORM",
+                                       8U,
+                                       1U,
+                                       1U,
+                                       1U,
+                                       false,
+                                       "textures/unsupported/r8_unorm_1d.dds",
+                                       "unsupported",
+                                       dds_resource_dimension_texture1d,
+                                       1U};
+  write_file(source_dir / unsupported_1d.file, build_source_dds(unsupported_1d));
+  const source_dds_spec unsupported_3d{"unsupported_r8g8b8a8_unorm_3d",
+                                       "ba2_dx10_unsupported_r8g8b8a8_unorm_3d.dds",
+                                       28U,
+                                       "R8G8B8A8_UNORM",
+                                       4U,
+                                       4U,
+                                       1U,
+                                       1U,
+                                       false,
+                                       "textures/unsupported/r8g8b8a8_unorm_3d.dds",
+                                       "unsupported",
+                                       dds_resource_dimension_texture3d,
+                                       2U};
+  write_file(source_dir / unsupported_3d.file, build_source_dds(unsupported_3d));
   write_text(source_dir / "ba2_dx10_writer_sources_manifest.json", writer_sources_manifest(specs));
 }
 

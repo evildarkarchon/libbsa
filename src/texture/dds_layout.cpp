@@ -72,6 +72,7 @@ constexpr std::array locked_formats{
     dxgi_format_descriptor{84U, 4U, 4U, 16U}, // DXGI_FORMAT_BC5_SNORM.
     dxgi_format_descriptor{95U, 4U, 4U, 16U}, // DXGI_FORMAT_BC6H_UF16.
     dxgi_format_descriptor{98U, 4U, 4U, 16U}, // DXGI_FORMAT_BC7_UNORM.
+    dxgi_format_descriptor{99U, 4U, 4U, 16U}, // DXGI_FORMAT_BC7_UNORM_SRGB.
     dxgi_format_descriptor{87U, 1U, 1U, 4U},  // DXGI_FORMAT_B8G8R8A8_UNORM.
 };
 

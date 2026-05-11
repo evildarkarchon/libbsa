@@ -85,13 +85,14 @@ struct ba2_dx10_record_metadata {
 
 constexpr auto writer_proof_matrix = std::to_array<writer_proof_case>({
     {"bc1_unorm", "BC1_UNORM", libbsa::ba2_dx10_target::fallout4},
-    {"bc1_unorm_srgb", "BC1_UNORM_SRGB", libbsa::ba2_dx10_target::fallout4},
+    {"bc1_unorm_srgb", "BC1_UNORM_SRGB", libbsa::ba2_dx10_target::starfield_v3},
     {"bc3_unorm", "BC3_UNORM", libbsa::ba2_dx10_target::fallout4},
     {"bc4_unorm", "BC4_UNORM", libbsa::ba2_dx10_target::fallout4},
     {"bc5_unorm", "BC5_UNORM", libbsa::ba2_dx10_target::fallout4},
-    {"bc5_snorm", "BC5_SNORM", libbsa::ba2_dx10_target::fallout4},
+    {"bc5_snorm", "BC5_SNORM", libbsa::ba2_dx10_target::starfield_v3},
     {"bc6h_uf16", "BC6H_UF16", libbsa::ba2_dx10_target::starfield_v3},
     {"bc7_unorm", "BC7_UNORM", libbsa::ba2_dx10_target::starfield_v3},
+    {"bc7_unorm_srgb", "BC7_UNORM_SRGB", libbsa::ba2_dx10_target::starfield_v3},
     {"r8g8b8a8_unorm", "R8G8B8A8_UNORM", libbsa::ba2_dx10_target::starfield_v3},
     {"r8g8b8a8_unorm_srgb", "R8G8B8A8_UNORM_SRGB", libbsa::ba2_dx10_target::starfield_v3},
     {"b8g8r8a8_unorm", "B8G8R8A8_UNORM", libbsa::ba2_dx10_target::starfield_v3},
@@ -470,7 +471,7 @@ void add_duplicate_dds_pair(libbsa::ba2_dx10_writer& writer, const nlohmann::jso
 
 TEST_CASE("BA2 DX10 writer DDS source manifest covers locked formats", "[unit][fixture][ba2_dx10_writer][dds]") {
   const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
-  constexpr auto locked_formats = std::to_array<std::uint32_t>({28U, 71U, 72U, 77U, 80U, 83U, 84U, 95U, 98U, 29U, 87U, 61U, 31U});
+  constexpr auto locked_formats = std::to_array<std::uint32_t>({28U, 71U, 72U, 77U, 80U, 83U, 84U, 95U, 98U, 99U, 29U, 87U, 61U, 31U});
 
   std::set<std::uint32_t> present_formats;
   for (const auto& source_case : manifest.at("valid_cases")) {
@@ -550,6 +551,53 @@ TEST_CASE("BA2 DX10 writer DDS source manifest rejects malformed and unsupported
     REQUIRE_FALSE(analysis.has_value());
     CHECK(analysis.error().code == libbsa::error_code::format_error);
     CHECK(source_case.at("expected_error").get<std::string>() == "format_error");
+  }
+}
+
+TEST_CASE("BA2 DX10 writer rejects valid non-2D DDS sources", "[unit][ba2_dx10_writer][add]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+
+  for (const auto id : {"unsupported_r8_unorm_1d", "unsupported_r8g8b8a8_unorm_3d"}) {
+    const auto& source_case = invalid_source_case(manifest, id);
+    const auto source_path = generated_source_dir() / source_case.at("file").get<std::string>();
+    const auto bytes = read_binary_file(source_path);
+    INFO("non-2D DDS source: " << id);
+
+    auto metadata = libbsa::texture::analyze_dds_metadata(bytes);
+    REQUIRE(metadata.has_value());
+
+    auto analysis = libbsa::texture::analyze_dds_source(bytes);
+    REQUIRE_FALSE(analysis.has_value());
+    CHECK(analysis.error().code == libbsa::error_code::format_error);
+
+    libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+    auto added = writer.add_file("textures/non-2d.dds", source_path.string());
+    REQUIRE_FALSE(added.has_value());
+    CHECK(added.error().code == libbsa::error_code::format_error);
+  }
+}
+
+TEST_CASE("BA2 DX10 writer rejects Starfield-only DDS formats for Fallout 4 archives", "[unit][ba2_dx10_writer][add]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+
+  for (const auto id : {"bc1_unorm_srgb", "bc5_snorm", "bc6h_uf16", "bc7_unorm_srgb", "r8g8b8a8_unorm_srgb",
+                        "r8g8b8a8_snorm"}) {
+    const auto& source_case = valid_source_case(manifest, id);
+    const auto source_path = generated_source_dir() / source_case.at("file").get<std::string>();
+    INFO("Starfield-only format: " << id);
+
+    const auto bytes = read_binary_file(source_path);
+    auto analysis = libbsa::texture::analyze_dds_source(bytes);
+    REQUIRE(analysis.has_value());
+
+    libbsa::ba2_dx10_writer fallout4_writer{libbsa::ba2_dx10_target::fallout4};
+    auto fallout4_added = fallout4_writer.add_file(source_case.at("archive_path").get<std::string>(), source_path.string());
+    REQUIRE_FALSE(fallout4_added.has_value());
+    CHECK(fallout4_added.error().code == libbsa::error_code::format_error);
+
+    libbsa::ba2_dx10_writer starfield_writer{libbsa::ba2_dx10_target::starfield_v3};
+    auto starfield_added = starfield_writer.add_file(source_case.at("archive_path").get<std::string>(), source_path.string());
+    REQUIRE(starfield_added.has_value());
   }
 }
 

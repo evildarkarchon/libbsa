@@ -30,6 +30,44 @@
 #include "texture/directxtex_analyzer.hpp"
 #include "texture/dds_layout.hpp"
 
+namespace libbsa::formats::ba2 {
+namespace {
+
+/// Returns true for DDS DXGI formats accepted by the Starfield DX10 profile but not Fallout 4.
+bool is_starfield_only_dx10_format(std::uint32_t dxgi_format) noexcept {
+  switch (dxgi_format) {
+  case 29U: // DXGI_FORMAT_R8G8B8A8_UNORM_SRGB.
+  case 31U: // DXGI_FORMAT_R8G8B8A8_SNORM.
+  case 72U: // DXGI_FORMAT_BC1_UNORM_SRGB.
+  case 84U: // DXGI_FORMAT_BC5_SNORM.
+  case 95U: // DXGI_FORMAT_BC6H_UF16.
+  case 96U: // DXGI_FORMAT_BC6H_SF16.
+  case 99U: // DXGI_FORMAT_BC7_UNORM_SRGB.
+    return true;
+  default:
+    return false;
+  }
+}
+
+} // namespace
+
+/// Validates target-specific DDS DXGI format compatibility before archive serialization.
+result<void> validate_dx10_texture_format_for_target(ba2_dx10_target target, std::uint32_t dxgi_format) {
+  switch (target) {
+  case ba2_dx10_target::fallout4:
+    if (is_starfield_only_dx10_format(dxgi_format)) {
+      return error{error_code::format_error,
+                   "BA2 DX10 Fallout 4 target does not support BC6, SRGB, or SNORM DDS formats"};
+    }
+    return {};
+  case ba2_dx10_target::starfield_v3:
+    return {};
+  }
+  return error{error_code::invalid_argument, "BA2 DX10 writer target profile is not supported"};
+}
+
+} // namespace libbsa::formats::ba2
+
 namespace libbsa {
 
 struct ba2_dx10_writer::state {
@@ -117,6 +155,7 @@ result<void> write_snapshot_file(const std::filesystem::path& snapshot_path, std
 
 result<formats::ba2::ba2_dx10_writer_entry> make_entry(std::string_view archive_path,
                                                         std::string_view dds_host_path,
+                                                        ba2_dx10_target target,
                                                         const std::filesystem::path& snapshot_dir,
                                                         std::size_t entry_index) {
   auto canonical = detail::normalize_archive_path(archive_path);
@@ -132,6 +171,10 @@ result<formats::ba2::ba2_dx10_writer_entry> make_entry(std::string_view archive_
   auto source = texture::analyze_dds_source(dds_bytes.value());
   if (!source) {
     return source.error();
+  }
+  auto target_format = formats::ba2::validate_dx10_texture_format_for_target(target, source.value().metadata.dxgi_format);
+  if (!target_format) {
+    return target_format.error();
   }
 
   formats::ba2::ba2_dx10_writer_entry entry;
@@ -174,7 +217,7 @@ result<void> ba2_dx10_writer::add_file(std::string_view archive_path, std::strin
     return snapshot_dir.error();
   }
 
-  auto entry = make_entry(archive_path, dds_host_path, state_->snapshot_dir, state_->entries.size());
+  auto entry = make_entry(archive_path, dds_host_path, state_->target, state_->snapshot_dir, state_->entries.size());
   if (!entry) {
     return entry.error();
   }
@@ -798,7 +841,7 @@ result<void> validate_target_options(ba2_dx10_target target, const ba2_dx10_writ
   return error{error_code::invalid_argument, "BA2 DX10 writer target profile is not supported"};
 }
 
-result<void> validate_entries(std::span<const ba2_dx10_writer_entry> entries) {
+result<void> validate_entries(ba2_dx10_target target, std::span<const ba2_dx10_writer_entry> entries) {
   if (entries.empty()) {
     return error{error_code::invalid_argument, "BA2 DX10 writer requires at least one texture entry"};
   }
@@ -807,6 +850,10 @@ result<void> validate_entries(std::span<const ba2_dx10_writer_entry> entries) {
   for (const auto& entry : entries) {
     if (!canonical_paths.insert(entry.archive_path_canonical).second) {
       return error{error_code::format_error, "BA2 DX10 writer has duplicate canonical archive paths"};
+    }
+    auto target_format = validate_dx10_texture_format_for_target(target, entry.metadata.dxgi_format);
+    if (!target_format) {
+      return target_format.error();
     }
     const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
     (void)directory;
@@ -850,7 +897,7 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target,
     return error{error_code::io_error, "BA2 DX10 output host path already exists"};
   }
 
-  auto validated = validate_entries(entries);
+  auto validated = validate_entries(target, entries);
   if (!validated) {
     return validated.error();
   }

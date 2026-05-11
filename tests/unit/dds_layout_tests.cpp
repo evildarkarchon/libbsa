@@ -144,9 +144,10 @@ TEST_CASE("dds_layout computes locked DX10 mip byte sizes", "[unit][dds_layout]"
       // DXGI_FORMAT_BC5_UNORM=83 and DXGI_FORMAT_BC5_SNORM=84: 4x4 blocks, 16 bytes.
       format_case{83U, "BC5_UNORM", 4U, 4U, 16U},
       format_case{84U, "BC5_SNORM", 4U, 4U, 16U},
-      // DXGI_FORMAT_BC6H_UF16=95 and DXGI_FORMAT_BC7_UNORM=98: 4x4 blocks, 16 bytes.
+      // DXGI_FORMAT_BC6H_UF16=95 and DXGI_FORMAT_BC7_UNORM/BC7_UNORM_SRGB=98/99: 4x4 blocks, 16 bytes.
       format_case{95U, "BC6H_UF16", 4U, 4U, 16U},
       format_case{98U, "BC7_UNORM", 4U, 4U, 16U},
+      format_case{99U, "BC7_UNORM_SRGB", 4U, 4U, 16U},
       // DXGI_FORMAT_R8G8B8A8_UNORM_SRGB=29, B8G8R8A8_UNORM=87, and R8G8B8A8_SNORM=31: 4 bytes/pixel.
       format_case{29U, "R8G8B8A8_UNORM_SRGB", 4U, 4U, 64U},
       format_case{87U, "B8G8R8A8_UNORM", 4U, 4U, 64U},

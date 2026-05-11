@@ -26,7 +26,7 @@ Fallout 4 BA2 GNRL archives use `archive_type::ba2`, `archive_variant::fallout4`
 
 ## Fallout 4 BA2 DX10
 
-Fallout 4 BA2 DX10 archives are texture archives created with `ba2_dx10_target::fallout4`. DDS input is analyzed internally, and public metadata exposes libbsa-owned texture dimensions, DXGI numeric format values, mip counts, array/cubemap state, and chunk records. DX10 DDS data is not resized, transcoded, mip-generated, repaired, or otherwise transformed by libbsa.
+Fallout 4 BA2 DX10 archives are texture archives created with `ba2_dx10_target::fallout4`. DDS input is analyzed internally, and public metadata exposes libbsa-owned texture dimensions, DXGI numeric format values, mip counts, array/cubemap state, and chunk records. DX10 DDS data is not resized, transcoded, mip-generated, repaired, or otherwise transformed by libbsa. BC6, SRGB, or SNORM DDS formats are rejected for Fallout 4 DX10 archives and require the Starfield DX10 target.
 
 ## Starfield BA2 v2 GNRL
 
