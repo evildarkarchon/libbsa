@@ -379,7 +379,8 @@ TEST_CASE("TES4 BSA writer reports invalid archive paths as invalid arguments", 
 TEST_CASE("TES4 BSA writer refuses to overwrite existing output when overwrite_existing is false",
           "[unit][tes4_bsa_writer]") {
   auto existing = output_path("overwrite-default.bsa");
-  write_binary_file(existing, {std::byte{0x01}});
+  const std::vector<std::byte> sentinel{std::byte{0x01}};
+  write_binary_file(existing, sentinel);
 
   libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::oblivion};
   REQUIRE(writer.add_bytes("Meshes/Unique.nif", sample_bytes()).has_value());
@@ -388,6 +389,8 @@ TEST_CASE("TES4 BSA writer refuses to overwrite existing output when overwrite_e
 
   REQUIRE_FALSE(written.has_value());
   REQUIRE(written.error().code == libbsa::error_code::io_error);
+  CHECK(written.error().message.find("TES4 BSA writer") != std::string::npos);
+  CHECK(read_binary_file(existing) == sentinel);
 }
 
 TEST_CASE("TES4 BSA writer reports missing disk sources as I/O errors", "[unit][tes4_bsa_writer]") {

@@ -2,7 +2,6 @@
 
 #include <libbsa/libbsa.hpp>
 
-#include "formats/ba2/ba2_publish.hpp"
 #include "texture/directxtex_analyzer.hpp"
 
 #include <nlohmann/json.hpp>
@@ -416,32 +415,4 @@ TEST_CASE("ba2_writer_execution duplicate DX10 canonical paths return format_err
   REQUIRE_FALSE(written.has_value());
   REQUIRE(written.error().code == libbsa::error_code::format_error);
   CHECK_FALSE(std::filesystem::exists(archive));
-}
-
-TEST_CASE("ba2_writer_execution publish rollback helper preserves backup sentinel contract",
-          "[unit][ba2_writer_execution][publish]") {
-  const auto backup = output_path("rollback-backup.ba2");
-  const auto output = output_path("rollback-output.ba2");
-  const auto sentinel = bytes_from_text("rollback sentinel bytes");
-  write_binary_file(backup, sentinel);
-
-  auto restored = libbsa::formats::ba2::publish_detail::restore_backup_after_publish_failure(
-      backup, output, [](const std::filesystem::path& from, const std::filesystem::path& to, std::error_code& error) {
-        std::filesystem::rename(from, to, error);
-      });
-
-  REQUIRE_FALSE(restored.has_value());
-  REQUIRE(restored.error().code == libbsa::error_code::io_error);
-  CHECK(read_binary_file(output) == sentinel);
-  CHECK_FALSE(std::filesystem::exists(backup));
-
-  std::error_code injected_error = std::make_error_code(std::errc::permission_denied);
-  auto failed_restore = libbsa::formats::ba2::publish_detail::restore_backup_after_publish_failure(
-      backup, output, [injected_error](const std::filesystem::path&,
-                                       const std::filesystem::path&,
-                                       std::error_code& error) { error = injected_error; });
-
-  REQUIRE_FALSE(failed_restore.has_value());
-  REQUIRE(failed_restore.error().code == libbsa::error_code::io_error);
-  CHECK(read_binary_file(output) == sentinel);
 }

@@ -1,13 +1,11 @@
 #include "formats/ba2/ba2_dx10_writer.hpp"
 
-#include "formats/ba2/ba2_publish.hpp"
-
-#include <detail/atomic_file_ops.hpp>
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/compression_router.hpp>
 #include <detail/parallel_work.hpp>
+#include <detail/writer_publish.hpp>
 
 #include <algorithm>
 #include <array>
@@ -774,59 +772,6 @@ result<void> write_archive_bytes(const ba2_dx10_writer_options& options,
   return {};
 }
 
-result<bool> path_exists_noexcept(const std::filesystem::path& path) {
-  std::error_code fs_error;
-  const bool exists = std::filesystem::exists(path, fs_error);
-  if (fs_error) {
-    return error{error_code::io_error, "BA2 DX10 writer failed to inspect output host path"};
-  }
-  return exists;
-}
-
-result<std::filesystem::path> make_unique_publish_directory(const std::filesystem::path& output_path) {
-  const auto parent = output_path.parent_path();
-  const auto filename = output_path.filename();
-  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
-    auto candidate_name = filename;
-    candidate_name += ".libbsa-tmp-" + std::to_string(counter);
-    const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
-    std::error_code fs_error;
-    // A unique directory avoids deterministic `<archive>.tmp` cleanup, which could delete a
-    // caller-owned sibling that merely looks like a temporary file.
-    if (std::filesystem::create_directory(candidate, fs_error)) {
-      return candidate;
-    }
-    if (fs_error) {
-      return error{error_code::io_error, "BA2 DX10 writer failed to reserve temporary output directory"};
-    }
-  }
-  return error{error_code::io_error, "BA2 DX10 writer exhausted temporary output directory names"};
-}
-
-result<std::filesystem::path> reserve_backup_path(const std::filesystem::path& output_path) {
-  const auto parent = output_path.parent_path();
-  const auto filename = output_path.filename();
-  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
-    auto candidate_name = filename;
-    candidate_name += ".libbsa-bak-" + std::to_string(counter);
-    const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
-    auto exists = path_exists_noexcept(candidate);
-    if (!exists) {
-      return exists.error();
-    }
-    if (!exists.value()) {
-      return candidate;
-    }
-  }
-  return error{error_code::io_error, "BA2 DX10 writer exhausted backup output path names"};
-}
-
-void cleanup_publish_directory(const std::filesystem::path& temp_dir) noexcept {
-  std::error_code fs_error;
-  // Cleanup is best-effort because callers should receive the primary write/publish failure, not cleanup noise.
-  std::filesystem::remove_all(temp_dir, fs_error);
-}
-
 result<void> validate_target_options(ba2_dx10_target target, const ba2_dx10_writer_options& options) {
   switch (target) {
   case ba2_dx10_target::fallout4:
@@ -889,13 +834,6 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target,
   }
 
   const auto output_path = std::filesystem::path{output_host_path};
-  auto output_exists = path_exists_noexcept(output_path);
-  if (!output_exists) {
-    return output_exists.error();
-  }
-  if (!options.overwrite_existing && output_exists.value()) {
-    return error{error_code::io_error, "BA2 DX10 output host path already exists"};
-  }
 
   auto validated = validate_entries(target, entries);
   if (!validated) {
@@ -914,86 +852,11 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target,
     return offsets.error();
   }
 
-  auto temp_dir = make_unique_publish_directory(output_path);
-  if (!temp_dir) {
-    return temp_dir.error();
-  }
-  const auto temp_path = temp_dir.value() / output_path.filename();
-  auto written = write_archive_bytes(options, prepared.value(), version, file_table_offset, temp_path);
-  if (!written) {
-    cleanup_publish_directory(temp_dir.value());
-    return written.error();
-  }
-
-  std::error_code fs_error;
-  if (options.overwrite_existing) {
-    output_exists = path_exists_noexcept(output_path);
-    if (!output_exists) {
-      cleanup_publish_directory(temp_dir.value());
-      return output_exists.error();
-    }
-    if (output_exists.value()) {
-      const bool is_regular = std::filesystem::is_regular_file(output_path, fs_error);
-      if (fs_error || !is_regular) {
-        cleanup_publish_directory(temp_dir.value());
-        return error{error_code::io_error, "BA2 DX10 writer refuses to replace non-regular output host path"};
-      }
-
-      auto backup_path = reserve_backup_path(output_path);
-      if (!backup_path) {
-        cleanup_publish_directory(temp_dir.value());
-        return backup_path.error();
-      }
-
-      // Move the old archive aside before publish so a failed replacement can roll back to the last good file.
-      std::filesystem::rename(output_path, backup_path.value(), fs_error);
-      if (fs_error) {
-        cleanup_publish_directory(temp_dir.value());
-        return error{error_code::io_error, "BA2 DX10 writer failed to reserve output backup"};
-      }
-
-      std::filesystem::rename(temp_path, output_path, fs_error);
-      if (fs_error) {
-        cleanup_publish_directory(temp_dir.value());
-        return publish_detail::restore_backup_after_publish_failure(
-            backup_path.value(), output_path, [](const std::filesystem::path& from, const std::filesystem::path& to, std::error_code& error) {
-              std::filesystem::rename(from, to, error);
-            });
-      }
-
-      std::filesystem::remove(backup_path.value(), fs_error);
-      cleanup_publish_directory(temp_dir.value());
-      return {};
-    }
-  }
-
-  if (!options.overwrite_existing) {
-    output_exists = path_exists_noexcept(output_path);
-    if (!output_exists) {
-      cleanup_publish_directory(temp_dir.value());
-      return output_exists.error();
-    }
-    if (output_exists.value()) {
-      cleanup_publish_directory(temp_dir.value());
-      return error{error_code::io_error, "BA2 DX10 output host path already exists"};
-    }
-
-    auto published = detail::publish_file_without_replace(temp_path, output_path);
-    if (!published) {
-      cleanup_publish_directory(temp_dir.value());
-      return error{error_code::io_error, "BA2 DX10 writer failed to publish output host path without overwrite"};
-    }
-    cleanup_publish_directory(temp_dir.value());
-    return {};
-  }
-
-  std::filesystem::rename(temp_path, output_path, fs_error);
-  if (fs_error) {
-    cleanup_publish_directory(temp_dir.value());
-    return error{error_code::io_error, "BA2 DX10 writer failed to publish output host path"};
-  }
-  cleanup_publish_directory(temp_dir.value());
-  return {};
+  return detail::publish_writer_output(
+      output_path, options.overwrite_existing, "BA2 DX10 writer",
+      [&](const std::filesystem::path& temp_path) -> result<void> {
+        return write_archive_bytes(options, prepared.value(), version, file_table_offset, temp_path);
+      });
 }
 
 } // namespace libbsa::formats::ba2

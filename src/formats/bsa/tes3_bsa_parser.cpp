@@ -3,7 +3,7 @@
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
-#include <detail/byte_vector.hpp>
+#include <detail/parser_primitives.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -34,53 +34,12 @@ struct file_record {
   std::uint32_t raw_offset;
 };
 
-bool multiply_fits(std::uint32_t count, std::size_t width, std::size_t& total) noexcept {
-  if (width != 0U && count > std::numeric_limits<std::size_t>::max() / width) {
-    return false;
-  }
-  total = static_cast<std::size_t>(count) * width;
-  return true;
-}
-
-bool add_fits(std::size_t lhs, std::size_t rhs, std::size_t& total) noexcept {
-  if (lhs > std::numeric_limits<std::size_t>::max() - rhs) {
-    return false;
-  }
-  total = lhs + rhs;
-  return true;
-}
-
-bool span_fits(std::size_t start, std::size_t length, std::size_t total) noexcept {
-  return start <= total && length <= total - start;
-}
-
-result<std::vector<std::byte>> read_file_bytes_at(std::ifstream& input, std::uint64_t offset, std::size_t count,
-                                                  std::string_view description) {
-  if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
-    return error{error_code::format_error, std::string{description} + " offset exceeds stream limits"};
-  }
-  if (count > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max())) {
-    return error{error_code::format_error, std::string{description} + " size exceeds stream limits"};
-  }
-
-  auto bytes = detail::make_byte_vector(count, description);
-  if (!bytes) {
-    return bytes.error();
-  }
-  input.clear();
-  input.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
-  if (!input) {
-    return error{error_code::io_error, std::string{"failed to seek while reading "} + std::string{description}};
-  }
-  input.read(reinterpret_cast<char*>(bytes.value().data()), static_cast<std::streamsize>(bytes.value().size()));
-  if (input.bad()) {
-    return error{error_code::io_error, std::string{"failed while reading "} + std::string{description}};
-  }
-  if (static_cast<std::size_t>(input.gcount()) != bytes.value().size()) {
-    return error{error_code::format_error, std::string{description} + " is truncated"};
-  }
-  return std::move(bytes).value();
-}
+using detail::add_fits;
+using detail::archive_string_from_bytes;
+using detail::multiply_fits;
+using detail::normalize_display_separators;
+using detail::read_file_bytes_at;
+using detail::span_fits;
 
 result<header_fields> read_header(detail::binary_reader& reader) {
   const auto version = reader.read_u32_le();
@@ -122,19 +81,6 @@ result<std::size_t> table_size_for(const header_fields& header, std::size_t arch
     return error{error_code::format_error, "TES3 BSA metadata table extends beyond archive bytes"};
   }
   return data_section_start;
-}
-
-std::string bytes_to_string(std::span<const std::byte> bytes) {
-  std::string result;
-  result.reserve(bytes.size());
-  for (const auto value : bytes) {
-    result.push_back(static_cast<char>(std::to_integer<unsigned char>(value)));
-  }
-  return result;
-}
-
-void normalize_original_separators(std::string& value) {
-  std::replace(value.begin(), value.end(), '\\', '/');
 }
 
 result<std::vector<file_record>> read_file_records(detail::binary_reader& reader, std::uint32_t file_count) {
@@ -186,7 +132,11 @@ result<std::vector<std::string>> read_names(std::span<const std::byte> table_byt
     if (end == hash_table_start || end == start) {
       return error{error_code::format_error, "TES3 BSA name table lacks a usable null-terminated name"};
     }
-    names.push_back(bytes_to_string(table_bytes.subspan(start, end - start)));
+    auto name = archive_string_from_bytes(table_bytes.subspan(start, end - start), "TES3 BSA name table entry");
+    if (!name) {
+      return name.error();
+    }
+    names.push_back(std::move(name.value()));
   }
   return names;
 }
@@ -234,7 +184,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     }
 
     auto original_path = names[index];
-    normalize_original_separators(original_path);
+    normalize_display_separators(original_path);
     auto canonical = detail::normalize_archive_path(original_path);
     if (!canonical) {
       return error{error_code::format_error, "TES3 BSA contains an invalid archive path"};

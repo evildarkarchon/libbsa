@@ -1,9 +1,9 @@
 #include "formats/bsa/tes3_bsa_writer.hpp"
 
 #include <detail/archive_path.hpp>
-#include <detail/atomic_file_ops.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
+#include <detail/writer_publish.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -403,40 +403,6 @@ result<void> write_archive_bytes(std::span<const prepared_entry> entries, const 
   return {};
 }
 
-result<bool> path_exists_noexcept(const std::filesystem::path& path) {
-  std::error_code fs_error;
-  const bool exists = std::filesystem::exists(path, fs_error);
-  if (fs_error) {
-    return error{error_code::io_error, "TES3 BSA writer failed to inspect output host path"};
-  }
-  return exists;
-}
-
-result<std::filesystem::path> make_unique_publish_directory(const std::filesystem::path& output_path) {
-  const auto parent = output_path.parent_path();
-  const auto filename = output_path.filename();
-  for (std::uint32_t counter = 0; counter < 64U; ++counter) {
-    auto candidate_name = filename;
-    candidate_name += ".libbsa-tmp-" + std::to_string(counter);
-    const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
-    std::error_code fs_error;
-    // A unique directory avoids deleting caller-owned deterministic siblings such as `<archive>.tmp`.
-    if (std::filesystem::create_directory(candidate, fs_error)) {
-      return candidate;
-    }
-    if (fs_error) {
-      return error{error_code::io_error, "TES3 BSA writer failed to reserve temporary output directory"};
-    }
-  }
-  return error{error_code::io_error, "TES3 BSA writer exhausted temporary output directory names"};
-}
-
-void cleanup_publish_directory(const std::filesystem::path& temp_dir) noexcept {
-  std::error_code fs_error;
-  // Cleanup is best-effort because callers should receive the primary write/publish failure, not cleanup noise.
-  std::filesystem::remove_all(temp_dir, fs_error);
-}
-
 } // namespace
 
 result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
@@ -448,13 +414,6 @@ result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
   }
 
   const auto output_path = std::filesystem::path{output_host_path};
-  auto output_exists = path_exists_noexcept(output_path);
-  if (!output_exists) {
-    return output_exists.error();
-  }
-  if (!options.overwrite_existing && output_exists.value()) {
-    return error{error_code::io_error, "TES3 BSA output host path already exists"};
-  }
 
   auto validated = validate_entries(entries);
   if (!validated) {
@@ -471,61 +430,12 @@ result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
   }
 
   // D-16 keeps disk-backed source bytes path-backed until this point, but sizes
-  // and source readability are validated before any publish path is reserved.
-  auto temp_dir = make_unique_publish_directory(output_path);
-  if (!temp_dir) {
-    return temp_dir.error();
-  }
-  const auto temp_path = temp_dir.value() / output_path.filename();
-
-  auto written = write_archive_bytes(prepared.value(), temp_path);
-  if (!written) {
-    cleanup_publish_directory(temp_dir.value());
-    return written.error();
-  }
-
-  std::error_code fs_error;
-  if (options.overwrite_existing) {
-    output_exists = path_exists_noexcept(output_path);
-    if (!output_exists) {
-      cleanup_publish_directory(temp_dir.value());
-      return output_exists.error();
-    }
-    if (output_exists.value()) {
-      const bool is_regular = std::filesystem::is_regular_file(output_path, fs_error);
-      if (fs_error || !is_regular) {
-        cleanup_publish_directory(temp_dir.value());
-        return error{error_code::io_error, "TES3 BSA writer refuses to replace non-regular output host path"};
-      }
-
-      auto published = detail::replace_file_atomically(temp_path, output_path);
-      if (!published) {
-        cleanup_publish_directory(temp_dir.value());
-        return error{error_code::io_error, "TES3 BSA writer failed to publish output host path"};
-      }
-
-      cleanup_publish_directory(temp_dir.value());
-      return {};
-    }
-  }
-
-  output_exists = path_exists_noexcept(output_path);
-  if (!output_exists) {
-    cleanup_publish_directory(temp_dir.value());
-    return output_exists.error();
-  }
-  if (output_exists.value()) {
-    cleanup_publish_directory(temp_dir.value());
-    return error{error_code::io_error, "TES3 BSA output host path already exists"};
-  }
-
-  auto published = detail::publish_file_without_replace(temp_path, output_path);
-  if (!published) {
-    cleanup_publish_directory(temp_dir.value());
-    return error{error_code::io_error, "TES3 BSA writer failed to publish output host path"};
-  }
-  cleanup_publish_directory(temp_dir.value());
-  return {};
+  // and source readability are validated before the shared helper reserves a publish path.
+  return detail::publish_writer_output(
+      output_path, options.overwrite_existing, "TES3 BSA writer",
+      [&](const std::filesystem::path& temp_path) -> result<void> {
+        return write_archive_bytes(prepared.value(), temp_path);
+      });
 }
 
 } // namespace libbsa::formats::bsa

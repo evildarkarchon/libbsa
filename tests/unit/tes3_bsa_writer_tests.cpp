@@ -586,6 +586,7 @@ TEST_CASE("tes3_bsa_writer refuses overwrite by default and preserves existing b
 
   REQUIRE_FALSE(written.has_value());
   REQUIRE(written.error().code == libbsa::error_code::io_error);
+  CHECK(written.error().message.find("TES3 BSA writer") != std::string::npos);
   CHECK(read_binary_file(archive) == sentinel);
 }
 

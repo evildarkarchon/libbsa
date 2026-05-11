@@ -15,6 +15,7 @@ add_executable(libbsa_tests
   unit/thread_safety_docs_policy_tests.cpp
   unit/target_format_policy_tests.cpp
   unit/ba2_gnrl_writer_tests.cpp
+  unit/writer_publish_tests.cpp
   unit/tes3_bsa_writer_tests.cpp
   unit/tes4_bsa_writer_tests.cpp
   unit/tes4_bsa_reader_tests.cpp
@@ -33,6 +34,7 @@ add_executable(libbsa_tests
   unit/compatibility_warning_tests.cpp
   unit/compatibility_matrix_tests.cpp
   unit/binary_io_tests.cpp
+  unit/parser_primitives_tests.cpp
   unit/archive_path_tests.cpp
   unit/payload_stream_tests.cpp
   unit/deflate_codec_tests.cpp

@@ -5,6 +5,7 @@
 #include <detail/archive_path.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/byte_vector.hpp>
+#include <detail/parser_primitives.hpp>
 
 #include <algorithm>
 #include <array>
@@ -61,25 +62,12 @@ struct dx10_record {
   std::vector<dx10_chunk_record> chunks;
 };
 
-bool multiply_fits(std::uint32_t count, std::size_t width, std::size_t& total) noexcept {
-  if (width != 0U && count > std::numeric_limits<std::size_t>::max() / width) {
-    return false;
-  }
-  total = static_cast<std::size_t>(count) * width;
-  return true;
-}
-
-bool add_fits(std::size_t lhs, std::size_t rhs, std::size_t& total) noexcept {
-  if (lhs > std::numeric_limits<std::size_t>::max() - rhs) {
-    return false;
-  }
-  total = lhs + rhs;
-  return true;
-}
-
-bool span_fits_u64(std::uint64_t start, std::uint64_t length, std::uint64_t total) noexcept {
-  return start <= total && length <= total - start;
-}
+using detail::add_fits;
+using detail::archive_string_from_bytes;
+using detail::multiply_fits;
+using detail::normalize_display_separators;
+using detail::read_file_bytes_at;
+using detail::span_fits_u64;
 
 std::size_t header_size_for(std::uint32_t version) noexcept {
   if (version == starfield_v3_version) {
@@ -89,43 +77,6 @@ std::size_t header_size_for(std::uint32_t version) noexcept {
     return starfield_v2_header_size;
   }
   return common_header_size;
-}
-
-result<std::vector<std::byte>> read_file_bytes_at(std::ifstream& input, std::uint64_t offset, std::size_t count,
-                                                  std::string_view description) {
-  if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
-    return error{error_code::format_error, std::string{description} + " offset exceeds stream limits"};
-  }
-  if (count > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max())) {
-    return error{error_code::format_error, std::string{description} + " size exceeds stream limits"};
-  }
-
-  auto bytes = detail::make_byte_vector(count, description);
-  if (!bytes) {
-    return bytes.error();
-  }
-  input.clear();
-  input.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
-  if (!input) {
-    return error{error_code::io_error, std::string{"failed to seek while reading "} + std::string{description}};
-  }
-  input.read(reinterpret_cast<char*>(bytes.value().data()), static_cast<std::streamsize>(bytes.value().size()));
-  if (input.bad()) {
-    return error{error_code::io_error, std::string{"failed while reading "} + std::string{description}};
-  }
-  if (static_cast<std::size_t>(input.gcount()) != bytes.value().size()) {
-    return error{error_code::format_error, std::string{description} + " is truncated"};
-  }
-  return std::move(bytes).value();
-}
-
-std::string bytes_to_string(std::span<const std::byte> bytes) {
-  std::string result;
-  result.reserve(bytes.size());
-  for (const auto value : bytes) {
-    result.push_back(static_cast<char>(std::to_integer<unsigned char>(value)));
-  }
-  return result;
 }
 
 result<void> append_u16_le(std::vector<std::byte>& output, std::uint16_t value) {
@@ -140,9 +91,6 @@ result<std::vector<std::byte>> parse_ba2_dx10_names_from_file(std::ifstream& inp
   if (file_table_offset > first_payload_offset) {
     return error{error_code::format_error, "BA2 DX10 filename table overlaps payload data"};
   }
-  if (file_table_offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
-    return error{error_code::format_error, "BA2 DX10 filename table offset exceeds stream limits"};
-  }
 
   std::vector<std::byte> encoded_names;
   std::size_t minimum_encoded_size = 0;
@@ -153,11 +101,6 @@ result<std::vector<std::byte>> parse_ba2_dx10_names_from_file(std::ifstream& inp
   if (!reserved) {
     return reserved.error();
   }
-  input.clear();
-  input.seekg(static_cast<std::streamoff>(file_table_offset), std::ios::beg);
-  if (!input) {
-    return error{error_code::io_error, "failed to seek while reading BA2 DX10 filename table"};
-  }
 
   std::uint64_t cursor = file_table_offset;
   for (std::uint32_t index = 0; index < file_count; ++index) {
@@ -165,34 +108,27 @@ result<std::vector<std::byte>> parse_ba2_dx10_names_from_file(std::ifstream& inp
       return error{error_code::format_error, "BA2 DX10 filename table is truncated before UInt16 length"};
     }
 
-    std::array<unsigned char, 2U> length_bytes{};
-    input.read(reinterpret_cast<char*>(length_bytes.data()), static_cast<std::streamsize>(length_bytes.size()));
-    if (input.bad()) {
-      return error{error_code::io_error, "failed while reading BA2 DX10 filename length"};
-    }
-    if (static_cast<std::size_t>(input.gcount()) != length_bytes.size()) {
-      return error{error_code::format_error, "BA2 DX10 filename table is truncated before UInt16 length"};
+    auto length_bytes = read_file_bytes_at(input, cursor, 2U, "BA2 DX10 filename length");
+    if (!length_bytes) {
+      return length_bytes.error();
     }
 
-    const auto length = static_cast<std::uint16_t>(length_bytes[0] | (static_cast<std::uint16_t>(length_bytes[1]) << 8U));
+    detail::binary_reader length_reader{length_bytes.value()};
+    const auto length = length_reader.read_u16_le();
+    if (!length) {
+      return error{error_code::format_error, "BA2 DX10 filename table is truncated before UInt16 length"};
+    }
     cursor += 2U;
-    if (static_cast<std::uint64_t>(length) > first_payload_offset - cursor) {
+    if (static_cast<std::uint64_t>(length.value()) > first_payload_offset - cursor) {
       return error{error_code::format_error, "BA2 DX10 filename table name crosses payload data"};
     }
 
-    auto name_bytes = detail::make_byte_vector(length, "BA2 DX10 filename bytes");
+    auto name_bytes = read_file_bytes_at(input, cursor, length.value(), "BA2 DX10 filename bytes");
     if (!name_bytes) {
       return name_bytes.error();
     }
-    input.read(reinterpret_cast<char*>(name_bytes.value().data()), static_cast<std::streamsize>(name_bytes.value().size()));
-    if (input.bad()) {
-      return error{error_code::io_error, "failed while reading BA2 DX10 filename bytes"};
-    }
-    if (static_cast<std::size_t>(input.gcount()) != name_bytes.value().size()) {
-      return error{error_code::format_error, "BA2 DX10 filename table is truncated before name bytes"};
-    }
 
-    auto appended_length = append_u16_le(encoded_names, length);
+    auto appended_length = append_u16_le(encoded_names, length.value());
     if (!appended_length) {
       return appended_length.error();
     }
@@ -200,14 +136,10 @@ result<std::vector<std::byte>> parse_ba2_dx10_names_from_file(std::ifstream& inp
     if (!appended_name) {
       return appended_name.error();
     }
-    cursor += length;
+    cursor += length.value();
   }
 
   return encoded_names;
-}
-
-void normalize_original_separators(std::string& value) {
-  std::replace(value.begin(), value.end(), '\\', '/');
 }
 
 result<header_fields> read_header(detail::binary_reader& reader) {
@@ -323,7 +255,11 @@ result<std::vector<std::string>> read_names(std::span<const std::byte> name_tabl
     if (bytes.value().empty()) {
       return error{error_code::format_error, "BA2 DX10 filename table contains an empty name"};
     }
-    names.push_back(bytes_to_string(bytes.value()));
+    auto name = archive_string_from_bytes(bytes.value(), "BA2 DX10 filename bytes");
+    if (!name) {
+      return name.error();
+    }
+    names.push_back(std::move(name.value()));
   }
   consumed = reader.position();
   return names;
@@ -423,7 +359,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
 
   for (std::size_t index = 0; index < records.size(); ++index) {
     auto original_path = names[index];
-    normalize_original_separators(original_path);
+    normalize_display_separators(original_path);
     auto canonical = detail::normalize_archive_path(original_path);
     if (!canonical) {
       return error{error_code::format_error, "BA2 DX10 filename table contains an invalid archive path"};

@@ -2,8 +2,6 @@
 
 #include <detail/bethesda_hash.hpp>
 
-#include <formats/ba2/ba2_publish.hpp>
-
 #include <libbsa/libbsa.hpp>
 
 #include "texture/directxtex_analyzer.hpp"
@@ -819,17 +817,18 @@ TEST_CASE("BA2 DX10 writer refuses to overwrite existing output by default and p
 
   REQUIRE_FALSE(written.has_value());
   CHECK(written.error().code == libbsa::error_code::io_error);
+  CHECK(written.error().message.find("BA2 DX10 writer") != std::string::npos);
   CHECK(read_binary_file(output) == sentinel);
 }
 
-TEST_CASE("BA2 DX10 writer routes no-overwrite publish through the no-replace helper",
+TEST_CASE("BA2 DX10 writer routes final publication through the shared writer publish helper",
           "[unit][ba2_dx10_writer][publish][policy]") {
   const auto source = read_text_file(std::filesystem::path{LIBBSA_SOURCE_DIR} / "src" / "formats" / "ba2" /
                                      "ba2_dx10_writer.cpp");
 
-  CHECK(source.find("detail::publish_file_without_replace(temp_path, output_path)") != std::string::npos);
+  CHECK(source.find("detail::publish_writer_output(") != std::string::npos);
   CHECK(source.find("std::filesystem::copy_file(temp_path, output_path") == std::string::npos);
-  CHECK(source.find("BA2 DX10 writer failed to publish output host path without overwrite") != std::string::npos);
+  CHECK(source.find("BA2 DX10 writer") != std::string::npos);
 }
 
 TEST_CASE("BA2 DX10 writer preserves caller-owned temp-name sibling files during unique temp publish",
@@ -876,25 +875,29 @@ TEST_CASE("BA2 DX10 writer rejects non-regular overwrite targets without replaci
   CHECK(std::filesystem::is_directory(directory));
 }
 
-TEST_CASE("BA2 DX10 internal publish rollback helper restores the original archive after publish failure",
+TEST_CASE("BA2 DX10 writer overwrites existing archives when overwrite_existing is true",
           "[unit][ba2_dx10_writer][publish][overwrite]") {
-  const auto output = unique_output_path("dx10-overwrite-rollback");
-  const std::vector<std::byte> original_bytes{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
-  write_binary_file(output, original_bytes);
-  auto backup = output;
-  backup += ".libbsa-bak-test";
-  std::filesystem::remove(backup);
-  std::error_code fs_error;
-  std::filesystem::rename(output, backup, fs_error);
-  REQUIRE_FALSE(fs_error);
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto output = unique_output_path("dx10-overwrite-existing");
+  const std::vector<std::byte> sentinel{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
+  write_binary_file(output, sentinel);
+  libbsa::ba2_dx10_writer_options options;
+  options.overwrite_existing = true;
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4, options};
+  REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(),
+                          (generated_source_dir() / source_case.at("file").get<std::string>()).string())
+              .has_value());
 
-  auto restored = libbsa::formats::ba2::publish_detail::restore_backup_after_publish_failure(
-      backup, output, [](const std::filesystem::path& from, const std::filesystem::path& to, std::error_code& error) {
-        std::filesystem::rename(from, to, error);
-      });
+  auto written = writer.write_to(output.string());
 
-  REQUIRE_FALSE(restored.has_value());
-  CHECK(restored.error().code == libbsa::error_code::io_error);
-  CHECK(read_binary_file(output) == original_bytes);
-  CHECK_FALSE(std::filesystem::exists(backup));
+  REQUIRE(written.has_value());
+  CHECK(read_binary_file(output) != sentinel);
+  auto opened = libbsa::archive_reader::open(output.string());
+  REQUIRE(opened.has_value());
+  auto extracted = opened.value().extract_bytes(source_case.at("archive_path").get<std::string>());
+  REQUIRE(extracted.has_value());
+  const auto source = libbsa::texture::analyze_dds_source(read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>()));
+  REQUIRE(source.has_value());
+  require_extracted_matches_source(extracted.value(), source.value());
 }

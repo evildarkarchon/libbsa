@@ -4,6 +4,7 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/byte_vector.hpp>
+#include <detail/parser_primitives.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -54,64 +55,23 @@ struct folder_block {
   std::vector<file_record> files;
 };
 
+using detail::add_fits;
+using detail::archive_string_from_bytes;
+using detail::multiply_fits;
+using detail::normalize_display_separators;
+using detail::read_file_bytes_at;
+using detail::span_fits;
+
+bool non_empty_span_intersects_prefix(std::size_t start, std::size_t length, std::size_t prefix_size) noexcept {
+  return length != 0U && start < prefix_size;
+}
+
 result<void> skip_checked(detail::binary_reader& reader, std::size_t count) {
   auto skipped = reader.skip(count);
   if (!skipped) {
     return error{error_code::format_error, "TES4 BSA table is truncated"};
   }
   return {};
-}
-
-bool multiply_fits(std::uint32_t count, std::size_t width, std::size_t& total) noexcept {
-  if (width != 0U && count > std::numeric_limits<std::size_t>::max() / width) {
-    return false;
-  }
-  total = static_cast<std::size_t>(count) * width;
-  return true;
-}
-
-bool add_fits(std::size_t lhs, std::size_t rhs, std::size_t& total) noexcept {
-  if (lhs > std::numeric_limits<std::size_t>::max() - rhs) {
-    return false;
-  }
-  total = lhs + rhs;
-  return true;
-}
-
-bool span_fits(std::size_t start, std::size_t length, std::size_t total) noexcept {
-  return start <= total && length <= total - start;
-}
-
-bool non_empty_span_intersects_prefix(std::size_t start, std::size_t length, std::size_t prefix_size) noexcept {
-  return length != 0U && start < prefix_size;
-}
-
-result<std::vector<std::byte>> read_file_bytes_at(std::ifstream& input, std::uint64_t offset, std::size_t count,
-                                                  std::string_view description) {
-  if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
-    return error{error_code::format_error, std::string{description} + " offset exceeds stream limits"};
-  }
-  if (count > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max())) {
-    return error{error_code::format_error, std::string{description} + " size exceeds stream limits"};
-  }
-
-  auto bytes = detail::make_byte_vector(count, description);
-  if (!bytes) {
-    return bytes.error();
-  }
-  input.clear();
-  input.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
-  if (!input) {
-    return error{error_code::io_error, std::string{"failed to seek while reading "} + std::string{description}};
-  }
-  input.read(reinterpret_cast<char*>(bytes.value().data()), static_cast<std::streamsize>(bytes.value().size()));
-  if (input.bad()) {
-    return error{error_code::io_error, std::string{"failed while reading "} + std::string{description}};
-  }
-  if (static_cast<std::size_t>(input.gcount()) != bytes.value().size()) {
-    return error{error_code::format_error, std::string{description} + " is truncated"};
-  }
-  return std::move(bytes).value();
 }
 
 result<header_fields> read_header(detail::binary_reader& reader) {
@@ -171,19 +131,6 @@ result<std::size_t> metadata_table_size(const header_fields& header, std::size_t
   return total;
 }
 
-std::string bytes_to_string(std::span<const std::byte> bytes) {
-  std::string result;
-  result.reserve(bytes.size());
-  for (const auto value : bytes) {
-    result.push_back(static_cast<char>(std::to_integer<unsigned char>(value)));
-  }
-  return result;
-}
-
-void normalize_original_separators(std::string& value) {
-  std::replace(value.begin(), value.end(), '\\', '/');
-}
-
 result<std::string> read_bsa_name(detail::binary_reader& reader, std::uint8_t encoded_size,
                                   std::string_view table_name) {
   if (encoded_size == 0U) {
@@ -196,7 +143,8 @@ result<std::string> read_bsa_name(detail::binary_reader& reader, std::uint8_t en
   if (bytes.value().empty() || bytes.value().back() != std::byte{0}) {
     return error{error_code::unsupported, std::string{"TES4 BSA "} + std::string{table_name} + " is not null-terminated"};
   }
-  return bytes_to_string(bytes.value().first(bytes.value().size() - 1U));
+  const auto description = std::string{"TES4 BSA "} + std::string{table_name};
+  return archive_string_from_bytes(bytes.value().first(bytes.value().size() - 1U), description);
 }
 
 result<void> validate_folder_file_counts(const header_fields& header, std::span<const folder_record> folders) {
@@ -264,14 +212,19 @@ result<std::vector<folder_block>> read_folder_blocks(detail::binary_reader& read
 
 result<std::vector<std::string>> read_file_names(detail::binary_reader& reader, std::uint32_t file_count,
                                                  std::uint32_t total_file_name_length) {
+  auto table_bytes = reader.read_bytes(total_file_name_length);
+  if (!table_bytes) {
+    return error{error_code::format_error, "TES4 BSA file name table is truncated"};
+  }
+
+  detail::binary_reader name_reader{table_bytes.value()};
   std::vector<std::string> names;
   names.reserve(file_count);
-  const auto start = reader.position();
   while (names.size() < file_count) {
-    std::string name;
+    const auto name_start = name_reader.position();
     bool terminated = false;
-    while (reader.position() - start < total_file_name_length) {
-      const auto ch = reader.read_u8();
+    while (name_reader.position() < table_bytes.value().size()) {
+      const auto ch = name_reader.read_u8();
       if (!ch) {
         return error{error_code::format_error, "TES4 BSA file name table is truncated"};
       }
@@ -279,14 +232,19 @@ result<std::vector<std::string>> read_file_names(detail::binary_reader& reader, 
         terminated = true;
         break;
       }
-      name.push_back(static_cast<char>(ch.value()));
     }
-    if (!terminated || name.empty()) {
+    const auto name_end = terminated ? name_reader.position() - 1U : name_reader.position();
+    if (!terminated || name_end == name_start) {
       return error{error_code::unsupported, "TES4 BSA file name table lacks usable names"};
     }
-    names.push_back(std::move(name));
+    auto name = archive_string_from_bytes(table_bytes.value().subspan(name_start, name_end - name_start),
+                                          "TES4 BSA file name table entry");
+    if (!name) {
+      return name.error();
+    }
+    names.push_back(std::move(name.value()));
   }
-  if (reader.position() - start != total_file_name_length) {
+  if (name_reader.position() != table_bytes.value().size()) {
     return error{error_code::format_error, "TES4 BSA file name lengths do not match header total"};
   }
   return names;
@@ -358,11 +316,11 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
 
   for (const auto& folder : folders) {
     auto folder_original = folder.name;
-    normalize_original_separators(folder_original);
+    normalize_display_separators(folder_original);
     for (const auto& record : folder.files) {
       const auto& file_name = file_names[name_index++];
       auto original_path = folder_original + "/" + file_name;
-      normalize_original_separators(original_path);
+      normalize_display_separators(original_path);
       auto canonical = detail::normalize_archive_path(original_path);
       if (!canonical) {
         return canonical.error();
