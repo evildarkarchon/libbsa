@@ -328,6 +328,12 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
       if (!canonical_paths.insert(canonical.value().value).second) {
         return error{error_code::format_error, "TES4 BSA contains duplicate canonical archive paths"};
       }
+      const auto file_hash = detail::hash_tes4(file_name);
+      // TES4 lookup tables are hash-driven; accepting a mismatched record would
+      // publish an entry that game-style lookup cannot resolve from its name.
+      if (record.hash != file_hash) {
+        return error{error_code::format_error, "TES4 BSA file record hash does not match filename table"};
+      }
 
       const auto stored_size = record.size_flags & ~file_size_compression_toggle;
       if (!span_fits(record.offset, stored_size, archive_size)) {
@@ -357,7 +363,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                                        raw_size.value(),
                                        stored_size,
                                        record.offset,
-                                       detail::hash_tes4(file_name),
+                                       record.hash,
                                        compression,
                                        record.size_flags & file_size_compression_toggle,
                                        has_embedded_names,

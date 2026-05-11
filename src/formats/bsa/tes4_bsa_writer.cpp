@@ -140,6 +140,7 @@ constexpr std::size_t payload_stream_chunk_size = 64U * 1024U;
 
 struct prepared_entry {
   std::string folder;
+  std::string canonical_folder;
   std::string file_name;
   std::uint64_t file_hash{0};
   std::uint32_t stored_size{0};
@@ -162,6 +163,11 @@ struct prepared_folder {
 struct prepared_entry_result {
   prepared_entry entry;
   std::uint32_t file_flags{0};
+};
+
+struct prepared_folder_group {
+  std::string display_name;
+  std::vector<prepared_entry> entries;
 };
 
 result<std::uint32_t> version_for(tes4_bsa_target target) {
@@ -517,8 +523,12 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
                                                 bool emit_embedded_names,
                                                 std::uint32_t version) {
   auto [folder, file_name] = split_folder_file(entry.archive_path_original);
+  auto [canonical_folder, canonical_file_name] = split_folder_file(entry.archive_path_canonical);
   if (folder.empty() || file_name.empty()) {
     return error{error_code::invalid_argument, "TES4 BSA writer archive paths must include folder and file names"};
+  }
+  if (canonical_folder.empty() || canonical_file_name.empty()) {
+    return error{error_code::invalid_argument, "TES4 BSA writer archive paths must include canonical folders and files"};
   }
 
   const auto entry_extension = extension_of(file_name);
@@ -554,6 +564,7 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
 
   prepared_entry prepared;
   prepared.folder = folder;
+  prepared.canonical_folder = std::move(canonical_folder);
   prepared.file_name = std::move(file_name);
   prepared.file_hash = file_hash_for(prepared.file_name);
   prepared.record_flags = record_flags;
@@ -619,23 +630,34 @@ result<std::vector<prepared_folder>> prepare_folders(std::span<const tes4_writer
     return prepared_work.error();
   }
 
-  std::map<std::string, std::vector<prepared_entry>> grouped;
+  std::map<std::string, prepared_folder_group> grouped;
   file_flags = 0U;
   for (auto& prepared : prepared_by_index) {
     if (!prepared.has_value()) {
       return error{error_code::io_error, "TES4 BSA writer failed to prepare an entry"};
     }
     file_flags |= prepared->file_flags;
-    grouped[prepared->entry.folder].push_back(std::move(prepared->entry));
+    // TES4 folder hashes fold ASCII case, so mixed-case spellings of the
+    // same virtual folder must serialize as one folder record.
+    auto [group, inserted] = grouped.try_emplace(prepared->entry.canonical_folder);
+    if (inserted) {
+      group->second.display_name = prepared->entry.folder;
+    }
+    group->second.entries.push_back(std::move(prepared->entry));
   }
 
   std::vector<prepared_folder> folders;
   folders.reserve(grouped.size());
-  for (auto& [folder_name, folder_entries] : grouped) {
+  for (auto& [canonical_folder, folder_group] : grouped) {
+    (void)canonical_folder;
+    auto& folder_entries = folder_group.entries;
     std::sort(folder_entries.begin(), folder_entries.end(), [](const prepared_entry& lhs, const prepared_entry& rhs) {
       return lhs.file_hash < rhs.file_hash;
     });
-    folders.push_back(prepared_folder{folder_name, detail::hash_tes4(folder_name, {}), 0U, std::move(folder_entries)});
+    folders.push_back(prepared_folder{folder_group.display_name,
+                                      detail::hash_tes4(folder_group.display_name, {}),
+                                      0U,
+                                      std::move(folder_entries)});
   }
   std::sort(folders.begin(), folders.end(), [](const prepared_folder& lhs, const prepared_folder& rhs) {
     return lhs.hash < rhs.hash;

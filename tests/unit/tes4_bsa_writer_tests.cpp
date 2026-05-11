@@ -365,6 +365,31 @@ TEST_CASE("TES4 BSA writer rejects duplicate canonical archive paths at write ti
   REQUIRE(written.error().code == libbsa::error_code::format_error);
 }
 
+TEST_CASE("TES4 BSA writer groups mixed-case folder spellings by canonical path", "[unit][tes4_bsa_writer]") {
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+
+  const auto upper_payload = bytes_from_text("upper folder spelling");
+  const auto lower_payload = bytes_from_text("lower folder spelling");
+  REQUIRE(writer.add_bytes("Meshes/Mixed/A.nif", upper_payload).has_value());
+  REQUIRE(writer.add_bytes("meshes/mixed/B.nif", lower_payload).has_value());
+
+  const auto archive = output_path("mixed-case-folder-grouping.bsa");
+  auto written = writer.write_to(archive.string());
+  REQUIRE(written.has_value());
+
+  const auto bytes = read_binary_file(archive);
+  REQUIRE(read_u32_le_at(bytes, 16U) == 1U);
+  CHECK(read_u64_le_at(bytes, 36U) == libbsa::detail::hash_tes4("Meshes\\Mixed", {}));
+
+  auto opened = libbsa::archive_reader::open(archive.string());
+  REQUIRE(opened.has_value());
+  require_extracted_bytes(opened.value(), "meshes/mixed/a.nif", upper_payload);
+  require_extracted_bytes(opened.value(), "Meshes/Mixed/B.nif", lower_payload);
+}
+
 TEST_CASE("TES4 BSA writer reports invalid archive paths as invalid arguments", "[unit][tes4_bsa_writer]") {
   for (const std::string invalid_path : {"/rooted/file.txt", "C:/drive/file.txt", "folder/../file.txt", ""}) {
     libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::oblivion};
