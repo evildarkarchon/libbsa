@@ -229,6 +229,7 @@ std::uint32_t bytes_per_block(std::uint32_t format) {
   case 83U:
   case 84U:
   case 95U:
+  case 96U:
   case 98U:
   case 99U:
     return 16U;
@@ -255,6 +256,7 @@ bool is_block_compressed(std::uint32_t format) noexcept {
   case 83U:
   case 84U:
   case 95U:
+  case 96U:
   case 98U:
   case 99U:
     return true;
@@ -286,6 +288,8 @@ std::vector<source_dds_spec> source_dds_valid_specs() {
            "textures/formats/bc5_snorm.dds", "format"},
            {"bc6h_uf16", "ba2_dx10_bc6h_uf16.dds", 95U, "BC6H_UF16", 16U, 16U, 1U, 1U, false,
             "textures/formats/bc6h_uf16.dds", "format"},
+           {"bc6h_sf16", "ba2_dx10_bc6h_sf16.dds", 96U, "BC6H_SF16", 16U, 16U, 1U, 1U, false,
+            "textures/formats/bc6h_sf16.dds", "format"},
            {"bc7_unorm", "ba2_dx10_bc7_unorm.dds", 98U, "BC7_UNORM", 16U, 16U, 1U, 1U, false,
             "textures/formats/bc7_unorm.dds", "format"},
            {"bc7_unorm_srgb", "ba2_dx10_bc7_unorm_srgb.dds", 99U, "BC7_UNORM_SRGB", 16U, 16U, 1U, 1U, false,

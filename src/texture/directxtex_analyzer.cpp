@@ -32,6 +32,7 @@ bool is_supported_writer_source_format(DXGI_FORMAT format) noexcept {
   case 83U: // BC5_UNORM
   case 84U: // BC5_SNORM
   case 95U: // BC6H_UF16
+  case 96U: // BC6H_SF16
   case 98U: // BC7_UNORM
   case 99U: // BC7_UNORM_SRGB
   case 29U: // R8G8B8A8_UNORM_SRGB
