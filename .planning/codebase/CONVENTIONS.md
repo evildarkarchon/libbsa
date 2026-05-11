@@ -1,109 +1,121 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-05-10
+**Analysis Date:** 2026-05-11
 
 ## Naming Patterns
 
 **Files:**
-- Use lowercase snake_case for C++ source and headers. Public headers use `.hpp` under `include/libbsa/`, such as `include/libbsa/archive.hpp`, `include/libbsa/result.hpp`, `include/libbsa/validation.hpp`, and `include/libbsa/writer.hpp`.
-- Keep implementation files beside their ownership area: shared internals in `src/detail/binary_io.cpp`, `src/detail/archive_path.cpp`, and `src/detail/parallel_work.cpp`; format code in `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/bsa/tes3_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_reader.cpp`, and `src/formats/ba2/ba2_dx10_writer.cpp`; texture code in `src/texture/directxtex_analyzer.cpp` and `src/texture/dds_layout.cpp`.
-- Name tests as `<area>_tests.cpp` under `tests/unit/`, for example `tests/unit/result_tests.cpp`, `tests/unit/tes4_bsa_reader_tests.cpp`, `tests/unit/ba2_dx10_writer_tests.cpp`, and `tests/unit/validation_api_tests.cpp`.
-- Name fixture generators as `generate_<family>_fixtures.cpp`, such as `tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp`, `tests/fixtures/generated/generate_tes3_bsa_fixtures.cpp`, and `tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp`.
+- Use lower snake_case file names for public headers, implementation files, and tests: `include/libbsa/archive.hpp`, `src/detail/binary_io.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`, `tests/unit/ba2_dx10_malformed_tests.cpp`.
+- Include archive-family and subtype prefixes in format-specific files: `src/formats/bsa/tes3_bsa_reader.cpp`, `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, `src/formats/ba2/ba2_dx10_reader.cpp`.
+- Keep test files named after the surface under test with `_tests.cpp`: `tests/unit/result_tests.cpp`, `tests/unit/archive_path_tests.cpp`, `tests/unit/public_include_boundary_tests.cpp`.
+- Keep fixture generator tools under `tests/fixtures/generated/` with `generate_<format>_fixtures.cpp` names: `tests/fixtures/generated/generate_tes3_bsa_fixtures.cpp`, `tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp`.
 
 **Functions:**
-- Use lowercase snake_case for public APIs and internal helpers: `libbsa::archive_reader::extract_bytes` in `include/libbsa/archive.hpp`, `libbsa::validate_archive` in `include/libbsa/validation.hpp`, `libbsa::detail::normalize_archive_path` in `src/detail/archive_path.cpp`, and `libbsa::formats::ba2::write_ba2_gnrl_archive` in `src/formats/ba2/ba2_gnrl_writer.cpp`.
-- Prefer verb-led helper names that state the operation and failure boundary: `read_detection_prefix` in `src/archive.cpp`, `validate_extractability_size_bounds` in `src/validation.cpp`, `checked_u32` in `src/formats/ba2/ba2_gnrl_writer.cpp`, `path_exists_noexcept` in `src/formats/bsa/tes4_bsa_writer.cpp`, and `run_indexed_work` in `src/detail/parallel_work.cpp`.
-- Use `*_for` helpers for mapping decisions from enums or metadata, as in `version_for`, `compression_method_for`, `file_flag_for_extension`, and `header_size_for` in `src/formats/bsa/tes4_bsa_writer.cpp` and `src/formats/ba2/ba2_dx10_writer.cpp`.
+- Use lower snake_case for functions and methods: `archive_reader::open` in `include/libbsa/archive.hpp`, `validate_archive` in `include/libbsa/validation.hpp`, `normalize_archive_path` in `src/detail/archive_path.hpp`.
+- Use verb phrases for operations that do work: `read_detection_prefix` in `src/archive.cpp`, `append_warning` in `src/validation.cpp`, `compress_payload` in `src/detail/compression_router.cpp`.
+- Use `require_*` helper names in tests for assertion helpers: `require_entry` and `require_extracted_bytes` in `tests/unit/tes4_bsa_writer_tests.cpp`, `require_valid_archive` in `tests/unit/validation_api_tests.cpp`.
+- Use `*_from_*` names for conversion helpers: `error_code_from_manifest` in `tests/unit/ba2_dx10_malformed_tests.cpp`, `archive_type_from_string` in `tests/unit/local_game_fixture_tests.cpp`.
 
 **Variables:**
-- Use lowercase snake_case for locals, parameters, and members exposed in public value types: `host_path`, `archive_path`, `worker_count`, `raw_size`, and `stored_size` in `include/libbsa/archive.hpp` and `include/libbsa/writer.hpp`.
-- Use a trailing underscore for private class members, as in `storage_` and `error_` in `include/libbsa/result.hpp`, `state_` in `include/libbsa/archive.hpp`, `bytes_` in `tests/unit/archive_reader_tests.cpp`, and `snapshot_dir` inside `ba2_dx10_writer::state` in `src/formats/ba2/ba2_dx10_writer.cpp`.
-- Use lowercase snake_case `constexpr` constants without a `k` prefix: `fixed_header_size` in `src/formats/bsa/tes4_bsa_parser.cpp`, `ba2_record_sentinel` in `src/formats/ba2/ba2_gnrl_writer.cpp`, `payload_stream_chunk_size` in `src/formats/bsa/tes4_bsa_writer.cpp`, and `max_worker_count` in `src/detail/parallel_work.cpp`.
+- Use lower snake_case for local variables and public data members: `host_path`, `archive_flags`, `default_compression` in `include/libbsa/archive.hpp`.
+- Use a trailing underscore for private class members: `state_` in `include/libbsa/archive.hpp`, `storage_` in `include/libbsa/result.hpp`, `bytes_` in `tests/unit/archive_reader_tests.cpp`.
+- Use explicit fixed-width integer types for serialized archive fields: `std::uint32_t`, `std::uint64_t`, and `std::byte` in `src/detail/binary_io.hpp`, `src/formats/bsa/tes3_bsa_parser.cpp`, `tests/unit/tes3_bsa_reader_tests.cpp`.
+- Use `constexpr` lower snake_case names for local constants: `archive_compress_by_default` in `tests/unit/tes4_bsa_writer_tests.cpp`, `payload_offset` in `tests/unit/validation_api_tests.cpp`.
 
 **Types:**
-- Use lowercase snake_case for public classes, structs, enums, and enum values: `archive_reader`, `entry_metadata`, `validation_report`, `tes4_bsa_writer`, `error_code::format_error`, and `entry_compression::lz4_block` in `include/libbsa/*.hpp`.
-- Use lowercase snake_case for internal structs and helpers: `header_fields`, `folder_record`, `prepared_entry`, `payload_assignment`, and `dedupe_key` in `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_writer.cpp`, and `src/formats/ba2/ba2_dx10_writer.cpp`.
-- Use descriptive local fake/test-double types in tests, such as `collecting_sink`, `partial_sink`, `capturing_sink_factory`, and `fnv1a32_sink` in `tests/unit/tes4_bsa_reader_tests.cpp`, `tests/unit/bulk_extraction_tests.cpp`, and `tests/unit/local_game_fixture_tests.cpp`.
+- Public classes, structs, and enum types use lower snake_case: `archive_reader`, `payload_sink`, `archive_metadata`, `error_code`, `tes4_bsa_writer` in `include/libbsa/archive.hpp`, `include/libbsa/result.hpp`, and `include/libbsa/writer.hpp`.
+- Enum values use lower snake_case: `archive_type::bsa`, `entry_compression::lz4_frame`, `archive_compression_policy::target_default` in `include/libbsa/archive.hpp` and `include/libbsa/writer.hpp`.
+- Internal namespaces mirror directories: `libbsa::detail` in `src/detail/binary_io.hpp`, `libbsa::formats::bsa` in `src/formats/bsa/tes3_bsa_parser.hpp`, `libbsa::formats::ba2` in `src/formats/ba2/ba2_gnrl_parser.hpp`, `libbsa::texture` in `src/texture/dds_layout.hpp`.
+- Internal implementation-only structs use lower snake_case names: `archive_reader::state` in `src/archive.cpp`, `physical_layout` in `tests/unit/ba2_gnrl_writer_tests.cpp`, `validation_archive_case` in `tests/unit/validation_api_tests.cpp`.
 
 ## Code Style
 
 **Formatting:**
-- No `.clang-format`, `.clang-tidy`, `.editorconfig`, or lint config is present. Match the existing hand-formatted C++ style in `include/libbsa/archive.hpp`, `src/archive.cpp`, `src/detail/parallel_work.cpp`, and `tests/unit/result_tests.cpp`.
-- Use 2-space indentation, K&R braces, one statement per line, and blank lines between include groups, namespaces, helper declarations, and test cases.
-- Use `#pragma once` in headers, as shown in `include/libbsa/archive.hpp`, `include/libbsa/result.hpp`, `src/detail/binary_io.hpp`, and `src/texture/dds_layout.hpp`.
-- Prefer uniform initialization and default member initializers for value types: `bulk_extract_options::worker_count{1U}` in `include/libbsa/archive.hpp`, `write_execution_options::worker_count{1U}` in `include/libbsa/writer.hpp`, and `validation_report::valid{false}` in `include/libbsa/validation.hpp`.
-- Use C++20 vocabulary types at API boundaries: `std::string_view` for host/archive paths, `std::span<const std::byte>` for byte ranges, `std::optional` for absent metadata, and `std::vector<std::byte>` for owned payloads in `include/libbsa/archive.hpp` and `include/libbsa/writer.hpp`.
+- Use C++20 throughout. The compile database hint in `.clangd` adds `-std=c++20` and `-Iinclude`, while `CMakeLists.txt` sets `target_compile_features(libbsa PUBLIC cxx_std_20)`.
+- No `.clang-format` or `.editorconfig` file is detected. Match the surrounding file style instead of introducing a new formatter profile.
+- Use two-space indentation in C++ and CMake files, as shown in `include/libbsa/result.hpp`, `src/detail/binary_io.cpp`, `tests/CMakeLists.txt`, and `CMakeLists.txt`.
+- Place opening braces on the same line for functions, classes, namespaces, loops, and `TEST_CASE` blocks: `src/detail/archive_path.cpp`, `tests/unit/result_tests.cpp`.
+- Prefer `#pragma once` in headers: `include/libbsa/archive.hpp`, `src/detail/binary_io.hpp`, `src/formats/ba2/ba2_gnrl_writer.hpp`.
+- Use direct list initialization for structured errors and value objects: `error{error_code::invalid_argument, "archive path must not be empty"}` in `src/archive.cpp`, `validation_diagnostic{code, diagnostic_message_for(code)}` in `src/validation.cpp`.
+- Keep CMake target-based and lower-case: `add_library`, `target_sources`, `target_link_libraries`, and `catch_discover_tests` in `CMakeLists.txt` and `tests/CMakeLists.txt`.
 
 **Linting:**
-- No standalone lint target is configured. Compiler warnings are enforced through CMake: `/W4` for MSVC and `-Wall -Wextra -Wpedantic` for non-MSVC in `CMakeLists.txt`.
-- Public documentation coverage is enforced through optional Doxygen configuration and policy tests, not a compiler lint. See `docs/Doxyfile.in`, `tests/unit/docs_policy_tests.cpp`, and `tests/unit/thread_safety_docs_policy_tests.cpp`.
-- Public include cleanliness is guarded by source tests in `tests/unit/public_include_boundary_tests.cpp`, which reject private implementation tokens such as `libdeflate`, `DirectXTex`, `formats::`, and `TES5Edit` from headers in `include/libbsa/`.
+- Dedicated lint configuration is not detected. There is no `.clang-tidy`, `.clang-format`, or standalone lint target in `CMakeLists.txt`.
+- Compiler warnings are the active style gate: MSVC builds use `/W4`; non-MSVC builds use `-Wall -Wextra -Wpedantic` in `CMakeLists.txt`.
+- Public API documentation has an optional Doxygen target. `CMakeLists.txt` uses `find_package(Doxygen QUIET)`, and `docs/Doxyfile.in` is checked by `tests/unit/docs_policy_tests.cpp`.
+- Public API docs warn on missing documentation but do not fail the build on warnings: `WARN_IF_UNDOCUMENTED = YES` and `WARN_AS_ERROR = NO` are enforced by `tests/unit/docs_policy_tests.cpp`.
 
 ## Import Organization
 
 **Order:**
-1. In implementation files, include the matching local header first, for example `#include "formats/bsa/tes4_bsa_parser.hpp"` in `src/formats/bsa/tes4_bsa_parser.cpp` and `#include "texture/directxtex_analyzer.hpp"` in `src/texture/directxtex_analyzer.cpp`.
-2. Include same-project private headers next, using quoted includes for same-area headers such as `"formats/ba2/ba2_publish.hpp"` and angle includes for private include-root headers such as `<detail/archive_path.hpp>` in `src/formats/ba2/ba2_dx10_writer.cpp`.
-3. Include public libbsa headers as `<libbsa/...>` when a file consumes the public surface, as in `src/archive.cpp`, `src/validation.cpp`, and tests under `tests/unit/`.
-4. Include third-party headers privately in implementation/tests only, such as `<DirectXTex.h>` in `src/texture/directxtex_analyzer.cpp`, `<libdeflate.h>` in `src/detail/deflate_codec.cpp`, and `<nlohmann/json.hpp>` in fixture-backed tests under `tests/unit/`.
-5. Include standard library headers after project/third-party headers in source files and after Catch2/public headers in tests, matching `tests/unit/archive_reader_tests.cpp` and `tests/unit/validation_policy_tests.cpp`.
+1. Primary header first for implementation files, using quotes for same-module private headers or angle brackets for public headers: `#include <libbsa/archive.hpp>` in `src/archive.cpp`, `#include "formats/bsa/tes3_bsa_parser.hpp"` in `src/formats/bsa/tes3_bsa_parser.cpp`.
+2. Local project headers next, grouped by public API, format internals, detail helpers, and texture helpers: `src/archive.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, `tests/unit/tes3_bsa_reader_tests.cpp`.
+3. Standard library headers next: `<algorithm>`, `<cstddef>`, `<filesystem>`, `<fstream>`, `<span>`, `<string_view>`, `<vector>` in `tests/unit/tes3_bsa_reader_tests.cpp`.
+4. Third-party headers last when present: `<nlohmann/json.hpp>` in `tests/unit/local_game_fixture_tests.cpp`, `<DirectXTex.h>` in `src/texture/directxtex_analyzer.cpp`, `<libdeflate.h>` in `src/detail/deflate_codec.cpp`, `<lz4.h>` in `src/detail/lz4_block_codec.cpp`.
 
 **Path Aliases:**
-- Public consumers include `#include <libbsa/libbsa.hpp>` or specific public headers from `include/libbsa/`. The umbrella header is `include/libbsa/libbsa.hpp`.
-- Internal code includes from the CMake private `src` include root using paths like `<detail/binary_io.hpp>`, `<detail/compression_router.hpp>`, and `"formats/ba2/ba2_gnrl_reader.hpp"` configured by `target_include_directories(libbsa PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)` in `CMakeLists.txt`.
-- Tests may include private headers only for internal policy/unit checks because `tests/CMakeLists.txt` adds `${PROJECT_SOURCE_DIR}/src` to `libbsa_tests`.
+- Public headers are included as `<libbsa/...>` through the `include/` build interface in `CMakeLists.txt`: `include/libbsa/libbsa.hpp`, `tests/unit/result_tests.cpp`.
+- Internal library and test code may include `src/`-relative headers because `CMakeLists.txt` and `tests/CMakeLists.txt` add `${CMAKE_CURRENT_SOURCE_DIR}/src` or `${PROJECT_SOURCE_DIR}/src`: `<detail/binary_io.hpp>` in `tests/unit/binary_io_tests.cpp`, `"formats/bsa/tes3_bsa_reader.hpp"` in `tests/unit/tes3_bsa_reader_tests.cpp`.
+- Public headers must not include private dependency or implementation symbols. This boundary is enforced in `tests/unit/public_include_boundary_tests.cpp` against `include/libbsa/*.hpp`.
 
 ## Error Handling
 
 **Patterns:**
-- Public APIs return `libbsa::result<T>` or `libbsa::result<void>` for I/O, format, validation, and caller-data failures. Use the stable `libbsa::error_code` enum in `include/libbsa/result.hpp` and return `error{error_code::..., "human diagnostic"}` as done in `src/archive.cpp`, `src/validation.cpp`, `src/detail/deflate_codec.cpp`, and `src/formats/ba2/ba2_gnrl_parser.cpp`.
-- Treat `error.message` as diagnostic text only. Tests compare `error().code`, not exact messages, as shown in `tests/unit/result_tests.cpp`, `tests/unit/tes4_bsa_reader_tests.cpp`, `tests/unit/ba2_gnrl_reader_tests.cpp`, and `tests/unit/validation_api_tests.cpp`.
-- Reserve exceptions for programmer misuse or unavoidable standard-library boundaries. `result<T>::value()` and `result<T>::error()` throw `std::logic_error` for misuse in `include/libbsa/result.hpp`; validation catches `std::bad_alloc` and `std::length_error` to keep archive-controlled extractability failures inside `validation_report` in `src/validation.cpp`.
-- Use `std::filesystem` overloads with `std::error_code` for expected filesystem failures. See `path_exists_noexcept`, `make_unique_publish_directory`, and cleanup helpers in `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, and `src/formats/ba2/ba2_dx10_writer.cpp`.
-- Validate archive-controlled counts, sizes, spans, and offsets before allocating or reading payloads. Use helpers such as `multiply_fits`, `add_fits`, `span_fits`, `checked_u32`, `checked_u16`, and `checked_size` in `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`, and `src/texture/dds_layout.cpp`.
-- Map partial sink writes to `error_code::io_error` instead of treating them as success. The pattern is implemented in `src/formats/bsa/tes4_bsa_reader.cpp`, `src/detail/payload_stream.cpp`, and exercised in `tests/unit/payload_stream_tests.cpp` and `tests/unit/bulk_extraction_tests.cpp`.
+- Use `libbsa::result<T>` and `libbsa::result<void>` for fallible public APIs and expected I/O, validation, and format failures: `include/libbsa/result.hpp`, `include/libbsa/archive.hpp`, `include/libbsa/validation.hpp`, `include/libbsa/writer.hpp`.
+- Use stable `libbsa::error_code` values for programmatic behavior and keep `error.message` diagnostic-only: `include/libbsa/result.hpp`, `tests/unit/result_tests.cpp`, `tests/unit/validation_api_tests.cpp`.
+- Return `error_code::invalid_argument` for caller input errors, `error_code::io_error` for host I/O failures, `error_code::unsupported` for recognized unsupported archive families or variants, and `error_code::format_error` for malformed archive bytes. Examples are in `src/archive.cpp`, `src/detail/archive_path.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, and `src/formats/bsa/tes4_bsa_writer.cpp`.
+- Do not throw for expected archive, compression, or filesystem failures. Convert them to `result` errors in boundary code such as `src/detail/parallel_work.cpp`, `src/detail/byte_vector.hpp`, and `src/validation.cpp`.
+- Reserve exceptions for programmer misuse or tool-style hard failures. `libbsa::result<T>::value()` and `error()` throw `std::logic_error` on invalid access in `include/libbsa/result.hpp`; fixture generator tools report exceptions from `main()` in `tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp`.
+- Keep validation setup failures at the result level and inspectable archive problems inside `validation_report::errors`: `validate_archive` in `src/validation.cpp`, with tests in `tests/unit/validation_api_tests.cpp`.
+- For bulk extraction, report setup failures through the outer `result` and per-entry lookup, sink, and extraction failures inside `bulk_extract_entry_result::failure`: `include/libbsa/archive.hpp`, `src/archive.cpp`, `tests/unit/bulk_extraction_tests.cpp`.
 
 ## Logging
 
-**Framework:** None.
+**Framework:** console for tools only; library logging is not used.
 
 **Patterns:**
-- Library code under `include/libbsa/` and `src/` does not log. It returns structured `libbsa::error` values and leaves logging/display to consumers; see `docs/integration-examples.md` and `tests/package-consumer/main.cpp`.
-- Tests use Catch2 `INFO(...)` for assertion context in files such as `tests/unit/validation_policy_tests.cpp`, `tests/unit/compatibility_matrix_tests.cpp`, and `tests/unit/ba2_dx10_writer_tests.cpp`.
-- The benchmark executable is maintainer tooling and may write user-facing failures to `std::cerr`; see `benchmarks/libbsa_benchmarks.cpp`.
+- Do not add logging dependencies such as `spdlog` or formatting libraries to library code. The library returns structured errors from `include/libbsa/result.hpp` and leaves display/logging to consumers.
+- Keep `std::cerr` use limited to executable tools and benchmarks: `tests/fixtures/generated/generate_tes3_bsa_fixtures.cpp`, `tests/fixtures/generated/generate_ba2_gnrl_fixtures.cpp`, `benchmarks/libbsa_benchmarks.cpp`.
+- Do not write diagnostic output from parser, reader, writer, validation, compression, or public API code under `src/` or `include/libbsa/`.
 
 ## Comments
 
 **When to Comment:**
-- Keep accurate existing comments. `AGENTS.md` explicitly forbids deleting accurate comments as cleanup and requires noting any comment removal or rewrite.
-- Add comments for non-obvious why: Bethesda compatibility constraints, offset math, snapshot/publish safety, bounded-memory behavior, threading, lifetime ownership, and deliberate private/public boundary decisions.
-- Existing examples to follow: TES4 folder offset compatibility in `src/formats/bsa/tes4_bsa_parser.cpp`, no-overwrite publish behavior in `src/formats/ba2/ba2_dx10_writer.cpp`, snapshot ownership in `src/texture/directxtex_analyzer.cpp`, and validation streaming/no-retention behavior in `src/validation.cpp`.
+- Preserve accurate comments. The project policy in `AGENTS.md` forbids deleting comments as cleanup and requires mentioning any removed or rewritten comment in the final reply for implementation work.
+- Add comments for non-obvious archive compatibility, public API boundary, ownership, memory-bounds, threading, and error-shaping decisions. Examples include the bounded convenience extraction note in `src/archive.cpp`, parser-coordinate privacy in `src/validation.cpp`, and vcpkg runtime DLL export note in `CMakeLists.txt`.
+- Keep inline comments short and focused on why the code exists, not on obvious mechanics. Examples are the sparse validation fixture cleanup note in `tests/unit/validation_api_tests.cpp` and `BAADF00D` physical-layout comments in `tests/unit/ba2_gnrl_writer_tests.cpp`.
 
 **JSDoc/TSDoc:**
-- Use Doxygen-style C++ doc comments (`///`) for public APIs and substantial rewritten methods. Public headers in `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, `include/libbsa/result.hpp`, `include/libbsa/validation.hpp`, and `include/libbsa/version.hpp` are documented this way.
-- Internal headers also document non-obvious contracts when they define reusable helpers, such as `src/detail/binary_io.hpp`, `src/detail/parallel_work.hpp`, `src/detail/deflate_codec.hpp`, and `src/texture/dds_layout.hpp`.
-- Doxygen is optional at configure time but the configured documentation input is public headers and public docs only, enforced by `docs/Doxyfile.in` and `tests/unit/docs_policy_tests.cpp`.
+- Use Doxygen-style `///` comments for public C++ APIs and for added or substantially rewritten methods. Public headers in `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, `include/libbsa/validation.hpp`, and `include/libbsa/result.hpp` document purpose, error semantics, ownership, and thread-safety.
+- Use Doxygen comments on non-trivial private helpers when they encode an important rule, as in `src/detail/binary_io.hpp`, `src/validation.cpp`, and `tests/unit/validation_api_tests.cpp`.
+- Keep implementation comments out of generated binary fixture outputs and manifests. Fixture behavior and provenance belong in `tests/fixtures/README.md` and generator source files under `tests/fixtures/generated/`.
 
 ## Function Design
 
-**Size:** Keep public wrapper functions short and delegate format-specific behavior to helpers. `src/archive.cpp` routes by detected family, while detailed parsing/writing lives in `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, and `src/formats/ba2/ba2_dx10_writer.cpp`.
+**Size:** Keep public methods as thin dispatchers over format-specific helpers when possible. `archive_reader::open`, `archive_reader::extract`, and `archive_reader::entries` in `src/archive.cpp` route to `src/formats/bsa/*` and `src/formats/ba2/*`; format-specific parser and writer files own the larger archive contracts.
 
-**Parameters:** Use `std::string_view` for caller-provided host/archive paths, `std::span<const std::byte>` for byte input, explicit options structs for behavior knobs, and `std::uint32_t` worker counts. Examples are `archive_reader::open`, `archive_reader::extract`, writer `add_file`/`add_bytes` overloads, and `validate_archive` in `include/libbsa/*.hpp`.
+**Parameters:** Prefer `std::string_view` for archive and host path input, `std::span<const std::byte>` for caller byte ranges, and fixed-width integers for serialized metadata. Examples are `archive_reader::find` in `include/libbsa/archive.hpp`, `tes4_bsa_writer::add_bytes` in `include/libbsa/writer.hpp`, and `binary_reader` in `src/detail/binary_io.hpp`.
 
-**Return Values:** Return `result<T>` for fallible operations and `std::optional` inside successful results for valid absence. `archive_reader::find` returns `result<std::optional<entry_metadata>>` in `include/libbsa/archive.hpp`; `validate_archive` reserves result-level errors for setup failures and reports readable archive problems inside `validation_report` in `src/validation.cpp`.
+**Return Values:** Return `result<T>` or `result<void>` from fallible code. Return plain values for noexcept accessors and deterministic metadata accessors when no failure is possible, such as `validation_report::is_valid` in `include/libbsa/validation.hpp` and `binary_reader::position` in `src/detail/binary_io.hpp`.
+
+**Helpers:** Put file-local helpers and test fakes in anonymous namespaces: `src/archive.cpp`, `src/validation.cpp`, `tests/unit/local_game_fixture_tests.cpp`, `tests/unit/tes4_bsa_writer_tests.cpp`. Use named internal namespaces for reusable implementation helpers: `libbsa::detail` in `src/detail/`, `libbsa::formats::bsa` in `src/formats/bsa/`, `libbsa::formats::ba2` in `src/formats/ba2/`.
+
+**Memory and ownership:** Copy caller-provided memory into writer-owned state and document it in public APIs. This convention is explicit in `include/libbsa/writer.hpp` and tested in `tests/unit/tes4_bsa_writer_tests.cpp`. Use `std::shared_ptr<state>` for opaque public objects such as `archive_reader` in `include/libbsa/archive.hpp` and writer classes in `include/libbsa/writer.hpp`.
+
+**Archive paths:** Treat archive-internal paths as normalized virtual keys, not host filesystem paths. Use `normalize_archive_path` in `src/detail/archive_path.cpp`; keep `std::filesystem::path` at host I/O and tests such as `tests/unit/local_game_fixture_tests.cpp` and `tests/unit/validation_api_tests.cpp`.
 
 ## Module Design
 
-**Exports:** Export only dependency-light public headers through the `FILE_SET HEADERS` list in `CMakeLists.txt`. Keep `libdeflate`, `lz4`, DirectXTex, private parser structs, threading primitives, and format namespaces out of `include/libbsa/`, as enforced by `tests/unit/public_include_boundary_tests.cpp`.
+**Exports:** Public API is limited to the CMake `FILE_SET HEADERS` in `CMakeLists.txt`: `include/libbsa/archive.hpp`, `include/libbsa/libbsa.hpp`, `include/libbsa/result.hpp`, `include/libbsa/validation.hpp`, `include/libbsa/version.hpp`, and `include/libbsa/writer.hpp`.
 
-**Barrel Files:** Use `include/libbsa/libbsa.hpp` as the single public umbrella header. It includes `archive.hpp`, `result.hpp`, `validation.hpp`, `version.hpp`, and `writer.hpp`.
+**Barrel Files:** Use `include/libbsa/libbsa.hpp` as the public umbrella header. Do not add public includes for private implementation headers under `src/detail/`, `src/formats/`, or `src/texture/`.
 
-**Internal Boundaries:**
-- Place shared implementation helpers in `src/detail/` and keep them under `namespace libbsa::detail`, such as `src/detail/archive_path.hpp`, `src/detail/binary_io.hpp`, `src/detail/compression_router.hpp`, and `src/detail/payload_stream.hpp`.
-- Place format-specific readers, parsers, and writers under `src/formats/bsa/` and `src/formats/ba2/` with namespaces `libbsa::formats::bsa` and `libbsa::formats::ba2`.
-- Place texture/DDS analysis behind `src/texture/` with namespace `libbsa::texture`; DirectXTex usage belongs in `src/texture/directxtex_analyzer.cpp`, not public headers.
-- Treat `TES5Edit/` as read-only reference material only. Do not edit, format, compile, stage, or copy generated outputs into `TES5Edit/`; this boundary is stated in `AGENTS.md`, `tests/fixtures/README.md`, and checked in `.github/workflows/ci.yml`.
+**Boundary Tests:** Maintain public boundary tests in `tests/unit/public_include_boundary_tests.cpp` when adding public API. This test forbids leaking `libdeflate`, `lz4`, `DirectXTex`, `DXGI`, `Windows.h`, `TES5Edit`, `std::expected`, private namespaces, and writer entry implementation types from `include/libbsa/*.hpp`.
+
+**Dependency Adapters:** Keep external dependency use behind internal adapters: `src/detail/deflate_codec.cpp` for libdeflate, `src/detail/lz4_frame_codec.cpp` and `src/detail/lz4_block_codec.cpp` for LZ4, `src/texture/directxtex_analyzer.cpp` for DirectXTex. Public structs in `include/libbsa/archive.hpp` expose libbsa-owned metadata instead.
+
+**Project Skills:** Project-local skills under `.codex/skills/openspec-*` are OpenSpec workflow guides, not C++ style rules. Use them for OpenSpec change handling only; code style remains governed by `AGENTS.md`, `CMakeLists.txt`, `include/libbsa/`, `src/`, and `tests/`.
 
 ---
 
-*Convention analysis: 2026-05-10*
+*Convention analysis: 2026-05-11*
