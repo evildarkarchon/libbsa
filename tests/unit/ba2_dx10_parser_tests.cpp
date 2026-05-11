@@ -318,6 +318,31 @@ TEST_CASE("ba2_dx10_detector opens sparse archive without reading the payload ga
   REQUIRE(contains.value());
 }
 
+TEST_CASE("ba2_dx10_detector returns format_error for oversized declared filename table offsets",
+          "[unit][fixture][malformed][ba2_dx10_detector][allocation]") {
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_oversized_filename_offset.ba2";
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  {
+    std::ofstream out{temp_path, std::ios::binary | std::ios::trunc};
+    REQUIRE(out);
+    write_ascii4(out, "BTDX");
+    write_u32(out, 1U);
+    write_ascii4(out, "DX10");
+    write_u32(out, 1U);
+    write_u64(out, std::numeric_limits<std::uint64_t>::max());
+    REQUIRE(out);
+  }
+
+  auto opened = libbsa::archive_reader::open(temp_path.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+  std::filesystem::remove(temp_path, remove_error);
+}
+
 TEST_CASE("ba2_dx10_layout exposes validated order and rejects contradictory format-defined order",
           "[unit][fixture][ba2_dx10_layout]") {
   const auto manifest = read_json_file(generated_archive_path("ba2_dx10_fo4_manifest.json"));

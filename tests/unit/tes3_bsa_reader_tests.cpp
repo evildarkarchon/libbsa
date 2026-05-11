@@ -103,6 +103,12 @@ std::uint32_t read_u32_le(const std::vector<std::byte>& bytes, std::size_t offse
          (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.at(offset + 3U))) << 24U);
 }
 
+void overwrite_u32_le(std::vector<std::byte>& bytes, std::size_t offset, std::uint32_t value) {
+  for (std::uint32_t index = 0; index < 4U; ++index) {
+    bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
+  }
+}
+
 void overwrite_u64_le(std::vector<std::byte>& bytes, std::size_t offset, std::uint64_t value) {
   for (std::uint32_t index = 0; index < 8U; ++index) {
     bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
@@ -380,6 +386,20 @@ TEST_CASE("tes3_bsa_malformed rejects generated malformed TES3 cases with stable
     REQUIRE_FALSE(opened.has_value());
     REQUIRE(opened.error().code == expected);
   }
+}
+
+TEST_CASE("tes3_bsa_malformed returns format_error for oversized declared metadata without exceptions",
+          "[unit][fixture][malformed][tes3_bsa_malformed][allocation]") {
+  auto bytes = read_binary_file(generated_archive_path("tes3_success.bsa"));
+  overwrite_u32_le(bytes, 4U, 0xFFFF'FFF0U);
+
+  const auto mutated = std::filesystem::temp_directory_path() / "libbsa_tes3_oversized_metadata.bsa";
+  write_binary_file(mutated, bytes);
+
+  auto opened = libbsa::archive_reader::open(mutated.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
 
 TEST_CASE("tes3_bsa_malformed maps invalid archive names to format_error", "[unit][fixture][malformed][tes3_bsa_malformed]") {

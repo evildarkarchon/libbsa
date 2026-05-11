@@ -34,13 +34,17 @@ result<std::vector<std::byte>> compress_deflate(std::span<const std::byte> input
   }
 
   const auto bound = libdeflate_deflate_compress_bound(compressor.get(), input.size());
-  std::vector<std::byte> compressed(bound);
-  const auto actual = libdeflate_deflate_compress(compressor.get(), input.data(), input.size(), compressed.data(), compressed.size());
+  auto compressed = make_byte_vector(bound, "raw deflate compressed output");
+  if (!compressed) {
+    return compressed.error();
+  }
+  const auto actual = libdeflate_deflate_compress(compressor.get(), input.data(), input.size(), compressed.value().data(),
+                                                  compressed.value().size());
   if (actual == 0) {
     return libbsa::error{libbsa::error_code::io_error, "raw deflate compression failed"};
   }
-  compressed.resize(actual);
-  return compressed;
+  compressed.value().resize(actual);
+  return std::move(compressed).value();
 }
 
 result<std::vector<std::byte>> decompress_deflate_exact(std::span<const std::byte> compressed, std::size_t expected_size) {

@@ -24,13 +24,20 @@ libbsa::error frame_error() {
 
 result<std::vector<std::byte>> compress_lz4_frame(std::span<const std::byte> input) {
   const auto bound = LZ4F_compressFrameBound(input.size(), nullptr);
-  std::vector<std::byte> compressed(bound);
-  const auto actual = LZ4F_compressFrame(compressed.data(), compressed.size(), input.data(), input.size(), nullptr);
+  if (LZ4F_isError(bound)) {
+    return libbsa::error{libbsa::error_code::format_error, "LZ4 frame compression bound failed"};
+  }
+  auto compressed = make_byte_vector(bound, "LZ4 frame compressed output");
+  if (!compressed) {
+    return compressed.error();
+  }
+  const auto actual =
+      LZ4F_compressFrame(compressed.value().data(), compressed.value().size(), input.data(), input.size(), nullptr);
   if (LZ4F_isError(actual)) {
     return libbsa::error{libbsa::error_code::io_error, "LZ4 frame compression failed"};
   }
-  compressed.resize(actual);
-  return compressed;
+  compressed.value().resize(actual);
+  return std::move(compressed).value();
 }
 
 result<std::vector<std::byte>> decompress_lz4_frame_exact(std::span<const std::byte> compressed, std::size_t expected_size) {

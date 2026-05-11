@@ -4,6 +4,7 @@
 
 #include <detail/archive_path.hpp>
 #include <detail/binary_io.hpp>
+#include <detail/byte_vector.hpp>
 
 #include <algorithm>
 #include <array>
@@ -99,20 +100,23 @@ result<std::vector<std::byte>> read_file_bytes_at(std::ifstream& input, std::uin
     return error{error_code::format_error, std::string{description} + " size exceeds stream limits"};
   }
 
-  std::vector<std::byte> bytes(count);
+  auto bytes = detail::make_byte_vector(count, description);
+  if (!bytes) {
+    return bytes.error();
+  }
   input.clear();
   input.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
   if (!input) {
     return error{error_code::io_error, std::string{"failed to seek while reading "} + std::string{description}};
   }
-  input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  input.read(reinterpret_cast<char*>(bytes.value().data()), static_cast<std::streamsize>(bytes.value().size()));
   if (input.bad()) {
     return error{error_code::io_error, std::string{"failed while reading "} + std::string{description}};
   }
-  if (static_cast<std::size_t>(input.gcount()) != bytes.size()) {
+  if (static_cast<std::size_t>(input.gcount()) != bytes.value().size()) {
     return error{error_code::format_error, std::string{description} + " is truncated"};
   }
-  return bytes;
+  return std::move(bytes).value();
 }
 
 std::string bytes_to_string(std::span<const std::byte> bytes) {
@@ -124,9 +128,9 @@ std::string bytes_to_string(std::span<const std::byte> bytes) {
   return result;
 }
 
-void append_u16_le(std::vector<std::byte>& output, std::uint16_t value) {
-  output.push_back(static_cast<std::byte>(value & 0xFFU));
-  output.push_back(static_cast<std::byte>((value >> 8U) & 0xFFU));
+result<void> append_u16_le(std::vector<std::byte>& output, std::uint16_t value) {
+  const std::array bytes{static_cast<std::byte>(value & 0xFFU), static_cast<std::byte>((value >> 8U) & 0xFFU)};
+  return detail::append_byte_vector(output, bytes, "BA2 DX10 encoded filename length");
 }
 
 result<std::vector<std::byte>> parse_ba2_dx10_names_from_file(std::ifstream& input,
@@ -141,7 +145,14 @@ result<std::vector<std::byte>> parse_ba2_dx10_names_from_file(std::ifstream& inp
   }
 
   std::vector<std::byte> encoded_names;
-  encoded_names.reserve(static_cast<std::size_t>(file_count) * 2U);
+  std::size_t minimum_encoded_size = 0;
+  if (!multiply_fits(file_count, 2U, minimum_encoded_size)) {
+    return error{error_code::format_error, "BA2 DX10 encoded filename table is too large"};
+  }
+  auto reserved = detail::reserve_byte_vector(encoded_names, minimum_encoded_size, "BA2 DX10 encoded filename table");
+  if (!reserved) {
+    return reserved.error();
+  }
   input.clear();
   input.seekg(static_cast<std::streamoff>(file_table_offset), std::ios::beg);
   if (!input) {
@@ -169,17 +180,26 @@ result<std::vector<std::byte>> parse_ba2_dx10_names_from_file(std::ifstream& inp
       return error{error_code::format_error, "BA2 DX10 filename table name crosses payload data"};
     }
 
-    std::vector<std::byte> name_bytes(length);
-    input.read(reinterpret_cast<char*>(name_bytes.data()), static_cast<std::streamsize>(name_bytes.size()));
+    auto name_bytes = detail::make_byte_vector(length, "BA2 DX10 filename bytes");
+    if (!name_bytes) {
+      return name_bytes.error();
+    }
+    input.read(reinterpret_cast<char*>(name_bytes.value().data()), static_cast<std::streamsize>(name_bytes.value().size()));
     if (input.bad()) {
       return error{error_code::io_error, "failed while reading BA2 DX10 filename bytes"};
     }
-    if (static_cast<std::size_t>(input.gcount()) != name_bytes.size()) {
+    if (static_cast<std::size_t>(input.gcount()) != name_bytes.value().size()) {
       return error{error_code::format_error, "BA2 DX10 filename table is truncated before name bytes"};
     }
 
-    append_u16_le(encoded_names, length);
-    encoded_names.insert(encoded_names.end(), name_bytes.begin(), name_bytes.end());
+    auto appended_length = append_u16_le(encoded_names, length);
+    if (!appended_length) {
+      return appended_length.error();
+    }
+    auto appended_name = detail::append_byte_vector(encoded_names, name_bytes.value(), "BA2 DX10 encoded filename bytes");
+    if (!appended_name) {
+      return appended_name.error();
+    }
     cursor += length;
   }
 
@@ -577,7 +597,11 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_file(std::string_view host_path,
   if (!name_table_bytes) {
     return name_table_bytes.error();
   }
-  metadata_bytes.value().insert(metadata_bytes.value().end(), name_table_bytes.value().begin(), name_table_bytes.value().end());
+  auto appended_names = detail::append_byte_vector(metadata_bytes.value(), name_table_bytes.value(),
+                                                  "BA2 DX10 metadata filename table");
+  if (!appended_names) {
+    return appended_names.error();
+  }
   return parse_ba2_dx10_archive_impl(metadata_bytes.value(), static_cast<std::size_t>(archive_size), detected);
 }
 

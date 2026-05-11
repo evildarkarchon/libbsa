@@ -3,6 +3,7 @@
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
+#include <detail/byte_vector.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -94,20 +95,23 @@ result<std::vector<std::byte>> read_file_bytes_at(std::ifstream& input, std::uin
     return error{error_code::format_error, std::string{description} + " size exceeds stream limits"};
   }
 
-  std::vector<std::byte> bytes(count);
+  auto bytes = detail::make_byte_vector(count, description);
+  if (!bytes) {
+    return bytes.error();
+  }
   input.clear();
   input.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
   if (!input) {
     return error{error_code::io_error, std::string{"failed to seek while reading "} + std::string{description}};
   }
-  input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  input.read(reinterpret_cast<char*>(bytes.value().data()), static_cast<std::streamsize>(bytes.value().size()));
   if (input.bad()) {
     return error{error_code::io_error, std::string{"failed while reading "} + std::string{description}};
   }
-  if (static_cast<std::size_t>(input.gcount()) != bytes.size()) {
+  if (static_cast<std::size_t>(input.gcount()) != bytes.value().size()) {
     return error{error_code::format_error, std::string{description} + " is truncated"};
   }
-  return bytes;
+  return std::move(bytes).value();
 }
 
 result<header_fields> read_header(detail::binary_reader& reader) {
@@ -584,7 +588,12 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes
       return error{error_code::format_error, "TES4 BSA payload prefix is truncated"};
     }
     const auto payload = bytes.subspan(start, count);
-    return std::vector<std::byte>{payload.begin(), payload.end()};
+    auto copied = detail::make_byte_vector(payload.size(), "TES4 BSA payload prefix");
+    if (!copied) {
+      return copied.error();
+    }
+    std::copy(payload.begin(), payload.end(), copied.value().begin());
+    return std::move(copied).value();
   };
   return parse_tes4_bsa_archive_impl(bytes, bytes.size(), detected, read_payload_bytes);
 }

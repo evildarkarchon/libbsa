@@ -222,6 +222,20 @@ TEST_CASE("tes4_bsa_malformed_open rejects count-derived table spans before allo
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
 
+TEST_CASE("tes4_bsa_malformed_open returns format_error for oversized declared file-name bytes",
+          "[unit][fixture][malformed][tes4_bsa_malformed_open][allocation]") {
+  auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+  overwrite_u32_le(bytes, 28U, 0xFFFF'FFFFU);
+
+  const auto mutated = std::filesystem::temp_directory_path() / "libbsa_oversized_file_names.bsa";
+  write_binary_file(mutated, bytes);
+
+  auto opened = libbsa::archive_reader::open(mutated.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
 TEST_CASE("tes4_bsa_malformed_open rejects folder record counts before allocation",
           "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
   auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));

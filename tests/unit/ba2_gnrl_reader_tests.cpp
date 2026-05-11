@@ -404,6 +404,33 @@ TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
 
+TEST_CASE("ba2_gnrl_detector returns format_error for oversized declared record tables",
+          "[unit][malformed][ba2_gnrl_detector][allocation]") {
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-oversized-records.ba2";
+  temp_file_cleanup cleanup{temp_path};
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  std::vector<std::byte> bytes;
+  append_ascii(bytes, "BTDX");
+  append_u32_le(bytes, 1U);
+  append_ascii(bytes, "GNRL");
+  append_u32_le(bytes, 0xFFFF'FFFFU);
+  append_u64_le(bytes, 60U);
+
+  {
+    std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
+    REQUIRE(output.good());
+    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(output.good());
+  }
+
+  auto opened = libbsa::archive_reader::open(temp_path.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
 TEST_CASE("ba2_gnrl_metadata lists manifest-backed records from filename tables",
           "[unit][fixture][ba2_gnrl_metadata]") {
   bool saw_raw = false;
