@@ -133,6 +133,8 @@ TEST_CASE("target_format_policy guide covers every supported target format and c
 
   REQUIRE(guide.find("DX10 DDS data is not resized, transcoded, mip-generated, repaired, or otherwise transformed") !=
           std::string::npos);
+  REQUIRE(guide.find("Earlier TES4-family BSA targets are limited to DX9 DDS texture formats") != std::string::npos);
+  REQUIRE(guide.find("Skyrim SE/AE BSA accepts the same DDS texture format set as Fallout 4") != std::string::npos);
   REQUIRE(guide.find("BC6, SRGB, or SNORM") != std::string::npos);
   REQUIRE(guide.find("CompressionMethod == 3") != std::string::npos);
   REQUIRE(guide.find("tes4_bsa_target::skyrim_se") != std::string::npos);

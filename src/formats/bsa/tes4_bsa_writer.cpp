@@ -7,6 +7,8 @@
 #include <detail/compression_router.hpp>
 #include <detail/parallel_work.hpp>
 
+#include "texture/directxtex_analyzer.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
@@ -126,6 +128,7 @@ constexpr std::uint32_t include_file_names = 0x0002U;
 constexpr std::uint32_t archive_compress_by_default = 0x0004U;
 constexpr std::uint32_t archive_embed_names = 0x0100U;
 constexpr std::uint32_t file_size_compression_toggle = 0x40000000U;
+constexpr std::size_t dds_metadata_probe_size = 148U;
 
 constexpr std::uint32_t file_flag_meshes = 0x0001U;
 constexpr std::uint32_t file_flag_textures = 0x0002U;
@@ -218,6 +221,56 @@ std::string extension_of(std::string_view file_name) {
   return lower_ascii(file_name.substr(dot));
 }
 
+bool is_dx9_bsa_texture_format(std::uint32_t dxgi_format) noexcept {
+  switch (dxgi_format) {
+  case 28U: // DXGI_FORMAT_R8G8B8A8_UNORM, used as a D3D9-era 32-bit color equivalent.
+  case 61U: // DXGI_FORMAT_R8_UNORM, used as an L8-style single-channel equivalent.
+  case 65U: // DXGI_FORMAT_A8_UNORM.
+  case 71U: // DXGI_FORMAT_BC1_UNORM / DXT1.
+  case 74U: // DXGI_FORMAT_BC2_UNORM / DXT3.
+  case 77U: // DXGI_FORMAT_BC3_UNORM / DXT5.
+  case 87U: // DXGI_FORMAT_B8G8R8A8_UNORM.
+  case 88U: // DXGI_FORMAT_B8G8R8X8_UNORM.
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool is_fallout4_compatible_bsa_texture_format(std::uint32_t dxgi_format) noexcept {
+  if (is_dx9_bsa_texture_format(dxgi_format)) {
+    return true;
+  }
+
+  switch (dxgi_format) {
+  case 80U: // DXGI_FORMAT_BC4_UNORM.
+  case 83U: // DXGI_FORMAT_BC5_UNORM.
+  case 98U: // DXGI_FORMAT_BC7_UNORM.
+    return true;
+  default:
+    return false;
+  }
+}
+
+result<void> validate_bsa_texture_format_for_target(tes4_bsa_target target, std::uint32_t dxgi_format) {
+  switch (target) {
+  case tes4_bsa_target::oblivion:
+  case tes4_bsa_target::fallout3:
+    if (!is_dx9_bsa_texture_format(dxgi_format)) {
+      return error{error_code::format_error,
+                   "TES4-family BSA target supports only DX9 DDS texture formats before Skyrim SE"};
+    }
+    return {};
+  case tes4_bsa_target::skyrim_se:
+    if (!is_fallout4_compatible_bsa_texture_format(dxgi_format)) {
+      return error{error_code::format_error,
+                   "Skyrim SE BSA target supports the same DDS texture format set as Fallout 4"};
+    }
+    return {};
+  }
+  return error{error_code::invalid_argument, "TES4 BSA writer target profile is not supported"};
+}
+
 std::uint64_t file_hash_for(std::string_view file_name) {
   const auto dot = file_name.find_last_of('.');
   if (dot == std::string_view::npos) {
@@ -263,11 +316,51 @@ result<std::vector<std::byte>> read_disk_source_bytes(const std::string& host_pa
   return bytes;
 }
 
+result<std::vector<std::byte>> read_disk_source_prefix(const std::string& host_path, std::size_t max_bytes) {
+  std::ifstream input{host_path, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "TES4 BSA writer failed to open disk source"};
+  }
+
+  std::vector<std::byte> bytes;
+  bytes.reserve(max_bytes);
+  for (char ch = 0; bytes.size() < max_bytes && input.get(ch);) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+  if (input.bad()) {
+    return error{error_code::io_error, "TES4 BSA writer failed while reading disk source"};
+  }
+  return bytes;
+}
+
 result<std::vector<std::byte>> read_source_bytes(const tes4_writer_entry& entry) {
   if (entry.from_memory) {
     return entry.memory_bytes;
   }
   return read_disk_source_bytes(entry.host_path);
+}
+
+result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& entry,
+                                                       std::string_view file_extension,
+                                                       tes4_bsa_target target) {
+  if (file_extension != ".dds") {
+    return {};
+  }
+
+  auto probe = entry.from_memory ? result<std::vector<std::byte>>{entry.memory_bytes}
+                                 : read_disk_source_prefix(entry.host_path, dds_metadata_probe_size);
+  if (!probe) {
+    return probe.error();
+  }
+
+  auto metadata = texture::analyze_dds_metadata(probe.value());
+  if (!metadata) {
+    // The generic BSA writer can store arbitrary payloads under .dds paths. Only parseable DDS
+    // metadata is target-gated so malformed or synthetic test bytes keep their container behavior.
+    return {};
+  }
+
+  return validate_bsa_texture_format_for_target(target, metadata.value().dxgi_format);
 }
 
 result<std::uint32_t> disk_payload_size(const std::string& host_path) {
@@ -428,7 +521,12 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
     return error{error_code::invalid_argument, "TES4 BSA writer archive paths must include folder and file names"};
   }
 
-  const auto entry_file_flags = file_flag_for_extension(extension_of(file_name), version);
+  const auto entry_extension = extension_of(file_name);
+  const auto entry_file_flags = file_flag_for_extension(entry_extension, version);
+  auto texture_format = validate_parseable_dds_texture_for_target(entry, entry_extension, target);
+  if (!texture_format) {
+    return texture_format.error();
+  }
   const bool entry_wants_compression = requested_entry_compression(archive_default_is_compressed, entry.compression);
 
   std::uint32_t raw_size = 0U;

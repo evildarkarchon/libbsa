@@ -24,6 +24,10 @@ std::filesystem::path writer_test_dir() {
   return path;
 }
 
+std::filesystem::path generated_source_dir() {
+  return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" / "source";
+}
+
 std::filesystem::path output_path(std::string name) { return writer_test_dir() / std::move(name); }
 
 void write_binary_file(const std::filesystem::path& path, std::vector<std::byte> bytes) {
@@ -42,6 +46,10 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
     bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
   }
   return bytes;
+}
+
+std::vector<std::byte> read_generated_dds(std::string_view file_name) {
+  return read_binary_file(generated_source_dir() / std::string{file_name});
 }
 
 std::uint32_t read_u32_le_at(const std::vector<std::byte>& bytes, std::size_t offset) {
@@ -405,6 +413,79 @@ TEST_CASE("TES4 BSA writer requires explicit archive paths for disk entries", "[
   auto added = writer.add_file("Textures/Disk.dds", source.string());
 
   REQUIRE(added.has_value());
+}
+
+TEST_CASE("TES4 BSA writer gates parseable DDS texture formats by target profile",
+          "[unit][tes4_bsa_writer][dds]") {
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.overwrite_existing = true;
+
+  SECTION("DX9 BC3 DDS payloads remain valid for Skyrim LE and earlier target profiles") {
+    const auto bc3_dds = read_generated_dds("ba2_dx10_bc3_unorm.dds");
+    const std::array targets{libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3,
+                             libbsa::tes4_bsa_target::skyrim_se};
+
+    for (const auto target : targets) {
+      INFO("target: " << target_name(target));
+      libbsa::tes4_bsa_writer writer{target, options};
+      REQUIRE(writer.add_bytes("Textures/Formats/BC3.dds", bc3_dds).has_value());
+
+      const auto archive = output_path(target_name(target) + "-bc3-texture.bsa");
+      auto written = writer.write_to(archive.string());
+
+      REQUIRE(written.has_value());
+    }
+  }
+
+  SECTION("DX10 BC7 DDS payloads require the Skyrim SE BSA target") {
+    const auto bc7_dds = read_generated_dds("ba2_dx10_bc7_unorm.dds");
+    const auto bc7_source = generated_source_dir() / "ba2_dx10_bc7_unorm.dds";
+
+    for (const auto target : {libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3}) {
+      INFO("target: " << target_name(target));
+      libbsa::tes4_bsa_writer writer{target, options};
+      REQUIRE(writer.add_bytes("Textures/Formats/BC7.dds", bc7_dds).has_value());
+
+      const auto archive = output_path(target_name(target) + "-bc7-texture.bsa");
+      auto written = writer.write_to(archive.string());
+
+      REQUIRE_FALSE(written.has_value());
+      CHECK(written.error().code == libbsa::error_code::format_error);
+    }
+
+    libbsa::tes4_bsa_writer disk_writer{libbsa::tes4_bsa_target::fallout3, options};
+    REQUIRE(disk_writer.add_file("Textures/Formats/DiskBC7.dds", bc7_source.string()).has_value());
+
+    auto disk_written = disk_writer.write_to(output_path("fallout3-disk-bc7-texture.bsa").string());
+
+    REQUIRE_FALSE(disk_written.has_value());
+    CHECK(disk_written.error().code == libbsa::error_code::format_error);
+
+    libbsa::tes4_bsa_writer skyrim_se_writer{libbsa::tes4_bsa_target::skyrim_se, options};
+    REQUIRE(skyrim_se_writer.add_bytes("Textures/Formats/BC7.dds", bc7_dds).has_value());
+
+    const auto archive = output_path("skyrim-se-bc7-texture.bsa");
+    auto written = skyrim_se_writer.write_to(archive.string());
+
+    REQUIRE(written.has_value());
+  }
+
+  SECTION("Skyrim SE rejects DDS formats outside the Fallout 4-compatible set") {
+    for (const auto& source : {std::pair{"ba2_dx10_bc6h_uf16.dds", "Textures/Formats/BC6.dds"},
+                               std::pair{"ba2_dx10_unsupported_r32g32b32a32_float.dds",
+                                         "Textures/Formats/R32G32B32A32.dds"}}) {
+      INFO("source DDS: " << source.first);
+      libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::skyrim_se, options};
+      REQUIRE(writer.add_bytes(source.second, read_generated_dds(source.first)).has_value());
+
+      const auto archive = output_path("skyrim-se-unsupported-texture.bsa");
+      auto written = writer.write_to(archive.string());
+
+      REQUIRE_FALSE(written.has_value());
+      CHECK(written.error().code == libbsa::error_code::format_error);
+    }
+  }
 }
 
 TEST_CASE("TES4 BSA writer compresses inherited entries and preserves raw overrides under all-compressed policy",

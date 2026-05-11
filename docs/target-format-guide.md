@@ -10,15 +10,15 @@ TES3 BSA covers Morrowind archives. Public metadata reports `archive_type::bsa`,
 
 ## TES4-family BSA v103
 
-TES4-family BSA v103 covers Oblivion-style archives selected by `tes4_bsa_target::oblivion`. The writer emits target-compatible v103 BSA metadata and deflate-capable payload routing where compression is enabled by policy. Embedded file names are controlled by writer options and should be used only when the target format expects them.
+TES4-family BSA v103 covers Oblivion-style archives selected by `tes4_bsa_target::oblivion`. The writer emits target-compatible v103 BSA metadata and deflate-capable payload routing where compression is enabled by policy. Embedded file names are controlled by writer options and should be used only when the target format expects them. Earlier TES4-family BSA targets are limited to DX9 DDS texture formats when a `.dds` payload is parseable as texture metadata.
 
 ## TES4-family BSA v104
 
-TES4-family BSA v104 covers Fallout 3, Fallout New Vegas, and Skyrim Legendary Edition style archives selected by `tes4_bsa_target::fallout3`. The public writer uses `archive_compression_policy` and `entry_compression_policy` to choose target-default, raw, or compressed entry storage without exposing raw archive flags or private codec types.
+TES4-family BSA v104 covers Fallout 3, Fallout New Vegas, and Skyrim Legendary Edition style archives selected by `tes4_bsa_target::fallout3`. The public writer uses `archive_compression_policy` and `entry_compression_policy` to choose target-default, raw, or compressed entry storage without exposing raw archive flags or private codec types. Parseable DDS texture payloads remain constrained to the same DX9 format set as v103.
 
 ## Skyrim SE/AE BSA v105
 
-Skyrim SE/AE BSA v105 archives use the TES4-family BSA container with LZ4 frame compression for compressed payloads. Consumers select this writer policy with `tes4_bsa_target::skyrim_se`; readers expose compressed entries as `entry_compression::lz4_frame`.
+Skyrim SE/AE BSA v105 archives use the TES4-family BSA container with LZ4 frame compression for compressed payloads. Consumers select this writer policy with `tes4_bsa_target::skyrim_se`; readers expose compressed entries as `entry_compression::lz4_frame`. Skyrim SE/AE BSA accepts the same DDS texture format set as Fallout 4: the DX9 formats plus BC4, BC5, and BC7, while BC6, SRGB, SNORM, and unrelated DXGI formats are rejected.
 
 ## Fallout 4 BA2 GNRL
 
