@@ -7,6 +7,7 @@
 #include <span>
 #include <string_view>
 
+#include <libbsa/export.hpp>
 #include <libbsa/result.hpp>
 
 namespace libbsa {
@@ -176,44 +177,44 @@ struct ba2_gnrl_entry_options {
 class tes4_bsa_writer {
  public:
   /// Creates a writer for `target` using default writer options.
-  explicit tes4_bsa_writer(tes4_bsa_target target);
+  LIBBSA_API explicit tes4_bsa_writer(tes4_bsa_target target);
 
   /// Creates a writer for `target` using the supplied compatibility options.
-  explicit tes4_bsa_writer(tes4_bsa_target target, tes4_bsa_writer_options options);
+  LIBBSA_API explicit tes4_bsa_writer(tes4_bsa_target target, tes4_bsa_writer_options options);
 
   /// Returns the target profile selected for this writer.
-  [[nodiscard]] tes4_bsa_target target() const noexcept;
+  [[nodiscard]] LIBBSA_API tes4_bsa_target target() const noexcept;
 
   /// Returns the immutable writer options selected at construction time.
-  [[nodiscard]] const tes4_bsa_writer_options& options() const noexcept;
+  [[nodiscard]] LIBBSA_API const tes4_bsa_writer_options& options() const noexcept;
 
   /// Adds a host-file payload with an explicit archive-internal path.
   ///
   /// Implementations validate both paths and report expected I/O or format
   /// failures through `result<void>` instead of throwing for caller data errors.
-  result<void> add_file(std::string_view archive_path,
-                        std::string_view host_path,
-                        entry_compression_policy compression = entry_compression_policy::inherit);
+  LIBBSA_API result<void> add_file(std::string_view archive_path,
+                                   std::string_view host_path,
+                                   entry_compression_policy compression = entry_compression_policy::inherit);
 
   /// Adds bytes copied from caller memory with an explicit archive-internal path.
   ///
   /// The writer owns an independent copy after this call, so callers may release
   /// or mutate the original memory before `write_to` is called.
-  result<void> add_bytes(std::string_view archive_path,
-                         std::span<const std::byte> bytes,
-                         entry_compression_policy compression = entry_compression_policy::inherit);
+  LIBBSA_API result<void> add_bytes(std::string_view archive_path,
+                                    std::span<const std::byte> bytes,
+                                    entry_compression_policy compression = entry_compression_policy::inherit);
 
   /// Finalizes the writer state into a new archive at `host_path`.
   ///
   /// Existing destinations fail unless `tes4_bsa_writer_options::overwrite_existing`
   /// was enabled, and compression or I/O failures are returned as structured errors.
-  result<void> write_to(std::string_view host_path) const;
+  LIBBSA_API result<void> write_to(std::string_view host_path) const;
 
   /// Finalizes the writer state using explicit write-call execution controls.
   ///
   /// `execution.worker_count` must be positive. A value of `1` preserves the
   /// serial behavior of the one-argument overload.
-  result<void> write_to(std::string_view host_path, write_execution_options execution) const;
+  LIBBSA_API result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:
   struct state;
@@ -233,38 +234,38 @@ class tes4_bsa_writer {
 class tes3_bsa_writer {
  public:
   /// Creates a raw/uncompressed TES3 writer using default writer options.
-  tes3_bsa_writer();
+  LIBBSA_API tes3_bsa_writer();
 
   /// Creates a raw/uncompressed TES3 writer using explicit finalization options.
-  explicit tes3_bsa_writer(tes3_bsa_writer_options options);
+  LIBBSA_API explicit tes3_bsa_writer(tes3_bsa_writer_options options);
 
   /// Returns the immutable TES3 writer options selected at construction time.
-  [[nodiscard]] const tes3_bsa_writer_options& options() const noexcept;
+  [[nodiscard]] LIBBSA_API const tes3_bsa_writer_options& options() const noexcept;
 
   /// Adds a host-file payload with an explicit TES3 archive-internal path.
   ///
   /// The archive path and non-empty host path are validated at add time; source
   /// file existence is checked when `write_to` finalizes the archive.
-  result<void> add_file(std::string_view archive_path, std::string_view host_path);
+  LIBBSA_API result<void> add_file(std::string_view archive_path, std::string_view host_path);
 
   /// Adds bytes copied from caller memory with an explicit TES3 archive-internal path.
   ///
   /// The writer owns an independent copy after this call, so callers may release
   /// or mutate the original memory before `write_to` is called.
-  result<void> add_bytes(std::string_view archive_path, std::span<const std::byte> bytes);
+  LIBBSA_API result<void> add_bytes(std::string_view archive_path, std::span<const std::byte> bytes);
 
   /// Finalizes the writer state into a raw/uncompressed TES3 archive at `host_path`.
   ///
   /// Existing destinations fail unless `tes3_bsa_writer_options::overwrite_existing`
   /// was enabled, and validation or I/O failures are returned as structured errors.
-  result<void> write_to(std::string_view host_path) const;
+  LIBBSA_API result<void> write_to(std::string_view host_path) const;
 
   /// Finalizes the TES3 writer using explicit write-call execution controls.
   ///
   /// `execution.worker_count` must be positive. TES3 output has no compression
   /// work, so values greater than one are accepted for the uniform public shape
   /// while preserving the existing serial output path.
-  result<void> write_to(std::string_view host_path, write_execution_options execution) const;
+  LIBBSA_API result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:
   struct state;
@@ -284,52 +285,52 @@ class tes3_bsa_writer {
 class ba2_gnrl_writer {
  public:
   /// Creates a writer for `target` using default BA2 GNRL writer options.
-  explicit ba2_gnrl_writer(ba2_gnrl_target target);
+  LIBBSA_API explicit ba2_gnrl_writer(ba2_gnrl_target target);
 
   /// Creates a writer for `target` using the supplied compatibility options.
-  explicit ba2_gnrl_writer(ba2_gnrl_target target, ba2_gnrl_writer_options options);
+  LIBBSA_API explicit ba2_gnrl_writer(ba2_gnrl_target target, ba2_gnrl_writer_options options);
 
   /// Returns the BA2 GNRL target profile selected for this writer.
-  [[nodiscard]] ba2_gnrl_target target() const noexcept;
+  [[nodiscard]] LIBBSA_API ba2_gnrl_target target() const noexcept;
 
   /// Returns the immutable BA2 GNRL writer options selected at construction time.
-  [[nodiscard]] const ba2_gnrl_writer_options& options() const noexcept;
+  [[nodiscard]] LIBBSA_API const ba2_gnrl_writer_options& options() const noexcept;
 
   /// Adds a host-file payload with an explicit archive-internal path.
-  result<void> add_file(std::string_view archive_path,
-                        std::string_view host_path,
-                        entry_compression_policy compression = entry_compression_policy::inherit);
+  LIBBSA_API result<void> add_file(std::string_view archive_path,
+                                   std::string_view host_path,
+                                   entry_compression_policy compression = entry_compression_policy::inherit);
 
   /// Adds a host-file payload with explicit BA2 GNRL per-entry options.
-  result<void> add_file(std::string_view archive_path,
-                        std::string_view host_path,
-                        ba2_gnrl_entry_options options);
+  LIBBSA_API result<void> add_file(std::string_view archive_path,
+                                   std::string_view host_path,
+                                   ba2_gnrl_entry_options options);
 
   /// Adds bytes copied from caller memory with an explicit archive-internal path.
   ///
   /// The writer owns an independent copy after this call, so callers may release
   /// or mutate the original memory before `write_to` is called.
-  result<void> add_bytes(std::string_view archive_path,
-                         std::span<const std::byte> bytes,
-                         entry_compression_policy compression = entry_compression_policy::inherit);
+  LIBBSA_API result<void> add_bytes(std::string_view archive_path,
+                                    std::span<const std::byte> bytes,
+                                    entry_compression_policy compression = entry_compression_policy::inherit);
 
   /// Adds copied memory bytes with explicit BA2 GNRL per-entry options.
-  result<void> add_bytes(std::string_view archive_path,
-                         std::span<const std::byte> bytes,
-                         ba2_gnrl_entry_options options);
+  LIBBSA_API result<void> add_bytes(std::string_view archive_path,
+                                    std::span<const std::byte> bytes,
+                                    ba2_gnrl_entry_options options);
 
   /// Finalizes the writer state into a new BA2 GNRL archive at `host_path`.
   ///
   /// Existing destinations fail unless `ba2_gnrl_writer_options::overwrite_existing`
   /// was enabled, and validation, compression, or I/O failures are returned as
   /// structured errors.
-  result<void> write_to(std::string_view host_path) const;
+  LIBBSA_API result<void> write_to(std::string_view host_path) const;
 
   /// Finalizes the BA2 GNRL writer using explicit write-call execution controls.
   ///
   /// `execution.worker_count` must be positive. A value of `1` preserves the
   /// serial behavior of the one-argument overload.
-  result<void> write_to(std::string_view host_path, write_execution_options execution) const;
+  LIBBSA_API result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:
   struct state;
@@ -350,35 +351,35 @@ class ba2_gnrl_writer {
 class ba2_dx10_writer {
  public:
   /// Creates a writer for `target` using default BA2 DX10 writer options.
-  explicit ba2_dx10_writer(ba2_dx10_target target);
+  LIBBSA_API explicit ba2_dx10_writer(ba2_dx10_target target);
 
   /// Creates a writer for `target` using the supplied texture archive options.
-  explicit ba2_dx10_writer(ba2_dx10_target target, ba2_dx10_writer_options options);
+  LIBBSA_API explicit ba2_dx10_writer(ba2_dx10_target target, ba2_dx10_writer_options options);
 
   /// Returns the BA2 DX10 target profile selected for this writer.
-  [[nodiscard]] ba2_dx10_target target() const noexcept;
+  [[nodiscard]] LIBBSA_API ba2_dx10_target target() const noexcept;
 
   /// Returns the immutable BA2 DX10 writer options selected at construction time.
-  [[nodiscard]] const ba2_dx10_writer_options& options() const noexcept;
+  [[nodiscard]] LIBBSA_API const ba2_dx10_writer_options& options() const noexcept;
 
   /// Adds a DDS host-file payload with an explicit archive-internal texture path.
   ///
   /// The DDS file is validated and snapshotted at add time; expected caller-data
   /// failures are reported through `result<void>`.
-  result<void> add_file(std::string_view archive_path, std::string_view dds_host_path);
+  LIBBSA_API result<void> add_file(std::string_view archive_path, std::string_view dds_host_path);
 
   /// Finalizes the writer state into a new BA2 DX10 archive at `host_path`.
   ///
   /// Existing destinations fail unless `ba2_dx10_writer_options::overwrite_existing`
   /// was enabled, and validation, compression, or I/O failures are returned as
   /// structured errors.
-  result<void> write_to(std::string_view host_path) const;
+  LIBBSA_API result<void> write_to(std::string_view host_path) const;
 
   /// Finalizes the BA2 DX10 writer using explicit write-call execution controls.
   ///
   /// `execution.worker_count` must be positive. A value of `1` preserves the
   /// serial behavior of the one-argument overload.
-  result<void> write_to(std::string_view host_path, write_execution_options execution) const;
+  LIBBSA_API result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:
   struct state;

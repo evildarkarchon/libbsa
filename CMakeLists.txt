@@ -43,9 +43,25 @@ endif()
 add_library(libbsa)
 add_library(libbsa::libbsa ALIAS libbsa)
 
-set_target_properties(libbsa PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
-
 target_compile_features(libbsa PUBLIC cxx_std_20)
+
+get_target_property(libbsa_target_type libbsa TYPE)
+if(libbsa_target_type STREQUAL "SHARED_LIBRARY")
+  target_compile_definitions(libbsa
+    PRIVATE
+      LIBBSA_BUILDING_LIBRARY
+  )
+elseif(libbsa_target_type STREQUAL "STATIC_LIBRARY")
+  target_compile_definitions(libbsa
+    PUBLIC
+      LIBBSA_STATIC_DEFINE
+  )
+endif()
+
+get_target_property(libbsa_windows_auto_exports libbsa WINDOWS_EXPORT_ALL_SYMBOLS)
+if(libbsa_windows_auto_exports)
+  message(FATAL_ERROR "libbsa uses explicit LIBBSA_API annotations; WINDOWS_EXPORT_ALL_SYMBOLS must remain disabled")
+endif()
 
 target_include_directories(libbsa
   PUBLIC
@@ -71,60 +87,65 @@ target_link_libraries(libbsa
     Microsoft::DirectXTex
 )
 
+set(libbsa_library_sources
+  src/archive.cpp
+  src/validation.cpp
+  src/detail/archive_path.cpp
+  src/detail/bethesda_hash.cpp
+  src/detail/binary_io.cpp
+  src/detail/compression_router.cpp
+  src/detail/deflate_codec.cpp
+  src/detail/lz4_block_codec.cpp
+  src/detail/lz4_frame_codec.cpp
+  src/detail/parallel_work.cpp
+  src/detail/parser_primitives.cpp
+  src/detail/payload_stream.cpp
+  src/detail/writer_publish.cpp
+  src/formats/ba2/ba2_format_detector.cpp
+  src/formats/ba2/ba2_dx10_parser.cpp
+  src/formats/ba2/ba2_dx10_reader.cpp
+  src/formats/ba2/ba2_dx10_prepare.cpp
+  src/formats/ba2/ba2_dx10_layout.cpp
+  src/formats/ba2/ba2_dx10_serialize.cpp
+  src/formats/ba2/ba2_dx10_writer.cpp
+  src/formats/ba2/ba2_gnrl_parser.cpp
+  src/formats/ba2/ba2_gnrl_reader.cpp
+  src/formats/ba2/ba2_gnrl_prepare.cpp
+  src/formats/ba2/ba2_gnrl_layout.cpp
+  src/formats/ba2/ba2_gnrl_serialize.cpp
+  src/formats/ba2/ba2_gnrl_writer.cpp
+  src/formats/bsa/bsa_format_detector.cpp
+  src/formats/bsa/tes3_bsa_parser.cpp
+  src/formats/bsa/tes3_bsa_reader.cpp
+  src/formats/bsa/tes3_bsa_prepare.cpp
+  src/formats/bsa/tes3_bsa_layout.cpp
+  src/formats/bsa/tes3_bsa_serialize.cpp
+  src/formats/bsa/tes3_bsa_writer.cpp
+  src/formats/bsa/tes4_bsa_parser.cpp
+  src/formats/bsa/tes4_bsa_reader.cpp
+  src/formats/bsa/tes4_bsa_prepare.cpp
+  src/formats/bsa/tes4_bsa_layout.cpp
+  src/formats/bsa/tes4_bsa_serialize.cpp
+  src/formats/bsa/tes4_bsa_writer.cpp
+  src/texture/dds_layout.cpp
+  src/texture/directxtex_analyzer.cpp
+  src/libbsa.cpp
+)
+
 target_sources(libbsa
   PUBLIC
     FILE_SET HEADERS
       BASE_DIRS include
       FILES
         include/libbsa/archive.hpp
+        include/libbsa/export.hpp
         include/libbsa/libbsa.hpp
         include/libbsa/result.hpp
         include/libbsa/validation.hpp
         include/libbsa/version.hpp
         include/libbsa/writer.hpp
   PRIVATE
-    src/archive.cpp
-    src/validation.cpp
-    src/detail/archive_path.cpp
-    src/detail/bethesda_hash.cpp
-    src/detail/binary_io.cpp
-    src/detail/compression_router.cpp
-    src/detail/deflate_codec.cpp
-    src/detail/lz4_block_codec.cpp
-    src/detail/lz4_frame_codec.cpp
-    src/detail/parallel_work.cpp
-    src/detail/parser_primitives.cpp
-    src/detail/payload_stream.cpp
-    src/detail/writer_publish.cpp
-    src/formats/ba2/ba2_format_detector.cpp
-    src/formats/ba2/ba2_dx10_parser.cpp
-    src/formats/ba2/ba2_dx10_reader.cpp
-    src/formats/ba2/ba2_dx10_prepare.cpp
-    src/formats/ba2/ba2_dx10_layout.cpp
-    src/formats/ba2/ba2_dx10_serialize.cpp
-    src/formats/ba2/ba2_dx10_writer.cpp
-    src/formats/ba2/ba2_gnrl_parser.cpp
-    src/formats/ba2/ba2_gnrl_reader.cpp
-    src/formats/ba2/ba2_gnrl_prepare.cpp
-    src/formats/ba2/ba2_gnrl_layout.cpp
-    src/formats/ba2/ba2_gnrl_serialize.cpp
-    src/formats/ba2/ba2_gnrl_writer.cpp
-    src/formats/bsa/bsa_format_detector.cpp
-    src/formats/bsa/tes3_bsa_parser.cpp
-    src/formats/bsa/tes3_bsa_reader.cpp
-    src/formats/bsa/tes3_bsa_prepare.cpp
-    src/formats/bsa/tes3_bsa_layout.cpp
-    src/formats/bsa/tes3_bsa_serialize.cpp
-    src/formats/bsa/tes3_bsa_writer.cpp
-    src/formats/bsa/tes4_bsa_parser.cpp
-    src/formats/bsa/tes4_bsa_reader.cpp
-    src/formats/bsa/tes4_bsa_prepare.cpp
-    src/formats/bsa/tes4_bsa_layout.cpp
-    src/formats/bsa/tes4_bsa_serialize.cpp
-    src/formats/bsa/tes4_bsa_writer.cpp
-    src/texture/dds_layout.cpp
-    src/texture/directxtex_analyzer.cpp
-    src/libbsa.cpp
+    ${libbsa_library_sources}
 )
 
 if(LIBBSA_BUILD_BENCHMARKS)

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <libbsa/archive.hpp>
+#include <libbsa/export.hpp>
 #include <libbsa/result.hpp>
 
 namespace libbsa {
@@ -107,7 +108,7 @@ struct validation_report {
   std::vector<compatibility_warning> warnings;
 
   /// Returns true when the report represents a valid archive.
-  [[nodiscard]] bool is_valid() const noexcept;
+  [[nodiscard]] LIBBSA_API bool is_valid() const noexcept;
 };
 
 /// Validates an archive host path and returns structured diagnostics.
@@ -118,6 +119,7 @@ struct validation_report {
 ///
 /// Thread-safety: validation uses no global mutable state, so independent calls
 /// may run concurrently subject to the host filesystem.
-[[nodiscard]] result<validation_report> validate_archive(std::string_view host_path, validation_options options = {});
+[[nodiscard]] LIBBSA_API result<validation_report> validate_archive(std::string_view host_path,
+                                                                    validation_options options = {});
 
 } // namespace libbsa

@@ -2,6 +2,48 @@ find_package(Catch2 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+function(libbsa_link_internal_test_support target_name)
+  if(BUILD_SHARED_LIBS)
+    set(libbsa_test_library_sources)
+    foreach(libbsa_source IN LISTS libbsa_library_sources)
+      list(APPEND libbsa_test_library_sources "${PROJECT_SOURCE_DIR}/${libbsa_source}")
+    endforeach()
+
+    target_sources(${target_name}
+      PRIVATE
+        ${libbsa_test_library_sources}
+    )
+
+    target_compile_definitions(${target_name}
+      PRIVATE
+        LIBBSA_STATIC_DEFINE
+    )
+
+    target_compile_options(${target_name}
+      PRIVATE
+        $<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus>
+    )
+
+    target_include_directories(${target_name}
+      PRIVATE
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/src
+    )
+
+    target_link_libraries(${target_name}
+      PRIVATE
+        $<IF:$<TARGET_EXISTS:libdeflate::libdeflate_static>,libdeflate::libdeflate_static,libdeflate::libdeflate_shared>
+        ${libbsa_lz4_target}
+        Microsoft::DirectXTex
+    )
+  else()
+    target_link_libraries(${target_name}
+      PRIVATE
+        libbsa::libbsa
+    )
+  endif()
+endfunction()
+
 add_executable(libbsa_tests
   unit/result_tests.cpp
   unit/archive_reader_tests.cpp
@@ -32,6 +74,7 @@ add_executable(libbsa_tests
   unit/local_game_fixture_tests.cpp
   unit/validation_policy_tests.cpp
   unit/validation_api_tests.cpp
+  unit/export_surface_policy_tests.cpp
   unit/compatibility_warning_tests.cpp
   unit/compatibility_matrix_tests.cpp
   unit/binary_io_tests.cpp
@@ -46,15 +89,17 @@ add_executable(libbsa_tests
 
 target_link_libraries(libbsa_tests
   PRIVATE
-    libbsa::libbsa
     Catch2::Catch2WithMain
     nlohmann_json::nlohmann_json
 )
+
+libbsa_link_internal_test_support(libbsa_tests)
 
 target_compile_features(libbsa_tests PRIVATE cxx_std_20)
 
 target_include_directories(libbsa_tests
   PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/src
 )
 
@@ -67,10 +112,7 @@ add_executable(generate_tes4_bsa_fixtures_tool
   fixtures/generated/generate_tes4_bsa_fixtures.cpp
 )
 
-target_link_libraries(generate_tes4_bsa_fixtures_tool
-  PRIVATE
-    libbsa::libbsa
-)
+libbsa_link_internal_test_support(generate_tes4_bsa_fixtures_tool)
 
 target_compile_features(generate_tes4_bsa_fixtures_tool PRIVATE cxx_std_20)
 
@@ -83,10 +125,7 @@ add_executable(generate_tes3_bsa_fixtures_tool
   fixtures/generated/generate_tes3_bsa_fixtures.cpp
 )
 
-target_link_libraries(generate_tes3_bsa_fixtures_tool
-  PRIVATE
-    libbsa::libbsa
-)
+libbsa_link_internal_test_support(generate_tes3_bsa_fixtures_tool)
 
 target_compile_features(generate_tes3_bsa_fixtures_tool PRIVATE cxx_std_20)
 
@@ -99,10 +138,7 @@ add_executable(generate_tes3_bsa_writer_fixtures_tool
   fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp
 )
 
-target_link_libraries(generate_tes3_bsa_writer_fixtures_tool
-  PRIVATE
-    libbsa::libbsa
-)
+libbsa_link_internal_test_support(generate_tes3_bsa_writer_fixtures_tool)
 
 target_compile_features(generate_tes3_bsa_writer_fixtures_tool PRIVATE cxx_std_20)
 
@@ -115,10 +151,7 @@ add_executable(generate_ba2_gnrl_fixtures_tool
   fixtures/generated/generate_ba2_gnrl_fixtures.cpp
 )
 
-target_link_libraries(generate_ba2_gnrl_fixtures_tool
-  PRIVATE
-    libbsa::libbsa
-)
+libbsa_link_internal_test_support(generate_ba2_gnrl_fixtures_tool)
 
 target_compile_features(generate_ba2_gnrl_fixtures_tool PRIVATE cxx_std_20)
 
@@ -131,10 +164,7 @@ add_executable(generate_ba2_dx10_fixtures_tool
   fixtures/generated/generate_ba2_dx10_fixtures.cpp
 )
 
-target_link_libraries(generate_ba2_dx10_fixtures_tool
-  PRIVATE
-    libbsa::libbsa
-)
+libbsa_link_internal_test_support(generate_ba2_dx10_fixtures_tool)
 
 target_compile_features(generate_ba2_dx10_fixtures_tool PRIVATE cxx_std_20)
 
@@ -266,6 +296,20 @@ add_test(
 set_tests_properties(package_consumer_smoke package_consumer_runtime_dll_copy PROPERTIES
   LABELS "package_consumer;target_format_policy"
 )
+
+if(WIN32 AND BUILD_SHARED_LIBS)
+  add_test(
+    NAME shared_export_surface
+    COMMAND ${CMAKE_COMMAND}
+      -DLIBBSA_DLL=$<TARGET_FILE:libbsa>
+      -DLIBBSA_DUMPBIN_HINT=${CMAKE_LINKER}
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/export-surface/check-dll-exports.cmake
+  )
+
+  set_tests_properties(shared_export_surface PROPERTIES
+    LABELS "export_surface;public-api"
+  )
+endif()
 
 add_test(
   NAME validate_fixture_manifests

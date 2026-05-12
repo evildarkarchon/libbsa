@@ -9,6 +9,7 @@
 #include <string_view>
 #include <vector>
 
+#include <libbsa/export.hpp>
 #include <libbsa/result.hpp>
 
 namespace libbsa {
@@ -164,7 +165,7 @@ struct entry_metadata {
 /// Thread-safety: sinks are caller-owned; concurrent extraction requires
 /// distinct sinks or caller-owned synchronization for intentionally shared
 /// output state. See `docs/thread-safety.md`.
-class payload_sink {
+class LIBBSA_API payload_sink {
  public:
   virtual ~payload_sink() = default;
 
@@ -200,7 +201,7 @@ struct bulk_extract_request {
 ///
 /// Thread-safety: caller-owned factories must protect shared state and return
 /// distinct sinks for concurrent entry extraction.
-class bulk_extract_sink_factory {
+class LIBBSA_API bulk_extract_sink_factory {
  public:
   virtual ~bulk_extract_sink_factory() = default;
 
@@ -246,29 +247,29 @@ class archive_reader {
   /// unreadable files return `error_code::io_error`, unsupported archive bytes
   /// return `error_code::unsupported`, and malformed supported archives return
   /// `error_code::format_error`.
-  static result<archive_reader> open(std::string_view host_path);
+  static LIBBSA_API result<archive_reader> open(std::string_view host_path);
 
   /// Returns archive-level metadata for a successfully opened archive.
-  [[nodiscard]] result<archive_metadata> metadata() const;
+  [[nodiscard]] LIBBSA_API result<archive_metadata> metadata() const;
 
   /// Returns deterministic entry metadata sorted by canonical archive path.
-  [[nodiscard]] result<std::vector<entry_metadata>> entries() const;
+  [[nodiscard]] LIBBSA_API result<std::vector<entry_metadata>> entries() const;
 
   /// Finds metadata for a normalized archive path if it exists.
   ///
   /// Invalid archive path syntax is reported as `error_code::invalid_argument`;
   /// valid missing paths return an empty optional so lookup can distinguish
   /// absence from malformed caller input.
-  [[nodiscard]] result<std::optional<entry_metadata>> find(std::string_view path) const;
+  [[nodiscard]] LIBBSA_API result<std::optional<entry_metadata>> find(std::string_view path) const;
 
   /// Returns whether a valid archive path exists in the opened archive.
-  [[nodiscard]] result<bool> contains(std::string_view path) const;
+  [[nodiscard]] LIBBSA_API result<bool> contains(std::string_view path) const;
 
   /// Extracts an entry by archive path into a synchronous caller-owned sink.
-  [[nodiscard]] result<void> extract(std::string_view path, payload_sink& sink) const;
+  [[nodiscard]] LIBBSA_API result<void> extract(std::string_view path, payload_sink& sink) const;
 
   /// Extracts an entry into a bounded in-memory byte vector convenience result.
-  [[nodiscard]] result<std::vector<std::byte>> extract_bytes(std::string_view path) const;
+  [[nodiscard]] LIBBSA_API result<std::vector<std::byte>> extract_bytes(std::string_view path) const;
 
   /// Extracts multiple entries into caller-created per-entry sinks.
   ///
@@ -276,7 +277,7 @@ class archive_reader {
   /// outer result. Lookup, sink-creation, and extraction failures are recorded
   /// on the corresponding request-order result record so independent sibling
   /// entries can still complete.
-  [[nodiscard]] result<std::vector<bulk_extract_entry_result>> extract_entries(
+  [[nodiscard]] LIBBSA_API result<std::vector<bulk_extract_entry_result>> extract_entries(
       std::span<const bulk_extract_request> requests,
       bulk_extract_sink_factory& sink_factory,
       bulk_extract_options options = {}) const;

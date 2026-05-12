@@ -203,9 +203,52 @@ libbsa::result<libbsa::validation_report> example_validate_archive(std::string_v
   return report;
 }
 
+int example_link_representative_public_api() {
+  std::vector<std::byte> bytes{std::byte{0x41}};
+
+  auto opened = libbsa::archive_reader::open("consumer-smoke-missing.bsa");
+  if (opened) {
+    return 1;
+  }
+
+  auto validated = libbsa::validate_archive("consumer-smoke-missing.bsa");
+  if (validated) {
+    return 1;
+  }
+
+  libbsa::tes3_bsa_writer tes3_writer;
+  if (!tes3_writer.add_bytes("meshes/consumer/link.nif", bytes)) {
+    return 1;
+  }
+  [[maybe_unused]] const auto& tes3_options = tes3_writer.options();
+
+  libbsa::tes4_bsa_writer tes4_writer{libbsa::tes4_bsa_target::fallout3};
+  if (!tes4_writer.add_bytes("meshes/consumer/link.nif", bytes)) {
+    return 1;
+  }
+  [[maybe_unused]] const auto tes4_target = tes4_writer.target();
+
+  libbsa::ba2_gnrl_writer ba2_gnrl_writer{libbsa::ba2_gnrl_target::fallout4};
+  if (!ba2_gnrl_writer.add_bytes("meshes/consumer/link.nif", bytes)) {
+    return 1;
+  }
+  [[maybe_unused]] const auto ba2_gnrl_target = ba2_gnrl_writer.target();
+
+  libbsa::ba2_dx10_writer ba2_dx10_writer{libbsa::ba2_dx10_target::fallout4};
+  [[maybe_unused]] const auto& ba2_dx10_options = ba2_dx10_writer.options();
+
+  byte_vector_sink_factory factory;
+  [[maybe_unused]] const auto& requested = factory.requested_paths();
+  return 0;
+}
+
 } // namespace
 
 int main() {
+  if (example_link_representative_public_api() != 0) {
+    return 1;
+  }
+
   auto result = libbsa::validate_archive("consumer-smoke.bsa");
   if (result) {
     return 1;
