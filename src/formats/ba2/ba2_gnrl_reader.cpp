@@ -1,14 +1,13 @@
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 
 #include <detail/archive_path.hpp>
-#include <detail/byte_vector.hpp>
 #include <detail/compression_router.hpp>
+#include <detail/payload_stream.hpp>
 
 #include <algorithm>
 #include <fstream>
-#include <limits>
+#include <span>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace libbsa::formats::ba2 {
@@ -16,51 +15,7 @@ namespace {
 
 constexpr std::size_t extraction_chunk_size = 64U * 1024U;
 
-result<std::size_t> checked_size(std::uint64_t value, std::string_view description) {
-  if (value > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
-    return error{error_code::format_error, std::string{description} + " exceeds platform limits"};
-  }
-  return static_cast<std::size_t>(value);
-}
-
-result<void> write_all(payload_sink& sink, std::span<const std::byte> bytes) {
-  auto written = sink.write(bytes);
-  if (!written) {
-    return written.error();
-  }
-  if (written.value() != bytes.size()) {
-    return error{error_code::io_error, "payload sink accepted a partial chunk"};
-  }
-  return {};
-}
-
-result<void> write_in_chunks(payload_sink& sink, std::span<const std::byte> bytes) {
-  for (std::size_t offset = 0; offset < bytes.size();) {
-    const auto chunk_size = std::min(extraction_chunk_size, bytes.size() - offset);
-    auto written = write_all(sink, bytes.subspan(offset, chunk_size));
-    if (!written) {
-      return written.error();
-    }
-    offset += chunk_size;
-  }
-  return {};
-}
-
-result<void> validate_stream_limits(const entry_metadata& entry) {
-  if (entry.payload_offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
-    return error{error_code::format_error, "BA2 GNRL payload offset exceeds stream limits"};
-  }
-  if (entry.stored_size > static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max())) {
-    return error{error_code::format_error, "BA2 GNRL stored payload exceeds stream limits"};
-  }
-  return {};
-}
-
 result<void> stream_raw_payload(std::string_view host_path, const entry_metadata& entry, payload_sink& sink) {
-  auto limits = validate_stream_limits(entry);
-  if (!limits) {
-    return limits.error();
-  }
   if (entry.raw_size != entry.stored_size) {
     return error{error_code::format_error, "BA2 GNRL raw payload size does not match stored size"};
   }
@@ -69,63 +24,8 @@ result<void> stream_raw_payload(std::string_view host_path, const entry_metadata
   if (!input) {
     return error{error_code::io_error, "failed to open BA2 archive host path for extraction"};
   }
-  input.seekg(static_cast<std::streamoff>(entry.payload_offset), std::ios::beg);
-  if (!input) {
-    return error{error_code::io_error, "failed to seek to BA2 GNRL payload"};
-  }
-
-  std::vector<std::byte> buffer(extraction_chunk_size);
-  std::uint64_t remaining = entry.stored_size;
-  while (remaining != 0U) {
-    const auto chunk_size = static_cast<std::size_t>(std::min<std::uint64_t>(remaining, buffer.size()));
-    input.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(chunk_size));
-    if (input.bad()) {
-      return error{error_code::io_error, "failed while reading BA2 GNRL payload"};
-    }
-    if (static_cast<std::size_t>(input.gcount()) != chunk_size) {
-      return error{error_code::format_error, "BA2 GNRL entry payload span is outside the archive"};
-    }
-
-    auto written = write_all(sink, std::span<const std::byte>{buffer.data(), chunk_size});
-    if (!written) {
-      return written.error();
-    }
-    remaining -= chunk_size;
-  }
-  return {};
-}
-
-result<std::vector<std::byte>> read_stored_payload(std::string_view host_path, const entry_metadata& entry) {
-  auto limits = validate_stream_limits(entry);
-  if (!limits) {
-    return limits.error();
-  }
-  auto stored_size = checked_size(entry.stored_size, "BA2 GNRL stored payload");
-  if (!stored_size) {
-    return stored_size.error();
-  }
-
-  std::ifstream input{std::string{host_path}, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "failed to open BA2 archive host path for extraction"};
-  }
-  input.seekg(static_cast<std::streamoff>(entry.payload_offset), std::ios::beg);
-  if (!input) {
-    return error{error_code::io_error, "failed to seek to BA2 GNRL payload"};
-  }
-
-  auto payload = detail::make_byte_vector(stored_size.value(), "BA2 GNRL stored payload");
-  if (!payload) {
-    return payload.error();
-  }
-  input.read(reinterpret_cast<char*>(payload.value().data()), static_cast<std::streamsize>(payload.value().size()));
-  if (input.bad()) {
-    return error{error_code::io_error, "failed while reading BA2 GNRL payload"};
-  }
-  if (static_cast<std::size_t>(input.gcount()) != payload.value().size()) {
-    return error{error_code::format_error, "BA2 GNRL entry payload span is outside the archive"};
-  }
-  return std::move(payload).value();
+  return detail::stream_payload_range(input, entry.payload_offset, entry.stored_size, sink, extraction_chunk_size,
+                                      "BA2 GNRL entry payload");
 }
 
 result<detail::compression_method> compression_method_for(const entry_metadata& entry) {
@@ -143,11 +43,16 @@ result<detail::compression_method> compression_method_for(const entry_metadata& 
 }
 
 result<void> extract_compressed_payload(std::string_view host_path, const entry_metadata& entry, payload_sink& sink) {
-  auto stored = read_stored_payload(host_path, entry);
+  std::ifstream input{std::string{host_path}, std::ios::binary};
+  if (!input) {
+    return error{error_code::io_error, "failed to open BA2 archive host path for extraction"};
+  }
+
+  auto stored = detail::read_payload_bytes_at(input, entry.payload_offset, entry.stored_size, "BA2 GNRL stored payload");
   if (!stored) {
     return stored.error();
   }
-  auto expected_size = checked_size(entry.raw_size, "BA2 GNRL raw payload");
+  auto expected_size = detail::checked_payload_size(entry.raw_size, "BA2 GNRL raw payload");
   if (!expected_size) {
     return expected_size.error();
   }
@@ -161,7 +66,7 @@ result<void> extract_compressed_payload(std::string_view host_path, const entry_
   if (!decoded) {
     return decoded.error();
   }
-  return write_in_chunks(sink, decoded.value());
+  return detail::write_payload_chunks(sink, decoded.value(), extraction_chunk_size, "BA2 GNRL decoded payload");
 }
 
 } // namespace

@@ -1,16 +1,15 @@
 #include "formats/ba2/ba2_dx10_reader.hpp"
 
 #include <detail/archive_path.hpp>
-#include <detail/byte_vector.hpp>
 #include <detail/compression_router.hpp>
+#include <detail/payload_stream.hpp>
 
 #include "texture/dds_layout.hpp"
 
 #include <algorithm>
 #include <fstream>
-#include <limits>
+#include <span>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace libbsa::formats::ba2 {
@@ -18,110 +17,12 @@ namespace {
 
 constexpr std::size_t extraction_chunk_size = 64U * 1024U;
 
-result<std::size_t> checked_size(std::uint64_t value, std::string_view description) {
-  if (value > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
-    return error{error_code::format_error, std::string{description} + " exceeds platform limits"};
-  }
-  return static_cast<std::size_t>(value);
-}
-
-result<void> write_all(payload_sink& sink, std::span<const std::byte> bytes) {
-  auto written = sink.write(bytes);
-  if (!written) {
-    return written.error();
-  }
-  if (written.value() != bytes.size()) {
-    return error{error_code::io_error, "payload sink accepted a partial chunk"};
-  }
-  return {};
-}
-
-result<void> write_in_chunks(payload_sink& sink, std::span<const std::byte> bytes) {
-  for (std::size_t offset = 0; offset < bytes.size();) {
-    const auto chunk_size = std::min(extraction_chunk_size, bytes.size() - offset);
-    auto written = write_all(sink, bytes.subspan(offset, chunk_size));
-    if (!written) {
-      return written.error();
-    }
-    offset += chunk_size;
-  }
-  return {};
-}
-
-result<void> validate_chunk_stream_limits(const texture_chunk_metadata& chunk) {
-  if (chunk.payload_offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
-    return error{error_code::format_error, "BA2 DX10 chunk payload offset exceeds stream limits"};
-  }
-  if (chunk.stored_size > static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max())) {
-    return error{error_code::format_error, "BA2 DX10 chunk stored payload exceeds stream limits"};
-  }
-  return {};
-}
-
 result<void> stream_raw_chunk(std::ifstream& input, const texture_chunk_metadata& chunk, payload_sink& sink) {
-  auto limits = validate_chunk_stream_limits(chunk);
-  if (!limits) {
-    return limits.error();
-  }
   if (chunk.raw_size != chunk.stored_size) {
     return error{error_code::format_error, "BA2 DX10 raw chunk size does not match stored size"};
   }
-
-  input.clear();
-  input.seekg(static_cast<std::streamoff>(chunk.payload_offset), std::ios::beg);
-  if (!input) {
-    return error{error_code::io_error, "failed to seek to BA2 DX10 chunk payload"};
-  }
-
-  std::vector<std::byte> buffer(extraction_chunk_size);
-  std::uint64_t remaining = chunk.stored_size;
-  while (remaining != 0U) {
-    const auto chunk_size = static_cast<std::size_t>(std::min<std::uint64_t>(remaining, buffer.size()));
-    input.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(chunk_size));
-    if (input.bad()) {
-      return error{error_code::io_error, "failed while reading BA2 DX10 chunk payload"};
-    }
-    if (static_cast<std::size_t>(input.gcount()) != chunk_size) {
-      return error{error_code::format_error, "BA2 DX10 chunk payload span is outside the archive"};
-    }
-
-    auto written = write_all(sink, std::span<const std::byte>{buffer.data(), chunk_size});
-    if (!written) {
-      return written.error();
-    }
-    remaining -= chunk_size;
-  }
-  return {};
-}
-
-result<std::vector<std::byte>> read_stored_chunk(std::ifstream& input, const texture_chunk_metadata& chunk) {
-  auto limits = validate_chunk_stream_limits(chunk);
-  if (!limits) {
-    return limits.error();
-  }
-  auto stored_size = checked_size(chunk.stored_size, "BA2 DX10 stored chunk");
-  if (!stored_size) {
-    return stored_size.error();
-  }
-
-  input.clear();
-  input.seekg(static_cast<std::streamoff>(chunk.payload_offset), std::ios::beg);
-  if (!input) {
-    return error{error_code::io_error, "failed to seek to BA2 DX10 chunk payload"};
-  }
-
-  auto payload = detail::make_byte_vector(stored_size.value(), "BA2 DX10 stored chunk");
-  if (!payload) {
-    return payload.error();
-  }
-  input.read(reinterpret_cast<char*>(payload.value().data()), static_cast<std::streamsize>(payload.value().size()));
-  if (input.bad()) {
-    return error{error_code::io_error, "failed while reading BA2 DX10 chunk payload"};
-  }
-  if (static_cast<std::size_t>(input.gcount()) != payload.value().size()) {
-    return error{error_code::format_error, "BA2 DX10 chunk payload span is outside the archive"};
-  }
-  return std::move(payload).value();
+  return detail::stream_payload_range(input, chunk.payload_offset, chunk.stored_size, sink, extraction_chunk_size,
+                                      "BA2 DX10 chunk payload");
 }
 
 result<detail::compression_method> compression_method_for(const texture_chunk_metadata& chunk) {
@@ -139,11 +40,11 @@ result<detail::compression_method> compression_method_for(const texture_chunk_me
 }
 
 result<void> extract_compressed_chunk(std::ifstream& input, const texture_chunk_metadata& chunk, payload_sink& sink) {
-  auto stored = read_stored_chunk(input, chunk);
+  auto stored = detail::read_payload_bytes_at(input, chunk.payload_offset, chunk.stored_size, "BA2 DX10 stored chunk");
   if (!stored) {
     return stored.error();
   }
-  auto expected_size = checked_size(chunk.raw_size, "BA2 DX10 raw chunk");
+  auto expected_size = detail::checked_payload_size(chunk.raw_size, "BA2 DX10 raw chunk");
   if (!expected_size) {
     return expected_size.error();
   }
@@ -156,7 +57,7 @@ result<void> extract_compressed_chunk(std::ifstream& input, const texture_chunk_
   if (!decoded) {
     return decoded.error();
   }
-  return write_in_chunks(sink, decoded.value());
+  return detail::write_payload_chunks(sink, decoded.value(), extraction_chunk_size, "BA2 DX10 decoded chunk");
 }
 
 } // namespace
@@ -210,7 +111,7 @@ result<void> extract_ba2_dx10_payload(std::string_view host_path, const entry_me
   }
 
   // D-13/D-30: write the reconstructed DDS header first and keep later work bounded to one chunk.
-  auto wrote_header = write_all(sink, header.value());
+  auto wrote_header = detail::write_payload_exact(sink, header.value(), "BA2 DX10 DDS header");
   if (!wrote_header) {
     return wrote_header.error();
   }
