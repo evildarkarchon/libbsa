@@ -2,6 +2,7 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include "formats/ba2/ba2_gnrl_parser.hpp"
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 
 #include <detail/bethesda_hash.hpp>
@@ -11,6 +12,7 @@
 #include <fstream>
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -393,6 +395,55 @@ TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename t
   auto extracted = opened.value().extract_bytes(archive_path);
   REQUIRE(extracted.has_value());
   CHECK(extracted.value() == payload);
+}
+
+TEST_CASE("ba2_gnrl_detector rejects unrepresentable high filename table ranges before materialization",
+          "[unit][malformed][ba2_gnrl_detector]") {
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-name-table-overflow.ba2";
+  temp_file_cleanup cleanup{temp_path};
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  constexpr std::uint32_t file_count = 1U;
+  constexpr std::uint64_t record_table_end = 60U;
+  constexpr std::uint64_t file_table_offset = std::numeric_limits<std::uint64_t>::max() - 2U;
+  const std::string archive_path = "meshes/overflow.bin";
+
+  std::vector<std::byte> bytes;
+  append_ascii(bytes, "BTDX");
+  append_u32_le(bytes, 1U);
+  append_ascii(bytes, "GNRL");
+  append_u32_le(bytes, file_count);
+  append_u64_le(bytes, file_table_offset);
+
+  append_u32_le(bytes, libbsa::detail::hash_fo4("overflow.bin"));
+  append_ascii(bytes, std::string_view{"BIN\0", 4U});
+  append_u32_le(bytes, libbsa::detail::hash_fo4("meshes"));
+  append_u32_le(bytes, 0U);
+  append_u64_le(bytes, record_table_end);
+  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, 0xBAADF00DU);
+
+  {
+    std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
+    REQUIRE(output.good());
+    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(output.good());
+  }
+
+  auto detected = libbsa::formats::ba2::detect_ba2_format(bytes);
+  REQUIRE(detected.has_value());
+
+  // A non-empty BA2 name table high enough to overflow UInt64 is above normal Windows stream seek limits, so this
+  // parser-level host-file fixture documents the malformed layout rejection while parser primitive tests cover the
+  // exact aggregate-end arithmetic contract.
+  auto parsed = libbsa::formats::ba2::parse_ba2_gnrl_archive_file(temp_path.string(),
+                                                                  std::numeric_limits<std::uint64_t>::max(),
+                                                                  detected.value());
+
+  REQUIRE_FALSE(parsed.has_value());
+  REQUIRE(parsed.error().code == libbsa::error_code::format_error);
 }
 
 TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",

@@ -40,6 +40,7 @@ struct gnrl_record {
 };
 
 using detail::add_fits;
+using detail::add_fits_u64;
 using detail::archive_string_from_bytes;
 using detail::multiply_fits;
 using detail::normalize_display_separators;
@@ -457,7 +458,10 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(std::string_view host_path,
   if (!names) {
     return names.error();
   }
-  const auto name_table_end = header.value().file_table_offset + static_cast<std::uint64_t>(name_table_consumed);
+  std::uint64_t name_table_end = 0;
+  if (!add_fits_u64(header.value().file_table_offset, static_cast<std::uint64_t>(name_table_consumed), name_table_end)) {
+    return error{error_code::format_error, "BA2 GNRL filename table is too large"};
+  }
   auto entries = materialize_entries(archive_size, static_cast<std::uint64_t>(records_end), header.value().file_table_offset,
                                      name_table_end, records.value(), names.value(), detected);
   if (!entries) {

@@ -55,6 +55,13 @@ TEST_CASE("parser_primitives validate checked arithmetic", "[unit][parser_primit
   REQUIRE(libbsa::detail::add_fits_u64(12U, 30U, total64));
   REQUIRE(total64 == 42U);
 
+  // BA2 host-file parsing uses this contract for FileTableOffset plus parsed filename-table bytes; a full fixture
+  // cannot usually seek to offsets high enough to overflow UInt64 before stream limits reject it.
+  constexpr auto nearly_max_u64 = std::numeric_limits<std::uint64_t>::max() - 1U;
+  REQUIRE(libbsa::detail::add_fits_u64(nearly_max_u64, 1U, total64));
+  REQUIRE(total64 == std::numeric_limits<std::uint64_t>::max());
+  REQUIRE_FALSE(libbsa::detail::add_fits_u64(nearly_max_u64, 2U, total64));
+
   REQUIRE_FALSE(libbsa::detail::add_fits_u64(std::numeric_limits<std::uint64_t>::max(), 1U, total64));
 }
 
