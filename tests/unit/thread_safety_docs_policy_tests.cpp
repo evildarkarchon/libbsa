@@ -32,7 +32,8 @@ void require_all_tokens(std::string_view text, std::initializer_list<std::string
 
 } // namespace
 
-TEST_CASE("thread_safety_policy public types have canonical documentation sections", "[unit][thread_safety_policy]") {
+TEST_CASE("thread_safety_policy public types have canonical documentation sections",
+          "[unit][thread_safety_policy][doc_structure]") {
   const auto root = source_root();
   const auto archive_header = read_text_file(root / "include" / "libbsa" / "archive.hpp");
   const auto writer_header = read_text_file(root / "include" / "libbsa" / "writer.hpp");
@@ -79,11 +80,15 @@ TEST_CASE("thread_safety_policy public types have canonical documentation sectio
 }
 
 TEST_CASE("thread_safety_policy documents callback sink writer validation and benchmark rules",
-          "[unit][thread_safety_policy]") {
-  const auto docs = read_text_file(source_root() / "docs" / "thread-safety.md");
+          "[unit][thread_safety_policy][doc_structure]") {
+  const auto root = source_root();
+  const auto docs = read_text_file(root / "docs" / "thread-safety.md");
+  const auto compatibility_evidence = read_text_file(root / "docs" / "compatibility-evidence.md");
+  const auto fixture_policy = read_text_file(root / "tests" / "fixtures" / "README.md");
 
   require_all_tokens(docs,
                      {"distinct sink",
+                      "caller-owned synchronization",
                       "bulk_extract_sink_factory::create",
                       "may be called concurrently",
                       "libbsa does not call sink factory or sink methods while holding internal locks",
@@ -92,15 +97,29 @@ TEST_CASE("thread_safety_policy documents callback sink writer validation and be
                       "not concurrent with other mutation or `write_to`",
                       "`write_to` owns any worker scheduling",
                       "write_execution_options",
+                      "write-call execution controls",
                       "worker_count > 1",
                       "no global mutable state",
                       "Independent validation calls may run concurrently",
                       "libbsa_benchmarks",
                       "report generation",
                       "not a synchronization primitive"});
+
+  require_all_tokens(compatibility_evidence,
+                     {"Generated legal fixtures",
+                      "writer-output archives",
+                      "mandatory evidence",
+                      "public compatibility warnings"});
+  require_all_tokens(fixture_policy,
+                     {"Compatibility evidence",
+                      "generated fixtures",
+                      "writer-output archives",
+                      "Benchmark and generated data policy",
+                      "generated legal synthetic data"});
 }
 
-TEST_CASE("thread_safety_policy public headers point to canonical guidance", "[unit][thread_safety_policy]") {
+TEST_CASE("thread_safety_policy public headers point to canonical guidance",
+          "[unit][thread_safety_policy][doc_structure]") {
   const auto root = source_root();
   const auto archive_header = read_text_file(root / "include" / "libbsa" / "archive.hpp");
   const auto writer_header = read_text_file(root / "include" / "libbsa" / "writer.hpp");
@@ -109,12 +128,12 @@ TEST_CASE("thread_safety_policy public headers point to canonical guidance", "[u
   require_all_tokens(archive_header,
                      {"Thread-safety",
                       "docs/thread-safety.md",
-                      "D-23",
+                      "caller-owned synchronization",
                       "distinct sinks"});
   require_all_tokens(writer_header,
                      {"Thread-safety",
                       "docs/thread-safety.md",
-                      "D-23",
+                      "write-call execution controls",
                       "mutation is not concurrent"});
   require_all_tokens(validation_header,
                      {"Thread-safety",

@@ -21,8 +21,8 @@ enum class archive_type {
 
 /// Public archive variants known to libbsa.
 ///
-/// Phase 3 opens TES4-family BSA variants first; later reader phases can reuse
-/// the same metadata field for TES3 and BA2 without changing the reader shape.
+/// The same metadata field represents supported BSA and BA2 format families
+/// without changing the public reader shape as archive coverage expands.
 enum class archive_variant {
   tes3,
   tes4,
@@ -119,7 +119,7 @@ struct texture_metadata {
 
 /// Archive-level metadata exposed by an opened reader.
 ///
-/// The structure is intentionally limited to stable Phase 3 fields: container
+/// The structure is intentionally limited to stable public fields: container
 /// type, archive variant/version, raw archive flags, file count, the default
 /// compression behavior advertised by the archive family, and optional
 /// format-family metadata that remains dependency-light.
@@ -161,8 +161,9 @@ struct entry_metadata {
 /// extractor treats partial acceptance as `error_code::io_error` so callers
 /// never observe ambiguous partial-success extraction.
 ///
-/// Thread-safety: sinks are caller-owned; see `docs/thread-safety.md` for the
-/// D-23 distinct-sink rule used by parallel bulk extraction.
+/// Thread-safety: sinks are caller-owned; concurrent extraction requires
+/// distinct sinks or caller-owned synchronization for intentionally shared
+/// output state. See `docs/thread-safety.md`.
 class payload_sink {
  public:
   virtual ~payload_sink() = default;
@@ -197,8 +198,8 @@ struct bulk_extract_request {
 /// threads. libbsa does not call user factory or sink methods while holding an
 /// internal mutex.
 ///
-/// Thread-safety: D-23 requires caller-owned factories to protect shared state
-/// and return distinct sinks for concurrent entry extraction.
+/// Thread-safety: caller-owned factories must protect shared state and return
+/// distinct sinks for concurrent entry extraction.
 class bulk_extract_sink_factory {
  public:
   virtual ~bulk_extract_sink_factory() = default;

@@ -263,6 +263,10 @@ add_test(
     -P ${CMAKE_CURRENT_SOURCE_DIR}/package-consumer/verify-runtime-dll-copy.cmake
 )
 
+set_tests_properties(package_consumer_smoke package_consumer_runtime_dll_copy PROPERTIES
+  LABELS "package_consumer;target_format_policy"
+)
+
 add_test(
   NAME validate_fixture_manifests
   COMMAND Python3::Interpreter

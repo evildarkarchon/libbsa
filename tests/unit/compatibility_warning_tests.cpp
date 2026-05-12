@@ -2,11 +2,17 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <algorithm>
+#include <array>
 #include <atomic>
+#include <cctype>
 #include <cstddef>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -15,6 +21,10 @@ std::filesystem::path warning_test_dir() {
   auto path = std::filesystem::temp_directory_path() / "libbsa_compatibility_warning_tests";
   std::filesystem::create_directories(path);
   return path;
+}
+
+std::filesystem::path source_root() {
+  return std::filesystem::path{LIBBSA_SOURCE_DIR};
 }
 
 std::filesystem::path unique_output_path(std::string_view stem, std::string_view extension) {
@@ -43,6 +53,73 @@ std::vector<std::byte> repeated_text_bytes(std::string_view text, std::size_t re
     bytes.insert(bytes.end(), chunk.begin(), chunk.end());
   }
   return bytes;
+}
+
+std::string read_text_file(const std::filesystem::path& path) {
+  std::ifstream stream{path};
+  REQUIRE(stream.is_open());
+
+  std::ostringstream buffer;
+  buffer << stream.rdbuf();
+  return buffer.str();
+}
+
+std::string trim_copy(std::string value) {
+  const auto first = std::find_if(value.begin(), value.end(), [](unsigned char ch) {
+    return !std::isspace(ch);
+  });
+  const auto last = std::find_if(value.rbegin(), value.rend(), [](unsigned char ch) {
+                      return !std::isspace(ch);
+                    }).base();
+
+  if (first >= last) {
+    return {};
+  }
+  return std::string{first, last};
+}
+
+std::vector<std::string> compatibility_warning_codes_from_public_header() {
+  const auto header = read_text_file(source_root() / "include/libbsa/validation.hpp");
+  const auto enum_name = std::string{"enum class compatibility_warning_code"};
+  const auto enum_start = header.find(enum_name);
+  REQUIRE(enum_start != std::string::npos);
+
+  const auto body_start = header.find('{', enum_start);
+  REQUIRE(body_start != std::string::npos);
+  const auto body_end = header.find("};", body_start);
+  REQUIRE(body_end != std::string::npos);
+
+  std::vector<std::string> codes;
+  std::istringstream lines{header.substr(body_start + 1, body_end - body_start - 1)};
+  std::string line;
+  while (std::getline(lines, line)) {
+    if (const auto comment = line.find("//"); comment != std::string::npos) {
+      line.erase(comment);
+    }
+    if (const auto comma = line.find(','); comma != std::string::npos) {
+      line.erase(comma);
+    }
+
+    auto code = trim_copy(line);
+    if (!code.empty()) {
+      codes.push_back(std::move(code));
+    }
+  }
+  return codes;
+}
+
+std::string warning_code_name(libbsa::compatibility_warning_code code) {
+  switch (code) {
+  case libbsa::compatibility_warning_code::compressed_sound_payload:
+    return "compressed_sound_payload";
+  case libbsa::compatibility_warning_code::bsa_embedded_name_compatibility_risk:
+    return "bsa_embedded_name_compatibility_risk";
+  case libbsa::compatibility_warning_code::target_family_mismatch:
+    return "target_family_mismatch";
+  }
+
+  FAIL("unknown compatibility_warning_code");
+  return {};
 }
 
 const libbsa::compatibility_warning& require_warning(const libbsa::validation_report& report,
@@ -136,4 +213,30 @@ TEST_CASE("compatibility_warning reports compressed sound payloads",
                   libbsa::compatibility_warning_code::compressed_sound_payload,
                   libbsa::compatibility_warning_severity::advisory,
                   true);
+}
+
+TEST_CASE("compatibility_warning behavior covers every public warning code",
+          "[unit][compat][compatibility_warning][validation_policy]") {
+  libbsa::validation_options mismatch_options;
+  mismatch_options.expected_type = libbsa::archive_type::bsa;
+
+  const std::array reports{
+      require_validated_report(write_raw_ba2_archive(), mismatch_options),
+      require_validated_report(write_embedded_name_bsa_archive()),
+      require_validated_report(write_compressed_sound_bsa_archive()),
+  };
+
+  std::vector<std::string> observed_codes;
+  for (const auto& report : reports) {
+    for (const auto& warning : report.warnings) {
+      observed_codes.push_back(warning_code_name(warning.code));
+    }
+  }
+
+  const auto public_codes = compatibility_warning_codes_from_public_header();
+  REQUIRE_FALSE(public_codes.empty());
+  for (const auto& public_code : public_codes) {
+    INFO("missing behavior-backed warning code: " << public_code);
+    REQUIRE(std::find(observed_codes.begin(), observed_codes.end(), public_code) != observed_codes.end());
+  }
 }

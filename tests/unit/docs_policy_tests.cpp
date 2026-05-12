@@ -1,8 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -36,9 +38,28 @@ void require_no_tokens(std::string_view text, std::initializer_list<std::string_
   }
 }
 
+void require_no_planning_identifier_patterns(std::string_view relative_path, const std::string& text) {
+  struct ForbiddenPattern {
+    std::string_view family;
+    std::regex pattern;
+  };
+
+  const auto patterns = std::array{
+      ForbiddenPattern{"phase label", std::regex{R"(\bphase\s+\d+\b)", std::regex_constants::icase}},
+      ForbiddenPattern{"milestone label", std::regex{R"(\bmilestone\s+\d+\b)", std::regex_constants::icase}},
+      ForbiddenPattern{"decision ID", std::regex{R"(\bD-\d+\b)", std::regex_constants::icase}},
+  };
+
+  for (const auto& forbidden : patterns) {
+    INFO("Public documentation file: " << relative_path);
+    INFO("Forbidden planning token family: " << forbidden.family);
+    REQUIRE_FALSE(std::regex_search(text, forbidden.pattern));
+  }
+}
+
 } // namespace
 
-TEST_CASE("docs_policy CMake keeps public API documentation optional", "[unit][docs_policy]") {
+TEST_CASE("docs_policy static boundary keeps public API documentation optional", "[unit][docs_policy][static_boundary]") {
   const auto cmake = read_text_file(source_root() / "CMakeLists.txt");
 
   require_all_tokens(cmake,
@@ -52,7 +73,8 @@ TEST_CASE("docs_policy CMake keeps public API documentation optional", "[unit][d
                       "Doxygen not found; libbsa_docs target not available"});
 }
 
-TEST_CASE("docs_policy Doxyfile documents public headers and excludes private inputs", "[unit][docs_policy]") {
+TEST_CASE("docs_policy Doxyfile boundary documents public headers and excludes private inputs",
+          "[unit][docs_policy][static_boundary]") {
   const auto doxyfile = read_text_file(source_root() / "docs" / "Doxyfile.in");
 
   require_all_tokens(doxyfile,
@@ -77,7 +99,7 @@ TEST_CASE("docs_policy Doxyfile documents public headers and excludes private in
                      "WARN_AS_ERROR = YES"});
 }
 
-TEST_CASE("docs_policy API mainpage links public operations", "[unit][docs_policy]") {
+TEST_CASE("docs_policy API mainpage preserves public operation structure", "[unit][docs_policy][doc_structure]") {
   const auto mainpage = read_text_file(source_root() / "docs" / "api-mainpage.md");
 
   require_all_tokens(mainpage,
@@ -97,4 +119,21 @@ TEST_CASE("docs_policy API mainpage links public operations", "[unit][docs_polic
                       "validation_report",
                       "@ref thread_safety",
                       "target-format guide"});
+}
+
+TEST_CASE("docs_policy public documentation surfaces hide planning identifiers",
+          "[unit][docs_policy][doc_structure]") {
+  const auto root = source_root();
+  constexpr auto public_documentation_files = std::array{
+      "include/libbsa/archive.hpp",
+      "include/libbsa/writer.hpp",
+      "docs/thread-safety.md",
+      "docs/compatibility-evidence.md",
+      "tests/fixtures/README.md",
+  };
+
+  for (const auto relative_path : public_documentation_files) {
+    const auto text = read_text_file(root / relative_path);
+    require_no_planning_identifier_patterns(relative_path, text);
+  }
 }

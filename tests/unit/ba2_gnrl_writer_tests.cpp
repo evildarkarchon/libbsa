@@ -78,7 +78,7 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
 }
 
 TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
-          "[unit][ba2_gnrl_writer][stream]") {
+          "[unit][ba2_gnrl_writer][bounded_memory_policy][stream]") {
   const std::vector<std::byte> expected{std::byte{0x47}, std::byte{0x4E}, std::byte{0x52}, std::byte{0x4C}};
 
   SECTION("source grows after preparation") {
@@ -126,7 +126,7 @@ TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
 }
 
 TEST_CASE("BA2 GNRL dedupe disk comparisons reject source size changes",
-          "[unit][ba2_gnrl_writer][dedupe]") {
+          "[unit][ba2_gnrl_writer][bounded_memory_policy][dedupe]") {
   const std::vector<std::byte> expected{std::byte{0x44}, std::byte{0x45}, std::byte{0x44}, std::byte{0x55}};
 
   SECTION("disk-to-memory source grows beyond the prepared payload") {
@@ -423,7 +423,7 @@ TEST_CASE("BA2 GNRL writer rejects duplicate canonical archive paths at write ti
 }
 
 TEST_CASE("BA2 GNRL writer refuses to overwrite existing output when overwrite_existing is false",
-          "[unit][ba2_gnrl_writer]") {
+          "[unit][ba2_gnrl_writer][publish]") {
   const auto existing = output_path("overwrite-default.ba2");
   const std::vector<std::byte> sentinel{std::byte{0x01}};
   write_binary_file(existing, sentinel);
@@ -462,7 +462,7 @@ TEST_CASE("BA2 GNRL writer overwrites existing archives when overwrite_existing 
 }
 
 TEST_CASE("BA2 GNRL writer preserves pre-existing deterministic temp-name siblings",
-          "[unit][ba2_gnrl_writer]") {
+          "[unit][ba2_gnrl_writer][publish][temp]") {
   const auto output = output_path("safe-temp-collision.ba2");
   const auto collision = output_path("safe-temp-collision.ba2.tmp");
   const std::vector<std::byte> sentinel{std::byte{0x54}, std::byte{0x4D}, std::byte{0x50}};
@@ -479,7 +479,7 @@ TEST_CASE("BA2 GNRL writer preserves pre-existing deterministic temp-name siblin
 }
 
 TEST_CASE("BA2 GNRL writer rejects overwrite targets that are existing directories",
-          "[unit][ba2_gnrl_writer]") {
+          "[unit][ba2_gnrl_writer][publish][overwrite]") {
   const auto directory = output_path("overwrite-directory.ba2");
   std::error_code fs_error;
   std::filesystem::remove_all(directory, fs_error);

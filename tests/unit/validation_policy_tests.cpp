@@ -81,7 +81,8 @@ std::vector<std::string> compatibility_warning_codes_from_public_header() {
 
 } // namespace
 
-TEST_CASE("CTest label taxonomy is documented and backed by selectable tests", "[unit][fixture][roundtrip][compat][malformed][slow]") {
+TEST_CASE("validation_policy CTest label taxonomy is documented and backed by selectable tests",
+          "[unit][fixture][roundtrip][compat][malformed][slow][doc_structure]") {
   const auto readme = read_text_file(source_root() / "tests/fixtures/README.md");
 
   constexpr std::array<std::string_view, 7> required_labels{
@@ -100,7 +101,8 @@ TEST_CASE("CTest label taxonomy is documented and backed by selectable tests", "
   }
 }
 
-TEST_CASE("requires-game-fixture label is selectable without local archives", "[unit][requires-game-fixture]") {
+TEST_CASE("validation_policy requires-game-fixture label is selectable without local archives",
+          "[unit][requires-game-fixture][doc_structure]") {
   const auto readme = read_text_file(source_root() / "tests/fixtures/README.md");
 
   REQUIRE(readme.find("Tests discovered by default") != std::string::npos);
@@ -108,7 +110,8 @@ TEST_CASE("requires-game-fixture label is selectable without local archives", "[
   REQUIRE(readme.find("LIBBSA_GAME_FIXTURES") != std::string::npos);
 }
 
-TEST_CASE("compatibility evidence catalog documents public warning codes", "[unit][compat][validation_policy]") {
+TEST_CASE("validation_policy compatibility evidence catalog documents public warning-code structure",
+          "[unit][compat][validation_policy][doc_structure]") {
   const auto catalog = read_text_file(source_root() / "docs/compatibility-evidence.md");
   const auto warning_codes = compatibility_warning_codes_from_public_header();
   REQUIRE_FALSE(warning_codes.empty());
@@ -129,7 +132,8 @@ TEST_CASE("compatibility evidence catalog documents public warning codes", "[uni
   REQUIRE(catalog.find("writer-output") != std::string::npos);
 }
 
-TEST_CASE("local fixture policy keeps game archives ignored and provenance documented", "[unit][fixture]") {
+TEST_CASE("validation_policy local fixture boundary keeps game archives ignored and provenance documented",
+          "[unit][fixture][static_boundary][doc_structure]") {
   const auto root = source_root();
   const auto readme = read_text_file(root / "tests/fixtures/README.md");
   const auto gitignore = read_text_file(root / ".gitignore");
@@ -158,7 +162,8 @@ TEST_CASE("local fixture policy keeps game archives ignored and provenance docum
   REQUIRE_FALSE(command_succeeds(git_base + "tests/fixtures/local/.gitkeep" + silence));
 }
 
-TEST_CASE("CI and presets preserve static shared and TES5Edit build boundaries", "[unit][public-api]") {
+TEST_CASE("validation_policy CI and presets preserve static shared and TES5Edit build boundaries",
+          "[unit][public-api][static_boundary]") {
   const auto root = source_root();
   const auto presets = read_text_file(root / "CMakePresets.json");
   const auto workflow = read_text_file(root / ".github/workflows/ci.yml");
@@ -181,7 +186,8 @@ TEST_CASE("CI and presets preserve static shared and TES5Edit build boundaries",
   REQUIRE(workflow.find("TES5Edit submodule changed during CI") != std::string::npos);
 }
 
-TEST_CASE("configured build profiles are Windows-only and documented", "[unit][validation_policy]") {
+TEST_CASE("validation_policy configured build profiles are Windows-only and documented",
+          "[unit][validation_policy][static_boundary][doc_structure]") {
   const auto root = source_root();
   const auto presets = read_text_file(root / "CMakePresets.json");
   const auto workflow = read_text_file(root / ".github/workflows/ci.yml");

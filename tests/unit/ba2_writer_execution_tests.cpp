@@ -218,7 +218,7 @@ void require_dx10_outputs_match(const std::filesystem::path& serial_output,
 } // namespace
 
 TEST_CASE("ba2_writer_execution GNRL worker_count preserves Fallout 4 deflate output",
-          "[unit][ba2_writer_execution][ba2_gnrl_writer][worker_count]") {
+          "[unit][ba2_writer_execution][bounded_memory_policy][ba2_gnrl_writer][worker_count]") {
   const std::vector<gnrl_case> entries{
       {"Meshes/Large/CompressedA.nif", repeated_bytes(96U * 1024U, 0x41U)},
       {"Scripts/Large/CompressedB.pex", repeated_bytes((80U * 1024U) + 17U, 0x51U)},
@@ -253,7 +253,7 @@ TEST_CASE("ba2_writer_execution GNRL worker_count preserves Fallout 4 deflate ou
 }
 
 TEST_CASE("ba2_writer_execution GNRL worker_count preserves starfield v3 raw LZ4 output",
-          "[unit][ba2_writer_execution][ba2_gnrl_writer][worker_count][starfield]") {
+          "[unit][ba2_writer_execution][bounded_memory_policy][ba2_gnrl_writer][worker_count][starfield]") {
   const std::vector<gnrl_case> entries{
       {"Meshes/Starfield/CompressedA.mesh", repeated_bytes(128U * 1024U, 0x6AU)},
       {"Textures/Starfield/CompressedB.bin", repeated_bytes((66U * 1024U) + 9U, 0x22U)},
@@ -287,7 +287,7 @@ TEST_CASE("ba2_writer_execution GNRL worker_count preserves starfield v3 raw LZ4
 }
 
 TEST_CASE("ba2_writer_execution DX10 worker_count preserves Fallout 4 deflate texture output",
-          "[unit][ba2_writer_execution][ba2_dx10_writer][worker_count][DX10]") {
+          "[unit][ba2_writer_execution][bounded_memory_policy][ba2_dx10_writer][worker_count][DX10]") {
   const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
   const std::vector<dx10_case> entries{
       make_dx10_case(manifest, "bc1_unorm"),
@@ -319,7 +319,7 @@ TEST_CASE("ba2_writer_execution DX10 worker_count preserves Fallout 4 deflate te
 }
 
 TEST_CASE("ba2_writer_execution DX10 worker_count preserves starfield v3 raw LZ4 texture output",
-          "[unit][ba2_writer_execution][ba2_dx10_writer][worker_count][DX10][starfield]") {
+          "[unit][ba2_writer_execution][bounded_memory_policy][ba2_dx10_writer][worker_count][DX10][starfield]") {
   const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
   const std::vector<dx10_case> entries{
       make_dx10_case(manifest, "bc7_unorm"),
@@ -351,7 +351,7 @@ TEST_CASE("ba2_writer_execution DX10 worker_count preserves starfield v3 raw LZ4
 }
 
 TEST_CASE("ba2_writer_execution missing GNRL disk source with worker_count preserves existing sentinel",
-          "[unit][ba2_writer_execution][ba2_gnrl_writer][worker_count][publish]") {
+          "[unit][ba2_writer_execution][bounded_memory_policy][ba2_gnrl_writer][worker_count][publish]") {
   const auto archive = output_path("missing-source-preserves-output.ba2");
   const auto missing_source = output_path("missing-gnrl-source.nif");
   const auto sentinel = bytes_from_text("existing BA2 output sentinel");
@@ -375,7 +375,7 @@ TEST_CASE("ba2_writer_execution missing GNRL disk source with worker_count prese
 }
 
 TEST_CASE("ba2_writer_execution missing GNRL disk source with worker_count leaves no partial output",
-          "[unit][ba2_writer_execution][ba2_gnrl_writer][worker_count][publish]") {
+          "[unit][ba2_writer_execution][bounded_memory_policy][ba2_gnrl_writer][worker_count][publish]") {
   const auto archive = output_path("missing-source-no-partial.ba2");
   const auto missing_source = output_path("missing-gnrl-source-no-partial.nif");
   std::error_code fs_error;
@@ -397,7 +397,7 @@ TEST_CASE("ba2_writer_execution missing GNRL disk source with worker_count leave
 }
 
 TEST_CASE("ba2_writer_execution duplicate DX10 canonical paths return format_error without partial output",
-          "[unit][ba2_writer_execution][ba2_dx10_writer][worker_count][publish][DX10]") {
+          "[unit][ba2_writer_execution][bounded_memory_policy][ba2_dx10_writer][worker_count][publish][DX10]") {
   const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
   const auto source = make_dx10_case(manifest, "bc1_unorm");
   const auto archive = output_path("dx10-duplicate-no-partial.ba2");

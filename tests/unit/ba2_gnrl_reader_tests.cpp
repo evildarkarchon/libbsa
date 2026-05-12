@@ -269,7 +269,7 @@ TEST_CASE("ba2_gnrl_detector rejects Phase 5 unsupported BA2 profiles with stabl
 }
 
 TEST_CASE("ba2_gnrl_bounded_open opens sparse large-payload archives without reading payload bytes",
-          "[unit][fixture][ba2_gnrl_bounded_open]") {
+          "[unit][fixture][bounded_memory_policy][ba2_gnrl_bounded_open]") {
   const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-bounded-open.ba2";
   temp_file_cleanup cleanup{temp_path};
   std::error_code remove_error;
@@ -677,7 +677,8 @@ TEST_CASE("ba2_gnrl_extract helper routes by metadata and detects partial_sink w
   REQUIRE(lz4_sink.bytes() == bytes_from_hex(expected_lz4.at("expected").at("bytes_hex").get<std::string>()));
 }
 
-TEST_CASE("ba2_gnrl_malformed manifest cases fail with stable error codes", "[unit][fixture][ba2_gnrl_malformed]") {
+TEST_CASE("ba2_gnrl_malformed manifest cases fail with stable error codes",
+          "[unit][fixture][malformed][ba2_gnrl_malformed]") {
   const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_malformed_manifest.json"));
   constexpr auto required_cases = std::to_array<std::string_view>({"ba2_unsupported_v3_compression_method",
                                                                   "ba2_duplicate_canonical_path",

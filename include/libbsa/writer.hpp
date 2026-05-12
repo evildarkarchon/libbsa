@@ -63,13 +63,13 @@ enum class ba2_dx10_target {
 
 /// Write-call execution controls shared by public writer finalization APIs.
 ///
-/// Phase 12 D-07 through D-09 keep packing controls at `write_to` time rather
-/// than in target compatibility options. `worker_count == 1` preserves serial
-/// behavior, `worker_count > 1` opts into parallel-capable work for writer
-/// paths that support it, and `worker_count == 0` is invalid.
+/// Packing controls live on `write_to` calls rather than in target
+/// compatibility options. `worker_count == 1` preserves serial behavior,
+/// `worker_count > 1` opts into parallel-capable work for writer paths that
+/// support it, and `worker_count == 0` is invalid.
 ///
 /// Thread-safety: the options value is copied into `write_to`; the writer owns
-/// worker scheduling for that call. See `docs/thread-safety.md` for D-23 rules.
+/// worker scheduling for that call. See `docs/thread-safety.md`.
 struct write_execution_options {
   /// Positive worker count requested for finalization work.
   std::uint32_t worker_count{1U};
@@ -225,7 +225,7 @@ class tes4_bsa_writer {
 ///
 /// TES3 writer output is raw/uncompressed. The public surface intentionally has
 /// no compression, dedupe, or embedded-name controls because Morrowind BSA
-/// archives in this phase are one raw payload per archive entry.
+/// archives use one raw payload per archive entry.
 ///
 /// Thread-safety: independent writer objects may be used concurrently, but
 /// mutation is not concurrent with other mutation or `write_to` on the same
@@ -261,9 +261,9 @@ class tes3_bsa_writer {
 
   /// Finalizes the TES3 writer using explicit write-call execution controls.
   ///
-  /// `execution.worker_count` must be positive. TES3 has no compression work in
-  /// this phase, so values greater than one are accepted for the uniform public
-  /// shape while preserving the existing serial output path.
+  /// `execution.worker_count` must be positive. TES3 output has no compression
+  /// work, so values greater than one are accepted for the uniform public shape
+  /// while preserving the existing serial output path.
   result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:

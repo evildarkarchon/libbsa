@@ -330,7 +330,8 @@ TEST_CASE("ba2_dx10_lookup preserves canonical lowercase paths and original spel
   REQUIRE_FALSE(missing.value().has_value());
 }
 
-TEST_CASE("ba2_dx10_detector opens sparse archive without reading the payload gap", "[unit][fixture][ba2_dx10_detector][sparse]") {
+TEST_CASE("ba2_dx10_detector opens sparse archive without reading the payload gap",
+          "[unit][fixture][bounded_memory_policy][ba2_dx10_detector][sparse]") {
   const auto sparse_path = std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_sparse_gap.ba2";
   write_sparse_dx10_archive(sparse_path);
 

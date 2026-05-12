@@ -211,8 +211,8 @@ TEST_CASE("writer_publish cleans temporary output after callback errors",
   CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
 }
 
-TEST_CASE("writer_publish source policy keeps all writer families on the shared helper",
-          "[unit][writer_publish][policy]") {
+TEST_CASE("writer_publish delegation boundary keeps all writer families on the shared helper",
+          "[unit][writer_publish][publish][static_boundary]") {
   const auto root = std::filesystem::path{LIBBSA_SOURCE_DIR};
   const std::array sources{
       std::pair{"src/formats/bsa/tes3_bsa_writer.cpp", "TES3 BSA writer"},
@@ -222,7 +222,7 @@ TEST_CASE("writer_publish source policy keeps all writer families on the shared 
   };
 
   for (const auto& [relative_source, prefix] : sources) {
-    INFO(relative_source);
+    INFO("writer publish delegation boundary source: " << relative_source);
     const auto text = read_text_file(root / relative_source);
     CHECK(text.find("detail::publish_writer_output(") != std::string::npos);
     CHECK(text.find(prefix) != std::string::npos);

@@ -62,8 +62,8 @@ metadata, legal `provenance`, and an `entries` array. Each entry records:
 
 ### TES3 manifest schema
 
-The TES3 success manifest records the flat Morrowind BSA contract used by Phase 4
-reader tests. Each entry records:
+The TES3 success manifest records the flat Morrowind BSA reader contract. Each
+entry records:
 
 - `path` — canonical lowercase `/` lookup path expected from libbsa.
 - `original_path` — archive-derived spelling; tests normalize display separators to `/`.
@@ -144,23 +144,22 @@ catalog for public validation warning codes. It links each warning rule to
 generated fixtures, writer-output archives, read-only reference notes, or
 optional local corpus checks.
 
-Phase 11 compatibility evidence must keep committed generated fixtures and
-writer-output archives as the mandatory path. Optional game archives or
-BSArchPro-derived compare output are smoke/compare only: tests must use the
+Compatibility evidence must keep committed generated fixtures and writer-output
+archives as the mandatory path. Optional game archives or BSArchPro-derived
+compare output are smoke/compare only: tests must use the
 `requires-game-fixture` label, skip when `LIBBSA_GAME_FIXTURES` is unset, and
 must not commit copyrighted bytes or use `TES5Edit/` as a fixture workspace.
 The default opt-in harness for those comparisons is
 `tests/unit/local_game_fixture_tests.cpp`, driven by
 `LIBBSA_BSARCHPRO_EXPECTED` or local `bsarchpro_expected.json`.
 
-## Phase 12 benchmark and generated data policy
+## Benchmark and generated data policy
 
-Phase 12 benchmark inputs are generated legal synthetic data only. The
-benchmark runner and report target are documented in `benchmarks/README.md` and
-must not use game archives, BSArchPro exports, or `TES5Edit/` as a fixture
-workspace. Benchmark report data is maintainer evidence, not a committed game
-corpus, and default acceptance must continue to pass without local copyrighted
-archives.
+Benchmark inputs are generated legal synthetic data only. The benchmark runner
+and report target are documented in `benchmarks/README.md` and must not use game
+archives, BSArchPro exports, or `TES5Edit/` as a fixture workspace. Benchmark
+report data is maintainer evidence, not a committed game corpus, and default
+acceptance must continue to pass without local copyrighted archives.
 
 ## Platform policy
 

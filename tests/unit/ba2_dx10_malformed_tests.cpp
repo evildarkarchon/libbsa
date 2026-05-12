@@ -53,7 +53,8 @@ class collecting_sink final : public libbsa::payload_sink {
 
 } // namespace
 
-TEST_CASE("ba2_dx10_malformed manifest cases fail with stable errors", "[unit][fixture][ba2_dx10_malformed]") {
+TEST_CASE("ba2_dx10_malformed manifest cases fail with stable errors",
+          "[unit][fixture][malformed][ba2_dx10_malformed]") {
   const auto manifest = read_json_file(generated_archive_path("ba2_dx10_malformed_manifest.json"));
   std::vector<std::string> observed_cases;
 

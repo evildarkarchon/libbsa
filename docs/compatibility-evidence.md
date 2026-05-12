@@ -5,8 +5,9 @@ rule they represent, the evidence that proves the rule, and the default gate
 that keeps the evidence reproducible.
 
 Generated legal fixtures and writer-output archives are the mandatory evidence
-path for Phase 11. Optional local game or BSArchPro-derived checks may add
-smoke/compare confidence, but they are never required for the default suite.
+path for public compatibility warnings. Optional local game or BSArchPro-derived
+checks may add smoke/compare confidence, but they are never required for the
+default suite.
 The executable opt-in comparison harness is
 `tests/unit/local_game_fixture_tests.cpp`; it consumes
 `LIBBSA_BSARCHPRO_EXPECTED` or a local `bsarchpro_expected.json` manifest under
@@ -28,7 +29,7 @@ bytes or FNV-1a payload hashes against BSArchPro-derived expectations.
 ### `target_family_mismatch`
 
 - Rule: A structurally valid archive should warn when the caller supplies an expected archive family or variant that does not match parsed archive metadata.
-- Evidence: `tests/unit/compatibility_warning_tests.cpp` test `compatibility_warning reports BA2 target family mismatch` creates a synthetic writer-output BA2 GNRL archive, validates it with `validation_options::expected_type = archive_type::bsa`, and asserts the risky target-family mismatch warning. Plan 11 validation tests also run `validate_archive` over generated BA2 fixtures and writer-output archives as the same parsed-metadata source of truth.
+- Evidence: `tests/unit/compatibility_warning_tests.cpp` test `compatibility_warning reports BA2 target family mismatch` creates a synthetic writer-output BA2 GNRL archive, validates it with `validation_options::expected_type = archive_type::bsa`, and asserts the risky target-family mismatch warning. Validation tests also run `validate_archive` over generated BA2 fixtures and writer-output archives as the same parsed-metadata source of truth.
 - Default gate: generated/writer-output; covered by default CTest through the `compatibility_warning` and `validation_api` test labels.
 
 ## Optional Local Corpus Checks

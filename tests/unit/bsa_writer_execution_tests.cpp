@@ -122,7 +122,7 @@ void add_tes4_sources(libbsa::tes4_bsa_writer& writer,
 } // namespace
 
 TEST_CASE("bsa_writer_execution TES3 worker_count streams large disk-backed source and reopens output",
-          "[unit][bsa_writer_execution][tes3_bsa_writer]") {
+          "[unit][bsa_writer_execution][bounded_memory_policy][tes3_bsa_writer]") {
   const auto source = output_path("large-tes3-source.nif");
   const auto archive = output_path("large-tes3-output.bsa");
   const auto expected = patterned_bytes((2U * 64U * 1024U) + 4097U, 0x35U);
@@ -144,7 +144,7 @@ TEST_CASE("bsa_writer_execution TES3 worker_count streams large disk-backed sour
 }
 
 TEST_CASE("bsa_writer_execution TES4 worker_count preserves deflate and LZ4-frame output compatibility",
-          "[unit][bsa_writer_execution][tes4_bsa_writer]") {
+          "[unit][bsa_writer_execution][bounded_memory_policy][tes4_bsa_writer]") {
   constexpr std::array targets{libbsa::tes4_bsa_target::fallout3, libbsa::tes4_bsa_target::skyrim_se};
   const std::array entries{
       std::pair<std::string_view, std::vector<std::byte>>{"Meshes/Large/Model.nif",
@@ -180,7 +180,7 @@ TEST_CASE("bsa_writer_execution TES4 worker_count preserves deflate and LZ4-fram
 }
 
 TEST_CASE("bsa_writer_execution missing disk source with worker_count preserves existing output",
-          "[unit][bsa_writer_execution][tes4_bsa_writer][publish]") {
+          "[unit][bsa_writer_execution][bounded_memory_policy][tes4_bsa_writer][publish]") {
   const auto archive = output_path("missing-source-preserves-output.bsa");
   const auto missing_source = output_path("missing-source-input.nif");
   const auto sentinel = bytes_from_text("existing output sentinel");
@@ -204,7 +204,7 @@ TEST_CASE("bsa_writer_execution missing disk source with worker_count preserves 
 }
 
 TEST_CASE("bsa_writer_execution overwrite failure with worker_count preserves readable previous archive",
-          "[unit][bsa_writer_execution][tes4_bsa_writer][publish]") {
+          "[unit][bsa_writer_execution][bounded_memory_policy][tes4_bsa_writer][publish]") {
   const auto archive = output_path("overwrite-failure-keeps-readable-archive.bsa");
   const auto missing_source = output_path("overwrite-missing-source.nif");
   const auto original_payload = bytes_from_text("original readable archive payload");

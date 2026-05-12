@@ -77,11 +77,11 @@ bool guide_has_warning_entry(const std::string& guide, const std::string& code) 
 
 } // namespace
 
-TEST_CASE("target_format_policy examples match compile-checked package consumer functions",
-          "[unit][target_format_policy]") {
+TEST_CASE("target_format_policy package consumer examples have docs and CTest smoke gates",
+          "[unit][target_format_policy][package_consumer][doc_structure]") {
   const auto root = source_root();
   const auto docs = read_text_file(root / "docs/integration-examples.md");
-  const auto consumer = read_text_file(root / "tests/package-consumer/main.cpp");
+  const auto tests_cmake = read_text_file(root / "tests/CMakeLists.txt");
 
   constexpr std::array<std::string_view, 8> examples{
     "example_open_list_extract",
@@ -96,18 +96,16 @@ TEST_CASE("target_format_policy examples match compile-checked package consumer 
 
   for (const auto example : examples) {
     INFO("Missing integration example: " << example);
-    REQUIRE(consumer.find(std::string{example}) != std::string::npos);
     REQUIRE(docs.find("## `" + std::string{example} + "`") != std::string::npos);
   }
 
-  REQUIRE(consumer.find("extract_entries") != std::string::npos);
-  REQUIRE(consumer.find("write_execution_options") != std::string::npos);
-  REQUIRE(consumer.find("validate_archive") != std::string::npos);
-  REQUIRE(consumer.find("error().code") != std::string::npos);
+  REQUIRE(tests_cmake.find("NAME package_consumer_smoke") != std::string::npos);
+  REQUIRE(tests_cmake.find("NAME package_consumer_runtime_dll_copy") != std::string::npos);
+  REQUIRE(tests_cmake.find("LABELS \"package_consumer;target_format_policy\"") != std::string::npos);
 }
 
 TEST_CASE("target_format_policy guide covers every supported target format and compression route",
-          "[unit][target_format_policy]") {
+          "[unit][target_format_policy][doc_structure]") {
   const auto guide = read_text_file(source_root() / "docs/target-format-guide.md");
 
   constexpr std::array<std::string_view, 13> required_headings{
@@ -131,19 +129,17 @@ TEST_CASE("target_format_policy guide covers every supported target format and c
     REQUIRE(guide.find(std::string{heading}) != std::string::npos);
   }
 
-  REQUIRE(guide.find("DX10 DDS data is not resized, transcoded, mip-generated, repaired, or otherwise transformed") !=
-          std::string::npos);
-  REQUIRE(guide.find("Earlier TES4-family BSA targets are limited to DX9 DDS texture formats") != std::string::npos);
-  REQUIRE(guide.find("Skyrim SE/AE BSA accepts the same DDS texture format set as Fallout 4") != std::string::npos);
-  REQUIRE(guide.find("BC6, SRGB, or SNORM") != std::string::npos);
-  REQUIRE(guide.find("CompressionMethod == 3") != std::string::npos);
   REQUIRE(guide.find("tes4_bsa_target::skyrim_se") != std::string::npos);
   REQUIRE(guide.find("ba2_gnrl_target::starfield_v3") != std::string::npos);
   REQUIRE(guide.find("ba2_dx10_target::starfield_v3") != std::string::npos);
+  REQUIRE(guide.find("write_execution_options::worker_count") != std::string::npos);
+  REQUIRE(guide.find("entry_compression::deflate") != std::string::npos);
+  REQUIRE(guide.find("entry_compression::lz4_frame") != std::string::npos);
+  REQUIRE(guide.find("entry_compression::lz4_block") != std::string::npos);
 }
 
 TEST_CASE("target_format_policy guide documents public compatibility_warning_code values",
-          "[unit][target_format_policy][validation_policy]") {
+          "[unit][target_format_policy][validation_policy][doc_structure]") {
   const auto guide = read_text_file(source_root() / "docs/target-format-guide.md");
   const auto warning_codes = compatibility_warning_codes_from_public_header();
   REQUIRE_FALSE(warning_codes.empty());
@@ -158,7 +154,7 @@ TEST_CASE("target_format_policy guide documents public compatibility_warning_cod
 }
 
 TEST_CASE("target_format_policy guide preserves legal evidence and reference boundaries",
-          "[unit][target_format_policy][fixture]") {
+          "[unit][target_format_policy][fixture][static_boundary][doc_structure]") {
   const auto guide = read_text_file(source_root() / "docs/target-format-guide.md");
   const auto fixture_policy = read_text_file(source_root() / "tests/fixtures/README.md");
 

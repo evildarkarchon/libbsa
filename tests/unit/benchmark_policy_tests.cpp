@@ -40,7 +40,8 @@ void require_no_tokens(std::string_view text, std::initializer_list<std::string_
 
 } // namespace
 
-TEST_CASE("benchmark_policy CMake exposes explicit benchmark report tooling", "[unit][benchmark_policy]") {
+TEST_CASE("benchmark_policy static boundary exposes explicit opt-in benchmark report tooling",
+          "[unit][benchmark_policy][static_boundary]") {
   const auto root = source_root();
   const auto cmake = read_text_file(root / "CMakeLists.txt");
   const auto tests_cmake = read_text_file(root / "tests" / "CMakeLists.txt");
@@ -55,7 +56,8 @@ TEST_CASE("benchmark_policy CMake exposes explicit benchmark report tooling", "[
   REQUIRE(tests_cmake.find("unit/benchmark_policy_tests.cpp") != std::string::npos);
 }
 
-TEST_CASE("build_policy BUILD_TESTING disables test dependency discovery", "[unit][build_policy]") {
+TEST_CASE("build_policy static boundary lets BUILD_TESTING disable test dependency discovery",
+          "[unit][build_policy][static_boundary]") {
   const auto cmake = read_text_file(source_root() / "CMakeLists.txt");
 
   require_all_tokens(cmake,
@@ -67,7 +69,8 @@ TEST_CASE("build_policy BUILD_TESTING disables test dependency discovery", "[uni
   REQUIRE(cmake.find("enable_testing()") == std::string_view::npos);
 }
 
-TEST_CASE("benchmark_policy runner contains correctness checked report scenarios", "[unit][benchmark_policy]") {
+TEST_CASE("benchmark_policy runner preserves required report scenario structure",
+          "[unit][benchmark_policy][doc_structure]") {
   const auto benchmark_source = read_text_file(source_root() / "benchmarks" / "libbsa_benchmarks.cpp");
 
   require_all_tokens(benchmark_source,
@@ -88,7 +91,8 @@ TEST_CASE("benchmark_policy runner contains correctness checked report scenarios
                       "correctness_passed"});
 }
 
-TEST_CASE("benchmark_policy README documents commands schema and data policy", "[unit][benchmark_policy]") {
+TEST_CASE("benchmark_policy README documents commands schema and data policy",
+          "[unit][benchmark_policy][doc_structure]") {
   const auto readme = read_text_file(source_root() / "benchmarks" / "README.md");
 
   require_all_tokens(readme,
@@ -107,7 +111,8 @@ TEST_CASE("benchmark_policy README documents commands schema and data policy", "
                       "does not gate"});
 }
 
-TEST_CASE("benchmark_policy keeps report generation out of default CTest timing gates", "[unit][benchmark_policy]") {
+TEST_CASE("benchmark_policy static boundary keeps report generation out of default CTest timing gates",
+          "[unit][benchmark_policy][static_boundary]") {
   const auto root = source_root();
   const auto cmake = read_text_file(root / "CMakeLists.txt");
   const auto tests_cmake = read_text_file(root / "tests" / "CMakeLists.txt");
@@ -122,7 +127,8 @@ TEST_CASE("benchmark_policy keeps report generation out of default CTest timing 
                      "elapsed_ms"});
 }
 
-TEST_CASE("benchmark_policy rejects fixed speedup threshold gates", "[unit][benchmark_policy]") {
+TEST_CASE("benchmark_policy static boundary rejects fixed speedup threshold gates",
+          "[unit][benchmark_policy][static_boundary]") {
   const auto root = source_root();
   const std::array files{
       root / "CMakeLists.txt",

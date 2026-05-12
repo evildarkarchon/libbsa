@@ -4,7 +4,7 @@ libbsa objects are isolated by ownership. The library does not use global mutabl
 
 ## archive_reader
 
-Independently opened `archive_reader` objects may be used concurrently by different threads. A single `archive_reader` object may run concurrent const metadata, lookup, listing, single-entry extraction, and bulk extraction calls when each extraction writes to a distinct caller-owned sink. This D-23 rule keeps libbsa responsible for archive parsing and scheduling while callers keep ownership of shared output state.
+Independently opened `archive_reader` objects may be used concurrently by different threads. A single `archive_reader` object may run concurrent const metadata, lookup, listing, single-entry extraction, and bulk extraction calls when each extraction writes to a distinct caller-owned sink. This distinct sink requirement keeps libbsa responsible for archive parsing and scheduling while callers keep ownership of shared output state and any caller-owned synchronization.
 
 ## payload_sink
 
@@ -40,7 +40,7 @@ Independent `ba2_dx10_writer` objects may be used concurrently. Calls that mutat
 
 ## write_execution_options
 
-`write_execution_options` is copied into a write call. `worker_count == 1` preserves serial behavior, `worker_count > 1` opts into writer-owned scheduling, and callers must not use `worker_count == 0`.
+`write_execution_options` is copied into a write call. These write-call execution controls keep finalization scheduling separate from target compatibility options: `worker_count == 1` preserves serial behavior, `worker_count > 1` opts into writer-owned scheduling, and callers must not use `worker_count == 0`.
 
 ## validation_report
 
