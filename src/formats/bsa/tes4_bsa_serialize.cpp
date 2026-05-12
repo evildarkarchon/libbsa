@@ -1,5 +1,7 @@
 #include "formats/bsa/tes4_bsa_serialize.hpp"
 
+#include "formats/bsa/tes4_bsa_constants.hpp"
+
 #include <detail/binary_io.hpp>
 
 #include <algorithm>
@@ -14,12 +16,6 @@ namespace libbsa::formats::bsa {
 
 namespace {
 
-constexpr std::uint32_t skyrim_se_version = 0x69U;
-constexpr std::uint32_t header_size = 36U;
-constexpr std::uint32_t include_directory_names = 0x0001U;
-constexpr std::uint32_t include_file_names = 0x0002U;
-constexpr std::uint32_t archive_compress_by_default = 0x0004U;
-constexpr std::uint32_t archive_embed_names = 0x0100U;
 constexpr std::size_t payload_stream_chunk_size = 64U * 1024U;
 
 result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view description) {
@@ -118,21 +114,20 @@ result<void> tes4_write_archive_bytes(std::span<const tes4_prepared_folder> fold
                                       std::uint32_t file_flags,
                                       const tes4_layout_result& layout,
                                       const std::filesystem::path& output_path) {
-  std::uint32_t archive_flags = include_directory_names | include_file_names;
+  std::uint32_t archive_flags = tes4_bsa_archive_include_directory_names | tes4_bsa_archive_include_file_names;
   if (archive_default_is_compressed) {
-    archive_flags |= archive_compress_by_default;
+    archive_flags |= tes4_bsa_archive_compress_by_default;
   }
   if (emit_embedded_names) {
-    archive_flags |= archive_embed_names;
+    archive_flags |= tes4_bsa_archive_embed_names;
   }
 
   detail::binary_writer writer;
-  const std::byte magic[] = {std::byte{'B'}, std::byte{'S'}, std::byte{'A'}, std::byte{0}};
-  auto written = writer.write_bytes(magic);
+  auto written = writer.write_u32_le(tes4_bsa_magic);
   if (!written) {
     return written.error();
   }
-  if (!(written = writer.write_u32_le(version)) || !(written = writer.write_u32_le(header_size)) ||
+  if (!(written = writer.write_u32_le(version)) || !(written = writer.write_u32_le(tes4_bsa_header_size)) ||
       !(written = writer.write_u32_le(archive_flags)) ||
       !(written = writer.write_u32_le(static_cast<std::uint32_t>(folders.size()))) ||
       !(written = writer.write_u32_le(layout.file_count)) ||
@@ -147,7 +142,7 @@ result<void> tes4_write_archive_bytes(std::span<const tes4_prepared_folder> fold
         !(written = writer.write_u32_le(static_cast<std::uint32_t>(folder.entries.size())))) {
       return written.error();
     }
-    if (version == skyrim_se_version) {
+    if (version == tes4_bsa_skyrim_se_version) {
       if (!(written = writer.write_u32_le(0U)) || !(written = writer.write_u64_le(folder.folder_block_offset))) {
         return written.error();
       }

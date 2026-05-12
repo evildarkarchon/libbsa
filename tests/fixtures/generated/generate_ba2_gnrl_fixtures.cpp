@@ -1,5 +1,6 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/compression_router.hpp>
+#include <formats/ba2/ba2_constants.hpp>
 
 #include <algorithm>
 #include <array>
@@ -18,15 +19,6 @@
 #include <vector>
 
 namespace {
-
-constexpr std::uint32_t ba2_btdx_magic = 0x5844'5442U;
-constexpr std::uint32_t ba2_gnrl_magic = 0x4C52'4E47U;
-constexpr std::uint32_t ba2_dx10_magic = 0x3031'5844U;
-// BA2 GNRL records end with the BAADF00D sentinel used by Bethesda archives.
-constexpr std::uint32_t ba2_record_sentinel = 0xBAAD'F00DU;
-constexpr std::uint32_t ba2_fo4_version = 1U;
-constexpr std::uint32_t ba2_sfv2_version = 2U;
-constexpr std::uint32_t ba2_sfv3_version = 3U;
 
 struct byte_buffer {
   std::vector<std::byte> bytes;
@@ -90,10 +82,10 @@ struct entry_spec {
 struct archive_spec {
   std::string stem;
   std::string variant;
-  std::uint32_t version{ba2_fo4_version};
+  std::uint32_t version{libbsa::formats::ba2::ba2_fallout4_version};
   std::uint32_t starfield_unknown1{0};
   std::uint32_t starfield_unknown2{0};
-  std::uint32_t compression_method{0};
+  std::uint32_t compression_method{libbsa::formats::ba2::ba2_starfield_compression_deflate};
   std::vector<entry_spec> entries;
 };
 
@@ -188,7 +180,7 @@ void prepare_payload(entry_spec& entry) {
 
   if (entry.compression == libbsa::detail::compression_method::none) {
     entry.stored_payload = entry.expected_bytes;
-    entry.stored_size = 0U;
+    entry.stored_size = libbsa::formats::ba2::ba2_packed_size_raw;
     return;
   }
 
@@ -201,13 +193,13 @@ void prepare_payload(entry_spec& entry) {
 }
 
 std::uint32_t header_size_for(const archive_spec& archive) {
-  if (archive.version == ba2_sfv3_version) {
-    return 36U;
+  if (archive.version == libbsa::formats::ba2::ba2_starfield_v3_version) {
+    return static_cast<std::uint32_t>(libbsa::formats::ba2::ba2_starfield_v3_header_size);
   }
-  if (archive.version == ba2_sfv2_version) {
-    return 32U;
+  if (archive.version == libbsa::formats::ba2::ba2_starfield_v2_version) {
+    return static_cast<std::uint32_t>(libbsa::formats::ba2::ba2_starfield_v2_header_size);
   }
-  return 24U;
+  return static_cast<std::uint32_t>(libbsa::formats::ba2::ba2_common_header_size);
 }
 
 std::uint32_t name_table_size(const archive_spec& archive) {
@@ -219,16 +211,16 @@ std::uint32_t name_table_size(const archive_spec& archive) {
 }
 
 void write_header(byte_buffer& writer, const archive_spec& archive, std::uint64_t file_table_offset) {
-  writer.ascii4("BTDX");
+  writer.u32(libbsa::formats::ba2::ba2_btdx_magic);
   writer.u32(archive.version);
-  writer.ascii4("GNRL");
+  writer.u32(libbsa::formats::ba2::ba2_gnrl_magic);
   writer.u32(checked_u32(archive.entries.size(), "BA2 file count"));
   writer.u64(file_table_offset);
-  if (archive.version >= ba2_sfv2_version) {
+  if (archive.version >= libbsa::formats::ba2::ba2_starfield_v2_version) {
     writer.u32(archive.starfield_unknown1);
     writer.u32(archive.starfield_unknown2);
   }
-  if (archive.version >= ba2_sfv3_version) {
+  if (archive.version >= libbsa::formats::ba2::ba2_starfield_v3_version) {
     writer.u32(archive.compression_method);
   }
 }
@@ -242,7 +234,7 @@ void write_records(byte_buffer& writer, const archive_spec& archive) {
     writer.u64(entry.payload_offset);
     writer.u32(entry.stored_size);
     writer.u32(entry.raw_size);
-    writer.u32(ba2_record_sentinel);
+    writer.u32(libbsa::formats::ba2::ba2_record_sentinel);
   }
 }
 
@@ -250,7 +242,8 @@ std::vector<std::byte> build_archive(archive_spec& archive) {
   for (auto& entry : archive.entries) {
     prepare_payload(entry);
   }
-  const std::uint64_t file_table_offset = header_size_for(archive) + archive.entries.size() * 36ULL;
+  const std::uint64_t file_table_offset = header_size_for(archive) +
+                                          archive.entries.size() * libbsa::formats::ba2::ba2_gnrl_record_size;
   std::uint64_t next_payload_offset = file_table_offset + name_table_size(archive);
   for (auto& entry : archive.entries) {
     entry.payload_offset = next_payload_offset;
@@ -275,7 +268,7 @@ std::vector<std::byte> build_archive(archive_spec& archive) {
 archive_spec make_fo4() {
   return {.stem = "ba2_gnrl_fo4",
           .variant = "fallout4",
-          .version = ba2_fo4_version,
+          .version = libbsa::formats::ba2::ba2_fallout4_version,
           .entries = {{.original_path = "Meshes/MixedCase/Probe.NIF", .expected_bytes = bytes_from_string("fo4 raw mesh bytes\n")},
                       {.original_path = "textures\\nested\\packed.dds",
                        .expected_bytes = bytes_from_string("fo4 deflate texture bytes\n"),
@@ -286,7 +279,7 @@ archive_spec make_fo4() {
 archive_spec make_sfv2() {
   return {.stem = "ba2_gnrl_sfv2",
           .variant = "starfield_v2",
-          .version = ba2_sfv2_version,
+          .version = libbsa::formats::ba2::ba2_starfield_v2_version,
           .starfield_unknown1 = 0x1020'3040U,
           .starfield_unknown2 = 0x5060'7080U,
           .entries = {{.original_path = "Data/Scripts/RawScript.pex", .expected_bytes = bytes_from_string("sfv2 raw script bytes\n")},
@@ -298,10 +291,10 @@ archive_spec make_sfv2() {
 archive_spec make_sfv3() {
   return {.stem = "ba2_gnrl_sfv3",
           .variant = "starfield_v3",
-          .version = ba2_sfv3_version,
+          .version = libbsa::formats::ba2::ba2_starfield_v3_version,
           .starfield_unknown1 = 0x1111'2222U,
           .starfield_unknown2 = 0x3333'4444U,
-          .compression_method = 3U,
+          .compression_method = libbsa::formats::ba2::ba2_starfield_compression_lz4_block,
           .entries = {{.original_path = "geometries/Raw/Marker.mesh", .expected_bytes = bytes_from_string("sfv3 raw marker bytes\n")},
                       {.original_path = "geometries\\Packed\\Block.mesh",
                        .expected_bytes = bytes_from_string("sfv3 raw lz4 block bytes\n"),
@@ -356,7 +349,8 @@ std::string manifest_for(const archive_spec& archive) {
   out << "  \"magic\": \"BTDX\",\n";
   out << "  \"type\": \"GNRL\",\n";
   out << "  \"file_count\": " << archive.entries.size() << ",\n";
-  out << "  \"file_table_offset\": " << (header_size_for(archive) + archive.entries.size() * 36ULL) << ",\n";
+  out << "  \"file_table_offset\": "
+      << (header_size_for(archive) + archive.entries.size() * libbsa::formats::ba2::ba2_gnrl_record_size) << ",\n";
   out << "  \"starfield_unknown1\": " << archive.starfield_unknown1 << ",\n";
   out << "  \"starfield_unknown2\": " << archive.starfield_unknown2 << ",\n";
   out << "  \"compression_method\": " << archive.compression_method << ",\n";
@@ -430,11 +424,11 @@ void generate_malformed(const std::filesystem::path& output_dir) {
   const auto valid_fo4 = build_archive(fo4);
 
   byte_buffer dx10;
-  dx10.ascii4("BTDX");
-  dx10.u32(ba2_fo4_version);
-  dx10.u32(ba2_dx10_magic);
+  dx10.u32(libbsa::formats::ba2::ba2_btdx_magic);
+  dx10.u32(libbsa::formats::ba2::ba2_fallout4_version);
+  dx10.u32(libbsa::formats::ba2::ba2_dx10_magic);
   dx10.u32(0U);
-  dx10.u64(24U);
+  dx10.u64(libbsa::formats::ba2::ba2_common_header_size);
   write_file(output_dir / "ba2_dx10_unsupported.ba2", dx10.bytes);
 
   write_file(output_dir / "ba2_truncated_header.ba2", std::span<const std::byte>{valid_fo4.data(), 7U});
@@ -444,7 +438,8 @@ void generate_malformed(const std::filesystem::path& output_dir) {
   write_file(output_dir / "ba2_truncated_records.ba2", truncated_records);
 
   auto truncated_name_table = valid_fo4;
-  truncated_name_table.resize(header_size_for(fo4) + fo4.entries.size() * 36ULL + 1ULL);
+  truncated_name_table.resize(header_size_for(fo4) +
+                              fo4.entries.size() * libbsa::formats::ba2::ba2_gnrl_record_size + 1ULL);
   write_file(output_dir / "ba2_truncated_name_table.ba2", truncated_name_table);
 
   auto invalid_payload_span = valid_fo4;
@@ -465,7 +460,9 @@ void generate_malformed(const std::filesystem::path& output_dir) {
   write_file(output_dir / "ba2_corrupt_compressed_payload.ba2", corrupt);
 
   auto size_mismatch = valid_fo4;
-  overwrite_u32(size_mismatch, header_size_for(fo4) + 28U + 36U, fo4.entries[1].raw_size + 5U);
+  overwrite_u32(size_mismatch,
+                header_size_for(fo4) + 28U + libbsa::formats::ba2::ba2_gnrl_record_size,
+                fo4.entries[1].raw_size + 5U);
   write_file(output_dir / "ba2_exact_size_mismatch.ba2", size_mismatch);
 
   auto unsupported_method = make_sfv3();

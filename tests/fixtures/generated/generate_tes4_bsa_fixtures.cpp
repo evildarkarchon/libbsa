@@ -1,5 +1,6 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/compression_router.hpp>
+#include <formats/bsa/tes4_bsa_constants.hpp>
 
 #include <algorithm>
 #include <array>
@@ -18,11 +19,6 @@
 #include <vector>
 
 namespace {
-
-constexpr std::uint32_t archive_include_directory_names = 0x0001U;
-constexpr std::uint32_t archive_include_file_names = 0x0002U;
-constexpr std::uint32_t archive_embed_names = 0x0100U;
-constexpr std::uint32_t file_size_compression_toggle = 0x40000000U;
 
 struct byte_buffer {
   std::vector<std::byte> bytes;
@@ -94,7 +90,8 @@ struct archive_spec {
   std::string stem;
   std::string variant;
   std::uint32_t version{0};
-  std::uint32_t flags{archive_include_directory_names | archive_include_file_names};
+  std::uint32_t flags{libbsa::formats::bsa::tes4_bsa_archive_include_directory_names |
+                      libbsa::formats::bsa::tes4_bsa_archive_include_file_names};
   std::uint32_t file_flags{0};
   std::string folder;
   std::uint64_t folder_hash{0};
@@ -197,7 +194,7 @@ void prepare_payload(entry_spec& entry) {
       throw std::runtime_error("failed to compress fixture payload: " + compressed.error().message);
     }
     payload.raw(compressed.value());
-    entry.record_flags |= file_size_compression_toggle;
+    entry.record_flags |= libbsa::formats::bsa::tes4_bsa_file_size_compression_toggle;
   }
 
   entry.stored_payload = std::move(payload.bytes);
@@ -208,9 +205,9 @@ archive_spec make_v103() {
   archive_spec archive;
   archive.stem = "tes4_v103";
   archive.variant = "tes4_v103";
-  archive.version = 0x67;
+  archive.version = libbsa::formats::bsa::tes4_bsa_oblivion_version;
   archive.folder = "Meshes\\Tiny";
-  archive.file_flags = 0x0001U;
+  archive.file_flags = libbsa::formats::bsa::tes4_bsa_file_flag_meshes;
   archive.entries = {
       {.path = "Meshes\\Tiny\\RawMesh.nif",
        .folder = archive.folder,
@@ -229,10 +226,10 @@ archive_spec make_v104() {
   archive_spec archive;
   archive.stem = "tes4_v104";
   archive.variant = "tes4_v104";
-  archive.version = 0x68;
-  archive.flags |= archive_embed_names;
+  archive.version = libbsa::formats::bsa::tes4_bsa_fallout3_version;
+  archive.flags |= libbsa::formats::bsa::tes4_bsa_archive_embed_names;
   archive.folder = "Textures\\MixedCase";
-  archive.file_flags = 0x0002U;
+  archive.file_flags = libbsa::formats::bsa::tes4_bsa_file_flag_textures;
   archive.entries = {
       {.path = "Textures\\MixedCase\\RawTexture.dds",
        .folder = archive.folder,
@@ -255,10 +252,10 @@ archive_spec make_v105() {
   archive_spec archive;
   archive.stem = "tes4_v105";
   archive.variant = "tes4_v105";
-  archive.version = 0x69;
-  archive.flags |= archive_embed_names;
+  archive.version = libbsa::formats::bsa::tes4_bsa_skyrim_se_version;
+  archive.flags |= libbsa::formats::bsa::tes4_bsa_archive_embed_names;
   archive.folder = "Scripts\\SSE";
-  archive.file_flags = 0x0008U;
+  archive.file_flags = libbsa::formats::bsa::tes4_bsa_file_flag_scripts;
   archive.entries = {
       {.path = "Scripts\\SSE\\RawScript.pex",
        .folder = archive.folder,
@@ -322,16 +319,21 @@ void write_archive(archive_spec& archive, const std::filesystem::path& output_di
   }
   archive.folder_hash = libbsa::detail::hash_tes4(archive.folder);
 
-  const auto folder_record_size = archive.version == 0x69 ? 24U : 16U;
-  const auto folder_block_size = checked_u32(archive.folder.size() + 2 + archive.entries.size() * 16U, "folder block size");
+  const auto folder_record_size = archive.version == libbsa::formats::bsa::tes4_bsa_skyrim_se_version
+                                      ? libbsa::formats::bsa::tes4_bsa_sse_folder_record_size
+                                      : libbsa::formats::bsa::tes4_bsa_legacy_folder_record_size;
+  const auto folder_block_size = checked_u32(archive.folder.size() + 2 +
+                                                 archive.entries.size() * libbsa::formats::bsa::tes4_bsa_file_record_size,
+                                             "folder block size");
   std::uint32_t file_names_length = 0;
   for (const auto& entry : archive.entries) {
     file_names_length += checked_u32(entry.file.size() + 1, "file names length");
   }
 
-  const std::uint32_t metadata_size = 36U + folder_record_size + folder_block_size + file_names_length;
+  const std::uint32_t metadata_size = libbsa::formats::bsa::tes4_bsa_header_size + folder_record_size +
+                                      folder_block_size + file_names_length;
   // TES5Edit stores each folder record offset with the file-name block contribution folded in.
-  archive.folder_offset = 36U + folder_record_size + file_names_length;
+  archive.folder_offset = libbsa::formats::bsa::tes4_bsa_header_size + folder_record_size + file_names_length;
 
   std::uint32_t next_payload_offset = metadata_size;
   for (auto& entry : archive.entries) {
@@ -340,12 +342,9 @@ void write_archive(archive_spec& archive, const std::filesystem::path& output_di
   }
 
   byte_buffer writer;
-  writer.u8('B');
-  writer.u8('S');
-  writer.u8('A');
-  writer.u8(0);
+  writer.u32(libbsa::formats::bsa::tes4_bsa_magic);
   writer.u32(archive.version);
-  writer.u32(36U);
+  writer.u32(libbsa::formats::bsa::tes4_bsa_header_size);
   writer.u32(archive.flags);
   writer.u32(1U);
   writer.u32(checked_u32(archive.entries.size(), "file count"));
@@ -355,7 +354,7 @@ void write_archive(archive_spec& archive, const std::filesystem::path& output_di
 
   writer.u64(archive.folder_hash);
   writer.u32(checked_u32(archive.entries.size(), "folder file count"));
-  if (archive.version == 0x69) {
+  if (archive.version == libbsa::formats::bsa::tes4_bsa_skyrim_se_version) {
     writer.u32(0U);
     writer.u64(archive.folder_offset);
   } else {
@@ -443,9 +442,9 @@ archive_spec make_duplicate_canonical_path() {
   archive_spec archive;
   archive.stem = "malformed_duplicate_canonical_path";
   archive.variant = "malformed_duplicate_canonical_path";
-  archive.version = 0x67;
+  archive.version = libbsa::formats::bsa::tes4_bsa_oblivion_version;
   archive.folder = "Meshes\\Dupe";
-  archive.file_flags = 0x0001U;
+  archive.file_flags = libbsa::formats::bsa::tes4_bsa_file_flag_meshes;
   archive.entries = {
       {.path = "Meshes\\Dupe\\Same.txt",
        .folder = archive.folder,
@@ -549,8 +548,13 @@ void generate_malformed(const std::filesystem::path& output_dir) {
   unsupported.version = 0x6AU;
   write_archive(unsupported, output_dir);
 
-  const std::array<std::byte, 6> truncated_header{std::byte{'B'}, std::byte{'S'}, std::byte{'A'},
-                                                 std::byte{0}, std::byte{0x67}, std::byte{0}};
+  const std::array<std::byte, 6> truncated_header{
+      static_cast<std::byte>(libbsa::formats::bsa::tes4_bsa_magic & 0xFFU),
+      static_cast<std::byte>((libbsa::formats::bsa::tes4_bsa_magic >> 8U) & 0xFFU),
+      static_cast<std::byte>((libbsa::formats::bsa::tes4_bsa_magic >> 16U) & 0xFFU),
+      static_cast<std::byte>((libbsa::formats::bsa::tes4_bsa_magic >> 24U) & 0xFFU),
+      static_cast<std::byte>(libbsa::formats::bsa::tes4_bsa_oblivion_version & 0xFFU),
+      static_cast<std::byte>((libbsa::formats::bsa::tes4_bsa_oblivion_version >> 8U) & 0xFFU)};
   write_file(output_dir / "malformed_truncated_header.bsa", truncated_header);
 
   auto truncated_table = make_v103();

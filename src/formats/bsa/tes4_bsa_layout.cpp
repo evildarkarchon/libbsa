@@ -1,5 +1,7 @@
 #include "formats/bsa/tes4_bsa_layout.hpp"
 
+#include "formats/bsa/tes4_bsa_constants.hpp"
+
 #include <detail/writer_disk_source.hpp>
 
 #include <algorithm>
@@ -12,9 +14,6 @@
 namespace libbsa::formats::bsa {
 
 namespace {
-
-constexpr std::uint32_t skyrim_se_version = 0x69U;
-constexpr std::uint32_t header_size = 36U;
 
 struct payload_assignment {
   std::uint32_t offset{0};
@@ -168,9 +167,10 @@ result<tes4_layout_result> tes4_assign_offsets(std::span<tes4_prepared_folder> f
     return layout.error();
   }
 
-  const std::uint64_t folder_record_size = version == skyrim_se_version ? 24U : 16U;
+  const std::uint64_t folder_record_size = version == tes4_bsa_skyrim_se_version ? tes4_bsa_sse_folder_record_size
+                                                                                 : tes4_bsa_legacy_folder_record_size;
   const std::uint64_t folder_records_size = folder_record_size * folders.size();
-  std::uint64_t folder_block_cursor = header_size + folder_records_size;
+  std::uint64_t folder_block_cursor = tes4_bsa_header_size + folder_records_size;
   std::uint64_t folder_blocks_size = 0;
 
   for (auto& folder : folders) {
@@ -179,10 +179,10 @@ result<tes4_layout_result> tes4_assign_offsets(std::span<tes4_prepared_folder> f
       return error{error_code::format_error, "TES4 BSA folder name size overflows"};
     }
     std::uint64_t file_record_bytes = 0;
-    if (folder.entries.size() > std::numeric_limits<std::uint64_t>::max() / 16U) {
+    if (folder.entries.size() > std::numeric_limits<std::uint64_t>::max() / tes4_bsa_file_record_size) {
       return error{error_code::format_error, "TES4 BSA file record table size overflows"};
     }
-    file_record_bytes = static_cast<std::uint64_t>(folder.entries.size()) * 16U;
+    file_record_bytes = static_cast<std::uint64_t>(folder.entries.size()) * tes4_bsa_file_record_size;
 
     // Reference-compatible folder offsets include the later file-name table length,
     // even though the folder block bytes are serialized before that table.
@@ -198,7 +198,7 @@ result<tes4_layout_result> tes4_assign_offsets(std::span<tes4_prepared_folder> f
   }
 
   std::uint64_t payload_cursor = 0;
-  if (!add_fits_u64(header_size, folder_records_size, payload_cursor) ||
+  if (!add_fits_u64(tes4_bsa_header_size, folder_records_size, payload_cursor) ||
       !add_fits_u64(payload_cursor, folder_blocks_size, payload_cursor) ||
       !add_fits_u64(payload_cursor, layout.value().total_file_name_length, payload_cursor)) {
     return error{error_code::format_error, "TES4 BSA metadata size overflows"};

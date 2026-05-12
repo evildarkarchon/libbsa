@@ -1,5 +1,7 @@
 #include "formats/ba2/ba2_gnrl_serialize.hpp"
 
+#include "formats/ba2/ba2_constants.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -12,11 +14,6 @@
 namespace libbsa::formats::ba2 {
 
 namespace {
-
-// Serialize the BA2 `BTDX`/`GNRL` header and required `0xBAADF00D` record sentinel explicitly.
-constexpr std::uint32_t ba2_btdx_magic = 0x5844'5442U;
-constexpr std::uint32_t ba2_gnrl_magic = 0x4C52'4E47U;
-constexpr std::uint32_t ba2_record_sentinel = 0xBAAD'F00DU;
 
 class stream_writer {
  public:
@@ -152,7 +149,7 @@ result<void> ba2_gnrl_write_archive_bytes(ba2_gnrl_target target,
   if (!(written = writer.write_u32_le(file_count.value())) || !(written = writer.write_u64_le(file_table_offset))) {
     return written.error();
   }
-  if (version >= 2U) {
+  if (version >= ba2_starfield_v2_version) {
     // xEdit/BSArchPro initializes Starfield writer Unknown1/Unknown2 to 1/0; options can override these raw
     // compatibility fields while keeping them library-owned and version-gated in public metadata.
     if (!(written = writer.write_u32_le(options.starfield_unknown1)) ||
@@ -160,7 +157,7 @@ result<void> ba2_gnrl_write_archive_bytes(ba2_gnrl_target target,
       return written.error();
     }
   }
-  if (version >= 3U) {
+  if (version >= ba2_starfield_v3_version) {
     // Phase 8 treats v3 GNRL as a structurally supported profile. Method 3 remains the default raw-LZ4-block
     // method for later compression support; raw entries still serialize with PackedSize == 0 in this plan.
     if (!(written = writer.write_u32_le(options.starfield_compression_method))) {

@@ -1,5 +1,6 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/compression_router.hpp>
+#include <formats/ba2/ba2_constants.hpp>
 
 #include <algorithm>
 #include <array>
@@ -20,11 +21,6 @@
 
 namespace {
 
-constexpr std::uint32_t ba2_fo4_version = 1U;
-constexpr std::uint32_t ba2_sfv3_version = 3U;
-constexpr std::uint32_t ba2_record_sentinel = 0xBAAD'F00DU;
-constexpr std::uint16_t ba2_dx10_chunk_header_size = 24U;
-constexpr std::uint16_t ba2_dx10_cubemap_raw = 2049U;
 constexpr std::uint32_t dxgi_format_r8g8b8a8_unorm = 28U;
 constexpr std::uint32_t dds_dxt10_header_size = 148U;
 constexpr std::uint32_t dds_fourcc_dx10 = 0x30315844U;
@@ -124,10 +120,10 @@ struct texture_spec {
 struct archive_spec {
   std::string stem;
   std::string variant;
-  std::uint32_t version{ba2_fo4_version};
+  std::uint32_t version{libbsa::formats::ba2::ba2_fallout4_version};
   std::uint32_t starfield_unknown1{0};
   std::uint32_t starfield_unknown2{0};
-  std::uint32_t compression_method{0};
+  std::uint32_t compression_method{libbsa::formats::ba2::ba2_starfield_compression_deflate};
   std::vector<texture_spec> textures;
 };
 
@@ -470,7 +466,7 @@ void prepare_texture(texture_spec& texture) {
     chunk.raw_size = checked_u32(chunk.decoded_payload.size(), "BA2 DX10 decoded chunk");
     if (chunk.compression == libbsa::detail::compression_method::none) {
       chunk.stored_payload = chunk.decoded_payload;
-      chunk.packed_size = 0U;
+      chunk.packed_size = libbsa::formats::ba2::ba2_packed_size_raw;
       continue;
     }
     const auto compressed = libbsa::detail::compress_payload(chunk.compression, chunk.decoded_payload);
@@ -482,12 +478,17 @@ void prepare_texture(texture_spec& texture) {
   }
 }
 
-std::uint32_t header_size_for(const archive_spec& archive) { return archive.version == ba2_sfv3_version ? 36U : 24U; }
+std::uint32_t header_size_for(const archive_spec& archive) {
+  return archive.version == libbsa::formats::ba2::ba2_starfield_v3_version
+             ? static_cast<std::uint32_t>(libbsa::formats::ba2::ba2_starfield_v3_header_size)
+             : static_cast<std::uint32_t>(libbsa::formats::ba2::ba2_common_header_size);
+}
 
 std::uint64_t record_table_size(const archive_spec& archive) {
   std::uint64_t size = 0;
   for (const auto& texture : archive.textures) {
-    size += 24ULL + static_cast<std::uint64_t>(texture.chunks.size()) * ba2_dx10_chunk_header_size;
+    size += libbsa::formats::ba2::ba2_dx10_record_size +
+            static_cast<std::uint64_t>(texture.chunks.size()) * libbsa::formats::ba2::ba2_dx10_chunk_header_size;
   }
   return size;
 }
@@ -509,12 +510,12 @@ std::vector<std::byte> decoded_payload_bytes(const texture_spec& texture) {
 }
 
 void write_header(byte_buffer& writer, const archive_spec& archive, std::uint64_t file_table_offset) {
-  writer.ascii4("BTDX");
+  writer.u32(libbsa::formats::ba2::ba2_btdx_magic);
   writer.u32(archive.version);
-  writer.ascii4("DX10");
+  writer.u32(libbsa::formats::ba2::ba2_dx10_magic);
   writer.u32(checked_u32(archive.textures.size(), "BA2 DX10 file count"));
   writer.u64(file_table_offset);
-  if (archive.version >= ba2_sfv3_version) {
+  if (archive.version >= libbsa::formats::ba2::ba2_starfield_v3_version) {
     writer.u32(archive.starfield_unknown1);
     writer.u32(archive.starfield_unknown2);
     writer.u32(archive.compression_method);
@@ -528,7 +529,7 @@ void write_records(byte_buffer& writer, const archive_spec& archive) {
     writer.u32(texture.directory_hash);
     writer.u8(texture.unknown_tex);
     writer.u8(static_cast<std::uint8_t>(texture.chunks.size()));
-    writer.u16(ba2_dx10_chunk_header_size);
+    writer.u16(libbsa::formats::ba2::ba2_dx10_chunk_header_size);
     writer.u16(texture.height);
     writer.u16(texture.width);
     writer.u8(texture.num_mips);
@@ -540,7 +541,7 @@ void write_records(byte_buffer& writer, const archive_spec& archive) {
       writer.u32(chunk.raw_size);
       writer.u16(chunk.start_mip);
       writer.u16(chunk.end_mip);
-      writer.u32(ba2_record_sentinel);
+      writer.u32(libbsa::formats::ba2::ba2_record_sentinel);
     }
   }
 }
@@ -582,7 +583,7 @@ std::vector<std::byte> build_archive(archive_spec& archive) {
 archive_spec make_fo4() {
   return {.stem = "ba2_dx10_fo4",
           .variant = "fallout4",
-          .version = ba2_fo4_version,
+          .version = libbsa::formats::ba2::ba2_fallout4_version,
           .textures = {{.original_path = "Textures/Generated/Fo4Raw.dds",
                         .height = 2,
                         .width = 2,
@@ -609,7 +610,7 @@ archive_spec make_fo4() {
                         .height = 1,
                         .width = 1,
                         .num_mips = 1,
-                        .cube_maps_raw = ba2_dx10_cubemap_raw,
+                         .cube_maps_raw = libbsa::formats::ba2::ba2_dx10_cubemap_raw,
                         .is_cubemap = true,
                         .chunks = {{.decoded_payload = repeated_bytes(0x60, 4), .segment = {.face_index = 0, .source_chunk_index = 0}},
                                    {.decoded_payload = repeated_bytes(0x70, 4), .segment = {.face_index = 1, .source_chunk_index = 1}},
@@ -622,10 +623,10 @@ archive_spec make_fo4() {
 archive_spec make_sfv3() {
   return {.stem = "ba2_dx10_sfv3",
           .variant = "starfield_v3",
-          .version = ba2_sfv3_version,
+          .version = libbsa::formats::ba2::ba2_starfield_v3_version,
           .starfield_unknown1 = 0x1020'3040U,
           .starfield_unknown2 = 0x5060'7080U,
-          .compression_method = 3U,
+          .compression_method = libbsa::formats::ba2::ba2_starfield_compression_lz4_block,
           .textures = {{.original_path = "Textures/Generated/SfRawLz4.dds",
                         .height = 2,
                         .width = 2,
@@ -649,7 +650,7 @@ archive_spec make_sfv3() {
 archive_spec make_duplicate_canonical_path_malformed() {
   return {.stem = "ba2_dx10_duplicate_canonical_path",
           .variant = "fallout4",
-          .version = ba2_fo4_version,
+          .version = libbsa::formats::ba2::ba2_fallout4_version,
           .textures = {{.original_path = "Textures/Generated/Duplicate.dds",
                         .height = 1,
                         .width = 1,
@@ -742,7 +743,7 @@ std::string manifest_for(const archive_spec& archive) {
     out << "      \"directory_hash\": \"0x" << std::hex << std::setw(8) << texture.directory_hash << "\",\n";
     out << "      \"unknown_tex\": " << std::dec << static_cast<unsigned int>(texture.unknown_tex) << ",\n";
     out << "      \"chunk_count\": " << texture.chunks.size() << ",\n";
-    out << "      \"chunk_header_size\": 24,\n";
+    out << "      \"chunk_header_size\": " << libbsa::formats::ba2::ba2_dx10_chunk_header_size << ",\n";
     out << "      \"height\": " << texture.height << ",\n";
     out << "      \"width\": " << texture.width << ",\n";
     out << "      \"num_mips\": " << static_cast<unsigned int>(texture.num_mips) << ",\n";
@@ -868,9 +869,10 @@ void generate_malformed(const std::filesystem::path& output_dir) {
   const auto valid_fo4 = build_archive(fo4);
   const auto fixed_header_size = header_size_for(fo4);
   const auto first_record_offset = fixed_header_size;
-  const auto second_record_offset = first_record_offset + 24ULL + fo4.textures[0].chunks.size() * ba2_dx10_chunk_header_size;
-  const auto first_second_chunk_offset = second_record_offset + 24ULL;
-  const auto second_second_chunk_offset = first_second_chunk_offset + ba2_dx10_chunk_header_size;
+  const auto second_record_offset = first_record_offset + libbsa::formats::ba2::ba2_dx10_record_size +
+                                    fo4.textures[0].chunks.size() * libbsa::formats::ba2::ba2_dx10_chunk_header_size;
+  const auto first_second_chunk_offset = second_record_offset + libbsa::formats::ba2::ba2_dx10_record_size;
+  const auto second_second_chunk_offset = first_second_chunk_offset + libbsa::formats::ba2::ba2_dx10_chunk_header_size;
 
   write_file(output_dir / "ba2_dx10_truncated_header.ba2", std::span<const std::byte>{valid_fo4.data(), 11U});
 

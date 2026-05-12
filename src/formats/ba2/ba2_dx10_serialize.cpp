@@ -1,5 +1,7 @@
 #include "formats/ba2/ba2_dx10_serialize.hpp"
 
+#include "formats/ba2/ba2_constants.hpp"
+
 #include <array>
 #include <cstddef>
 #include <fstream>
@@ -11,12 +13,6 @@
 namespace libbsa::formats::ba2 {
 
 namespace {
-
-constexpr std::uint32_t starfield_v3_version = 3U;
-constexpr std::uint32_t ba2_btdx_magic = 0x5844'5442U;
-constexpr std::uint32_t ba2_dx10_magic = 0x3031'5844U;
-constexpr std::uint32_t ba2_record_sentinel = 0xBAAD'F00DU;
-constexpr std::uint16_t ba2_dx10_chunk_header_size = 24U;
 
 class stream_writer {
  public:
@@ -118,7 +114,7 @@ result<void> ba2_dx10_write_archive_bytes(const ba2_dx10_writer_options& options
   if (!(written = writer.write_u32_le(file_count.value())) || !(written = writer.write_u64_le(file_table_offset))) {
     return written.error();
   }
-  if (version >= starfield_v3_version) {
+  if (version >= ba2_starfield_v3_version) {
     if (!(written = writer.write_u32_le(options.starfield_unknown1)) ||
         !(written = writer.write_u32_le(options.starfield_unknown2)) ||
         !(written = writer.write_u32_le(options.starfield_compression_method))) {

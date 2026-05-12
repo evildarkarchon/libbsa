@@ -1,5 +1,7 @@
 #include "formats/ba2/ba2_gnrl_layout.hpp"
 
+#include "formats/ba2/ba2_constants.hpp"
+
 #include <algorithm>
 #include <array>
 #include <fstream>
@@ -12,11 +14,6 @@
 namespace libbsa::formats::ba2 {
 
 namespace {
-
-constexpr std::size_t common_header_size = 24U;
-constexpr std::size_t starfield_v2_header_size = 32U;
-constexpr std::size_t starfield_v3_header_size = 36U;
-constexpr std::size_t gnrl_record_size = 36U;
 
 struct payload_assignment {
   std::uint64_t offset{};
@@ -62,23 +59,23 @@ result<bool> compare_disk_payloads(const std::string& lhs_path,
 std::uint32_t ba2_gnrl_version_for(ba2_gnrl_target target) noexcept {
   switch (target) {
   case ba2_gnrl_target::fallout4:
-    return 1U;
+    return ba2_fallout4_version;
   case ba2_gnrl_target::starfield_v2:
-    return 2U;
+    return ba2_starfield_v2_version;
   case ba2_gnrl_target::starfield_v3:
-    return 3U;
+    return ba2_starfield_v3_version;
   }
   return 0U;
 }
 
 std::size_t ba2_gnrl_header_size_for(std::uint32_t version) noexcept {
-  if (version >= 3U) {
-    return starfield_v3_header_size;
+  if (version >= ba2_starfield_v3_version) {
+    return ba2_starfield_v3_header_size;
   }
-  if (version >= 2U) {
-    return starfield_v2_header_size;
+  if (version >= ba2_starfield_v2_version) {
+    return ba2_starfield_v2_header_size;
   }
-  return common_header_size;
+  return ba2_common_header_size;
 }
 
 result<bool> ba2_gnrl_payloads_equal(const ba2_gnrl_prepared_entry& lhs, const ba2_gnrl_prepared_entry& rhs) {
@@ -99,10 +96,10 @@ result<void> ba2_gnrl_assign_payload_offsets(std::span<ba2_gnrl_prepared_entry> 
                                              bool deduplicate_payloads,
                                              std::uint64_t& file_table_offset) {
   std::uint64_t record_bytes = 0;
-  if (entries.size() > std::numeric_limits<std::uint64_t>::max() / gnrl_record_size) {
+  if (entries.size() > std::numeric_limits<std::uint64_t>::max() / ba2_gnrl_record_size) {
     return error{error_code::format_error, "BA2 GNRL record table size overflows"};
   }
-  record_bytes = static_cast<std::uint64_t>(entries.size()) * gnrl_record_size;
+  record_bytes = static_cast<std::uint64_t>(entries.size()) * ba2_gnrl_record_size;
 
   std::uint64_t cursor = 0;
   if (!add_fits_u64(ba2_gnrl_header_size_for(version), record_bytes, cursor)) {

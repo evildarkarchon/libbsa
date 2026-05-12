@@ -1,5 +1,6 @@
 #include "formats/ba2/ba2_dx10_parser.hpp"
 
+#include "formats/ba2/ba2_constants.hpp"
 #include "texture/dds_layout.hpp"
 
 #include <detail/archive_path.hpp>
@@ -21,17 +22,6 @@
 
 namespace libbsa::formats::ba2 {
 namespace {
-
-constexpr std::uint32_t ba2_btdx_magic = 0x5844'5442U;
-constexpr std::uint32_t ba2_dx10_magic = 0x3031'5844U;
-constexpr std::uint32_t ba2_record_sentinel = 0xBAAD'F00DU;
-constexpr std::uint16_t ba2_dx10_chunk_header_size = 24U;
-constexpr std::uint16_t ba2_dx10_cubemap_raw = 2049U;
-constexpr std::uint32_t starfield_v2_version = 2U;
-constexpr std::uint32_t starfield_v3_version = 3U;
-constexpr std::size_t common_header_size = 24U;
-constexpr std::size_t starfield_v2_header_size = 32U;
-constexpr std::size_t starfield_v3_header_size = 36U;
 
 struct header_fields {
   std::uint32_t magic;
@@ -73,13 +63,13 @@ using detail::read_file_bytes_at;
 using detail::span_fits_u64;
 
 std::size_t header_size_for(std::uint32_t version) noexcept {
-  if (version == starfield_v3_version) {
-    return starfield_v3_header_size;
+  if (version == ba2_starfield_v3_version) {
+    return ba2_starfield_v3_header_size;
   }
-  if (version == starfield_v2_version) {
-    return starfield_v2_header_size;
+  if (version == ba2_starfield_v2_version) {
+    return ba2_starfield_v2_header_size;
   }
-  return common_header_size;
+  return ba2_common_header_size;
 }
 
 std::pair<std::string_view, std::string_view> split_directory_file(std::string_view archive_path) noexcept {
@@ -208,7 +198,7 @@ result<header_fields> read_header(detail::binary_reader& reader) {
   }
 
   ba2_archive_metadata ba2{};
-  if (version.value() >= starfield_v2_version) {
+  if (version.value() >= ba2_starfield_v2_version) {
     const auto unknown1 = reader.read_u32_le();
     const auto unknown2 = reader.read_u32_le();
     if (!unknown1 || !unknown2) {
@@ -217,7 +207,7 @@ result<header_fields> read_header(detail::binary_reader& reader) {
     ba2.starfield_unknown1 = unknown1.value();
     ba2.starfield_unknown2 = unknown2.value();
   }
-  if (version.value() >= starfield_v3_version) {
+  if (version.value() >= ba2_starfield_v3_version) {
     const auto compression_method = reader.read_u32_le();
     if (!compression_method) {
       return error{error_code::format_error, "BA2 DX10 Starfield v3 CompressionMethod is truncated"};

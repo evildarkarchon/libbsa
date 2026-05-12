@@ -1,5 +1,7 @@
 #include "formats/bsa/tes4_bsa_prepare.hpp"
 
+#include "formats/bsa/tes4_bsa_constants.hpp"
+
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/compression_router.hpp>
@@ -22,18 +24,7 @@ namespace libbsa::formats::bsa {
 
 namespace {
 
-constexpr std::uint32_t oblivion_version = 0x67U;
-constexpr std::uint32_t fallout3_version = 0x68U;
-constexpr std::uint32_t skyrim_se_version = 0x69U;
-constexpr std::uint32_t file_size_compression_toggle = 0x40000000U;
 constexpr std::size_t dds_metadata_probe_size = 148U;
-
-constexpr std::uint32_t file_flag_meshes = 0x0001U;
-constexpr std::uint32_t file_flag_textures = 0x0002U;
-constexpr std::uint32_t file_flag_sounds = 0x0004U;
-constexpr std::uint32_t file_flag_scripts = 0x0008U;
-constexpr std::uint32_t file_flag_menus = 0x0010U;
-constexpr std::uint32_t file_flag_misc = 0x0100U;
 
 struct prepared_entry_result {
   tes4_prepared_entry entry;
@@ -61,7 +52,7 @@ result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view descript
 }
 
 result<std::uint32_t> checked_size_flags_payload_size(std::uint64_t value, std::string_view description) {
-  if (value > (std::numeric_limits<std::uint32_t>::max() & ~file_size_compression_toggle)) {
+  if (value > (std::numeric_limits<std::uint32_t>::max() & ~tes4_bsa_file_size_compression_toggle)) {
     return error{error_code::format_error, std::string{description} + " exceeds TES4 BSA size-flag limits"};
   }
   return static_cast<std::uint32_t>(value);
@@ -150,22 +141,22 @@ std::uint64_t file_hash_for(std::string_view file_name) {
 
 std::uint32_t file_flag_for_extension(std::string_view extension, std::uint32_t version) noexcept {
   if (extension == ".nif" || extension == ".kf") {
-    return file_flag_meshes;
+    return tes4_bsa_file_flag_meshes;
   }
   if (extension == ".dds") {
-    return file_flag_textures;
+    return tes4_bsa_file_flag_textures;
   }
   if (extension == ".wav") {
-    return file_flag_sounds;
+    return tes4_bsa_file_flag_sounds;
   }
   if (extension == ".pex" || extension == ".psc") {
-    return file_flag_scripts;
+    return tes4_bsa_file_flag_scripts;
   }
   if (extension == ".xml") {
-    return version == oblivion_version ? file_flag_menus : 0U;
+    return version == tes4_bsa_oblivion_version ? tes4_bsa_file_flag_menus : 0U;
   }
   if (extension == ".txt" || extension == ".html" || extension == ".bat" || extension == ".scc") {
-    return version == skyrim_se_version ? 0U : file_flag_misc;
+    return version == tes4_bsa_skyrim_se_version ? 0U : tes4_bsa_file_flag_misc;
   }
   return 0U;
 }
@@ -359,7 +350,7 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
   if (archive_default_is_compressed != effective_compressed) {
     // Zero-byte entries are forced raw, so they still need the XOR toggle when
     // the archive default is compressed or readers will expect a size prefix.
-    record_flags |= file_size_compression_toggle;
+    record_flags |= tes4_bsa_file_size_compression_toggle;
   }
 
   tes4_prepared_entry prepared;
@@ -426,11 +417,11 @@ result<tes4_writer_entry> tes4_make_writer_entry(std::string_view archive_path,
 result<std::uint32_t> tes4_version_for(tes4_bsa_target target) {
   switch (target) {
   case tes4_bsa_target::oblivion:
-    return oblivion_version;
+    return tes4_bsa_oblivion_version;
   case tes4_bsa_target::fallout3:
-    return fallout3_version;
+    return tes4_bsa_fallout3_version;
   case tes4_bsa_target::skyrim_se:
-    return skyrim_se_version;
+    return tes4_bsa_skyrim_se_version;
   }
   return error{error_code::invalid_argument, "TES4 BSA writer target profile is not supported"};
 }
@@ -448,7 +439,7 @@ bool tes4_archive_default_compressed(tes4_bsa_target target, archive_compression
 }
 
 bool tes4_should_emit_embedded_names(const tes4_bsa_writer_options& options, std::uint32_t version) noexcept {
-  return options.embed_file_names && version != oblivion_version;
+  return options.embed_file_names && version != tes4_bsa_oblivion_version;
 }
 
 result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries) {

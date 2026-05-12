@@ -1,5 +1,7 @@
 #include "formats/ba2/ba2_dx10_layout.hpp"
 
+#include "formats/ba2/ba2_constants.hpp"
+
 #include <limits>
 #include <map>
 #include <utility>
@@ -8,9 +10,6 @@
 namespace libbsa::formats::ba2 {
 
 namespace {
-
-constexpr std::uint16_t ba2_dx10_chunk_header_size = 24U;
-constexpr std::size_t dx10_record_size = 24U;
 
 struct payload_assignment {
   std::uint64_t offset{};
@@ -53,7 +52,7 @@ result<void> ba2_dx10_assign_payload_offsets(std::span<ba2_dx10_prepared_entry> 
   std::uint64_t record_bytes = 0;
   for (const auto& entry : entries) {
     std::uint64_t entry_record_bytes = 0;
-    if (!add_fits_u64(dx10_record_size, static_cast<std::uint64_t>(entry.chunks.size()) * ba2_dx10_chunk_header_size,
+    if (!add_fits_u64(ba2_dx10_record_size, static_cast<std::uint64_t>(entry.chunks.size()) * ba2_dx10_chunk_header_size,
                       entry_record_bytes) ||
         !add_fits_u64(record_bytes, entry_record_bytes, record_bytes)) {
       return error{error_code::format_error, "BA2 DX10 record table size overflows"};

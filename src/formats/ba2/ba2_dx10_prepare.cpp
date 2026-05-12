@@ -1,5 +1,7 @@
 #include "formats/ba2/ba2_dx10_prepare.hpp"
 
+#include "formats/ba2/ba2_constants.hpp"
+
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/byte_vector.hpp>
@@ -22,18 +24,6 @@
 namespace libbsa::formats::ba2 {
 
 namespace {
-
-constexpr std::uint32_t fallout4_version = 1U;
-constexpr std::uint32_t starfield_v3_version = 3U;
-constexpr std::uint32_t starfield_deflate_method = 0U;
-constexpr std::uint32_t starfield_lz4_block_method = 3U;
-constexpr std::uint16_t ba2_dx10_non_cubemap_raw = 2048U;
-constexpr std::uint16_t ba2_dx10_cubemap_raw = 2049U;
-constexpr std::size_t common_header_size = 24U;
-constexpr std::size_t starfield_v3_header_size = 36U;
-// Reference-derived writer-owned texture byte. It is intentionally not a public option because
-// D-09 keeps unknown_tex library-owned until stronger compatibility evidence requires otherwise.
-constexpr std::uint8_t ba2_dx10_unknown_tex_default = 0U;
 
 /// Returns true for DDS DXGI formats accepted by the Starfield DX10 profile but not Fallout 4.
 bool is_starfield_only_dx10_format(std::uint32_t dxgi_format) noexcept {
@@ -164,10 +154,10 @@ result<detail::compression_method> compression_method_for(ba2_dx10_target target
   case ba2_dx10_target::fallout4:
     return detail::compression_method::deflate;
   case ba2_dx10_target::starfield_v3:
-    if (starfield_method == starfield_deflate_method) {
+    if (starfield_method == ba2_starfield_compression_deflate) {
       return detail::compression_method::deflate;
     }
-    if (starfield_method == starfield_lz4_block_method) {
+    if (starfield_method == ba2_starfield_compression_lz4_block) {
       return detail::compression_method::lz4_block;
     }
     return error{error_code::unsupported, "BA2 DX10 Starfield v3 compression method is unsupported"};
@@ -280,15 +270,15 @@ result<ba2_dx10_writer_entry> ba2_dx10_make_writer_entry(std::string_view archiv
 std::uint32_t ba2_dx10_version_for(ba2_dx10_target target) noexcept {
   switch (target) {
   case ba2_dx10_target::fallout4:
-    return fallout4_version;
+    return ba2_fallout4_version;
   case ba2_dx10_target::starfield_v3:
-    return starfield_v3_version;
+    return ba2_starfield_v3_version;
   }
   return 0U;
 }
 
 std::size_t ba2_dx10_header_size_for(std::uint32_t version) noexcept {
-  return version >= starfield_v3_version ? starfield_v3_header_size : common_header_size;
+  return version >= ba2_starfield_v3_version ? ba2_starfield_v3_header_size : ba2_common_header_size;
 }
 
 result<void> ba2_dx10_validate_target_options(ba2_dx10_target target, const ba2_dx10_writer_options& options) {
@@ -296,8 +286,8 @@ result<void> ba2_dx10_validate_target_options(ba2_dx10_target target, const ba2_
   case ba2_dx10_target::fallout4:
     return {};
   case ba2_dx10_target::starfield_v3:
-    if (options.starfield_compression_method == starfield_deflate_method ||
-        options.starfield_compression_method == starfield_lz4_block_method) {
+    if (options.starfield_compression_method == ba2_starfield_compression_deflate ||
+        options.starfield_compression_method == ba2_starfield_compression_lz4_block) {
       return {};
     }
     return error{error_code::unsupported, "BA2 DX10 Starfield v3 compression method is unsupported"};

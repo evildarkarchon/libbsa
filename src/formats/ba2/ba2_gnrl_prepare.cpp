@@ -1,5 +1,7 @@
 #include "formats/ba2/ba2_gnrl_prepare.hpp"
 
+#include "formats/ba2/ba2_constants.hpp"
+
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/compression_router.hpp>
@@ -17,9 +19,6 @@
 namespace libbsa::formats::ba2 {
 
 namespace {
-
-constexpr std::uint32_t starfield_deflate_method = 0U;
-constexpr std::uint32_t starfield_lz4_block_method = 3U;
 
 std::string preserved_archive_path(std::string_view archive_path) {
   std::string preserved{archive_path};
@@ -122,10 +121,10 @@ result<detail::compression_method> compression_method_for_compressed_entry(ba2_g
   case ba2_gnrl_target::starfield_v2:
     return detail::compression_method::deflate;
   case ba2_gnrl_target::starfield_v3:
-    if (starfield_method == starfield_deflate_method) {
+    if (starfield_method == ba2_starfield_compression_deflate) {
       return detail::compression_method::deflate;
     }
-    if (starfield_method == starfield_lz4_block_method) {
+    if (starfield_method == ba2_starfield_compression_lz4_block) {
       return detail::compression_method::lz4_block;
     }
     return error{error_code::unsupported, "BA2 GNRL Starfield v3 compression method is unsupported"};
@@ -180,7 +179,7 @@ result<ba2_gnrl_prepared_entry> prepare_entry(ba2_gnrl_target target,
     return raw_size.error();
   }
 
-  std::uint32_t packed_size = 0U;
+  std::uint32_t packed_size = ba2_packed_size_raw;
   bool stream_from_disk = !entry.from_memory && !entry_compressed;
   std::uint64_t payload_hash = 0U;
   if (entry_compressed || entry.from_memory) {
@@ -263,8 +262,8 @@ result<void> ba2_gnrl_validate_target_options(ba2_gnrl_target target, const ba2_
   case ba2_gnrl_target::starfield_v2:
     return {};
   case ba2_gnrl_target::starfield_v3:
-    if (options.starfield_compression_method == starfield_deflate_method ||
-        options.starfield_compression_method == starfield_lz4_block_method) {
+    if (options.starfield_compression_method == ba2_starfield_compression_deflate ||
+        options.starfield_compression_method == ba2_starfield_compression_lz4_block) {
       return {};
     }
     return error{error_code::unsupported, "BA2 GNRL Starfield v3 compression method is unsupported"};

@@ -1,5 +1,7 @@
 #include "formats/bsa/tes4_bsa_parser.hpp"
 
+#include "formats/bsa/tes4_bsa_constants.hpp"
+
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
@@ -16,17 +18,6 @@
 
 namespace libbsa::formats::bsa {
 namespace {
-
-constexpr std::uint32_t sse_version = 0x69U;
-constexpr std::uint32_t archive_include_directory_names = 0x0001U;
-constexpr std::uint32_t archive_include_file_names = 0x0002U;
-constexpr std::uint32_t archive_compress_by_default = 0x0004U;
-constexpr std::uint32_t archive_embed_names = 0x0100U;
-constexpr std::uint32_t file_size_compression_toggle = 0x40000000U;
-constexpr std::size_t fixed_header_size = 36U;
-constexpr std::size_t legacy_folder_record_size = 16U;
-constexpr std::size_t sse_folder_record_size = 24U;
-constexpr std::size_t file_record_size = 16U;
 
 struct header_fields {
   std::uint32_t version;
@@ -76,14 +67,11 @@ result<void> skip_checked(detail::binary_reader& reader, std::size_t count) {
 }
 
 result<header_fields> read_header(detail::binary_reader& reader) {
-  const auto magic = reader.read_bytes(4);
+  const auto magic = reader.read_u32_le();
   if (!magic) {
     return magic.error();
   }
-  if (magic.value().size() != 4U || static_cast<char>(std::to_integer<unsigned char>(magic.value()[0])) != 'B' ||
-      static_cast<char>(std::to_integer<unsigned char>(magic.value()[1])) != 'S' ||
-      static_cast<char>(std::to_integer<unsigned char>(magic.value()[2])) != 'A' ||
-      magic.value()[3] != std::byte{0}) {
+  if (magic.value() != tes4_bsa_magic) {
     return error{error_code::unsupported, "TES4 BSA magic is not supported"};
   }
 
@@ -115,11 +103,11 @@ result<std::size_t> metadata_table_size(const header_fields& header, std::size_t
   std::size_t folder_records_size = 0;
   std::size_t file_records_size = 0;
   if (!multiply_fits(header.folder_count, folder_record_size, folder_records_size) ||
-      !multiply_fits(header.file_count, file_record_size, file_records_size)) {
+      !multiply_fits(header.file_count, tes4_bsa_file_record_size, file_records_size)) {
     return error{error_code::format_error, "TES4 BSA metadata table is too large"};
   }
 
-  std::size_t total = fixed_header_size;
+  std::size_t total = tes4_bsa_header_size;
   if (!add_fits(total, folder_records_size, total) ||
       !add_fits(total, static_cast<std::size_t>(header.total_folder_name_length), total) ||
       !add_fits(total, file_records_size, total) ||
@@ -257,12 +245,12 @@ result<std::vector<std::string>> read_file_names(detail::binary_reader& reader, 
 }
 
 entry_compression compression_for(const header_fields& header, std::uint32_t size_flags) noexcept {
-  const bool default_compressed = (header.archive_flags & archive_compress_by_default) != 0U;
-  const bool toggled = (size_flags & file_size_compression_toggle) != 0U;
+  const bool default_compressed = (header.archive_flags & tes4_bsa_archive_compress_by_default) != 0U;
+  const bool toggled = (size_flags & tes4_bsa_file_size_compression_toggle) != 0U;
   if (!(default_compressed ^ toggled)) {
     return entry_compression::none;
   }
-  return header.version == sse_version ? entry_compression::lz4_frame : entry_compression::deflate;
+  return header.version == tes4_bsa_skyrim_se_version ? entry_compression::lz4_frame : entry_compression::deflate;
 }
 
 template <typename PayloadReader>
@@ -318,7 +306,8 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
   entries.reserve(header.file_count);
   std::unordered_set<std::string> canonical_paths;
   std::size_t name_index = 0;
-  const bool has_embedded_names = header.version != 0x67U && (header.archive_flags & archive_embed_names) != 0U;
+  const bool has_embedded_names = header.version != tes4_bsa_oblivion_version &&
+                                  (header.archive_flags & tes4_bsa_archive_embed_names) != 0U;
 
   for (const auto& folder : folders) {
     auto folder_original = folder.name;
@@ -341,7 +330,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
         return error{error_code::format_error, "TES4 BSA file record hash does not match filename table"};
       }
 
-      const auto stored_size = record.size_flags & ~file_size_compression_toggle;
+      const auto stored_size = record.size_flags & ~tes4_bsa_file_size_compression_toggle;
       if (!span_fits(record.offset, stored_size, archive_size)) {
         return error{error_code::format_error, "TES4 BSA entry payload span is outside the archive"};
       }
@@ -371,7 +360,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                                        record.offset,
                                        record.hash,
                                        compression,
-                                       record.size_flags & file_size_compression_toggle,
+                                        record.size_flags & tes4_bsa_file_size_compression_toggle,
                                        has_embedded_names,
                                        prefix_size});
     }
@@ -394,7 +383,7 @@ result<std::vector<folder_record>> read_folder_records(detail::binary_reader& re
     }
 
     std::uint64_t offset = 0;
-    if (header.version == sse_version) {
+    if (header.version == tes4_bsa_skyrim_se_version) {
       const auto unknown = reader.read_u32_le();
       const auto wide_offset = reader.read_u64_le();
       if (!unknown || !wide_offset) {
@@ -438,7 +427,7 @@ result<void> validate_tables(detail::binary_reader& reader, const header_fields&
     folder_name_bytes_seen += 1U + name_size.value();
 
     std::size_t file_record_bytes = 0;
-    if (!multiply_fits(folder.file_count, file_record_size, file_record_bytes)) {
+    if (!multiply_fits(folder.file_count, tes4_bsa_file_record_size, file_record_bytes)) {
       return error{error_code::format_error, "TES4 BSA file record table is too large"};
     }
     auto skipped_records = skip_checked(reader, file_record_bytes);
@@ -471,7 +460,7 @@ result<void> validate_tables(detail::binary_reader& reader, const header_fields&
 template <typename PayloadReader>
 result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> table_bytes, std::size_t archive_size,
                                                      detected_bsa_format detected, PayloadReader& read_payload_bytes) {
-  if (table_bytes.size() < fixed_header_size) {
+  if (table_bytes.size() < tes4_bsa_header_size) {
     return error{error_code::format_error, "TES4 BSA header is truncated"};
   }
 
@@ -483,23 +472,25 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> 
   if (header.value().version != detected.version) {
     return error{error_code::format_error, "TES4 BSA detected version does not match parsed header"};
   }
-  if (header.value().folder_offset != fixed_header_size) {
+  if (header.value().folder_offset != tes4_bsa_header_size) {
     return error{error_code::format_error, "TES4 BSA folder record offset does not match supported table layout"};
   }
-  if ((header.value().archive_flags & archive_include_directory_names) == 0U ||
-      (header.value().archive_flags & archive_include_file_names) == 0U || header.value().total_folder_name_length == 0U ||
+  if ((header.value().archive_flags & tes4_bsa_archive_include_directory_names) == 0U ||
+      (header.value().archive_flags & tes4_bsa_archive_include_file_names) == 0U || header.value().total_folder_name_length == 0U ||
       (header.value().file_count > 0U && header.value().total_file_name_length == 0U)) {
     return error{error_code::unsupported, "TES4 BSA archive does not include usable entry names"};
   }
 
-  const auto folder_record_size = detected.version == sse_version ? sse_folder_record_size : legacy_folder_record_size;
+  const auto folder_record_size = detected.version == tes4_bsa_skyrim_se_version ? tes4_bsa_sse_folder_record_size
+                                                                                 : tes4_bsa_legacy_folder_record_size;
   auto table_size = metadata_table_size(header.value(), folder_record_size, archive_size);
   if (!table_size) {
     return table_size.error();
   }
   std::size_t folder_records_size = 0;
   if (!multiply_fits(header.value().folder_count, folder_record_size, folder_records_size) ||
-      !span_fits(fixed_header_size, folder_records_size, table_bytes.size()) || table_bytes.size() < table_size.value()) {
+      !span_fits(tes4_bsa_header_size, folder_records_size, table_bytes.size()) ||
+      table_bytes.size() < table_size.value()) {
     return error{error_code::format_error, "TES4 BSA folder record span is outside the archive"};
   }
 
@@ -512,7 +503,7 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> 
     return folder_counts.error();
   }
   detail::binary_reader table_validator{table_bytes};
-  auto skipped_header_and_records = table_validator.skip(fixed_header_size + folder_records_size);
+  auto skipped_header_and_records = table_validator.skip(tes4_bsa_header_size + folder_records_size);
   if (!skipped_header_and_records) {
     return skipped_header_and_records.error();
   }
@@ -583,7 +574,7 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_file(std::string_view host_path,
   if (!input) {
     return error{error_code::io_error, "failed to open archive host path"};
   }
-  auto header_bytes = read_file_bytes_at(input, 0U, fixed_header_size, "TES4 BSA fixed header");
+  auto header_bytes = read_file_bytes_at(input, 0U, tes4_bsa_header_size, "TES4 BSA fixed header");
   if (!header_bytes) {
     return header_bytes.error();
   }
@@ -593,7 +584,8 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_file(std::string_view host_path,
     return header.error();
   }
 
-  const auto folder_record_size = detected.version == sse_version ? sse_folder_record_size : legacy_folder_record_size;
+  const auto folder_record_size = detected.version == tes4_bsa_skyrim_se_version ? tes4_bsa_sse_folder_record_size
+                                                                                 : tes4_bsa_legacy_folder_record_size;
   auto table_size = metadata_table_size(header.value(), folder_record_size, static_cast<std::size_t>(archive_size));
   if (!table_size) {
     return table_size.error();
