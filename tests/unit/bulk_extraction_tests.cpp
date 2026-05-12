@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <detail/bethesda_hash.hpp>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -295,6 +297,12 @@ std::vector<std::byte> build_raw_ba2_dx10_fixture(std::string_view archive_path,
   constexpr std::uint64_t file_table_offset = 24ULL + 24ULL + chunk_header_size;
   const std::uint64_t payload_offset = file_table_offset + 2ULL + archive_path.size();
   REQUIRE(payload.size() == static_cast<std::size_t>(width) * height * 4U);
+  const auto slash = archive_path.find_last_of('/');
+  const auto directory = slash == std::string_view::npos ? std::string_view{} : archive_path.substr(0U, slash);
+  const auto file_name = slash == std::string_view::npos ? archive_path : archive_path.substr(slash + 1U);
+  const auto dot = file_name.find_last_of('.');
+  REQUIRE(dot != std::string_view::npos);
+  const auto stem = file_name.substr(0U, dot);
 
   byte_buffer writer;
   writer.ascii4({'B', 'T', 'D', 'X'});
@@ -302,9 +310,9 @@ std::vector<std::byte> build_raw_ba2_dx10_fixture(std::string_view archive_path,
   writer.ascii4({'D', 'X', '1', '0'});
   writer.u32(file_count);
   writer.u64(file_table_offset);
-  writer.u32(0U);
+  writer.u32(libbsa::detail::hash_fo4(stem));
   writer.ascii4({'d', 'd', 's', '\0'});
-  writer.u32(0U);
+  writer.u32(libbsa::detail::hash_fo4(directory));
   writer.u8(0U);
   writer.u8(1U);
   writer.u16(chunk_header_size);

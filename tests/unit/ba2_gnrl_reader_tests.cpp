@@ -4,6 +4,8 @@
 
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 
+#include <detail/bethesda_hash.hpp>
+
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -81,6 +83,38 @@ std::vector<std::byte> bytes_from_hex(std::string_view hex) {
     bytes.push_back(static_cast<std::byte>(std::stoul(pair, nullptr, 16)));
   }
   return bytes;
+}
+
+/// Reads a complete binary fixture into memory so tests can corrupt selected record fields.
+std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
+  std::ifstream input{path, std::ios::binary};
+  std::vector<std::byte> bytes;
+  for (char ch = 0; input.get(ch);) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+  return bytes;
+}
+
+/// Writes a mutated binary fixture to a temporary host path.
+void write_binary_file(const std::filesystem::path& path, const std::vector<std::byte>& bytes) {
+  std::ofstream output{path, std::ios::binary | std::ios::trunc};
+  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+}
+
+/// Overwrites a little-endian UInt32 field inside a mutable binary fixture.
+void overwrite_u32_le(std::vector<std::byte>& bytes, std::size_t offset, std::uint32_t value) {
+  for (std::uint32_t index = 0; index < 4U; ++index) {
+    bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
+  }
+}
+
+/// Reads a little-endian UInt32 field from a binary fixture.
+std::uint32_t read_u32_le(const std::vector<std::byte>& bytes, std::size_t offset) {
+  std::uint32_t value = 0;
+  for (std::uint32_t index = 0; index < 4U; ++index) {
+    value |= static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.at(offset + index))) << (index * 8U);
+  }
+  return value;
 }
 
 class collecting_sink final : public libbsa::payload_sink {
@@ -252,9 +286,9 @@ TEST_CASE("ba2_gnrl_bounded_open opens sparse large-payload archives without rea
   append_u32_le(bytes, 1U);
   append_u64_le(bytes, 60U);
 
-  append_u32_le(bytes, 0x12345678U);
+  append_u32_le(bytes, libbsa::detail::hash_fo4("sparse_payload.bin"));
   append_ascii(bytes, std::string_view{"BIN\0", 4U});
-  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, libbsa::detail::hash_fo4("meshes"));
   append_u32_le(bytes, 0x0000002AU);
   append_u64_le(bytes, payload_offset);
   append_u32_le(bytes, 0U);
@@ -314,9 +348,9 @@ TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename t
   append_u32_le(bytes, file_count);
   append_u64_le(bytes, static_cast<std::uint64_t>(file_table_offset)); // FileTableOffset
 
-  append_u32_le(bytes, 0x12345678U);
+  append_u32_le(bytes, libbsa::detail::hash_fo4("alpha.nif"));
   append_ascii(bytes, std::string_view{"NIF\0", 4U});
-  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, libbsa::detail::hash_fo4("meshes/endtable"));
   append_u32_le(bytes, 0U);
   append_u64_le(bytes, record_table_end);
   append_u32_le(bytes, 0U);
@@ -379,9 +413,9 @@ TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
   append_u32_le(bytes, file_count);
   append_u64_le(bytes, record_table_end);
 
-  append_u32_le(bytes, 0x12345678U);
+  append_u32_le(bytes, libbsa::detail::hash_fo4("headerpayload.nif"));
   append_ascii(bytes, std::string_view{"NIF\0", 4U});
-  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, libbsa::detail::hash_fo4("meshes/invalid"));
   append_u32_le(bytes, 0U);
   append_u64_le(bytes, 0U);
   append_u32_le(bytes, 0U);
@@ -402,6 +436,52 @@ TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
 
   REQUIRE_FALSE(opened.has_value());
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
+          "[unit][fixture][malformed][ba2_gnrl_detector][ba2_gnrl_hash_lookup]") {
+  constexpr std::size_t first_record_name_hash_offset = 24U;
+  constexpr std::size_t first_record_directory_hash_offset = 32U;
+
+  SECTION("NameHash") {
+    auto bytes = read_binary_file(generated_archive_path("ba2_gnrl_fo4.ba2"));
+    overwrite_u32_le(bytes, first_record_name_hash_offset,
+                     read_u32_le(bytes, first_record_name_hash_offset) ^ 0x1000U);
+
+    const auto mutated = std::filesystem::temp_directory_path() / "libbsa_ba2_gnrl_name_hash_mismatch.ba2";
+    temp_file_cleanup cleanup{mutated};
+    write_binary_file(mutated, bytes);
+
+    auto opened = libbsa::archive_reader::open(mutated.string());
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+    auto validated = libbsa::validate_archive(mutated.string());
+    REQUIRE(validated.has_value());
+    CHECK_FALSE(validated.value().is_valid());
+    REQUIRE(validated.value().errors.size() == 1U);
+    CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+  }
+
+  SECTION("DirectoryHash") {
+    auto bytes = read_binary_file(generated_archive_path("ba2_gnrl_fo4.ba2"));
+    overwrite_u32_le(bytes, first_record_directory_hash_offset,
+                     read_u32_le(bytes, first_record_directory_hash_offset) ^ 0x1000U);
+
+    const auto mutated = std::filesystem::temp_directory_path() / "libbsa_ba2_gnrl_directory_hash_mismatch.ba2";
+    temp_file_cleanup cleanup{mutated};
+    write_binary_file(mutated, bytes);
+
+    auto opened = libbsa::archive_reader::open(mutated.string());
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+    auto validated = libbsa::validate_archive(mutated.string());
+    REQUIRE(validated.has_value());
+    CHECK_FALSE(validated.value().is_valid());
+    REQUIRE(validated.value().errors.size() == 1U);
+    CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+  }
 }
 
 TEST_CASE("ba2_gnrl_detector returns format_error for oversized declared record tables",

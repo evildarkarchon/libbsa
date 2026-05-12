@@ -1,6 +1,7 @@
 #include "formats/ba2/ba2_gnrl_parser.hpp"
 
 #include <detail/archive_path.hpp>
+#include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/parser_primitives.hpp>
 
@@ -10,6 +11,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace libbsa::formats::ba2 {
@@ -60,6 +62,14 @@ bool spans_overlap_u64(std::uint64_t first_start, std::uint64_t first_length, st
     return false;
   }
   return first_start < second_start + second_length && second_start < first_start + first_length;
+}
+
+std::pair<std::string_view, std::string_view> split_directory_file(std::string_view archive_path) noexcept {
+  const auto slash = archive_path.find_last_of('/');
+  if (slash == std::string_view::npos) {
+    return {{}, archive_path};
+  }
+  return {archive_path.substr(0U, slash), archive_path.substr(slash + 1U)};
 }
 
 std::size_t header_size_for(std::uint32_t version) noexcept {
@@ -231,6 +241,15 @@ result<std::vector<entry_metadata>> materialize_entries(std::uint64_t archive_si
     }
     if (!canonical_paths.insert(canonical.value().value).second) {
       return error{error_code::format_error, "BA2 GNRL contains duplicate canonical archive paths"};
+    }
+    const auto [directory, file_name] = split_directory_file(canonical.value().value);
+    // BA2 lookup records store separate CRCs for the file name and containing directory; accepting mismatches would
+    // expose entries by parsed text that Bethesda-style hash lookup cannot reach.
+    if (records[index].name_hash != detail::hash_fo4(file_name)) {
+      return error{error_code::format_error, "BA2 GNRL NameHash does not match filename table"};
+    }
+    if (records[index].directory_hash != detail::hash_fo4(directory)) {
+      return error{error_code::format_error, "BA2 GNRL DirectoryHash does not match filename table"};
     }
 
     const auto stored_size = records[index].packed_size != 0U ? records[index].packed_size : records[index].size;

@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <detail/bethesda_hash.hpp>
+
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -74,6 +76,38 @@ std::string archive_original_path_from_manifest(std::string value) {
   return value;
 }
 
+/// Reads a complete binary fixture into memory so tests can corrupt selected record fields.
+std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
+  std::ifstream input{path, std::ios::binary};
+  std::vector<std::byte> bytes;
+  for (char ch = 0; input.get(ch);) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+  return bytes;
+}
+
+/// Writes a mutated binary fixture to a temporary host path.
+void write_binary_file(const std::filesystem::path& path, const std::vector<std::byte>& bytes) {
+  std::ofstream output{path, std::ios::binary | std::ios::trunc};
+  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+}
+
+/// Overwrites a little-endian UInt32 field inside a mutable binary fixture.
+void overwrite_u32_le(std::vector<std::byte>& bytes, std::size_t offset, std::uint32_t value) {
+  for (std::uint32_t index = 0; index < 4U; ++index) {
+    bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
+  }
+}
+
+/// Reads a little-endian UInt32 field from a binary fixture.
+std::uint32_t read_u32_le(const std::vector<std::byte>& bytes, std::size_t offset) {
+  std::uint32_t value = 0;
+  for (std::uint32_t index = 0; index < 4U; ++index) {
+    value |= static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.at(offset + index))) << (index * 8U);
+  }
+  return value;
+}
+
 const nlohmann::json& manifest_entry_for_path(const nlohmann::json& manifest, std::string_view path) {
   const auto found = std::find_if(manifest.at("entries").begin(), manifest.at("entries").end(), [&](const auto& entry) {
     return entry.at("path").get<std::string>() == path;
@@ -118,8 +152,8 @@ void write_sparse_dx10_archive(const std::filesystem::path& path) {
   constexpr std::uint32_t ba2_record_sentinel = 0xBAAD'F00DU;
   constexpr std::uint16_t chunk_header_size = 24U;
   const std::string original_path = "Textures/Generated/Sparse.dds";
-  const auto name_hash = std::uint32_t{0x4C75B3A1U};
-  const auto directory_hash = std::uint32_t{0x2A84D5E3U};
+  const auto name_hash = libbsa::detail::hash_fo4("sparse");
+  const auto directory_hash = libbsa::detail::hash_fo4("textures/generated");
   const auto file_table_offset = std::uint64_t{72U};
 
   std::filesystem::create_directories(path.parent_path());
@@ -341,6 +375,56 @@ TEST_CASE("ba2_dx10_detector returns format_error for oversized declared filenam
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
 
   std::filesystem::remove(temp_path, remove_error);
+}
+
+TEST_CASE("ba2_dx10_detector rejects record hash mismatches",
+          "[unit][fixture][malformed][ba2_dx10_detector][ba2_dx10_hash_lookup]") {
+  constexpr std::size_t first_record_name_hash_offset = 24U;
+  constexpr std::size_t first_record_directory_hash_offset = 32U;
+
+  SECTION("NameHash") {
+    auto bytes = read_binary_file(generated_archive_path("ba2_dx10_fo4.ba2"));
+    overwrite_u32_le(bytes, first_record_name_hash_offset,
+                     read_u32_le(bytes, first_record_name_hash_offset) ^ 0x1000U);
+
+    const auto mutated = std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_name_hash_mismatch.ba2";
+    write_binary_file(mutated, bytes);
+
+    auto opened = libbsa::archive_reader::open(mutated.string());
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+    auto validated = libbsa::validate_archive(mutated.string());
+    REQUIRE(validated.has_value());
+    CHECK_FALSE(validated.value().is_valid());
+    REQUIRE(validated.value().errors.size() == 1U);
+    CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+
+    std::error_code ignored;
+    std::filesystem::remove(mutated, ignored);
+  }
+
+  SECTION("DirectoryHash") {
+    auto bytes = read_binary_file(generated_archive_path("ba2_dx10_fo4.ba2"));
+    overwrite_u32_le(bytes, first_record_directory_hash_offset,
+                     read_u32_le(bytes, first_record_directory_hash_offset) ^ 0x1000U);
+
+    const auto mutated = std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_directory_hash_mismatch.ba2";
+    write_binary_file(mutated, bytes);
+
+    auto opened = libbsa::archive_reader::open(mutated.string());
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+    auto validated = libbsa::validate_archive(mutated.string());
+    REQUIRE(validated.has_value());
+    CHECK_FALSE(validated.value().is_valid());
+    REQUIRE(validated.value().errors.size() == 1U);
+    CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+
+    std::error_code ignored;
+    std::filesystem::remove(mutated, ignored);
+  }
 }
 
 TEST_CASE("ba2_dx10_layout exposes validated order and rejects contradictory format-defined order",

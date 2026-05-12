@@ -40,6 +40,7 @@ struct header_fields {
 };
 
 struct folder_record {
+  std::uint64_t hash;
   std::uint32_t file_count;
   std::uint64_t offset;
 };
@@ -183,6 +184,11 @@ result<std::vector<folder_block>> read_folder_blocks(detail::binary_reader& read
     auto folder_name = read_bsa_name(reader, name_size.value(), "folder name");
     if (!folder_name) {
       return folder_name.error();
+    }
+    // TES4 folder lookup reaches the stored folder hash before any per-file hash,
+    // so a mismatched folder record cannot resolve through game-style lookup.
+    if (folder.hash != detail::hash_tes4(folder_name.value(), {})) {
+      return error{error_code::format_error, "TES4 BSA folder record hash does not match folder name table"};
     }
     folder_name_bytes_seen += 1U + name_size.value();
 
@@ -403,7 +409,7 @@ result<std::vector<folder_record>> read_folder_records(detail::binary_reader& re
       offset = narrow_offset.value();
     }
 
-    records.push_back(folder_record{file_count.value(), offset});
+    records.push_back(folder_record{hash.value(), file_count.value(), offset});
   }
   return records;
 }

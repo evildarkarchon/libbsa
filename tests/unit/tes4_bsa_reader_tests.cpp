@@ -333,6 +333,25 @@ TEST_CASE("tes4_bsa_malformed_open rejects file record hash mismatches",
   CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
 }
 
+TEST_CASE("tes4_bsa_malformed_open rejects folder record hash mismatches",
+          "[unit][fixture][malformed][tes4_bsa_malformed_open][tes4_bsa_hash_lookup]") {
+  auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+  overwrite_u32_le(bytes, 36U, read_u32_le(bytes, 36U) ^ 0x1000U);
+
+  const auto mutated = std::filesystem::temp_directory_path() / "libbsa_folder_hash_mismatch.bsa";
+  write_binary_file(mutated, bytes);
+
+  auto opened = libbsa::archive_reader::open(mutated.string());
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+  auto validated = libbsa::validate_archive(mutated.string());
+  REQUIRE(validated.has_value());
+  CHECK_FALSE(validated.value().is_valid());
+  REQUIRE(validated.value().errors.size() == 1U);
+  CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+}
+
 TEST_CASE("tes4_bsa_entry_metadata materializes table paths, hashes, sizes, and embedded names",
           "[unit][fixture][tes4_bsa_entry_metadata][tes4_bsa_listing][tes4_bsa_embedded_name]") {
   for (const auto& fixture : success_fixtures()) {

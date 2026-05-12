@@ -3,6 +3,7 @@
 #include "texture/dds_layout.hpp"
 
 #include <detail/archive_path.hpp>
+#include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/byte_vector.hpp>
 #include <detail/parser_primitives.hpp>
@@ -15,6 +16,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace libbsa::formats::ba2 {
@@ -77,6 +79,22 @@ std::size_t header_size_for(std::uint32_t version) noexcept {
     return starfield_v2_header_size;
   }
   return common_header_size;
+}
+
+std::pair<std::string_view, std::string_view> split_directory_file(std::string_view archive_path) noexcept {
+  const auto slash = archive_path.find_last_of('/');
+  if (slash == std::string_view::npos) {
+    return {{}, archive_path};
+  }
+  return {archive_path.substr(0U, slash), archive_path.substr(slash + 1U)};
+}
+
+std::pair<std::string_view, std::string_view> split_stem_extension(std::string_view file_name) noexcept {
+  const auto dot = file_name.find_last_of('.');
+  if (dot == std::string_view::npos || dot == 0U || dot + 1U == file_name.size()) {
+    return {{}, {}};
+  }
+  return {file_name.substr(0U, dot), file_name.substr(dot + 1U)};
 }
 
 result<void> append_u16_le(std::vector<std::byte>& output, std::uint16_t value) {
@@ -366,6 +384,19 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     }
     if (!canonical_paths.insert(canonical.value().value).second) {
       return error{error_code::format_error, "BA2 DX10 contains duplicate canonical archive paths"};
+    }
+    const auto [directory, file_name] = split_directory_file(canonical.value().value);
+    const auto [stem, extension_text] = split_stem_extension(file_name);
+    if (stem.empty() || extension_text.empty()) {
+      return error{error_code::format_error, "BA2 DX10 filename table must include a file stem and extension"};
+    }
+    // DX10 records hash the texture stem separately from its containing directory; extension bytes are their own
+    // record field, so hashing the full filename would not match Bethesda lookup semantics.
+    if (records[index].name_hash != detail::hash_fo4(stem)) {
+      return error{error_code::format_error, "BA2 DX10 NameHash does not match filename table"};
+    }
+    if (records[index].directory_hash != detail::hash_fo4(directory)) {
+      return error{error_code::format_error, "BA2 DX10 DirectoryHash does not match filename table"};
     }
 
     auto chunks = public_chunks_for(records[index], detected);

@@ -175,10 +175,15 @@ std::uint32_t hash_folder(std::string_view canonical_path) {
   return slash == std::string_view::npos ? 0U : libbsa::detail::hash_fo4(canonical_path.substr(0U, slash));
 }
 
+std::uint32_t hash_file_name(std::string_view canonical_path) {
+  const auto slash = canonical_path.find_last_of('/');
+  return libbsa::detail::hash_fo4(slash == std::string_view::npos ? canonical_path : canonical_path.substr(slash + 1U));
+}
+
 void prepare_payload(entry_spec& entry) {
   entry.path = canonicalize(entry.original_path);
   entry.ext = extension_fourcc(entry.path);
-  entry.archive_hash = libbsa::detail::hash_fo4(entry.path);
+  entry.archive_hash = hash_file_name(entry.path);
   entry.raw_size = checked_u32(entry.expected_bytes.size(), "BA2 raw payload");
 
   if (entry.compression == libbsa::detail::compression_method::none) {
