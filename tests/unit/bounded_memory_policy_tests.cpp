@@ -135,3 +135,29 @@ TEST_CASE("bounded_memory_policy targeted writer stages avoid byte-at-a-time dis
     CHECK(text.find("input.get(ch)") == std::string::npos);
   }
 }
+
+TEST_CASE("bounded_memory_policy BA2 DX10 snapshot temp directories use hardened reservation",
+          "[unit][bounded_memory_policy][ba2_dx10_writer][security]") {
+  const auto text = read_text_file(source_root() / "src" / "formats" / "ba2" / "ba2_dx10_prepare.cpp");
+
+  constexpr auto required_tokens = std::array<std::string_view, 4U>{
+      "BCryptGenRandom",
+      "BCRYPT_USE_SYSTEM_PREFERRED_RNG",
+      "std::filesystem::create_directory",
+      "libbsa-dx10-snapshot-",
+  };
+  for (const auto token : required_tokens) {
+    INFO("BA2 DX10 hardened snapshot reservation token: " << token);
+    CHECK(text.find(token) != std::string::npos);
+  }
+
+  constexpr auto forbidden_tokens = std::array<std::string_view, 3U>{
+      "static std::atomic_uint64_t counter",
+      "fetch_add",
+      "std::to_string(id)",
+  };
+  for (const auto token : forbidden_tokens) {
+    INFO("BA2 DX10 predictable snapshot reservation token: " << token);
+    CHECK(text.find(token) == std::string::npos);
+  }
+}

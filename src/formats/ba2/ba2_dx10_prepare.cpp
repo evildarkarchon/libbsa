@@ -11,13 +11,25 @@
 #include "texture/dds_layout.hpp"
 #include "texture/directxtex_analyzer.hpp"
 
+// BCrypt depends on Windows base types; keep both headers private and prevent min/max macros.
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
+#include <bcrypt.h>
+
 #include <algorithm>
 #include <array>
-#include <atomic>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <limits>
 #include <optional>
+#include <string>
 #include <unordered_set>
 #include <utility>
 
@@ -61,17 +73,48 @@ constexpr detail::writer_disk_source_context ba2_dx10_snapshot_source_context{
     "BA2 DX10 writer failed while reading snapshot temp file",
     "BA2 DX10 snapshot temp file"};
 
+constexpr std::size_t snapshot_random_suffix_bytes = 16U;
+
 result<std::vector<std::byte>> read_dds_file(std::string_view dds_host_path) {
   return detail::read_disk_source_exact(dds_host_path, ba2_dx10_dds_source_context);
 }
 
+/// Generates a 128-bit lowercase hex suffix using the Windows system-preferred RNG.
+/// Returns `io_error` if Windows cannot provide fresh cryptographic randomness for a candidate.
+result<std::string> make_snapshot_random_suffix() {
+  std::array<std::byte, snapshot_random_suffix_bytes> random_bytes{};
+  const auto status = BCryptGenRandom(nullptr, reinterpret_cast<PUCHAR>(random_bytes.data()),
+                                      static_cast<ULONG>(random_bytes.size()), BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+  if (status < 0) {
+    return error{error_code::io_error, "BA2 DX10 writer failed to generate snapshot temp directory name"};
+  }
+
+  constexpr char hex_digits[] = "0123456789abcdef";
+  std::string suffix;
+  suffix.resize(random_bytes.size() * 2U);
+  for (std::size_t index = 0; index < random_bytes.size(); ++index) {
+    const auto value = static_cast<unsigned char>(random_bytes[index]);
+    suffix[index * 2U] = hex_digits[(value >> 4U) & 0x0FU];
+    suffix[index * 2U + 1U] = hex_digits[value & 0x0FU];
+  }
+  return suffix;
+}
+
 result<std::filesystem::path> make_unique_snapshot_directory() {
-  static std::atomic_uint64_t counter{0U};
-  const auto root = std::filesystem::temp_directory_path();
+  std::error_code fs_error;
+  const auto root = std::filesystem::temp_directory_path(fs_error);
+  if (fs_error) {
+    return error{error_code::io_error, "BA2 DX10 writer failed to locate snapshot temp root"};
+  }
+
   for (std::uint32_t attempt = 0; attempt < 1024U; ++attempt) {
-    const auto id = counter.fetch_add(1U, std::memory_order_relaxed);
-    const auto candidate = root / ("libbsa-dx10-snapshot-" + std::to_string(id));
-    std::error_code fs_error;
+    auto suffix = make_snapshot_random_suffix();
+    if (!suffix) {
+      return suffix.error();
+    }
+    const auto candidate = root / ("libbsa-dx10-snapshot-" + suffix.value());
+    fs_error.clear();
+    // Directory creation remains the atomic reservation boundary; existing paths are collisions.
     if (std::filesystem::create_directory(candidate, fs_error)) {
       return candidate;
     }

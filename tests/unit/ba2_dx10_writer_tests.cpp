@@ -75,6 +75,8 @@ struct ba2_dx10_record_metadata {
   std::uint32_t directory_hash{};
 };
 
+constexpr std::string_view snapshot_directory_prefix = "libbsa-dx10-snapshot-";
+
 constexpr auto writer_proof_matrix = std::to_array<writer_proof_case>({
     {"bc1_unorm", "BC1_UNORM", libbsa::ba2_dx10_target::fallout4},
     {"bc1_unorm_srgb", "BC1_UNORM_SRGB", libbsa::ba2_dx10_target::starfield_v3},
@@ -98,6 +100,23 @@ std::filesystem::path unique_output_path(std::string_view stem) {
   auto path = writer_test_dir() / (std::string{stem} + "-" + std::to_string(++counter) + ".ba2");
   std::filesystem::remove(path);
   return path;
+}
+
+/// Lists BA2 DX10 snapshot temp directories without querying metadata for unrelated temp entries.
+std::set<std::filesystem::path> snapshot_directories() {
+  std::set<std::filesystem::path> paths;
+  for (const auto& entry : std::filesystem::directory_iterator{std::filesystem::temp_directory_path()}) {
+    const auto name = entry.path().filename().string();
+    if (name.rfind(snapshot_directory_prefix, 0U) != 0U) {
+      continue;
+    }
+
+    std::error_code fs_error;
+    if (entry.is_directory(fs_error)) {
+      paths.insert(entry.path());
+    }
+  }
+  return paths;
 }
 
 void write_binary_file(const std::filesystem::path& path, std::span<const std::byte> bytes) {
@@ -686,6 +705,43 @@ TEST_CASE("ba2_dx10_writer::add_file snapshots DDS bytes before later source fil
   write_binary_file(scratch_path, malformed_bytes);
   std::filesystem::remove(scratch_path);
   SUCCEED("snapshot add succeeded before the source DDS was overwritten and deleted");
+}
+
+TEST_CASE("BA2 DX10 writer state removes snapshot temp directory on teardown",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup]") {
+  const auto before = snapshot_directories();
+  std::set<std::filesystem::path> staged_snapshot_dirs;
+
+  {
+    const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+    const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+    libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+    REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(),
+                            (generated_source_dir() / source_case.at("file").get<std::string>()).string())
+                .has_value());
+
+    const auto during = snapshot_directories();
+    for (const auto& path : during) {
+      if (!before.contains(path)) {
+        staged_snapshot_dirs.insert(path);
+      }
+    }
+
+    REQUIRE_FALSE(staged_snapshot_dirs.empty());
+    for (const auto& path : staged_snapshot_dirs) {
+      INFO("staged BA2 DX10 snapshot directory: " << path.string());
+      CHECK(std::filesystem::exists(path));
+    }
+  }
+
+  for (const auto& path : staged_snapshot_dirs) {
+    INFO("teardown-owned BA2 DX10 snapshot directory: " << path.string());
+    CHECK_FALSE(std::filesystem::exists(path));
+    std::error_code fs_error;
+    // If this check fails, still remove the test-created snapshot so later runs start cleanly.
+    std::filesystem::remove_all(path, fs_error);
+  }
 }
 
 TEST_CASE("ba2_dx10_writer::add_file accepts duplicate canonical archive paths for write-time validation",

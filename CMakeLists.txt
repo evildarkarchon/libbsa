@@ -85,6 +85,7 @@ target_link_libraries(libbsa
     # Use the concrete vcpkg target when available so installed shared exports retain the LZ4 runtime DLL.
     ${libbsa_lz4_target}
     Microsoft::DirectXTex
+    bcrypt
 )
 
 set(libbsa_library_sources

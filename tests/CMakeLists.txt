@@ -35,6 +35,7 @@ function(libbsa_link_internal_test_support target_name)
         $<IF:$<TARGET_EXISTS:libdeflate::libdeflate_static>,libdeflate::libdeflate_static,libdeflate::libdeflate_shared>
         ${libbsa_lz4_target}
         Microsoft::DirectXTex
+        bcrypt
     )
   else()
     target_link_libraries(${target_name}
