@@ -85,7 +85,10 @@ result<std::size_t> table_size_for(const header_fields& header, std::size_t arch
 
 result<std::vector<file_record>> read_file_records(detail::binary_reader& reader, std::uint32_t file_count) {
   std::vector<file_record> records;
-  records.reserve(file_count);
+  auto reserved = detail::reserve_metadata_vector(records, file_count, "TES3 BSA file records");
+  if (!reserved) {
+    return reserved.error();
+  }
   for (std::uint32_t index = 0; index < file_count; ++index) {
     const auto size = reader.read_u32_le();
     const auto raw_offset = reader.read_u32_le();
@@ -99,7 +102,10 @@ result<std::vector<file_record>> read_file_records(detail::binary_reader& reader
 
 result<std::vector<std::uint32_t>> read_name_offsets(detail::binary_reader& reader, std::uint32_t file_count) {
   std::vector<std::uint32_t> offsets;
-  offsets.reserve(file_count);
+  auto reserved = detail::reserve_metadata_vector(offsets, file_count, "TES3 BSA name offsets");
+  if (!reserved) {
+    return reserved.error();
+  }
   for (std::uint32_t index = 0; index < file_count; ++index) {
     const auto offset = reader.read_u32_le();
     if (!offset) {
@@ -119,7 +125,10 @@ result<std::vector<std::string>> read_names(std::span<const std::byte> table_byt
 
   const auto name_section_size = hash_table_start - name_section_start;
   std::vector<std::string> names;
-  names.reserve(name_offsets.size());
+  auto reserved = detail::reserve_metadata_vector(names, name_offsets.size(), "TES3 BSA name table entries");
+  if (!reserved) {
+    return reserved.error();
+  }
   for (const auto offset : name_offsets) {
     if (offset >= name_section_size) {
       return error{error_code::format_error, "TES3 BSA name offset is outside the name table"};
@@ -143,7 +152,10 @@ result<std::vector<std::string>> read_names(std::span<const std::byte> table_byt
 
 result<std::vector<std::uint64_t>> read_hashes(detail::binary_reader& reader, std::uint32_t file_count) {
   std::vector<std::uint64_t> hashes;
-  hashes.reserve(file_count);
+  auto reserved = detail::reserve_metadata_vector(hashes, file_count, "TES3 BSA hash records");
+  if (!reserved) {
+    return reserved.error();
+  }
   for (std::uint32_t index = 0; index < file_count; ++index) {
     const auto hash = reader.read_u64_le();
     if (!hash) {
@@ -158,75 +170,95 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                                                         std::span<const file_record> records,
                                                         std::span<const std::string> names,
                                                         std::span<const std::uint64_t> hashes) {
-  std::vector<entry_metadata> entries;
-  entries.reserve(records.size());
-  std::unordered_set<std::string> canonical_paths;
-  std::unordered_set<std::uint64_t> stored_hashes;
-  std::vector<std::pair<std::size_t, std::size_t>> payload_spans;
-  payload_spans.reserve(records.size());
-  std::optional<std::uint64_t> previous_hash_sort_key;
+  try {
+    std::vector<entry_metadata> entries;
+    auto reserved_entries = detail::reserve_metadata_vector(entries, records.size(), "TES3 BSA entry metadata");
+    if (!reserved_entries) {
+      return reserved_entries.error();
+    }
+    std::unordered_set<std::string> canonical_paths;
+    auto reserved_paths = detail::reserve_metadata_set(canonical_paths, records.size(), "TES3 BSA canonical path set");
+    if (!reserved_paths) {
+      return reserved_paths.error();
+    }
+    std::unordered_set<std::uint64_t> stored_hashes;
+    auto reserved_hashes = detail::reserve_metadata_set(stored_hashes, records.size(), "TES3 BSA stored hash set");
+    if (!reserved_hashes) {
+      return reserved_hashes.error();
+    }
+    std::vector<std::pair<std::size_t, std::size_t>> payload_spans;
+    auto reserved_spans = detail::reserve_metadata_vector(payload_spans, records.size(), "TES3 BSA payload spans");
+    if (!reserved_spans) {
+      return reserved_spans.error();
+    }
+    std::optional<std::uint64_t> previous_hash_sort_key;
 
-  for (std::size_t index = 0; index < records.size(); ++index) {
-    const auto stored_hash = hashes[index];
-    const auto sort_key = detail::tes3_hash_sort_key(stored_hash);
-    if (previous_hash_sort_key && sort_key < previous_hash_sort_key.value()) {
-      return error{error_code::format_error, "TES3 BSA hash records are not sorted"};
-    }
-    previous_hash_sort_key = sort_key;
-    // Duplicate stored hashes are malformed even when one name would also fail recomputation; check them first so
-    // collision fixtures exercise the TES3 collision branch rather than being hidden by mismatch validation.
-    if (!stored_hashes.insert(stored_hash).second) {
-      return error{error_code::format_error, "TES3 BSA contains duplicate stored hash records"};
-    }
-    const auto computed_hash = detail::hash_tes3(names[index]);
-    if (stored_hash != computed_hash) {
-      return error{error_code::format_error, "TES3 BSA stored hash does not match parsed name"};
-    }
-
-    auto original_path = names[index];
-    normalize_display_separators(original_path);
-    auto canonical = detail::normalize_archive_path(original_path);
-    if (!canonical) {
-      return error{error_code::format_error, "TES3 BSA contains an invalid archive path"};
-    }
-    if (!canonical_paths.insert(canonical.value().value).second) {
-      return error{error_code::format_error, "TES3 BSA contains duplicate canonical archive paths"};
-    }
-
-    std::size_t absolute_payload_offset = 0;
-    if (!add_fits(data_section_start, records[index].raw_offset, absolute_payload_offset)) {
-      return error{error_code::format_error, "TES3 BSA entry payload offset is too large"};
-    }
-    // TES5Edit/Core/wbBSArchive.pas:1128-1129,2114-2118 and UESP document TES3 payload offsets as
-    // data-section-relative; libbsa stores only archive-absolute offsets in runtime metadata.
-    if (!span_fits(absolute_payload_offset, records[index].size, archive_size)) {
-      return error{error_code::format_error, "TES3 BSA entry payload span is outside the archive"};
-    }
-    const auto payload_end = absolute_payload_offset + static_cast<std::size_t>(records[index].size);
-    for (const auto& span : payload_spans) {
-      const auto overlaps = absolute_payload_offset < span.second && span.first < payload_end;
-      if (records[index].size != 0U && overlaps) {
-        return error{error_code::format_error, "TES3 BSA entry payload spans overlap"};
+    for (std::size_t index = 0; index < records.size(); ++index) {
+      const auto stored_hash = hashes[index];
+      const auto sort_key = detail::tes3_hash_sort_key(stored_hash);
+      if (previous_hash_sort_key && sort_key < previous_hash_sort_key.value()) {
+        return error{error_code::format_error, "TES3 BSA hash records are not sorted"};
       }
+      previous_hash_sort_key = sort_key;
+      // Duplicate stored hashes are malformed even when one name would also fail recomputation; check them first so
+      // collision fixtures exercise the TES3 collision branch rather than being hidden by mismatch validation.
+      if (!stored_hashes.insert(stored_hash).second) {
+        return error{error_code::format_error, "TES3 BSA contains duplicate stored hash records"};
+      }
+      const auto computed_hash = detail::hash_tes3(names[index]);
+      if (stored_hash != computed_hash) {
+        return error{error_code::format_error, "TES3 BSA stored hash does not match parsed name"};
+      }
+
+      auto original_path = names[index];
+      normalize_display_separators(original_path);
+      auto canonical = detail::normalize_archive_path(original_path);
+      if (!canonical) {
+        return error{error_code::format_error, "TES3 BSA contains an invalid archive path"};
+      }
+      if (!canonical_paths.insert(canonical.value().value).second) {
+        return error{error_code::format_error, "TES3 BSA contains duplicate canonical archive paths"};
+      }
+
+      std::size_t absolute_payload_offset = 0;
+      if (!add_fits(data_section_start, records[index].raw_offset, absolute_payload_offset)) {
+        return error{error_code::format_error, "TES3 BSA entry payload offset is too large"};
+      }
+      // TES5Edit/Core/wbBSArchive.pas:1128-1129,2114-2118 and UESP document TES3 payload offsets as
+      // data-section-relative; libbsa stores only archive-absolute offsets in runtime metadata.
+      if (!span_fits(absolute_payload_offset, records[index].size, archive_size)) {
+        return error{error_code::format_error, "TES3 BSA entry payload span is outside the archive"};
+      }
+      const auto payload_end = absolute_payload_offset + static_cast<std::size_t>(records[index].size);
+      for (const auto& span : payload_spans) {
+        const auto overlaps = absolute_payload_offset < span.second && span.first < payload_end;
+        if (records[index].size != 0U && overlaps) {
+          return error{error_code::format_error, "TES3 BSA entry payload spans overlap"};
+        }
+      }
+      payload_spans.push_back({absolute_payload_offset, payload_end});
+
+      entries.push_back(entry_metadata{canonical.value().value,
+                                       std::move(original_path),
+                                       records[index].size,
+                                       records[index].size,
+                                       static_cast<std::uint64_t>(absolute_payload_offset),
+                                       stored_hash,
+                                       entry_compression::none,
+                                       0U,
+                                       false,
+                                       0U});
     }
-    payload_spans.push_back({absolute_payload_offset, payload_end});
 
-    entries.push_back(entry_metadata{canonical.value().value,
-                                     std::move(original_path),
-                                     records[index].size,
-                                     records[index].size,
-                                     static_cast<std::uint64_t>(absolute_payload_offset),
-                                     stored_hash,
-                                     entry_compression::none,
-                                     0U,
-                                     false,
-                                     0U});
+    std::sort(entries.begin(), entries.end(), [](const entry_metadata& lhs, const entry_metadata& rhs) {
+      return lhs.path < rhs.path;
+    });
+    return entries;
+  } catch (const std::bad_alloc&) {
+    return detail::metadata_allocation_error("TES3 BSA entry metadata");
+  } catch (const std::length_error&) {
+    return detail::metadata_allocation_error("TES3 BSA entry metadata");
   }
-
-  std::sort(entries.begin(), entries.end(), [](const entry_metadata& lhs, const entry_metadata& rhs) {
-    return lhs.path < rhs.path;
-  });
-  return entries;
 }
 
 result<tes3_bsa_archive> parse_tes3_bsa_archive_impl(std::span<const std::byte> table_bytes, std::size_t archive_size,
@@ -245,6 +277,12 @@ result<tes3_bsa_archive> parse_tes3_bsa_archive_impl(std::span<const std::byte> 
   }
   if (header.value().version != detected.version) {
     return error{error_code::format_error, "TES3 BSA detected version does not match parsed header"};
+  }
+  auto count_limit = detail::validate_metadata_count(header.value().file_count,
+                                                     detail::metadata_entry_count_limit,
+                                                     "TES3 BSA file count");
+  if (!count_limit) {
+    return count_limit.error();
   }
 
   auto data_section_start = table_size_for(header.value(), archive_size);
@@ -312,6 +350,12 @@ result<tes3_bsa_archive> parse_tes3_bsa_archive_file(std::string_view host_path,
   auto header = read_header(header_reader);
   if (!header) {
     return header.error();
+  }
+  auto count_limit = detail::validate_metadata_count(header.value().file_count,
+                                                     detail::metadata_entry_count_limit,
+                                                     "TES3 BSA file count");
+  if (!count_limit) {
+    return count_limit.error();
   }
   auto table_size = table_size_for(header.value(), static_cast<std::size_t>(archive_size));
   if (!table_size) {

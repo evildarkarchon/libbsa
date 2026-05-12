@@ -222,9 +222,13 @@ result<header_fields> read_header(detail::binary_reader& reader) {
 }
 
 result<std::vector<dx10_record>> read_records(detail::binary_reader& reader, std::uint32_t file_count,
-                                              std::uint64_t file_table_offset) {
+                                               std::uint64_t file_table_offset) {
   std::vector<dx10_record> records;
-  records.reserve(file_count);
+  auto reserved = detail::reserve_metadata_vector(records, file_count, "BA2 DX10 records");
+  if (!reserved) {
+    return reserved.error();
+  }
+  std::uint64_t aggregate_chunk_count = 0;
   for (std::uint32_t index = 0; index < file_count; ++index) {
     const auto name_hash = reader.read_u32_le();
     const auto extension_bytes = reader.read_bytes(4U);
@@ -249,6 +253,12 @@ result<std::vector<dx10_record>> read_records(detail::binary_reader& reader, std
     if (chunk_header_size.value() != ba2_dx10_chunk_header_size) {
       return error{error_code::format_error, "BA2 DX10 chunk_header_size is unsupported"};
     }
+    std::uint64_t next_aggregate_chunk_count = 0;
+    if (!add_fits_u64(aggregate_chunk_count, chunk_count.value(), next_aggregate_chunk_count) ||
+        next_aggregate_chunk_count > detail::metadata_dx10_chunk_count_limit) {
+      return error{error_code::format_error, "BA2 DX10 aggregate texture chunk count exceeds libbsa metadata limit"};
+    }
+    aggregate_chunk_count = next_aggregate_chunk_count;
 
     std::array<std::byte, 4> extension{};
     std::copy(extension_bytes.value().begin(), extension_bytes.value().end(), extension.begin());
@@ -262,9 +272,12 @@ result<std::vector<dx10_record>> read_records(detail::binary_reader& reader, std
                        width.value(),
                        num_mips.value(),
                        dxgi_format.value(),
-                       cube_maps_raw.value(),
-                       {}};
-    record.chunks.reserve(chunk_count.value());
+                        cube_maps_raw.value(),
+                        {}};
+    auto reserved_chunks = detail::reserve_metadata_vector(record.chunks, chunk_count.value(), "BA2 DX10 chunk records");
+    if (!reserved_chunks) {
+      return reserved_chunks.error();
+    }
     for (std::uint8_t chunk_index = 0; chunk_index < chunk_count.value(); ++chunk_index) {
       const auto offset = reader.read_u64_le();
       const auto packed_size = reader.read_u32_le();
@@ -293,7 +306,10 @@ result<std::vector<std::string>> read_names(std::span<const std::byte> name_tabl
                                             std::size_t& consumed) {
   detail::binary_reader reader{name_table};
   std::vector<std::string> names;
-  names.reserve(file_count);
+  auto reserved = detail::reserve_metadata_vector(names, file_count, "BA2 DX10 filename table entries");
+  if (!reserved) {
+    return reserved.error();
+  }
   for (std::uint32_t index = 0; index < file_count; ++index) {
     const auto length = reader.read_u16_le();
     if (!length) {
@@ -360,35 +376,51 @@ std::uint32_t inferred_array_size(const dx10_record& record) noexcept {
 }
 
 result<std::vector<texture_chunk_metadata>> public_chunks_for(const dx10_record& record, detected_ba2_format detected) {
-  std::vector<texture_chunk_metadata> archive_chunks;
-  archive_chunks.reserve(record.chunks.size());
-  for (const auto& chunk : record.chunks) {
-    const auto compression = compression_for(chunk, detected);
-    archive_chunks.push_back(texture_chunk_metadata{chunk.offset,
-                                                    chunk.packed_size == 0U ? chunk.raw_size : chunk.packed_size,
-                                                    chunk.raw_size,
-                                                    chunk.start_mip,
-                                                    chunk.end_mip,
-                                                    compression});
-  }
+  try {
+    std::vector<texture_chunk_metadata> archive_chunks;
+    auto reserved_archive_chunks = detail::reserve_metadata_vector(archive_chunks,
+                                                                  record.chunks.size(),
+                                                                  "BA2 DX10 public texture chunks");
+    if (!reserved_archive_chunks) {
+      return reserved_archive_chunks.error();
+    }
+    for (const auto& chunk : record.chunks) {
+      const auto compression = compression_for(chunk, detected);
+      archive_chunks.push_back(texture_chunk_metadata{chunk.offset,
+                                                      chunk.packed_size == 0U ? chunk.raw_size : chunk.packed_size,
+                                                      chunk.raw_size,
+                                                      chunk.start_mip,
+                                                      chunk.end_mip,
+                                                      compression});
+    }
 
-  texture::dds_texture_layout layout{record.width,
-                                     record.height,
-                                     record.num_mips,
-                                     record.dxgi_format,
-                                     inferred_array_size(record),
-                                     record.cube_maps_raw == ba2_dx10_cubemap_raw};
-  auto ordered_segments = texture::validate_and_order_chunks(layout, archive_chunks);
-  if (!ordered_segments) {
-    return ordered_segments.error();
-  }
+    texture::dds_texture_layout layout{record.width,
+                                       record.height,
+                                       record.num_mips,
+                                       record.dxgi_format,
+                                       inferred_array_size(record),
+                                       record.cube_maps_raw == ba2_dx10_cubemap_raw};
+    auto ordered_segments = texture::validate_and_order_chunks(layout, archive_chunks);
+    if (!ordered_segments) {
+      return ordered_segments.error();
+    }
 
-  std::vector<texture_chunk_metadata> ordered_chunks;
-  ordered_chunks.reserve(ordered_segments.value().size());
-  for (const auto& logical_texture_segment : ordered_segments.value()) {
-    ordered_chunks.push_back(archive_chunks.at(logical_texture_segment.source_chunk_index));
+    std::vector<texture_chunk_metadata> ordered_chunks;
+    auto reserved_ordered_chunks = detail::reserve_metadata_vector(ordered_chunks,
+                                                                  ordered_segments.value().size(),
+                                                                  "BA2 DX10 ordered texture chunks");
+    if (!reserved_ordered_chunks) {
+      return reserved_ordered_chunks.error();
+    }
+    for (const auto& logical_texture_segment : ordered_segments.value()) {
+      ordered_chunks.push_back(archive_chunks.at(logical_texture_segment.source_chunk_index));
+    }
+    return ordered_chunks;
+  } catch (const std::bad_alloc&) {
+    return detail::metadata_allocation_error("BA2 DX10 public texture chunks");
+  } catch (const std::length_error&) {
+    return detail::metadata_allocation_error("BA2 DX10 public texture chunks");
   }
-  return ordered_chunks;
 }
 
 result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size,
@@ -396,106 +428,119 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                                                         std::span<const dx10_record> records,
                                                         std::span<const std::string> names,
                                                         detected_ba2_format detected) {
-  std::vector<entry_metadata> entries;
-  entries.reserve(records.size());
-  std::unordered_set<std::string> canonical_paths;
-
-  auto first_payload_offset = first_payload_offset_for(records, archive_size);
-  if (!first_payload_offset) {
-    return first_payload_offset.error();
-  }
-  if (name_table_end > first_payload_offset.value()) {
-    return error{error_code::format_error, "BA2 DX10 filename table overlaps payload data"};
-  }
-
-  for (std::size_t index = 0; index < records.size(); ++index) {
-    auto original_path = names[index];
-    normalize_display_separators(original_path);
-    auto canonical = detail::normalize_archive_path(original_path);
-    if (!canonical) {
-      return error{error_code::format_error, "BA2 DX10 filename table contains an invalid archive path"};
+  try {
+    std::vector<entry_metadata> entries;
+    auto reserved_entries = detail::reserve_metadata_vector(entries, records.size(), "BA2 DX10 entry metadata");
+    if (!reserved_entries) {
+      return reserved_entries.error();
     }
-    if (!canonical_paths.insert(canonical.value().value).second) {
-      return error{error_code::format_error, "BA2 DX10 contains duplicate canonical archive paths"};
-    }
-    const auto [directory, file_name] = split_directory_file(canonical.value().value);
-    const auto [stem, extension_text] = split_stem_extension(file_name);
-    if (stem.empty() || extension_text.empty()) {
-      return error{error_code::format_error, "BA2 DX10 filename table must include a file stem and extension"};
-    }
-    // DX10 records hash the texture stem separately from its containing directory; extension bytes are their own
-    // record field, so hashing the full filename would not match Bethesda lookup semantics.
-    if (records[index].name_hash != detail::hash_fo4(stem)) {
-      return error{error_code::format_error, "BA2 DX10 NameHash does not match filename table"};
-    }
-    if (records[index].directory_hash != detail::hash_fo4(directory)) {
-      return error{error_code::format_error, "BA2 DX10 DirectoryHash does not match filename table"};
-    }
-    auto expected_extension = extension_fourcc_for_extension(extension_text);
-    if (!expected_extension) {
-      return expected_extension.error();
-    }
-    // DX10 extension bytes participate in Bethesda texture lookup independently from the hashed stem.
-    if (!extension_fourcc_matches(records[index].extension, expected_extension.value())) {
-      return error{error_code::format_error, "BA2 DX10 record extension does not match filename table"};
+    std::unordered_set<std::string> canonical_paths;
+    auto reserved_paths = detail::reserve_metadata_set(canonical_paths, records.size(), "BA2 DX10 canonical path set");
+    if (!reserved_paths) {
+      return reserved_paths.error();
     }
 
-    auto chunks = public_chunks_for(records[index], detected);
-    if (!chunks) {
-      return chunks.error();
+    auto first_payload_offset = first_payload_offset_for(records, archive_size);
+    if (!first_payload_offset) {
+      return first_payload_offset.error();
+    }
+    if (name_table_end > first_payload_offset.value()) {
+      return error{error_code::format_error, "BA2 DX10 filename table overlaps payload data"};
     }
 
-    std::uint64_t raw_payload_size = 0;
-    std::uint64_t stored_payload_size = 0;
-    bool has_compressed_chunk = false;
-    std::uint64_t payload_offset = std::numeric_limits<std::uint64_t>::max();
-    for (const auto& chunk : chunks.value()) {
-      // Current BA2 DX10 record fields bound these totals below UInt64 max, but keep the public
-      // metadata boundary checked so future chunk-size widening cannot expose wrapped sizes.
-      if (!add_fits_u64(raw_payload_size, chunk.raw_size, raw_payload_size)) {
-        return error{error_code::format_error, "BA2 DX10 raw payload aggregate size overflows"};
+    for (std::size_t index = 0; index < records.size(); ++index) {
+      auto original_path = names[index];
+      normalize_display_separators(original_path);
+      auto canonical = detail::normalize_archive_path(original_path);
+      if (!canonical) {
+        return error{error_code::format_error, "BA2 DX10 filename table contains an invalid archive path"};
       }
-      if (!add_fits_u64(stored_payload_size, chunk.stored_size, stored_payload_size)) {
-        return error{error_code::format_error, "BA2 DX10 stored payload aggregate size overflows"};
+      if (!canonical_paths.insert(canonical.value().value).second) {
+        return error{error_code::format_error, "BA2 DX10 contains duplicate canonical archive paths"};
       }
-      payload_offset = std::min(payload_offset, chunk.payload_offset);
-      has_compressed_chunk = has_compressed_chunk || chunk.compression != entry_compression::none;
+      const auto [directory, file_name] = split_directory_file(canonical.value().value);
+      const auto [stem, extension_text] = split_stem_extension(file_name);
+      if (stem.empty() || extension_text.empty()) {
+        return error{error_code::format_error, "BA2 DX10 filename table must include a file stem and extension"};
+      }
+      // DX10 records hash the texture stem separately from its containing directory; extension bytes are their own
+      // record field, so hashing the full filename would not match Bethesda lookup semantics.
+      if (records[index].name_hash != detail::hash_fo4(stem)) {
+        return error{error_code::format_error, "BA2 DX10 NameHash does not match filename table"};
+      }
+      if (records[index].directory_hash != detail::hash_fo4(directory)) {
+        return error{error_code::format_error, "BA2 DX10 DirectoryHash does not match filename table"};
+      }
+      auto expected_extension = extension_fourcc_for_extension(extension_text);
+      if (!expected_extension) {
+        return expected_extension.error();
+      }
+      // DX10 extension bytes participate in Bethesda texture lookup independently from the hashed stem.
+      if (!extension_fourcc_matches(records[index].extension, expected_extension.value())) {
+        return error{error_code::format_error, "BA2 DX10 record extension does not match filename table"};
+      }
+
+      auto chunks = public_chunks_for(records[index], detected);
+      if (!chunks) {
+        return chunks.error();
+      }
+
+      std::uint64_t raw_payload_size = 0;
+      std::uint64_t stored_payload_size = 0;
+      bool has_compressed_chunk = false;
+      std::uint64_t payload_offset = std::numeric_limits<std::uint64_t>::max();
+      for (const auto& chunk : chunks.value()) {
+        // Current BA2 DX10 record fields bound these totals below UInt64 max, but keep the public
+        // metadata boundary checked so future chunk-size widening cannot expose wrapped sizes.
+        if (!add_fits_u64(raw_payload_size, chunk.raw_size, raw_payload_size)) {
+          return error{error_code::format_error, "BA2 DX10 raw payload aggregate size overflows"};
+        }
+        if (!add_fits_u64(stored_payload_size, chunk.stored_size, stored_payload_size)) {
+          return error{error_code::format_error, "BA2 DX10 stored payload aggregate size overflows"};
+        }
+        payload_offset = std::min(payload_offset, chunk.payload_offset);
+        has_compressed_chunk = has_compressed_chunk || chunk.compression != entry_compression::none;
+      }
+
+      std::uint64_t entry_raw_size = 0;
+      if (!add_fits_u64(reconstructed_dds_header_size, raw_payload_size, entry_raw_size)) {
+        return error{error_code::format_error, "BA2 DX10 reconstructed DDS size overflows"};
+      }
+
+      const auto array_size = inferred_array_size(records[index]);
+      const auto is_cubemap = records[index].cube_maps_raw == ba2_dx10_cubemap_raw;
+      texture_metadata texture{records[index].width,
+                               records[index].height,
+                               records[index].num_mips,
+                               records[index].dxgi_format,
+                               array_size,
+                               is_cubemap,
+                               records[index].unknown_tex,
+                               records[index].cube_maps_raw,
+                               std::move(chunks.value())};
+
+      entries.push_back(entry_metadata{canonical.value().value,
+                                       std::move(original_path),
+                                       entry_raw_size,
+                                       stored_payload_size,
+                                       payload_offset,
+                                       records[index].name_hash,
+                                       has_compressed_chunk ? detected.default_compression : entry_compression::none,
+                                       records[index].unknown_tex,
+                                       false,
+                                       0U,
+                                       std::move(texture)});
     }
 
-    std::uint64_t entry_raw_size = 0;
-    if (!add_fits_u64(reconstructed_dds_header_size, raw_payload_size, entry_raw_size)) {
-      return error{error_code::format_error, "BA2 DX10 reconstructed DDS size overflows"};
-    }
-
-    const auto array_size = inferred_array_size(records[index]);
-    const auto is_cubemap = records[index].cube_maps_raw == ba2_dx10_cubemap_raw;
-    texture_metadata texture{records[index].width,
-                             records[index].height,
-                             records[index].num_mips,
-                             records[index].dxgi_format,
-                             array_size,
-                             is_cubemap,
-                             records[index].unknown_tex,
-                             records[index].cube_maps_raw,
-                             std::move(chunks.value())};
-
-    entries.push_back(entry_metadata{canonical.value().value,
-                                     std::move(original_path),
-                                     entry_raw_size,
-                                     stored_payload_size,
-                                     payload_offset,
-                                     records[index].name_hash,
-                                     has_compressed_chunk ? detected.default_compression : entry_compression::none,
-                                     records[index].unknown_tex,
-                                     false,
-                                     0U,
-                                     std::move(texture)});
+    std::sort(entries.begin(), entries.end(), [](const entry_metadata& lhs, const entry_metadata& rhs) {
+      return lhs.path < rhs.path;
+    });
+    return entries;
+  } catch (const std::bad_alloc&) {
+    return detail::metadata_allocation_error("BA2 DX10 entry metadata");
+  } catch (const std::length_error&) {
+    return detail::metadata_allocation_error("BA2 DX10 entry metadata");
   }
-
-  std::sort(entries.begin(), entries.end(), [](const entry_metadata& lhs, const entry_metadata& rhs) {
-    return lhs.path < rhs.path;
-  });
-  return entries;
 }
 
 result<ba2_dx10_archive> parse_ba2_dx10_archive_impl(std::span<const std::byte> metadata_bytes, std::size_t archive_size,
@@ -514,6 +559,12 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_impl(std::span<const std::byte> 
   }
   if (header.value().version != detected.version || header.value().file_count != detected.file_count) {
     return error{error_code::format_error, "BA2 DX10 detected header does not match parsed header"};
+  }
+  auto count_limit = detail::validate_metadata_count(header.value().file_count,
+                                                     detail::metadata_entry_count_limit,
+                                                     "BA2 DX10 file count");
+  if (!count_limit) {
+    return count_limit.error();
   }
   if (header.value().file_table_offset > archive_size) {
     return error{error_code::format_error, "BA2 DX10 FileTableOffset is outside the metadata span"};
@@ -580,6 +631,12 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_file(std::string_view host_path,
   }
   if (header.value().version != detected.version || header.value().file_count != detected.file_count) {
     return error{error_code::format_error, "BA2 DX10 detected header does not match parsed header"};
+  }
+  auto count_limit = detail::validate_metadata_count(header.value().file_count,
+                                                     detail::metadata_entry_count_limit,
+                                                     "BA2 DX10 file count");
+  if (!count_limit) {
+    return count_limit.error();
   }
   if (header.value().file_table_offset > archive_size || header.value().file_table_offset < header_size_for(header.value().version)) {
     return error{error_code::format_error, "BA2 DX10 FileTableOffset is outside the metadata span"};

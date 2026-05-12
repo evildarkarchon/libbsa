@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <detail/parser_primitives.hpp>
+
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -263,6 +265,48 @@ TEST_CASE("tes4_bsa_malformed_open rejects matched oversized file counts before 
 
   REQUIRE_FALSE(opened.has_value());
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("tes4_bsa_malformed_open rejects metadata counts above parser limits",
+          "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
+  SECTION("header folder count") {
+    auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+    overwrite_u32_le(bytes, 16U, static_cast<std::uint32_t>(libbsa::detail::metadata_bsa_folder_count_limit + 1U));
+
+    const auto mutated = std::filesystem::temp_directory_path() / "libbsa_tes4_excessive_folder_count.bsa";
+    write_binary_file(mutated, bytes);
+
+    auto opened = libbsa::archive_reader::open(mutated.string());
+
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+  }
+
+  SECTION("header file count") {
+    auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+    overwrite_u32_le(bytes, 20U, static_cast<std::uint32_t>(libbsa::detail::metadata_entry_count_limit + 1U));
+
+    const auto mutated = std::filesystem::temp_directory_path() / "libbsa_tes4_excessive_file_count.bsa";
+    write_binary_file(mutated, bytes);
+
+    auto opened = libbsa::archive_reader::open(mutated.string());
+
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+  }
+
+  SECTION("per-folder file count") {
+    auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+    overwrite_u32_le(bytes, 44U, static_cast<std::uint32_t>(libbsa::detail::metadata_entry_count_limit + 1U));
+
+    const auto mutated = std::filesystem::temp_directory_path() / "libbsa_tes4_excessive_folder_file_count.bsa";
+    write_binary_file(mutated, bytes);
+
+    auto opened = libbsa::archive_reader::open(mutated.string());
+
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+  }
 }
 
 TEST_CASE("tes4_bsa_malformed_open rejects inconsistent table offsets",

@@ -9,6 +9,7 @@
 #include <limits>
 #include <span>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace {
@@ -17,6 +18,24 @@ std::size_t impossible_string_size() {
   const auto max_size = std::string{}.max_size();
   if (max_size == std::numeric_limits<std::size_t>::max()) {
     SKIP("string max_size cannot be overflowed on this standard library");
+  }
+  return max_size + 1U;
+}
+
+template <typename T>
+std::size_t impossible_vector_capacity() {
+  const auto max_size = std::vector<T>{}.max_size();
+  if (max_size == std::numeric_limits<std::size_t>::max()) {
+    SKIP("vector max_size cannot be overflowed on this standard library");
+  }
+  return max_size + 1U;
+}
+
+template <typename T>
+std::size_t impossible_set_capacity() {
+  const auto max_size = std::unordered_set<T>{}.max_size();
+  if (max_size == std::numeric_limits<std::size_t>::max()) {
+    SKIP("unordered_set max_size cannot be overflowed on this standard library");
   }
   return max_size + 1U;
 }
@@ -75,6 +94,42 @@ TEST_CASE("parser_primitives reject spans outside archive bounds", "[unit][parse
   REQUIRE(libbsa::detail::span_fits_u64(5U, 0U, 5U));
   REQUIRE_FALSE(libbsa::detail::span_fits_u64(3U, 3U, 5U));
   REQUIRE_FALSE(libbsa::detail::span_fits_u64(std::numeric_limits<std::uint64_t>::max(), 1U, 5U));
+}
+
+TEST_CASE("parser_primitives enforce metadata count limits", "[unit][parser_primitives][malformed]") {
+  auto accepted = libbsa::detail::validate_metadata_count(libbsa::detail::metadata_entry_count_limit,
+                                                          libbsa::detail::metadata_entry_count_limit,
+                                                          "test metadata count");
+  REQUIRE(accepted.has_value());
+
+  auto rejected = libbsa::detail::validate_metadata_count(libbsa::detail::metadata_entry_count_limit + 1U,
+                                                          libbsa::detail::metadata_entry_count_limit,
+                                                          "test metadata count");
+  REQUIRE_FALSE(rejected.has_value());
+  REQUIRE(rejected.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("parser_primitives translate typed metadata reserve failures", "[unit][parser_primitives][allocation]") {
+  std::vector<std::uint64_t> values;
+  auto vector_reserved = libbsa::detail::reserve_metadata_vector(values, 4U, "test metadata vector");
+  REQUIRE(vector_reserved.has_value());
+  REQUIRE(values.capacity() >= 4U);
+
+  auto impossible_vector = libbsa::detail::reserve_metadata_vector(values,
+                                                                   impossible_vector_capacity<std::uint64_t>(),
+                                                                   "test metadata vector");
+  REQUIRE_FALSE(impossible_vector.has_value());
+  REQUIRE(impossible_vector.error().code == libbsa::error_code::format_error);
+
+  std::unordered_set<std::uint64_t> set;
+  auto set_reserved = libbsa::detail::reserve_metadata_set(set, 4U, "test metadata set");
+  REQUIRE(set_reserved.has_value());
+
+  auto impossible_set = libbsa::detail::reserve_metadata_set(set,
+                                                            impossible_set_capacity<std::uint64_t>(),
+                                                            "test metadata set");
+  REQUIRE_FALSE(impossible_set.has_value());
+  REQUIRE(impossible_set.error().code == libbsa::error_code::format_error);
 }
 
 TEST_CASE("parser_primitives read exact bounded file spans", "[unit][parser_primitives]") {

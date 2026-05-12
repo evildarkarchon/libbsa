@@ -149,7 +149,10 @@ result<header_fields> read_header(detail::binary_reader& reader) {
 
 result<std::vector<gnrl_record>> read_records(detail::binary_reader& reader, std::uint32_t file_count) {
   std::vector<gnrl_record> records;
-  records.reserve(file_count);
+  auto reserved = detail::reserve_metadata_vector(records, file_count, "BA2 GNRL records");
+  if (!reserved) {
+    return reserved.error();
+  }
   for (std::uint32_t index = 0; index < file_count; ++index) {
     const auto name_hash = reader.read_u32_le();
     auto extension_bytes = reader.read_bytes(4U);
@@ -177,7 +180,10 @@ result<std::vector<std::string>> read_names(std::span<const std::byte> name_tabl
                                             std::size_t& consumed) {
   detail::binary_reader reader{name_table};
   std::vector<std::string> names;
-  names.reserve(file_count);
+  auto reserved = detail::reserve_metadata_vector(names, file_count, "BA2 GNRL filename table entries");
+  if (!reserved) {
+    return reserved.error();
+  }
   for (std::uint32_t index = 0; index < file_count; ++index) {
     const auto length = reader.read_u16_le();
     if (!length) {
@@ -208,7 +214,10 @@ result<std::vector<std::string>> read_names_from_file(std::ifstream& input, std:
   }
 
   std::vector<std::string> names;
-  names.reserve(file_count);
+  auto reserved = detail::reserve_metadata_vector(names, file_count, "BA2 GNRL filename table entries");
+  if (!reserved) {
+    return reserved.error();
+  }
   std::uint64_t cursor = file_table_offset;
   for (std::uint32_t index = 0; index < file_count; ++index) {
     if (!span_fits_u64(cursor, 2U, archive_size)) {
@@ -264,68 +273,81 @@ result<std::vector<entry_metadata>> materialize_entries(std::uint64_t archive_si
                                                         std::span<const gnrl_record> records,
                                                         std::span<const std::string> names,
                                                         detected_ba2_format detected) {
-  std::vector<entry_metadata> entries;
-  entries.reserve(records.size());
-  std::unordered_set<std::string> canonical_paths;
-
-  for (std::size_t index = 0; index < records.size(); ++index) {
-    auto original_path = names[index];
-    normalize_display_separators(original_path);
-    auto canonical = detail::normalize_archive_path(original_path);
-    if (!canonical) {
-      return error{error_code::format_error, "BA2 GNRL filename table contains an invalid archive path"};
+  try {
+    std::vector<entry_metadata> entries;
+    auto reserved_entries = detail::reserve_metadata_vector(entries, records.size(), "BA2 GNRL entry metadata");
+    if (!reserved_entries) {
+      return reserved_entries.error();
     }
-    if (!canonical_paths.insert(canonical.value().value).second) {
-      return error{error_code::format_error, "BA2 GNRL contains duplicate canonical archive paths"};
-    }
-    const auto [directory, file_name] = split_directory_file(canonical.value().value);
-    // BA2 lookup records store separate CRCs for the file name and containing directory; accepting mismatches would
-    // expose entries by parsed text that Bethesda-style hash lookup cannot reach.
-    if (records[index].name_hash != detail::hash_fo4(file_name)) {
-      return error{error_code::format_error, "BA2 GNRL NameHash does not match filename table"};
-    }
-    if (records[index].directory_hash != detail::hash_fo4(directory)) {
-      return error{error_code::format_error, "BA2 GNRL DirectoryHash does not match filename table"};
-    }
-    auto expected_extension = extension_fourcc_for_file_name(file_name);
-    if (!expected_extension) {
-      return expected_extension.error();
-    }
-    // BA2 extension bytes are lookup metadata separate from the filename text; accepting a mismatch would publish
-    // an entry that Bethesda-style extension lookup cannot resolve consistently.
-    if (!extension_fourcc_matches(records[index].extension, expected_extension.value())) {
-      return error{error_code::format_error, "BA2 GNRL record extension does not match filename table"};
+    std::unordered_set<std::string> canonical_paths;
+    auto reserved_paths = detail::reserve_metadata_set(canonical_paths, records.size(), "BA2 GNRL canonical path set");
+    if (!reserved_paths) {
+      return reserved_paths.error();
     }
 
-    const auto stored_size = records[index].packed_size != 0U ? records[index].packed_size : records[index].size;
-    if (!span_fits_u64(records[index].offset, stored_size, archive_size)) {
-      return error{error_code::format_error, "BA2 GNRL entry payload span is outside the archive"};
-    }
-    // BSArchPro writes GNRL payloads after the fixed header and records; spans into this prefix
-    // would later extract archive metadata bytes as if they were file payload.
-    if (spans_overlap_u64(records[index].offset, stored_size, 0U, records_end)) {
-      return error{error_code::format_error, "BA2 GNRL entry payload span intersects header or record table"};
-    }
-    if (spans_overlap_u64(records[index].offset, stored_size, name_table_offset, name_table_end - name_table_offset)) {
-      return error{error_code::format_error, "BA2 GNRL filename table intersects payload data"};
+    for (std::size_t index = 0; index < records.size(); ++index) {
+      auto original_path = names[index];
+      normalize_display_separators(original_path);
+      auto canonical = detail::normalize_archive_path(original_path);
+      if (!canonical) {
+        return error{error_code::format_error, "BA2 GNRL filename table contains an invalid archive path"};
+      }
+      if (!canonical_paths.insert(canonical.value().value).second) {
+        return error{error_code::format_error, "BA2 GNRL contains duplicate canonical archive paths"};
+      }
+      const auto [directory, file_name] = split_directory_file(canonical.value().value);
+      // BA2 lookup records store separate CRCs for the file name and containing directory; accepting mismatches would
+      // expose entries by parsed text that Bethesda-style hash lookup cannot reach.
+      if (records[index].name_hash != detail::hash_fo4(file_name)) {
+        return error{error_code::format_error, "BA2 GNRL NameHash does not match filename table"};
+      }
+      if (records[index].directory_hash != detail::hash_fo4(directory)) {
+        return error{error_code::format_error, "BA2 GNRL DirectoryHash does not match filename table"};
+      }
+      auto expected_extension = extension_fourcc_for_file_name(file_name);
+      if (!expected_extension) {
+        return expected_extension.error();
+      }
+      // BA2 extension bytes are lookup metadata separate from the filename text; accepting a mismatch would publish
+      // an entry that Bethesda-style extension lookup cannot resolve consistently.
+      if (!extension_fourcc_matches(records[index].extension, expected_extension.value())) {
+        return error{error_code::format_error, "BA2 GNRL record extension does not match filename table"};
+      }
+
+      const auto stored_size = records[index].packed_size != 0U ? records[index].packed_size : records[index].size;
+      if (!span_fits_u64(records[index].offset, stored_size, archive_size)) {
+        return error{error_code::format_error, "BA2 GNRL entry payload span is outside the archive"};
+      }
+      // BSArchPro writes GNRL payloads after the fixed header and records; spans into this prefix
+      // would later extract archive metadata bytes as if they were file payload.
+      if (spans_overlap_u64(records[index].offset, stored_size, 0U, records_end)) {
+        return error{error_code::format_error, "BA2 GNRL entry payload span intersects header or record table"};
+      }
+      if (spans_overlap_u64(records[index].offset, stored_size, name_table_offset, name_table_end - name_table_offset)) {
+        return error{error_code::format_error, "BA2 GNRL filename table intersects payload data"};
+      }
+
+      entries.push_back(entry_metadata{canonical.value().value,
+                                       std::move(original_path),
+                                       records[index].size,
+                                       stored_size,
+                                       records[index].offset,
+                                       records[index].name_hash,
+                                       compression_for(records[index], detected),
+                                       records[index].unknown,
+                                       false,
+                                       0U});
     }
 
-    entries.push_back(entry_metadata{canonical.value().value,
-                                     std::move(original_path),
-                                     records[index].size,
-                                     stored_size,
-                                     records[index].offset,
-                                     records[index].name_hash,
-                                     compression_for(records[index], detected),
-                                     records[index].unknown,
-                                     false,
-                                     0U});
+    std::sort(entries.begin(), entries.end(), [](const entry_metadata& lhs, const entry_metadata& rhs) {
+      return lhs.path < rhs.path;
+    });
+    return entries;
+  } catch (const std::bad_alloc&) {
+    return detail::metadata_allocation_error("BA2 GNRL entry metadata");
+  } catch (const std::length_error&) {
+    return detail::metadata_allocation_error("BA2 GNRL entry metadata");
   }
-
-  std::sort(entries.begin(), entries.end(), [](const entry_metadata& lhs, const entry_metadata& rhs) {
-    return lhs.path < rhs.path;
-  });
-  return entries;
 }
 
 result<ba2_gnrl_archive> parse_ba2_gnrl_archive_impl(std::span<const std::byte> metadata_bytes, std::size_t archive_size,
@@ -344,6 +366,12 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_impl(std::span<const std::byte> 
   }
   if (header.value().version != detected.version || header.value().file_count != detected.file_count) {
     return error{error_code::format_error, "BA2 GNRL detected header does not match parsed header"};
+  }
+  auto count_limit = detail::validate_metadata_count(header.value().file_count,
+                                                     detail::metadata_entry_count_limit,
+                                                     "BA2 GNRL file count");
+  if (!count_limit) {
+    return count_limit.error();
   }
 
   std::size_t records_size = 0;
@@ -421,6 +449,12 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(std::string_view host_path,
   }
   if (header.value().version != detected.version || header.value().file_count != detected.file_count) {
     return error{error_code::format_error, "BA2 GNRL detected header does not match parsed header"};
+  }
+  auto count_limit = detail::validate_metadata_count(header.value().file_count,
+                                                     detail::metadata_entry_count_limit,
+                                                     "BA2 GNRL file count");
+  if (!count_limit) {
+    return count_limit.error();
   }
 
   std::size_t records_size = 0;

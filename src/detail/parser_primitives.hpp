@@ -5,12 +5,65 @@
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <new>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 
 namespace libbsa::detail {
+
+// Internal safety policy for untrusted archive metadata. These are deliberately not public options until callers have
+// real-world evidence that larger verified-local archives need a configurable override.
+inline constexpr std::uint64_t metadata_entry_count_limit = 1'000'000ULL;
+inline constexpr std::uint64_t metadata_bsa_folder_count_limit = 65'536ULL;
+inline constexpr std::uint64_t metadata_dx10_chunk_count_limit = 1'000'000ULL;
+
+/// Returns a parser metadata allocation error without letting archive-controlled counts throw.
+inline error metadata_allocation_error(std::string_view description) {
+  return error{error_code::format_error, std::string{description} + " exceeds platform metadata limits"};
+}
+
+/// Rejects archive-declared metadata counts that exceed an internal parser safety policy.
+result<void> validate_metadata_count(std::uint64_t count, std::uint64_t limit, std::string_view description);
+
+/// Reserves typed parser metadata vectors while translating allocation failures into libbsa results.
+template <typename T>
+result<void> reserve_metadata_vector(std::vector<T>& values, std::size_t capacity, std::string_view description) {
+  if (capacity > values.max_size()) {
+    return metadata_allocation_error(description);
+  }
+
+  try {
+    values.reserve(capacity);
+  } catch (const std::bad_alloc&) {
+    return metadata_allocation_error(description);
+  } catch (const std::length_error&) {
+    return metadata_allocation_error(description);
+  }
+  return {};
+}
+
+/// Reserves duplicate-detection metadata sets while translating allocation failures into libbsa results.
+template <typename Key, typename Hash, typename KeyEqual, typename Allocator>
+result<void> reserve_metadata_set(std::unordered_set<Key, Hash, KeyEqual, Allocator>& values,
+                                  std::size_t capacity,
+                                  std::string_view description) {
+  if (capacity > values.max_size()) {
+    return metadata_allocation_error(description);
+  }
+
+  try {
+    values.reserve(capacity);
+  } catch (const std::bad_alloc&) {
+    return metadata_allocation_error(description);
+  } catch (const std::length_error&) {
+    return metadata_allocation_error(description);
+  }
+  return {};
+}
 
 /// Multiplies an archive-declared element count by a byte width without wrapping.
 bool multiply_fits(std::uint32_t count, std::size_t width, std::size_t& total) noexcept;

@@ -6,6 +6,7 @@
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 
 #include <detail/bethesda_hash.hpp>
+#include <detail/parser_primitives.hpp>
 
 #include <cstdint>
 #include <filesystem>
@@ -581,6 +582,40 @@ TEST_CASE("ba2_gnrl_detector returns format_error for oversized declared record 
 
   REQUIRE_FALSE(opened.has_value());
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("ba2_gnrl_detector rejects declared file counts above the metadata limit",
+          "[unit][malformed][ba2_gnrl_detector]") {
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-excessive-file-count.ba2";
+  temp_file_cleanup cleanup{temp_path};
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  const auto excessive_file_count = static_cast<std::uint32_t>(libbsa::detail::metadata_entry_count_limit + 1U);
+  std::vector<std::byte> bytes;
+  append_ascii(bytes, "BTDX");
+  append_u32_le(bytes, 1U);
+  append_ascii(bytes, "GNRL");
+  append_u32_le(bytes, excessive_file_count);
+  append_u64_le(bytes, 60U);
+
+  auto detected = libbsa::formats::ba2::detect_ba2_format(bytes);
+  REQUIRE(detected.has_value());
+
+  auto parsed = libbsa::formats::ba2::parse_ba2_gnrl_archive(bytes, detected.value());
+  REQUIRE_FALSE(parsed.has_value());
+  REQUIRE(parsed.error().code == libbsa::error_code::format_error);
+
+  write_binary_file(temp_path, bytes);
+  auto opened = libbsa::archive_reader::open(temp_path.string());
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+  auto validated = libbsa::validate_archive(temp_path.string());
+  REQUIRE(validated.has_value());
+  CHECK_FALSE(validated.value().is_valid());
+  REQUIRE(validated.value().errors.size() == 1U);
+  CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
 }
 
 TEST_CASE("ba2_gnrl_metadata lists manifest-backed records from filename tables",

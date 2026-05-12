@@ -6,6 +6,7 @@
 #include "formats/bsa/tes3_bsa_reader.hpp"
 
 #include <detail/bethesda_hash.hpp>
+#include <detail/parser_primitives.hpp>
 
 #include <algorithm>
 #include <array>
@@ -400,6 +401,26 @@ TEST_CASE("tes3_bsa_malformed returns format_error for oversized declared metada
 
   REQUIRE_FALSE(opened.has_value());
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("tes3_bsa_malformed rejects declared file counts above the metadata limit",
+          "[unit][fixture][malformed][tes3_bsa_malformed]") {
+  auto bytes = read_binary_file(generated_archive_path("tes3_success.bsa"));
+  overwrite_u32_le(bytes, 8U, static_cast<std::uint32_t>(libbsa::detail::metadata_entry_count_limit + 1U));
+
+  const auto mutated = std::filesystem::temp_directory_path() / "libbsa_tes3_excessive_file_count.bsa";
+  write_binary_file(mutated, bytes);
+
+  auto opened = libbsa::archive_reader::open(mutated.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+  auto validated = libbsa::validate_archive(mutated.string());
+  REQUIRE(validated.has_value());
+  REQUIRE_FALSE(validated.value().is_valid());
+  REQUIRE(validated.value().errors.size() == 1U);
+  CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
 }
 
 TEST_CASE("tes3_bsa_malformed maps invalid archive names to format_error", "[unit][fixture][malformed][tes3_bsa_malformed]") {

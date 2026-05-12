@@ -152,9 +152,12 @@ result<void> validate_folder_file_counts(const header_fields& header, std::span<
 }
 
 result<std::vector<folder_block>> read_folder_blocks(detail::binary_reader& reader, const header_fields& header,
-                                                     std::span<const folder_record> folders) {
+                                                      std::span<const folder_record> folders) {
   std::vector<folder_block> blocks;
-  blocks.reserve(folders.size());
+  auto reserved_blocks = detail::reserve_metadata_vector(blocks, folders.size(), "TES4 BSA folder blocks");
+  if (!reserved_blocks) {
+    return reserved_blocks.error();
+  }
   std::size_t file_records_seen = 0;
   std::size_t folder_name_bytes_seen = 0;
   for (const auto& folder : folders) {
@@ -181,7 +184,10 @@ result<std::vector<folder_block>> read_folder_blocks(detail::binary_reader& read
     folder_name_bytes_seen += 1U + name_size.value();
 
     std::vector<file_record> file_records;
-    file_records.reserve(folder.file_count);
+    auto reserved_files = detail::reserve_metadata_vector(file_records, folder.file_count, "TES4 BSA file records");
+    if (!reserved_files) {
+      return reserved_files.error();
+    }
     for (std::uint32_t index = 0; index < folder.file_count; ++index) {
       const auto hash = reader.read_u64_le();
       const auto size_flags = reader.read_u32_le();
@@ -213,7 +219,10 @@ result<std::vector<std::string>> read_file_names(detail::binary_reader& reader, 
 
   detail::binary_reader name_reader{table_bytes.value()};
   std::vector<std::string> names;
-  names.reserve(file_count);
+  auto reserved_names = detail::reserve_metadata_vector(names, file_count, "TES4 BSA file name table entries");
+  if (!reserved_names) {
+    return reserved_names.error();
+  }
   while (names.size() < file_count) {
     const auto name_start = name_reader.position();
     bool terminated = false;
@@ -302,84 +311,106 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                                                         std::span<const folder_block> folders,
                                                         std::span<const std::string> file_names,
                                                         PayloadReader& read_payload_bytes) {
-  std::vector<entry_metadata> entries;
-  entries.reserve(header.file_count);
-  std::unordered_set<std::string> canonical_paths;
-  std::size_t name_index = 0;
-  const bool has_embedded_names = header.version != tes4_bsa_oblivion_version &&
-                                  (header.archive_flags & tes4_bsa_archive_embed_names) != 0U;
-
-  for (const auto& folder : folders) {
-    auto folder_original = folder.name;
-    normalize_display_separators(folder_original);
-    for (const auto& record : folder.files) {
-      const auto& file_name = file_names[name_index++];
-      auto original_path = folder_original + "/" + file_name;
-      normalize_display_separators(original_path);
-      auto canonical = detail::normalize_archive_path(original_path);
-      if (!canonical) {
-        return canonical.error();
-      }
-      if (!canonical_paths.insert(canonical.value().value).second) {
-        return error{error_code::format_error, "TES4 BSA contains duplicate canonical archive paths"};
-      }
-      const auto file_hash = detail::hash_tes4(file_name);
-      // TES4 lookup tables are hash-driven; accepting a mismatched record would
-      // publish an entry that game-style lookup cannot resolve from its name.
-      if (record.hash != file_hash) {
-        return error{error_code::format_error, "TES4 BSA file record hash does not match filename table"};
-      }
-
-      const auto stored_size = record.size_flags & ~tes4_bsa_file_size_compression_toggle;
-      if (!span_fits(record.offset, stored_size, archive_size)) {
-        return error{error_code::format_error, "TES4 BSA entry payload span is outside the archive"};
-      }
-      // Payload offsets are archive-controlled; non-empty file bytes must not point back into the header or name
-      // tables.
-      if (non_empty_span_intersects_prefix(record.offset, stored_size, metadata_size)) {
-        return error{error_code::format_error, "TES4 BSA entry payload span overlaps metadata"};
-      }
-      const auto compression = compression_for(header, record.size_flags);
-      std::uint32_t prefix_size = 0;
-      if (has_embedded_names) {
-        auto prefix = embedded_prefix_size(archive_size, record, stored_size, read_payload_bytes);
-        if (!prefix) {
-          return prefix.error();
-        }
-        prefix_size = prefix.value();
-      }
-      auto raw_size = raw_size_for(archive_size, record, compression, stored_size, prefix_size, read_payload_bytes);
-      if (!raw_size) {
-        return raw_size.error();
-      }
-
-      entries.push_back(entry_metadata{canonical.value().value,
-                                       std::move(original_path),
-                                       raw_size.value(),
-                                       stored_size,
-                                       record.offset,
-                                       record.hash,
-                                       compression,
-                                        record.size_flags & tes4_bsa_file_size_compression_toggle,
-                                       has_embedded_names,
-                                       prefix_size});
+  try {
+    std::vector<entry_metadata> entries;
+    auto reserved_entries = detail::reserve_metadata_vector(entries, header.file_count, "TES4 BSA entry metadata");
+    if (!reserved_entries) {
+      return reserved_entries.error();
     }
-  }
+    std::unordered_set<std::string> canonical_paths;
+    auto reserved_paths = detail::reserve_metadata_set(canonical_paths, header.file_count, "TES4 BSA canonical path set");
+    if (!reserved_paths) {
+      return reserved_paths.error();
+    }
+    std::size_t name_index = 0;
+    const bool has_embedded_names = header.version != tes4_bsa_oblivion_version &&
+                                    (header.archive_flags & tes4_bsa_archive_embed_names) != 0U;
 
-  std::sort(entries.begin(), entries.end(), [](const entry_metadata& lhs, const entry_metadata& rhs) {
-    return lhs.path < rhs.path;
-  });
-  return entries;
+    for (const auto& folder : folders) {
+      auto folder_original = folder.name;
+      normalize_display_separators(folder_original);
+      for (const auto& record : folder.files) {
+        const auto& file_name = file_names[name_index++];
+        auto original_path = folder_original + "/" + file_name;
+        normalize_display_separators(original_path);
+        auto canonical = detail::normalize_archive_path(original_path);
+        if (!canonical) {
+          return canonical.error();
+        }
+        if (!canonical_paths.insert(canonical.value().value).second) {
+          return error{error_code::format_error, "TES4 BSA contains duplicate canonical archive paths"};
+        }
+        const auto file_hash = detail::hash_tes4(file_name);
+        // TES4 lookup tables are hash-driven; accepting a mismatched record would
+        // publish an entry that game-style lookup cannot resolve from its name.
+        if (record.hash != file_hash) {
+          return error{error_code::format_error, "TES4 BSA file record hash does not match filename table"};
+        }
+
+        const auto stored_size = record.size_flags & ~tes4_bsa_file_size_compression_toggle;
+        if (!span_fits(record.offset, stored_size, archive_size)) {
+          return error{error_code::format_error, "TES4 BSA entry payload span is outside the archive"};
+        }
+        // Payload offsets are archive-controlled; non-empty file bytes must not point back into the header or name
+        // tables.
+        if (non_empty_span_intersects_prefix(record.offset, stored_size, metadata_size)) {
+          return error{error_code::format_error, "TES4 BSA entry payload span overlaps metadata"};
+        }
+        const auto compression = compression_for(header, record.size_flags);
+        std::uint32_t prefix_size = 0;
+        if (has_embedded_names) {
+          auto prefix = embedded_prefix_size(archive_size, record, stored_size, read_payload_bytes);
+          if (!prefix) {
+            return prefix.error();
+          }
+          prefix_size = prefix.value();
+        }
+        auto raw_size = raw_size_for(archive_size, record, compression, stored_size, prefix_size, read_payload_bytes);
+        if (!raw_size) {
+          return raw_size.error();
+        }
+
+        entries.push_back(entry_metadata{canonical.value().value,
+                                         std::move(original_path),
+                                         raw_size.value(),
+                                         stored_size,
+                                         record.offset,
+                                         record.hash,
+                                         compression,
+                                         record.size_flags & tes4_bsa_file_size_compression_toggle,
+                                         has_embedded_names,
+                                         prefix_size});
+      }
+    }
+
+    std::sort(entries.begin(), entries.end(), [](const entry_metadata& lhs, const entry_metadata& rhs) {
+      return lhs.path < rhs.path;
+    });
+    return entries;
+  } catch (const std::bad_alloc&) {
+    return detail::metadata_allocation_error("TES4 BSA entry metadata");
+  } catch (const std::length_error&) {
+    return detail::metadata_allocation_error("TES4 BSA entry metadata");
+  }
 }
 
 result<std::vector<folder_record>> read_folder_records(detail::binary_reader& reader, const header_fields& header) {
   std::vector<folder_record> records;
-  records.reserve(header.folder_count);
+  auto reserved = detail::reserve_metadata_vector(records, header.folder_count, "TES4 BSA folder records");
+  if (!reserved) {
+    return reserved.error();
+  }
   for (std::uint32_t index = 0; index < header.folder_count; ++index) {
     const auto hash = reader.read_u64_le();
     const auto file_count = reader.read_u32_le();
     if (!hash || !file_count) {
       return error{error_code::format_error, "TES4 BSA folder record table is truncated"};
+    }
+    auto file_count_limit = detail::validate_metadata_count(file_count.value(),
+                                                            detail::metadata_entry_count_limit,
+                                                            "TES4 BSA folder file count");
+    if (!file_count_limit) {
+      return file_count_limit.error();
     }
 
     std::uint64_t offset = 0;
@@ -479,6 +510,18 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> 
       (header.value().archive_flags & tes4_bsa_archive_include_file_names) == 0U || header.value().total_folder_name_length == 0U ||
       (header.value().file_count > 0U && header.value().total_file_name_length == 0U)) {
     return error{error_code::unsupported, "TES4 BSA archive does not include usable entry names"};
+  }
+  auto folder_count_limit = detail::validate_metadata_count(header.value().folder_count,
+                                                           detail::metadata_bsa_folder_count_limit,
+                                                           "TES4 BSA folder count");
+  if (!folder_count_limit) {
+    return folder_count_limit.error();
+  }
+  auto file_count_limit = detail::validate_metadata_count(header.value().file_count,
+                                                         detail::metadata_entry_count_limit,
+                                                         "TES4 BSA file count");
+  if (!file_count_limit) {
+    return file_count_limit.error();
   }
 
   const auto folder_record_size = detected.version == tes4_bsa_skyrim_se_version ? tes4_bsa_sse_folder_record_size
@@ -582,6 +625,18 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_file(std::string_view host_path,
   auto header = read_header(header_reader);
   if (!header) {
     return header.error();
+  }
+  auto folder_count_limit = detail::validate_metadata_count(header.value().folder_count,
+                                                           detail::metadata_bsa_folder_count_limit,
+                                                           "TES4 BSA folder count");
+  if (!folder_count_limit) {
+    return folder_count_limit.error();
+  }
+  auto file_count_limit = detail::validate_metadata_count(header.value().file_count,
+                                                         detail::metadata_entry_count_limit,
+                                                         "TES4 BSA file count");
+  if (!file_count_limit) {
+    return file_count_limit.error();
   }
 
   const auto folder_record_size = detected.version == tes4_bsa_skyrim_se_version ? tes4_bsa_sse_folder_record_size

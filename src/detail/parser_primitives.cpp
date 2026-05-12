@@ -9,6 +9,13 @@
 
 namespace libbsa::detail {
 
+result<void> validate_metadata_count(std::uint64_t count, std::uint64_t limit, std::string_view description) {
+  if (count > limit) {
+    return error{error_code::format_error, std::string{description} + " exceeds libbsa metadata count limit"};
+  }
+  return {};
+}
+
 bool multiply_fits(std::uint32_t count, std::size_t width, std::size_t& total) noexcept {
   if (width != 0U && count > std::numeric_limits<std::size_t>::max() / width) {
     return false;

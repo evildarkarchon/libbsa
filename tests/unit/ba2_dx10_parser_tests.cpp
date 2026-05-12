@@ -3,6 +3,9 @@
 #include <libbsa/libbsa.hpp>
 
 #include <detail/bethesda_hash.hpp>
+#include <detail/parser_primitives.hpp>
+
+#include "formats/ba2/ba2_dx10_parser.hpp"
 
 #include <algorithm>
 #include <array>
@@ -145,6 +148,56 @@ void write_ascii4(std::ofstream& out, std::string_view value) {
 
 void write_ascii4(std::ofstream& out, const std::array<char, 4U>& value) {
   out.write(value.data(), static_cast<std::streamsize>(value.size()));
+}
+
+void append_u8(std::vector<std::byte>& bytes, std::uint8_t value) {
+  bytes.push_back(static_cast<std::byte>(value));
+}
+
+void append_u16_le(std::vector<std::byte>& bytes, std::uint16_t value) {
+  append_u8(bytes, static_cast<std::uint8_t>(value & 0xFFU));
+  append_u8(bytes, static_cast<std::uint8_t>((value >> 8U) & 0xFFU));
+}
+
+void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
+  for (std::uint32_t index = 0; index < 4U; ++index) {
+    append_u8(bytes, static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+  }
+}
+
+void append_u64_le(std::vector<std::byte>& bytes, std::uint64_t value) {
+  for (std::uint32_t index = 0; index < 8U; ++index) {
+    append_u8(bytes, static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+  }
+}
+
+void append_ascii(std::vector<std::byte>& bytes, std::string_view value) {
+  for (const char ch : value) {
+    append_u8(bytes, static_cast<std::uint8_t>(ch));
+  }
+}
+
+void append_dx10_record_header(std::vector<std::byte>& bytes, std::uint8_t chunk_count) {
+  append_u32_le(bytes, libbsa::detail::hash_fo4("limit"));
+  append_ascii(bytes, std::string_view{"dds\0", 4U});
+  append_u32_le(bytes, libbsa::detail::hash_fo4("textures"));
+  append_u8(bytes, 0U);
+  append_u8(bytes, chunk_count);
+  append_u16_le(bytes, 24U);
+  append_u16_le(bytes, 1U);
+  append_u16_le(bytes, 1U);
+  append_u8(bytes, 1U);
+  append_u8(bytes, 28U);
+  append_u16_le(bytes, 0U);
+}
+
+void append_dx10_chunk_record(std::vector<std::byte>& bytes) {
+  append_u64_le(bytes, 0U);
+  append_u32_le(bytes, 0U);
+  append_u32_le(bytes, 1U);
+  append_u16_le(bytes, 0U);
+  append_u16_le(bytes, 0U);
+  append_u32_le(bytes, 0xBAADF00DU);
 }
 
 void write_sparse_dx10_archive(const std::filesystem::path& path) {
@@ -376,6 +429,82 @@ TEST_CASE("ba2_dx10_detector returns format_error for oversized declared filenam
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
 
   std::filesystem::remove(temp_path, remove_error);
+}
+
+TEST_CASE("ba2_dx10_detector rejects declared file counts above the metadata limit",
+          "[unit][fixture][malformed][ba2_dx10_detector]") {
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_excessive_file_count.ba2";
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  const auto excessive_file_count = static_cast<std::uint32_t>(libbsa::detail::metadata_entry_count_limit + 1U);
+  std::vector<std::byte> bytes;
+  append_ascii(bytes, "BTDX");
+  append_u32_le(bytes, 1U);
+  append_ascii(bytes, "DX10");
+  append_u32_le(bytes, excessive_file_count);
+  append_u64_le(bytes, 24U);
+
+  auto detected = libbsa::formats::ba2::detect_ba2_format(bytes);
+  REQUIRE(detected.has_value());
+
+  auto parsed = libbsa::formats::ba2::parse_ba2_dx10_archive(bytes, detected.value());
+  REQUIRE_FALSE(parsed.has_value());
+  REQUIRE(parsed.error().code == libbsa::error_code::format_error);
+
+  write_binary_file(temp_path, bytes);
+  auto opened = libbsa::archive_reader::open(temp_path.string());
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+  auto validated = libbsa::validate_archive(temp_path.string());
+  REQUIRE(validated.has_value());
+  CHECK_FALSE(validated.value().is_valid());
+  REQUIRE(validated.value().errors.size() == 1U);
+  CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+
+  std::filesystem::remove(temp_path, remove_error);
+}
+
+TEST_CASE("ba2_dx10_detector rejects aggregate texture chunk counts above the metadata limit",
+          "[unit][fixture][malformed][ba2_dx10_detector]") {
+  constexpr std::uint8_t chunks_per_record = std::numeric_limits<std::uint8_t>::max();
+  const auto file_count = static_cast<std::uint32_t>(libbsa::detail::metadata_dx10_chunk_count_limit / chunks_per_record + 1U);
+  REQUIRE(file_count <= libbsa::detail::metadata_entry_count_limit);
+
+  constexpr std::size_t dx10_record_header_size = 24U;
+  constexpr std::size_t dx10_chunk_record_size = 24U;
+  const auto records_before_limit = static_cast<std::size_t>(file_count - 1U);
+  const auto file_table_offset = 24U + records_before_limit * (dx10_record_header_size +
+                                                               chunks_per_record * dx10_chunk_record_size) +
+                                 dx10_record_header_size;
+
+  std::vector<std::byte> bytes;
+  bytes.reserve(file_table_offset);
+  append_ascii(bytes, "BTDX");
+  append_u32_le(bytes, 1U);
+  append_ascii(bytes, "DX10");
+  append_u32_le(bytes, file_count);
+  append_u64_le(bytes, file_table_offset);
+
+  for (std::uint32_t record_index = 0; record_index < file_count; ++record_index) {
+    append_dx10_record_header(bytes, chunks_per_record);
+    if (record_index + 1U == file_count) {
+      break;
+    }
+    for (std::uint16_t chunk_index = 0; chunk_index < chunks_per_record; ++chunk_index) {
+      append_dx10_chunk_record(bytes);
+    }
+  }
+  REQUIRE(bytes.size() == file_table_offset);
+
+  auto detected = libbsa::formats::ba2::detect_ba2_format(bytes);
+  REQUIRE(detected.has_value());
+
+  auto parsed = libbsa::formats::ba2::parse_ba2_dx10_archive(bytes, detected.value());
+
+  REQUIRE_FALSE(parsed.has_value());
+  REQUIRE(parsed.error().code == libbsa::error_code::format_error);
 }
 
 TEST_CASE("ba2_dx10 aggregate overflow fixtures are unreachable under record field bounds",
