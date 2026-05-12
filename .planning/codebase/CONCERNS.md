@@ -4,244 +4,168 @@
 
 ## Tech Debt
 
-**Allocation error translation is incomplete outside `detail::byte_vector`:**
-- Issue: Some archive-controlled or caller-controlled sizes still flow into direct `std::vector` construction, `reserve`, `insert`, and codec output allocation instead of the result-translating helpers in `src/detail/byte_vector.hpp`.
-- Files: `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`, `src/detail/deflate_codec.cpp`, `src/detail/lz4_frame_codec.cpp`, `src/detail/lz4_block_codec.cpp`, `src/detail/byte_vector.hpp`
-- Impact: Malformed sparse archives or very large caller inputs can still trigger `std::bad_alloc` / `std::length_error` outside the public `libbsa::result<T>` error contract.
-- Fix approach: Route byte-vector allocation, reserve, and append operations through `detail::make_byte_vector`, `detail::reserve_byte_vector`, and `detail::append_byte_vector`; add sparse-file regressions where declared spans are valid but allocation must return `error_code::format_error`.
+**Parser allocation and exception translation are inconsistent:**
+- Issue: Parser hot paths reserve and grow archive-controlled containers without uniformly translating `std::bad_alloc`, `std::length_error`, or `std::unordered_set` allocation failures into `libbsa::result` errors. Byte-buffer helpers use safe wrappers in `src/detail/byte_vector.hpp`, but metadata vectors and hash sets call `reserve`, `push_back`, and `insert` directly.
+- Files: `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`, `src/detail/parser_primitives.cpp`, `src/detail/byte_vector.hpp`
+- Impact: Malformed archives with very large `file_count`, `chunk_count`, or filename-table counts can surface C++ exceptions instead of stable `error_code::format_error`, which weakens the public no-throw-for-data-errors model.
+- Fix approach: Add reusable `reserve_vector`, `reserve_unordered_set`, and `push_back`/`emplace` wrappers similar to `detail::reserve_byte_vector`; use them before all archive-controlled metadata allocations.
 
-**Parser helper duplication makes format hardening easy to miss:**
-- Issue: Size arithmetic, byte-span reads, byte-to-string conversion, and separator normalization are duplicated in each parser translation unit.
-- Files: `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`, `src/detail/binary_io.cpp`
-- Impact: Bounds fixes and allocation handling can land in one archive family and not another, especially around `read_file_bytes_at`, `multiply_fits`, `add_fits`, and `span_fits`.
-- Fix approach: Extract shared parser primitives for checked arithmetic, bounded file reads, allocation translation, and archive string materialization; keep format-specific compatibility checks in the format modules.
+**Writer preparation has duplicated whole-file read loops:**
+- Issue: Several writer paths read disk inputs byte-by-byte into `std::vector<std::byte>` before compression or texture analysis. Streaming raw disk paths exist for some uncompressed cases, but compressed BSA/BA2 paths and DX10 add-time analysis still load full source payloads.
+- Files: `src/formats/bsa/tes4_bsa_prepare.cpp`, `src/formats/ba2/ba2_gnrl_prepare.cpp`, `src/formats/ba2/ba2_dx10_prepare.cpp`, `src/detail/compression_router.cpp`
+- Impact: Large payloads can cause high memory pressure, slow byte-at-a-time reads, and duplicated buffering before codec calls. This is acceptable for current whole-buffer codecs but is the main scalability hotspot for packing.
+- Fix approach: Centralize disk-source reads behind bounded chunk readers. Keep whole-buffer codec boundaries explicit, but use pre-sized reads and allocation wrappers rather than `input.get` loops.
 
-**Safe publish logic is duplicated and not uniform across writer families:**
-- Issue: Temporary-directory reservation, output existence checks, no-overwrite publishing, overwrite replacement, backup selection, rollback, and cleanup are implemented separately across writers.
-- Files: `src/formats/bsa/tes3_bsa_writer.cpp`, `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`, `src/detail/atomic_file_ops.hpp`, `src/formats/ba2/ba2_publish.hpp`
-- Impact: BSA writers use `detail::replace_file_atomically` for overwrite, while BA2 writers move the destination aside to a backup before renaming the temporary file. The BA2 path has more rollback code and a larger process-crash window.
-- Fix approach: Extract one publish helper that owns no-overwrite, overwrite, backup, rollback, and cleanup behavior for every writer; parameterize only the format-specific diagnostic prefix.
+**Format-specific extraction helpers duplicate sink/write/stream logic:**
+- Issue: `write_all`, `write_in_chunks`, `checked_size`, and stream-limit checks are repeated across readers.
+- Files: `src/formats/bsa/tes4_bsa_reader.cpp`, `src/formats/ba2/ba2_gnrl_reader.cpp`, `src/formats/ba2/ba2_dx10_reader.cpp`, `src/detail/payload_stream.cpp`, `src/detail/payload_stream.hpp`
+- Impact: Future fixes to partial-sink behavior, chunk sizing, or stream-limit handling must be copied into multiple files, increasing drift risk.
+- Fix approach: Move common extraction helpers into `src/detail/payload_stream.cpp`/`src/detail/payload_stream.hpp`; keep only format-specific compression routing and DDS header reconstruction in format readers.
 
-**Large format writer files carry high change risk:**
-- Issue: Writer preparation, compression routing, deduplication, offset assignment, serialization, and publish behavior live in large translation units.
-- Files: `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`, `src/formats/bsa/tes3_bsa_writer.cpp`
-- Impact: Small changes to compression, dedupe, or publish behavior require editing dense files with several cross-coupled responsibilities and similar helper names.
-- Fix approach: Split along existing responsibility boundaries: source preparation, payload assignment/deduplication, archive serialization, and publish. Move behavior with tests before changing semantics.
-
-**Source-text policy tests are useful but brittle:**
-- Issue: Several policy tests assert that specific source tokens appear or do not appear instead of exercising behavior directly.
-- Files: `tests/unit/bounded_memory_policy_tests.cpp`, `tests/unit/benchmark_policy_tests.cpp`, `tests/unit/validation_policy_tests.cpp`, `tests/unit/docs_policy_tests.cpp`, `tests/unit/thread_safety_docs_policy_tests.cpp`, `tests/unit/target_format_policy_tests.cpp`, `tests/unit/ba2_gnrl_writer_tests.cpp`, `tests/unit/ba2_dx10_writer_tests.cpp`
-- Impact: Refactors can fail tests without changing behavior, and behavior regressions can pass if the expected token remains in source text or documentation.
-- Fix approach: Keep policy tests for hard boundaries, but prefer executable tests for memory bounds, publish behavior, warning coverage, package integration, and parser malformed-input behavior.
-
-**Public documentation still exposes planning-era identifiers:**
-- Issue: Public headers and docs include milestone, phase, and decision identifiers such as `Phase 3`, `Phase 12`, `D-23`, and `D-09`.
-- Files: `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, `docs/thread-safety.md`, `docs/compatibility-evidence.md`, `docs/PRD.md`, `tests/fixtures/README.md`
-- Impact: Consumer-facing API docs can read as internal planning notes rather than stable library documentation, and some comments describe early milestone scope while the implementation supports broader formats.
-- Fix approach: Rewrite public comments and docs around durable behavior names. Preserve accurate compatibility rationale, but move phase/decision references to planning artifacts.
-
-**Windows shared-library exports are broad:**
-- Issue: `CMakeLists.txt` uses `WINDOWS_EXPORT_ALL_SYMBOLS ON` instead of an explicit public export macro and hidden-by-default internal symbols.
-- Files: `CMakeLists.txt`, `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, `include/libbsa/validation.hpp`, `include/libbsa/result.hpp`
-- Impact: Dynamic-library consumers can accidentally link to unintended exported symbols, and the project has no stable ABI discipline despite shipping shared builds.
-- Fix approach: Add an explicit `LIBBSA_API` export macro before committing to a binary ABI policy; keep internal symbols private and preserve C++20 source compatibility.
+**Compatibility knowledge is encoded as scattered literals:**
+- Issue: Archive magic values, record sizes, version numbers, sentinel values, compression methods, and texture constants are duplicated in parser, writer, and fixture-generator code.
+- Files: `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`, `src/formats/ba2/ba2_gnrl_prepare.cpp`, `src/formats/ba2/ba2_dx10_prepare.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_prepare.cpp`, `tests/fixtures/generated/generate_ba2_gnrl_fixtures.cpp`, `tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp`
+- Impact: Parser/writer/fixture drift can silently change compatibility behavior in one path without the others.
+- Fix approach: Introduce internal format-constants headers per family, such as `src/formats/ba2/ba2_constants.hpp` and `src/formats/bsa/tes4_bsa_constants.hpp`, with comments referencing compatibility evidence.
 
 ## Known Bugs
 
-**Confirmed runtime bugs:**
-- Symptoms: Not detected in the current scan of source, tests, CI configuration, and committed generated fixtures.
-- Files: `src/archive.cpp`, `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`, `tests/CMakeLists.txt`, `.github/workflows/ci.yml`
-- Trigger: Not applicable.
-- Workaround: Treat the items in this document as risk areas until reproduced with failing tests.
+**BA2 DX10 aggregate payload sizes can overflow silently:**
+- Symptoms: `raw_payload_size` and `stored_payload_size` are accumulated with unchecked `+=` across chunks and then exposed in `entry_metadata`.
+- Files: `src/formats/ba2/ba2_dx10_parser.cpp`
+- Trigger: A malicious DX10 archive with many chunks whose per-chunk spans fit the file size but whose total decoded or stored chunk sizes overflow `std::uint64_t` during entry materialization.
+- Workaround: None in the public API; current chunk-level bounds still prevent direct out-of-file reads.
+
+**BA2 GNRL filename table end can overflow:**
+- Symptoms: `name_table_end` is computed as `file_table_offset + name_table_consumed` after parsing host-file names.
+- Files: `src/formats/ba2/ba2_gnrl_parser.cpp`
+- Trigger: An archive with a very high `FileTableOffset` and enough parsed name bytes to wrap the `std::uint64_t` sum.
+- Workaround: Name reads are individually bounded by `archive_size`; add an `add_fits_u64` helper before using the aggregate end value.
+
+**Parallel bulk extraction can duplicate expensive work for repeated paths:**
+- Symptoms: `archive_reader::extract_entries` performs `find`, sink creation, and extraction per request without de-duplicating repeated archive paths.
+- Files: `src/archive.cpp`, `src/detail/parallel_work.cpp`
+- Trigger: A caller submits many duplicate `bulk_extract_request` paths with `worker_count > 1`.
+- Workaround: Callers can de-duplicate requests before invoking `extract_entries`.
 
 ## Security Considerations
 
-**Malformed archive allocation must stay inside `result` errors:**
-- Risk: Parser helpers that allocate direct vectors from archive-derived counts can throw if a hostile archive declares large but span-valid metadata, records, or name tables.
-- Files: `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`, `src/detail/byte_vector.hpp`
-- Current mitigation: Count and offset arithmetic is checked before many allocations, and `src/detail/byte_vector.hpp` translates allocation failures where it is used.
-- Recommendations: Make allocation translation mandatory in parser read helpers and add sparse-file tests that do not require large committed fixtures.
+**Archive-controlled counts can drive memory and CPU denial of service:**
+- Risk: High `file_count`, `folder_count`, or DX10 chunk counts can cause large metadata allocations, sort costs, and hash-set insertion work before the archive is rejected.
+- Files: `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`
+- Current mitigation: Arithmetic helpers (`src/detail/parser_primitives.cpp`) validate table byte spans, and byte-vector allocation helpers (`src/detail/byte_vector.hpp`) translate some allocation failures.
+- Recommendations: Add explicit maximum metadata-count policies or caller-configurable validation limits; translate all metadata allocation failures into `format_error`.
 
-**Archive virtual paths are not host output paths:**
-- Risk: `entry_metadata::original_path` preserves archive spelling and separators; extraction-to-directory helpers can introduce traversal if archive paths are joined directly onto host paths.
-- Files: `src/detail/archive_path.cpp`, `include/libbsa/archive.hpp`, `docs/integration-examples.md`, `tests/unit/archive_path_tests.cpp`
-- Current mitigation: `detail::normalize_archive_path` rejects empty, rooted, drive-rooted, `.` / `..`, repeated-separator, and embedded-NUL virtual paths.
-- Recommendations: Any extraction-to-directory helper must normalize, revalidate, and safely join under an output root with canonical containment checks.
+**Temporary DX10 snapshot directory names are predictable:**
+- Risk: Snapshot directories use `std::filesystem::temp_directory_path()` plus `libbsa-dx10-snapshot-<counter>`, with only 1024 attempts.
+- Files: `src/formats/ba2/ba2_dx10_prepare.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`
+- Current mitigation: `std::filesystem::create_directory` makes reservation atomic, and `ba2_dx10_writer.cpp` removes the snapshot directory best-effort.
+- Recommendations: Use a cryptographically strong random suffix or Windows temp-file APIs; keep the current create-directory reservation and cleanup ownership model.
 
-**Local compatibility corpora must stay external:**
-- Risk: Optional game archives and BSArchPro-derived expected data can contain copyrighted payloads or local machine paths.
-- Files: `tests/unit/local_game_fixture_tests.cpp`, `tests/fixtures/README.md`, `docs/compatibility-evidence.md`, `.gitignore`
-- Current mitigation: Local corpus checks require `LIBBSA_GAME_FIXTURES` or `LIBBSA_BSARCHPRO_EXPECTED`, are labeled `requires-game-fixture`, and skip in the default suite.
-- Recommendations: Keep local corpora ignored and never generate expected data under `tests/fixtures/generated/`; use machine-local paths or private CI artifacts for real-game compatibility checks.
-
-**TES5Edit boundary is protected but still easy to violate manually:**
-- Risk: `TES5Edit/` is a submodule and reference corpus; accidental edits, formatting, or submodule pointer changes break the project boundary.
-- Files: `AGENTS.md`, `.github/workflows/ci.yml`, `TES5Edit/`
-- Current mitigation: CI checks `git status --short TES5Edit`, and `AGENTS.md` forbids editing, formatting, staging, compiling, or vendoring under `TES5Edit/`.
-- Recommendations: Keep scripts, fixture generators, docs tools, and formatting commands scoped away from `TES5Edit/`; never use it as a writable fixture workspace.
+**Output publish safety depends on same-volume rename behavior:**
+- Risk: Writer output is created in a temporary directory next to the destination and published with `MoveFileExW`; callers using unusual paths, reparse points, or network filesystems may see platform-specific failures.
+- Files: `src/detail/writer_publish.cpp`, `src/detail/atomic_file_ops.hpp`, `src/formats/bsa/tes3_bsa_writer.cpp`, `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`
+- Current mitigation: Existing destinations must be regular files when overwrite is enabled, non-overwrite publish is atomic, and cleanup is isolated to a writer-owned temp directory.
+- Recommendations: Document reparse-point/network-share expectations in `docs/target-format-guide.md` or writer API docs; add tests for directory targets, read-only existing files, and reparse-point refusal if supported by the CI environment.
 
 ## Performance Bottlenecks
 
-**Compressed extraction buffers per entry or per texture chunk:**
-- Problem: Raw extraction streams in 64 KiB chunks, but compressed extraction materializes the stored compressed payload and decoded output before writing to the sink.
+**Compressed extraction is whole-buffer per entry or chunk:**
+- Problem: Compressed BSA entries and BA2 payloads are read and decompressed into memory before being written to the sink.
 - Files: `src/formats/bsa/tes4_bsa_reader.cpp`, `src/formats/ba2/ba2_gnrl_reader.cpp`, `src/formats/ba2/ba2_dx10_reader.cpp`, `src/detail/deflate_codec.cpp`, `src/detail/lz4_frame_codec.cpp`, `src/detail/lz4_block_codec.cpp`
-- Cause: `libdeflate`, LZ4 frame, and raw LZ4 block helpers expose exact-size one-shot vector APIs.
-- Improvement path: Add streaming or bounded-window decompression adapters where library support permits it; otherwise expose caller-selectable extraction size limits outside `validate_archive`.
+- Cause: `detail::decompress_payload_exact` returns a complete `std::vector<std::byte>`, matching whole-buffer libdeflate/LZ4 APIs.
+- Improvement path: Keep exact-size validation, but add streaming sink adapters for codec outputs where practical, or enforce public size limits for convenience APIs such as `archive_reader::extract_bytes`.
 
-**Writer compression and dedupe paths materialize large payloads:**
-- Problem: Compressed writer entries and dedupe comparisons read or build complete stored payloads before archive output is written.
-- Files: `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`, `src/detail/compression_router.cpp`
-- Cause: Compression, exact-byte dedupe, and stored-payload hashing operate on whole buffers.
-- Improvement path: Add streaming compression/hashing where codecs allow it; keep exact stored-byte equality semantics for dedupe.
+**DX10 writer snapshots then re-reads texture subresources:**
+- Problem: `add_file` analyzes a full DDS, writes each subresource to temp snapshot files, and later `write_to` reopens those snapshot files to assemble and compress chunks.
+- Files: `src/formats/ba2/ba2_dx10_prepare.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`, `src/texture/directxtex_analyzer.cpp`
+- Cause: Snapshotting stabilizes mutable source-file inputs between add and finalize, but introduces extra disk I/O and temp cleanup work.
+- Improvement path: Preserve snapshot semantics, but batch reads, pre-size chunk buffers, and measure snapshot overhead in `benchmarks/libbsa_benchmarks.cpp` before changing ownership.
 
-**Open/list metadata is fully materialized and copied:**
-- Problem: `archive_reader::open` builds a full `std::vector<entry_metadata>`, and `archive_reader::entries()` returns a copy.
-- Files: `src/archive.cpp`, `include/libbsa/archive.hpp`, `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`
-- Cause: The public API returns value vectors and optional value copies for stable ownership.
-- Improvement path: Add an iterator/view-style API or callback listing API while preserving the current value-returning API for simple consumers.
-
-**BA2 DX10 writer snapshots DDS inputs through DirectXTex and temp files:**
-- Problem: `ba2_dx10_writer::add_file` loads DDS bytes, copies subresource bytes, and writes writer-owned snapshots to a temp directory before final archive output.
-- Files: `src/texture/directxtex_analyzer.cpp`, `src/texture/directxtex_analyzer.hpp`, `src/formats/ba2/ba2_dx10_writer.cpp`, `src/formats/ba2/ba2_dx10_writer.hpp`, `include/libbsa/writer.hpp`
-- Cause: The writer owns input bytes after `add_file` so callers can mutate or delete the source DDS before `write_to`.
-- Improvement path: Keep the ownership guarantee, but consider a disk-backed source policy that validates immutable file metadata and streams subresources from caller-approved stable sources.
-
-**Benchmarks are correctness-checked but not performance-gated:**
-- Problem: Benchmark output records timing and correctness, but default tests intentionally reject fixed speed thresholds.
-- Files: `benchmarks/libbsa_benchmarks.cpp`, `benchmarks/README.md`, `tests/unit/benchmark_policy_tests.cpp`, `CMakeLists.txt`, `.github/workflows/ci.yml`
-- Cause: Host-dependent timing makes fixed CI thresholds noisy.
-- Improvement path: Store historical benchmark reports outside the default test gate and compare trends in a separate maintainer workflow.
+**TES3 payload overlap validation is quadratic:**
+- Problem: Each TES3 entry span is checked against every previously seen payload span.
+- Files: `src/formats/bsa/tes3_bsa_parser.cpp`
+- Cause: `payload_spans` is kept in insertion order and scanned linearly for every entry.
+- Improvement path: Sort payload spans by offset after materialization or maintain an ordered interval structure. Preserve the current hash-order validation before changing overlap logic.
 
 ## Fragile Areas
 
-**Format parser offset math and record validation:**
-- Files: `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`
-- Why fragile: Each parser combines Bethesda-specific table layouts, count-derived span math, hash/order rules, duplicate path checks, name-table parsing, and payload span validation.
-- Safe modification: Add or update generated malformed fixtures in `tests/fixtures/generated/`, update `tests/fixtures/generated/compatibility_matrix.json`, and cover the affected parser through `tests/unit/*reader_tests.cpp` or `tests/unit/*parser_tests.cpp`.
-- Test coverage: Strong generated malformed coverage exists, but real-world corpus coverage remains optional through `tests/unit/local_game_fixture_tests.cpp`.
+**BA2 DX10 chunk layout and DDS reconstruction:**
+- Files: `src/formats/ba2/ba2_dx10_parser.cpp`, `src/formats/ba2/ba2_dx10_reader.cpp`, `src/texture/dds_layout.cpp`, `src/texture/directxtex_analyzer.cpp`, `tests/unit/ba2_dx10_parser_tests.cpp`, `tests/unit/ba2_dx10_malformed_tests.cpp`, `tests/unit/dds_layout_tests.cpp`
+- Why fragile: Correctness depends on `start_mip`/`end_mip`, cubemap face grouping, DDS DXT10 header reconstruction, and Starfield compression method routing all agreeing.
+- Safe modification: Change one invariant at a time and add malformed cases to `tests/fixtures/generated/compatibility_matrix.json` plus unit coverage in `tests/unit/ba2_dx10_malformed_tests.cpp`.
+- Test coverage: Good generated coverage exists, but broader real-game DDS and BSArchPro-derived comparison coverage is opt-in through `tests/unit/local_game_fixture_tests.cpp`.
 
-**Starfield BA2 v2/v3 header fields and compression methods:**
-- Files: `src/formats/ba2/ba2_format_detector.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`, `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, `docs/target-format-guide.md`
-- Why fragile: `Unknown1`, `Unknown2`, and `CompressionMethod` are preserved public metadata, while method `3` routes to raw LZ4 block and method `0` routes to deflate. Other values fail closed.
-- Safe modification: Do not infer new Starfield behavior from extension or target alone; add fixture-backed policy and update target-format docs before accepting new method values.
-- Test coverage: Generated FO4/Starfield fixtures exist in `tests/fixtures/generated/archives/`, but real-corpus checks are optional.
+**TES4 BSA embedded-name and compression-size prefixes:**
+- Files: `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_reader.cpp`, `src/formats/bsa/tes4_bsa_prepare.cpp`, `src/formats/bsa/tes4_bsa_serialize.cpp`, `tests/unit/tes4_bsa_reader_tests.cpp`, `tests/unit/tes4_bsa_writer_tests.cpp`
+- Why fragile: Stored size flags, default-compression XOR behavior, embedded-name prefixes, and codec-specific raw-size prefixes interact in both parser and writer paths.
+- Safe modification: Keep parser and writer changes paired; test zero-byte entries, embedded-name entries, compressed entries, and target-specific v103/v104/v105 cases together.
+- Test coverage: Strong synthetic tests exist; local game corpus compatibility remains optional.
 
-**Deduplication and mutable disk-source handling:**
-- Files: `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`, `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/ba2_gnrl_writer_tests.cpp`, `tests/unit/ba2_dx10_writer_tests.cpp`
-- Why fragile: Dedupe eligibility depends on final stored bytes, compression route, raw size, packed size, metadata compatibility, and whether disk files changed after preparation.
-- Safe modification: Preserve the opt-in dedupe defaults and add tests for source growth/truncation, serial-vs-parallel determinism, and read-back extraction before changing dedupe keys.
-- Test coverage: Focused writer coverage exists, but dedupe behavior is spread across writer-specific tests rather than a shared contract suite.
-
-**Validation warning catalog coupling:**
-- Files: `include/libbsa/validation.hpp`, `src/validation.cpp`, `docs/compatibility-evidence.md`, `tests/unit/compatibility_warning_tests.cpp`, `tests/unit/validation_policy_tests.cpp`, `tests/unit/target_format_policy_tests.cpp`
-- Why fragile: Every new public `compatibility_warning_code` must be represented in public docs, evidence catalog text, policy tests, validation behavior, and package-consumer examples when relevant.
-- Safe modification: Add the enum value, add an executable warning test, update `docs/compatibility-evidence.md`, and keep diagnostics free of parser offsets or record indexes.
-- Test coverage: Policy tests enforce catalog presence, but warning semantics still need behavior tests per warning.
-
-**BA2 DX10 texture layout reconstruction:**
-- Files: `src/texture/dds_layout.cpp`, `src/texture/dds_layout.hpp`, `src/texture/directxtex_analyzer.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`, `src/formats/ba2/ba2_dx10_reader.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`, `tests/unit/dds_layout_tests.cpp`, `tests/unit/ba2_dx10_parser_tests.cpp`, `tests/unit/ba2_dx10_extraction_tests.cpp`, `tests/unit/ba2_dx10_writer_tests.cpp`
-- Why fragile: DDS header reconstruction, mip range planning, cubemap/array inference, chunk ordering, and DXGI format allowlists must stay aligned across parser, reader, writer, and DirectXTex-backed tests.
-- Safe modification: Treat every DXGI format, chunking, cubemap, or array change as a cross-module change; update generated DDS sources and validate extracted DDS metadata.
-- Test coverage: Strong generated coverage exists for supported fixtures, but unsupported real-world DDS variants require new fixtures before behavior changes.
-
-**Publish semantics differ between BSA and BA2 writers:**
-- Files: `src/detail/atomic_file_ops.hpp`, `src/formats/bsa/tes3_bsa_writer.cpp`, `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`, `src/formats/ba2/ba2_publish.hpp`
-- Why fragile: No-overwrite uses a shared helper, but overwrite behavior differs between BSA atomic replace and BA2 backup/rename rollback paths.
-- Safe modification: Centralize publish behavior before modifying overwrite, rollback, or temp directory semantics.
-- Test coverage: Writer tests cover default no-overwrite, non-regular targets, and rollback helpers, but process-crash interruption is not directly testable in the current suite.
+**Parallel execution error propagation:**
+- Files: `src/detail/parallel_work.cpp`, `src/archive.cpp`, `src/formats/bsa/tes4_bsa_prepare.cpp`, `src/formats/ba2/ba2_gnrl_prepare.cpp`, `src/formats/ba2/ba2_dx10_prepare.cpp`, `tests/unit/bulk_extraction_tests.cpp`, `tests/unit/bsa_writer_execution_tests.cpp`, `tests/unit/ba2_writer_execution_tests.cpp`
+- Why fragile: Work lambdas mutate per-index vectors and shared sink factories may be caller-defined; `run_indexed_work` stops on the first infrastructure error but bulk extraction records per-entry failures.
+- Safe modification: Preserve per-index ownership and never call user factories/sinks while holding internal locks. Add tests for worker creation failure only if it can be injected deterministically.
+- Test coverage: Functional parallel output equivalence is covered; stress/fuzz-level concurrency coverage is limited.
 
 ## Scaling Limits
 
-**Worker count has a hard library limit:**
-- Current capacity: `src/detail/parallel_work.cpp` accepts `1..1024` workers and rejects `0` or larger values.
-- Limit: There is no automatic worker-count selection based on CPU count, archive size, or codec cost.
-- Scaling path: Add an explicit `auto_worker_count` policy only if callers need it; keep `worker_count == 0` invalid to preserve current API semantics in `include/libbsa/archive.hpp` and `include/libbsa/writer.hpp`.
+**Archive sizes above platform `size_t` are unsupported for parsing metadata:**
+- Current capacity: Host-file parser entry points reject archives where `archive_size > std::numeric_limits<std::size_t>::max()`.
+- Limit: 32-bit builds cannot open large archives that fit `std::uint64_t` metadata fields; Windows MSVC x64 is the intended environment.
+- Scaling path: Keep Windows x64 as the supported target. Do not add 32-bit portability work unless project support changes.
 
-**Archive metadata index size scales with file count:**
-- Current capacity: Parsers check count-derived arithmetic and materialize all public entries in memory.
-- Limit: Archives with very large file counts require memory for record vectors, path strings, hash sets, texture chunks, and copied `entries()` results.
-- Scaling path: Add streaming list APIs, internal string interning, or borrowed views while preserving the current value-returning API for compatibility.
+**Payload size fields are 32-bit in several archive families:**
+- Current capacity: TES3/TES4/BA2 record sizes are checked against `std::uint32_t` or format-specific size-flag limits.
+- Limit: Individual writer entries larger than the format's record field range fail during preparation.
+- Scaling path: Preserve format limits; expose clearer diagnostics in public docs for users packing large loose files.
 
-**Compressed payload size is bounded by platform vector size and codec one-shot limits:**
-- Current capacity: `src/detail/lz4_block_codec.cpp` rejects sizes over `int` limits for raw LZ4 block APIs; deflate and LZ4 frame allocate expected output vectors.
-- Limit: Very large compressed payloads can fail or consume large memory even when raw extraction paths are chunked.
-- Scaling path: Add format-specific chunking policies or streaming codec adapters; keep `validate_archive` size caps in `include/libbsa/validation.hpp` for validation workflows.
-
-**Default build presets cover Debug only:**
-- Current capacity: `CMakePresets.json` and `.github/workflows/ci.yml` define `windows-msvc-debug-static` and `windows-msvc-debug-shared`.
-- Limit: Release optimization and release package behavior are not represented by a preset or CI matrix entry.
-- Scaling path: Add Windows MSVC Release static/shared presets and run at least package-consumer smoke tests against them.
+**Worker count is hard-capped at 1024:**
+- Current capacity: `detail::run_indexed_work` accepts `worker_count` from 1 to 1024.
+- Limit: Higher values return `error_code::invalid_argument`; there is no `auto` worker-count selection.
+- Scaling path: Keep the cap; add an explicit `auto` policy only if benchmarks prove it improves usability.
 
 ## Dependencies at Risk
 
-**DirectXTex Windows dependency and version behavior:**
-- Risk: DDS parsing and BA2 DX10 writer support depend on DirectXTex behavior and availability through vcpkg.
-- Impact: DirectXTex metadata changes can affect `src/texture/directxtex_analyzer.cpp`, `src/texture/dds_layout.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`, and BA2 DX10 tests.
-- Migration plan: Keep DirectXTex behind `src/texture/directxtex_analyzer.*` for API cleanliness, and treat Windows as the only supported platform.
+**DirectXTex API and DXGI format assumptions:**
+- Risk: DX10 writer and DDS analysis depend on DirectXTex metadata behavior while keeping DirectX types out of public headers.
+- Impact: DirectXTex version changes can affect accepted DDS inputs, mip metadata, and DXT10 header interpretation.
+- Migration plan: Keep all DirectXTex calls inside `src/texture/directxtex_analyzer.cpp`; update generated DDS fixture coverage in `tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp` when dependency behavior changes.
 
-**vcpkg manifest dependency pinning needs maintenance:**
-- Risk: `vcpkg.json` and `vcpkg-configuration.json` pin a baseline, but there is no separate dependency-update validation workflow.
-- Impact: Dependency security fixes or API changes in `libdeflate`, `lz4`, `DirectXTex`, `Catch2`, or `nlohmann-json` can remain untested until a manual baseline update.
-- Migration plan: Add a periodic dependency refresh workflow that runs Windows static/shared tests, benchmark report generation, and package-consumer smoke tests.
-
-**Binary ABI policy is not defined:**
-- Risk: Public headers expose value types containing `std::string`, `std::vector`, `std::optional`, and pimpl-owning classes, while `CMakeLists.txt` exports a shared library target.
-- Impact: Source consumers are fine, but binary package consumers can be broken by standard-library, compiler, or layout changes.
-- Migration plan: Treat `include/libbsa/` as source-compatible API; before binary distribution, define ABI policy, export macros, symbol visibility, compiler support matrix, and versioning rules.
+**nlohmann-json is test-only but listed as a top-level vcpkg dependency:**
+- Risk: `vcpkg.json` includes `nlohmann-json` for test fixture manifests, but the library target does not link it.
+- Impact: Consumers using manifest dependencies may install an unnecessary package unless tests are separated later.
+- Migration plan: If packaging needs a lean runtime manifest, move test-only dependencies behind a vcpkg feature or document them as development dependencies.
 
 ## Missing Critical Features
 
-**No public fuzzing harness:**
-- Problem: Malformed generated fixtures exist, but there is no committed libFuzzer/AFL-style harness for parser entry points.
-- Blocks: Continuous malformed-input discovery beyond the curated fixture matrix.
-- Files: `tests/fixtures/generated/compatibility_matrix.json`, `tests/fixtures/README.md`, `CMakePresets.json`, `src/archive.cpp`
+**Mandatory compatibility corpus is synthetic by default:**
+- Problem: Default tests use generated legal fixtures and writer-output archives; real game archive and BSArchPro-derived expected comparisons are opt-in.
+- Blocks: Byte-level confidence against broad in-the-wild archives depends on local `LIBBSA_GAME_FIXTURES`/`LIBBSA_BSARCHPRO_EXPECTED` setup.
 
-**No Release build preset or Release CI lane:**
-- Problem: The repo documents and tests Debug static/shared presets only.
-- Blocks: Continuous validation of optimizer-sensitive behavior, Release package exports, and Release package-consumer smoke tests.
-- Files: `CMakePresets.json`, `.github/workflows/ci.yml`, `README.md`
-
-**No stable binary ABI/export contract:**
-- Problem: The shared-library build exists, but explicit ABI policy and symbol export control are absent.
-- Blocks: Confident binary distribution to downstream tools that do not build from source.
-- Files: `CMakeLists.txt`, `cmake/libbsaConfig.cmake.in`, `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, `include/libbsa/validation.hpp`, `include/libbsa/result.hpp`
-
-**No committed real-game compatibility corpus:**
-- Problem: Default tests use legal generated fixtures and writer-output archives; real game archives and BSArchPro-derived manifests are opt-in only.
-- Blocks: Mandatory CI proof against every real Bethesda archive quirk.
-- Files: `tests/unit/local_game_fixture_tests.cpp`, `tests/fixtures/README.md`, `docs/compatibility-evidence.md`, `.gitignore`
+**No fuzzing harness is present for malformed binary inputs:**
+- Problem: Malformed tests are curated fixtures and unit cases, not coverage-guided fuzzing over parser entry points.
+- Blocks: Parser hardening against novel corrupted table combinations depends on manual fixture generation.
 
 ## Test Coverage Gaps
 
-**Real game and BSArchPro-derived corpus checks are opt-in:**
-- What's not tested: Default CI does not compare against a real local game corpus or BSArchPro-derived expected manifest.
-- Files: `tests/unit/local_game_fixture_tests.cpp`, `docs/compatibility-evidence.md`, `tests/fixtures/README.md`, `.github/workflows/ci.yml`
-- Risk: Generated fixtures can miss real-world archive quirks, especially Starfield BA2 variants and uncommon DDS layouts.
-- Priority: High for compatibility hardening.
+**Allocation-failure paths for metadata containers:**
+- What's not tested: `reserve`, `insert`, and `push_back` failures in metadata vectors and hash sets.
+- Files: `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`
+- Risk: Exceptions can escape public APIs on adversarial counts.
+- Priority: High
 
-**Release lane is absent from CI:**
-- What's not tested: `.github/workflows/ci.yml` runs Windows MSVC Debug static and shared presets only.
-- Files: `.github/workflows/ci.yml`, `CMakePresets.json`, `CMakeLists.txt`
-- Risk: Optimization-sensitive issues and package export differences are not continuously exercised.
-- Priority: Medium.
+**Real corpus compatibility and BSArchPro comparisons:**
+- What's not tested: Default CI does not compare metadata or payload hashes against a broad local game archive corpus.
+- Files: `tests/unit/local_game_fixture_tests.cpp`, `docs/compatibility-evidence.md`, `tests/fixtures/README.md`
+- Risk: Synthetic fixtures can miss rare Bethesda archive quirks.
+- Priority: Medium
 
-**Benchmark report target is manual:**
-- What's not tested: `libbsa_benchmark_report` is defined and policy-tested, but normal CI build/test does not generate or archive benchmark reports.
-- Files: `CMakeLists.txt`, `benchmarks/libbsa_benchmarks.cpp`, `benchmarks/README.md`, `tests/unit/benchmark_policy_tests.cpp`, `.github/workflows/ci.yml`
-- Risk: Performance regressions or benchmark breakage can sit outside pull-request feedback.
-- Priority: Medium.
-
-**Allocation-failure paths need larger sparse-file regression tests:**
-- What's not tested: The default malformed matrix covers many oversized arithmetic cases, but not every direct allocation path with a large sparse archive that passes span checks.
-- Files: `tests/fixtures/generated/compatibility_matrix.json`, `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/tes4_bsa_reader_tests.cpp`, `tests/unit/ba2_gnrl_reader_tests.cpp`, `tests/unit/ba2_dx10_parser_tests.cpp`, `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`
-- Risk: `std::bad_alloc` can escape in code paths that should return `error_code::format_error`.
-- Priority: High.
-
-**Publish crash-window behavior is not exercised:**
-- What's not tested: Tests cover no-overwrite races and rollback helper behavior, but not interrupted-process behavior between BA2 backup reservation and final rename.
-- Files: `src/formats/ba2/ba2_gnrl_writer.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`, `tests/unit/ba2_gnrl_writer_tests.cpp`, `tests/unit/ba2_dx10_writer_tests.cpp`
-- Risk: A crash or termination during overwrite can leave backup/temp artifacts and no final output path.
-- Priority: Medium.
+**Filesystem edge cases for writer publish and DX10 snapshots:**
+- What's not tested: Reparse points, read-only targets, network shares, temp-directory collision exhaustion, and cleanup failure paths.
+- Files: `src/detail/writer_publish.cpp`, `src/detail/atomic_file_ops.hpp`, `src/formats/ba2/ba2_dx10_prepare.cpp`, `tests/unit/writer_publish_tests.cpp`
+- Risk: Archive creation can fail or leave temp artifacts in unusual Windows filesystem environments.
+- Priority: Medium
 
 ---
 

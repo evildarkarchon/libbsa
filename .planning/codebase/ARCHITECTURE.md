@@ -1,4 +1,3 @@
-<!-- refreshed: 2026-05-11 -->
 # Architecture
 
 **Analysis Date:** 2026-05-11
@@ -7,37 +6,37 @@
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                    Public C++20 API Surface                  │
-│  `include/libbsa/archive.hpp` `include/libbsa/writer.hpp`    │
-│  `include/libbsa/validation.hpp` `include/libbsa/result.hpp` │
-└───────────────┬───────────────────────┬─────────────────────┘
-                │                       │
-                ▼                       ▼
-┌──────────────────────────────┐ ┌────────────────────────────┐
-│ Reader / Validation Facades  │ │ Public Writer Facades       │
-│ `src/archive.cpp`            │ │ `src/formats/*/*writer.cpp` │
-│ `src/validation.cpp`         │ │                            │
-└───────────────┬──────────────┘ └──────────────┬─────────────┘
-                │                               │
-                ▼                               ▼
+│                  Public C++20 API Layer                     │
+│ `include/libbsa/archive.hpp` `include/libbsa/writer.hpp`    │
+│ `include/libbsa/validation.hpp` `include/libbsa/result.hpp` │
+└──────────────┬───────────────────┬──────────────────────────┘
+               │                   │
+               ▼                   ▼
+┌──────────────────────────────┐  ┌────────────────────────────┐
+│ Reader / Validation Facades  │  │ Writer Facades             │
+│ `src/archive.cpp`            │  │ `src/formats/*/*writer.cpp`│
+│ `src/validation.cpp`         │  │                            │
+└──────┬────────────┬──────────┘  └──────┬──────────┬──────────┘
+       │            │                    │          │
+       ▼            ▼                    ▼          ▼
+┌──────────────┐ ┌──────────────┐  ┌──────────────┐ ┌────────────┐
+│ BSA Formats  │ │ BA2 Formats  │  │ Prepare      │ │ Layout     │
+│ `src/formats │ │ `src/formats │  │ `*_prepare`  │ │ `*_layout` │
+│ /bsa/`       │ │ /ba2/`       │  │              │ │            │
+└──────┬───────┘ └──────┬───────┘  └──────┬───────┘ └─────┬──────┘
+       │                │                 │               │
+       └────────┬───────┴─────────────────┴───────┬───────┘
+                ▼                                  ▼
+┌────────────────────────────────┐  ┌───────────────────────────┐
+│ Shared Detail Infrastructure   │  │ Texture Integration       │
+│ `src/detail/*`                 │  │ `src/texture/*`           │
+│ binary I/O, paths, codecs, I/O │  │ DDS layout + DirectXTex   │
+└────────────────────────────────┘  └───────────────────────────┘
+                │                                  │
+                ▼                                  ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                Format-Specific Implementations               │
-│ `src/formats/bsa/` TES3 + TES4-family BSA                    │
-│ `src/formats/ba2/` BA2 GNRL + BA2 DX10                       │
-└───────────────┬───────────────────────┬─────────────────────┘
-                │                       │
-                ▼                       ▼
-┌──────────────────────────────┐ ┌────────────────────────────┐
-│ Shared Internal Utilities    │ │ Texture / DDS Boundary      │
-│ `src/detail/`                │ │ `src/texture/`              │
-│ binary I/O, paths, hashing,  │ │ DirectXTex adapter + BA2    │
-│ compression, atomic publish  │ │ DX10 DDS layout planning    │
-└───────────────┬──────────────┘ └──────────────┬─────────────┘
-                │                               │
-                ▼                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│ Build, Tests, Fixtures, Package Smoke                        │
-│ `CMakeLists.txt` `tests/` `benchmarks/` `cmake/`              │
+│ Host filesystem archive files, caller sinks, fixture data    │
+│ `tests/fixtures/generated/` `docs/` `TES5Edit/` reference    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -45,280 +44,265 @@
 
 | Component | Responsibility | File |
 |-----------|----------------|------|
-| Public reader API | Defines archive metadata, entry metadata, sinks, bulk extraction contracts, and `archive_reader` methods. | `include/libbsa/archive.hpp` |
-| Public writer API | Defines TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 writer classes plus target/options types. | `include/libbsa/writer.hpp` |
-| Public validation API | Defines validation reports, diagnostics, compatibility warnings, and `validate_archive`. | `include/libbsa/validation.hpp` |
-| Public error model | Provides C++20-compatible `result<T>`, `result<void>`, `error`, and `error_code`. | `include/libbsa/result.hpp` |
-| Reader dispatcher | Opens host archive paths, detects BSA vs BA2 bytes, dispatches to parsers, owns immutable reader state, and routes listing/lookup/extraction. | `src/archive.cpp` |
-| Validation facade | Opens archives through public APIs, derives warnings from public metadata, and optionally proves extractability through a discard sink. | `src/validation.cpp` |
-| BSA detector | Classifies TES3 magic and TES4-family BSA versions before parser dispatch. | `src/formats/bsa/bsa_format_detector.cpp` |
-| TES3 BSA parser/reader/writer | Parses, extracts, and writes Morrowind/TES3 BSA archives with raw payloads and TES3 hash ordering. | `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes3_bsa_reader.cpp`, `src/formats/bsa/tes3_bsa_writer.cpp` |
-| TES4-family BSA parser/reader/writer | Parses, extracts, and writes Oblivion/Fallout 3/Skyrim SE BSA variants with deflate or LZ4 frame compression according to archive version. | `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_reader.cpp`, `src/formats/bsa/tes4_bsa_writer.cpp` |
-| BA2 detector | Classifies `BTDX` BA2 files by version, subtype, file count, Starfield header fields, and default compression route. | `src/formats/ba2/ba2_format_detector.cpp` |
-| BA2 GNRL parser/reader/writer | Parses, extracts, and writes Fallout 4 and Starfield general BA2 archives with deflate or raw LZ4 block routing. | `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_gnrl_reader.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp` |
-| BA2 DX10 parser/reader/writer | Parses, reconstructs, extracts, and writes BA2 texture archives using libbsa-owned texture metadata and DDS header reconstruction. | `src/formats/ba2/ba2_dx10_parser.cpp`, `src/formats/ba2/ba2_dx10_reader.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp` |
-| Internal utilities | Supplies bounded binary readers/writers, archive-path normalization, Bethesda hashes, compression routing, allocation guards, worker scheduling, payload streaming, and atomic publish helpers. | `src/detail/` |
-| Texture boundary | Hides DirectXTex and converts DDS state into libbsa-owned metadata, chunk plans, and reconstructed DDS headers. | `src/texture/directxtex_analyzer.cpp`, `src/texture/dds_layout.cpp` |
-| Test harness | Builds Catch2 tests, generated fixtures, package-consumer smoke tests, and manifest validation. | `tests/CMakeLists.txt` |
-| Build/package surface | Defines the `libbsa` target, public file set, private source list, vcpkg dependencies, install/export package, docs target, benchmarks, and tests. | `CMakeLists.txt`, `cmake/libbsaConfig.cmake.in` |
+| Public umbrella header | Aggregates stable consumer-facing archive, writer, validation, result, and version headers. | `include/libbsa/libbsa.hpp` |
+| Public reader API | Defines archive variants, entry metadata, extraction sinks, bulk extraction requests/results, and `archive_reader`. | `include/libbsa/archive.hpp` |
+| Public writer API | Defines target profiles, compression policies, writer options, and writer classes for TES3 BSA, TES4 BSA, BA2 GNRL, and BA2 DX10. | `include/libbsa/writer.hpp` |
+| Public result/error model | Provides C++20 `libbsa::result<T>` and stable `error_code` categories. | `include/libbsa/result.hpp` |
+| Public validation API | Provides `validate_archive`, validation options, fatal diagnostics, and compatibility warnings. | `include/libbsa/validation.hpp` |
+| Reader facade | Detects archive family, delegates parsing, stores immutable opened state, routes listing/lookup/extraction, and schedules bulk extraction. | `src/archive.cpp` |
+| Validation facade | Opens archives, collects metadata warnings, optionally proves extractability through a discard sink, and returns `validation_report`. | `src/validation.cpp` |
+| BSA format layer | Owns TES3 parsing/reading/writing and TES4-family detection, parsing, reading, writer preparation, layout, and serialization. | `src/formats/bsa/` |
+| BA2 format layer | Owns BA2 subtype detection plus GNRL and DX10 parsing, reading, writer preparation, layout, and serialization. | `src/formats/ba2/` |
+| Shared detail layer | Owns internal path normalization, binary readers/writers, overflow-safe parser primitives, codec routing, parallel work, payload streaming, hashes, byte-vector helpers, and publish-safe output. | `src/detail/` |
+| Texture layer | Owns DDS metadata/layout logic and keeps DirectXTex types out of public headers. | `src/texture/` |
+| Build target definition | Defines the `libbsa` target, public header file set, private sources, dependencies, install/export rules, docs, tests, and benchmarks. | `CMakeLists.txt` |
 
 ## Pattern Overview
 
-**Overall:** Public API facade with format-specific parser/reader/writer modules and private dependency adapters.
+**Overall:** Layered library architecture with dependency-light public API, format-specific modules, and shared private infrastructure.
 
 **Key Characteristics:**
-- Public headers under `include/libbsa/` expose stable C++20 value types and classes; private codec, DirectXTex, and format-record details remain in `src/`.
-- Reader and validation flows go through public facades in `src/archive.cpp` and `src/validation.cpp`; format modules under `src/formats/` own byte-level archive rules.
-- Writers use small public objects with `std::shared_ptr<state>` implementation state, collect caller entries, then finalize through format-owned `write_*_archive` functions.
-- Archive-internal paths are normalized through `src/detail/archive_path.cpp`; host filesystem paths appear only at host I/O boundaries.
-- Compression is selected from parsed or target metadata and routed through `src/detail/compression_router.cpp`; callers never select raw codec APIs.
-- DDS and DirectXTex concerns stay behind `src/texture/`, and public texture metadata uses plain libbsa-owned types from `include/libbsa/archive.hpp`.
+- Keep public headers in `include/libbsa/` small and dependency-light; do not expose `libdeflate`, LZ4, DirectXTex, Windows headers, or raw format parser structures from `src/`.
+- Route public operations through façade classes and free functions (`archive_reader::open`, writer `write_to`, `validate_archive`) that delegate to format-specific internals in `src/formats/`.
+- Use format-family modules that follow a consistent split: detection/parsing/reading for readers and writer façade + prepare + layout + serialize for writers.
+- Use `libbsa::result<T>` for expected I/O, format, and caller-data failures; reserve throwing in `result::value()`/`result::error()` for programmer misuse.
+- Store canonical archive paths as normalized `/`-separated lowercase keys, never as host `std::filesystem::path` values inside archive metadata.
+- Treat `TES5Edit/` as read-only behavioral reference material; implementation, tests, and generated fixtures live outside `TES5Edit/`.
 
 ## Layers
 
 **Public API Layer:**
-- Purpose: Define the reusable C++20 library contract for readers, writers, validation, results, and version constants.
+- Purpose: Define the stable consumer contract for opening, listing, extracting, validating, and writing archives.
 - Location: `include/libbsa/`
-- Contains: Public enums, POD metadata, virtual sink interfaces, writer option types, public classes, and Doxygen comments.
-- Depends on: C++ standard library and other public `include/libbsa/` headers only.
-- Used by: Consumers, tests in `tests/unit/`, package smoke tests in `tests/package-consumer/`, and implementation files in `src/`.
+- Contains: Public enums, metadata value types, `payload_sink`, `bulk_extract_sink_factory`, `archive_reader`, writer classes, validation reports, `result<T>`, DLL export macro.
+- Depends on: C++20 standard library headers only plus sibling public headers such as `include/libbsa/result.hpp`.
+- Used by: Consumers, tests in `tests/unit/`, implementation files in `src/`, package consumer smoke tests in `tests/package-consumer/`.
 
-**Facade and Dispatch Layer:**
-- Purpose: Convert public calls into format-specific operations without exposing private format types.
-- Location: `src/archive.cpp`, `src/validation.cpp`
-- Contains: `archive_reader::open`, reader listing/lookup/extraction routing, bulk extraction scheduling, validation report construction.
-- Depends on: Public headers, `src/formats/` parsers/readers, and select `src/detail/` helpers.
-- Used by: Public API callers and validation code.
+**Facade Layer:**
+- Purpose: Bridge the stable public API to private format implementations.
+- Location: `src/archive.cpp`, `src/validation.cpp`, writer façade sections in `src/formats/bsa/tes3_bsa_writer.cpp`, `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, and `src/formats/ba2/ba2_dx10_writer.cpp`.
+- Contains: PIMPL-like public class state, archive family detection, format dispatch, bulk scheduling, writer state mutation, validation diagnostics.
+- Depends on: Public headers, format modules under `src/formats/`, and shared helpers under `src/detail/`.
+- Used by: Public API consumers through exported symbols.
 
 **BSA Format Layer:**
-- Purpose: Own TES3 and TES4-family BSA byte semantics, metadata materialization, extraction, and write-new serialization.
+- Purpose: Implement TES3/Morrowind and TES4-family BSA rules without leaking parser records to public metadata.
 - Location: `src/formats/bsa/`
-- Contains: `bsa_format_detector`, `tes3_bsa_*`, `tes4_bsa_*` parser/reader/writer pairs.
-- Depends on: Public libbsa metadata/results, `src/detail/binary_io.*`, `src/detail/archive_path.*`, `src/detail/bethesda_hash.*`, `src/detail/compression_router.*`, `src/detail/atomic_file_ops.hpp`.
-- Used by: `src/archive.cpp`, public BSA writer methods implemented in `src/formats/bsa/*_writer.cpp`, and focused tests in `tests/unit/`.
+- Contains: `bsa_format_detector`, `tes3_bsa_parser`, `tes3_bsa_reader`, `tes3_bsa_prepare`, `tes3_bsa_layout`, `tes3_bsa_serialize`, `tes3_bsa_writer`, `tes4_bsa_parser`, `tes4_bsa_reader`, `tes4_bsa_prepare`, `tes4_bsa_layout`, `tes4_bsa_serialize`, `tes4_bsa_writer`.
+- Depends on: `src/detail/archive_path.*`, `src/detail/bethesda_hash.*`, `src/detail/binary_io.*`, `src/detail/parser_primitives.*`, `src/detail/compression_router.*`, `src/detail/writer_publish.*`, and `src/texture/directxtex_analyzer.*` for DDS writer validation.
+- Used by: `src/archive.cpp`, public BSA writer classes, fixture generators in `tests/fixtures/generated/`, unit tests in `tests/unit/`.
 
 **BA2 Format Layer:**
-- Purpose: Own BA2 GNRL and DX10 byte semantics, Starfield header handling, chunk metadata, extraction, and write-new serialization.
+- Purpose: Implement Fallout 4 and Starfield BA2 GNRL/DX10 rules, including subtype detection, name-table handling, chunk metadata, and compression method routing.
 - Location: `src/formats/ba2/`
-- Contains: `ba2_format_detector`, `ba2_gnrl_*`, `ba2_dx10_*`, and BA2 publish helpers.
-- Depends on: Public metadata/results, `src/detail/` helpers, and for DX10 paths `src/texture/` adapters.
-- Used by: `src/archive.cpp`, public BA2 writer methods implemented in `src/formats/ba2/*_writer.cpp`, and BA2 tests in `tests/unit/`.
+- Contains: `ba2_format_detector`, GNRL parser/reader/prepare/layout/serialize/writer files, DX10 parser/reader/prepare/layout/serialize/writer files.
+- Depends on: Shared detail helpers, `src/texture/dds_layout.*`, and `src/texture/directxtex_analyzer.*` for DX10 DDS metadata and chunk planning.
+- Used by: `src/archive.cpp`, BA2 public writer classes, BA2 fixture generators, BA2 tests.
 
 **Shared Detail Layer:**
-- Purpose: Provide reusable internal primitives with no public API exposure.
+- Purpose: Centralize reusable internal mechanisms that are not part of the public ABI.
 - Location: `src/detail/`
-- Contains: `binary_reader`, `binary_writer`, archive path normalization, Bethesda hash functions, compression wrappers/router, payload transfer, byte-vector allocation guards, worker scheduling, atomic publish.
-- Depends on: Public result types and third-party libraries only where needed (`libdeflate`, `lz4`, Windows APIs in `atomic_file_ops.hpp`).
-- Used by: `src/archive.cpp`, all format modules, texture layout code, and white-box unit tests.
+- Contains: `binary_reader`/`binary_writer`, safe vector helpers, overflow-safe span arithmetic, normalized archive path keys, Bethesda hashes, compression routers and concrete codec adapters, payload streaming, parallel work, and atomic writer publication.
+- Depends on: Public `result.hpp`, C++ standard library, private dependency adapters for libdeflate and LZ4.
+- Used by: All format modules and selected façade code.
 
 **Texture Layer:**
-- Purpose: Isolate DirectXTex and DDS layout rules from public headers and format writers/readers.
+- Purpose: Analyze DDS input, expose libbsa-native texture metadata, and reconstruct/plan DDS DXT10 layout without leaking DirectXTex.
 - Location: `src/texture/`
-- Contains: DDS source analysis, libbsa-owned texture metadata translation, DXT10 header reconstruction, mip/chunk planning, chunk ordering validation.
-- Depends on: Public texture metadata in `include/libbsa/archive.hpp`, public result types, `DirectXTex.h` only in `src/texture/directxtex_analyzer.cpp`, and `src/detail/binary_io.*` for header bytes.
-- Used by: BA2 DX10 parser, reader, writer, fixture tests, and DX10 writer tests.
+- Contains: `directxtex_analyzer.*` for DirectXTex-backed DDS metadata/source analysis and `dds_layout.*` for format-size math, mip/chunk planning, and DXT10 header generation.
+- Depends on: `Microsoft::DirectXTex` privately through `src/texture/directxtex_analyzer.cpp`; `src/texture/dds_layout.cpp` uses libbsa-native numeric DXGI format descriptors.
+- Used by: BA2 DX10 parser/reader/writer paths and TES4 BSA DDS compatibility checks.
 
-**Build/Test/Packaging Layer:**
-- Purpose: Build the library, expose installable CMake package config, run tests, generate fixtures, and verify consumer integration.
-- Location: `CMakeLists.txt`, `tests/CMakeLists.txt`, `cmake/`, `tests/package-consumer/`, `benchmarks/`
-- Contains: CMake target and file set, vcpkg package discovery, Catch2 tests, fixture generators, package-consumer smoke scripts, benchmark tooling.
-- Depends on: CMake 4.0+, vcpkg packages from `vcpkg.json`, and Windows MSVC presets from `CMakePresets.json`.
-- Used by: Local development, CI, packaging validation, and GSD verification.
+**Test and Fixture Layer:**
+- Purpose: Validate public behavior, private helpers, generated archive fixtures, package exports, policies, and compatibility evidence.
+- Location: `tests/`
+- Contains: Catch2 unit tests in `tests/unit/`, generated fixture sources/manifests in `tests/fixtures/generated/`, export checks in `tests/export-surface/`, package consumer smoke tests in `tests/package-consumer/`.
+- Depends on: `libbsa::libbsa`, Catch2, `nlohmann_json`, Python fixture scripts/tooling through `tests/CMakeLists.txt`.
+- Used by: CTest presets and CI-style validation.
 
 ## Data Flow
 
-### Primary Archive Open Path
+### Primary Request Path
 
-1. Caller invokes `archive_reader::open(host_path)` (`src/archive.cpp:82`).
-2. `src/archive.cpp` reads a bounded detection prefix and archive file size (`src/archive.cpp:58`, `src/archive.cpp:72`).
-3. BA2 archives are identified by `BTDX` and routed through `formats::ba2::detect_ba2_format` (`src/archive.cpp:109`, `src/formats/ba2/ba2_format_detector.cpp:35`).
-4. BA2 DX10 archives call `parse_ba2_dx10_archive_file`; BA2 GNRL archives call `parse_ba2_gnrl_archive_file` (`src/archive.cpp:122`, `src/archive.cpp:133`).
-5. Non-BA2 archives call `formats::bsa::detect_bsa_format`, then dispatch to TES3 or TES4-family parsers (`src/archive.cpp:141`, `src/archive.cpp:153`, `src/archive.cpp:164`).
-6. Parsers materialize `archive_metadata` and sorted `entry_metadata` vectors while validating spans, names, counts, duplicate canonical paths, hashes, and payload boundaries (`src/formats/bsa/tes3_bsa_parser.cpp:203`, `src/formats/bsa/tes4_bsa_parser.cpp:344`, `src/formats/ba2/ba2_gnrl_parser.cpp:259`, `src/formats/ba2/ba2_dx10_parser.cpp:387`).
-7. `archive_reader` stores immutable parsed state in `archive_reader::state` with metadata, entries, host path, and BA2 DX10 flag (`src/archive.cpp:26`).
+1. Public caller opens a host archive with `archive_reader::open(host_path)` (`src/archive.cpp:98`).
+2. Reader reads a bounded prefix for detection (`src/archive.cpp:69`) and dispatches by magic to BA2 detection (`src/archive.cpp:112`) or BSA detection (`src/archive.cpp:143`).
+3. Format-specific parser loads and validates metadata: TES3 (`src/formats/bsa/tes3_bsa_parser.cpp`), TES4 (`src/formats/bsa/tes4_bsa_parser.cpp`), BA2 GNRL (`src/formats/ba2/ba2_gnrl_parser.cpp`), or BA2 DX10 (`src/formats/ba2/ba2_dx10_parser.cpp`).
+4. Parser materializes sorted public `entry_metadata` records and archive metadata, using normalized archive paths from `src/detail/archive_path.cpp` and stable public compression enums from `include/libbsa/archive.hpp`.
+5. `archive_reader` stores `archive_metadata`, `entries`, `host_path`, and BA2 DX10 subtype state in `archive_reader::state` (`src/archive.cpp:26`).
+6. `entries()`, `find()`, and `contains()` route to the matching format reader lookup functions (`src/archive.cpp:182`, `src/archive.cpp:195`, `src/archive.cpp:209`).
+7. `extract()` resolves the entry and delegates payload delivery to the matching format reader (`src/archive.cpp:223`).
+8. Format reader streams raw bytes or decodes compressed data through `src/detail/compression_router.cpp` before writing to caller-owned `payload_sink`.
 
-### Entry Listing, Lookup, and Extraction
+### Writer Finalization Flow
 
-1. `archive_reader::entries`, `find`, and `contains` route to the active format reader helpers (`src/archive.cpp:182`, `src/archive.cpp:196`, `src/archive.cpp:210`).
-2. Format readers normalize lookup paths through `detail::normalize_archive_path` and binary-search sorted entries (`src/formats/bsa/tes4_bsa_reader.cpp:226`, `src/formats/ba2/ba2_gnrl_reader.cpp:173`, `src/formats/ba2/ba2_dx10_reader.cpp:168`).
-3. `archive_reader::extract` looks up the entry first and returns `not_found` when the normalized path is absent (`src/archive.cpp:223`).
-4. TES3 raw extraction streams payload bytes from the archive to a caller `payload_sink` (`src/formats/bsa/tes3_bsa_reader.cpp:97`).
-5. TES4-family extraction handles embedded-name prefixes, compression size prefixes, deflate/LZ4 frame decode, and chunked sink writes (`src/formats/bsa/tes4_bsa_reader.cpp:177`).
-6. BA2 GNRL extraction streams raw payloads or decompresses deflate/raw LZ4 block payloads based on parsed metadata only (`src/formats/ba2/ba2_gnrl_reader.cpp:198`).
-7. BA2 DX10 extraction reconstructs a DDS DXT10 header, validates texture metadata presence, then writes decoded chunks in parser-validated DDS order (`src/formats/ba2/ba2_dx10_reader.cpp:193`).
-8. `archive_reader::extract_bytes` is a bounded convenience wrapper over `extract` using `vector_payload_sink` (`src/archive.cpp:249`).
-9. `archive_reader::extract_entries` runs independent extraction requests through `detail::run_indexed_work`, keeping per-entry failures inside result records (`src/archive.cpp:271`, `src/detail/parallel_work.cpp:20`).
+1. Public writer object stores target/options and writer entries in private `state` (`src/formats/bsa/tes4_bsa_writer.cpp:21`, `src/formats/ba2/ba2_gnrl_writer.cpp:21`, `src/formats/ba2/ba2_dx10_writer.cpp:20`).
+2. `add_file`/`add_bytes` validates public archive paths and copies memory payloads into writer-owned state; BA2 DX10 `add_file` also creates snapshot-owned source state (`src/formats/ba2/ba2_dx10_writer.cpp:52`).
+3. `write_to` validates `write_execution_options::worker_count` and delegates to format-specific `write_*_archive` (`src/formats/bsa/tes4_bsa_writer.cpp:73`, `src/formats/ba2/ba2_gnrl_writer.cpp:89`, `src/formats/ba2/ba2_dx10_writer.cpp:72`).
+4. Format writer validates target options and entries, then runs prepare logic for paths, hashes, compression, DDS inspection, and payload ownership (`src/formats/bsa/tes4_bsa_prepare.cpp`, `src/formats/ba2/ba2_gnrl_prepare.cpp`, `src/formats/ba2/ba2_dx10_prepare.cpp`).
+5. Layout module assigns metadata offsets and optional deduplicated payload offsets (`src/formats/bsa/tes4_bsa_layout.cpp`, `src/formats/ba2/ba2_gnrl_layout.cpp`, `src/formats/ba2/ba2_dx10_layout.cpp`).
+6. Serialization module writes metadata and payloads to a temporary output path (`src/formats/bsa/tes4_bsa_serialize.cpp`, `src/formats/ba2/ba2_gnrl_serialize.cpp`, `src/formats/ba2/ba2_dx10_serialize.cpp`).
+7. Shared publish logic reserves an isolated temporary directory and atomically publishes or replaces output with overwrite policy (`src/detail/writer_publish.cpp`, `src/detail/atomic_file_ops.hpp`).
 
-### Public Writer Path
+### Bulk Extraction Flow
 
-1. Caller constructs a writer from `include/libbsa/writer.hpp`; implementation state lives in the matching format writer source file (`src/formats/bsa/tes3_bsa_writer.cpp:23`, `src/formats/bsa/tes4_bsa_writer.cpp:28`, `src/formats/ba2/ba2_gnrl_writer.cpp:31`, `src/formats/ba2/ba2_dx10_writer.cpp:35`).
-2. `add_file` and `add_bytes` normalize archive paths, preserve display path spelling, and copy memory-backed payloads into writer-owned state (`src/formats/bsa/tes4_bsa_writer.cpp:70`, `src/formats/ba2/ba2_gnrl_writer.cpp:71`, `src/formats/bsa/tes3_bsa_writer.cpp:73`).
-3. BA2 DX10 `add_file` reads DDS bytes, calls `texture::analyze_dds_source`, and snapshots validated subresources to temp files instead of retaining one long-lived full DDS buffer (`src/formats/ba2/ba2_dx10_writer.cpp:115`, `src/formats/ba2/ba2_dx10_writer.cpp:167`).
-4. `write_to` validates `worker_count`, delegates to the format-owned `write_*_archive` function, and keeps target/policy interpretation private (`src/formats/bsa/tes4_bsa_writer.cpp:102`, `src/formats/ba2/ba2_gnrl_writer.cpp:119`, `src/formats/ba2/ba2_dx10_writer.cpp:187`).
-5. Format writers validate entries, prepare compressed or raw payloads, assign offsets, write metadata/payload bytes to a temporary file, then publish or replace the output path (`src/formats/bsa/tes4_bsa_writer.cpp:876`, `src/formats/ba2/ba2_gnrl_writer.cpp:905`, `src/formats/ba2/ba2_dx10_writer.cpp:830`).
-6. Writers use `src/detail/atomic_file_ops.hpp` for no-replace and atomic-replace semantics where applicable; BA2 writers also use backup/restore helpers in `src/formats/ba2/ba2_publish.hpp`.
+1. Caller passes `bulk_extract_request` span, sink factory, and `bulk_extract_options` to `archive_reader::extract_entries` (`src/archive.cpp:271`).
+2. The reader validates `worker_count` and allocates one `bulk_extract_entry_result` per request (`src/archive.cpp:278`).
+3. `detail::run_indexed_work` schedules serial or parallel indexed work using `std::jthread` and first-error capture (`src/detail/parallel_work.cpp:20`).
+4. Each work item normalizes lookup through `find`, asks the caller factory for a distinct sink, and calls `extract` (`src/archive.cpp:283`).
+5. Per-entry failures are recorded in `bulk_extract_entry_result::failure`; independent sibling entries continue unless scheduler setup fails (`src/archive.cpp:288`).
 
-### Validation Path
+### Validation Flow
 
 1. Caller invokes `validate_archive(host_path, options)` (`src/validation.cpp:178`).
-2. Setup failures such as empty or unreadable host paths remain result-level errors (`src/validation.cpp:179`, `src/validation.cpp:183`).
-3. Readable archive bytes are opened through `archive_reader::open`; unsupported or malformed archives become `validation_report::errors` (`src/validation.cpp:187`).
-4. Metadata and entries are read through public `archive_reader` APIs, then target-family and entry-level compatibility warnings are derived from public metadata only (`src/validation.cpp:198`, `src/validation.cpp:207`, `src/validation.cpp:93`, `src/validation.cpp:109`).
-5. Optional extractability validation bounds entry/chunk sizes, streams to `discard_payload_sink`, and reports extraction failures as fatal diagnostics (`src/validation.cpp:131`, `src/validation.cpp:146`).
+2. Validation checks setup failures separately, opens through `archive_reader::open`, and converts malformed readable archives into report diagnostics (`src/validation.cpp:186`).
+3. Validation appends target-family and entry-level compatibility warnings based only on public metadata (`src/validation.cpp:92`, `src/validation.cpp:108`).
+4. Optional extractability validation streams entries to a `discard_payload_sink` without retaining archive-controlled payload bytes (`src/validation.cpp:145`).
+5. The returned `validation_report` contains stable fatal diagnostics and warnings from `include/libbsa/validation.hpp`.
 
 **State Management:**
-- Public reader and writer objects use hidden `state` structs owned by `std::shared_ptr`; public headers keep private fields opaque (`include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`).
-- Parsed archive reader state is immutable after open: metadata, sorted entries, host path, and BA2 DX10 flag live in `archive_reader::state` (`src/archive.cpp:26`).
-- Writer state is mutable until `write_to`; independent writer objects are isolated, and write-call worker scheduling is owned by the writer implementation (`docs/thread-safety.md`).
-- Result, metadata, validation reports, and entry records are value types and safe to copy after return.
+- Public readers and writers hold private shared state via `std::shared_ptr<state>` (`include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, `src/archive.cpp`, writer `.cpp` files). Treat public object copies as shared handles to the same underlying state.
+- Opened `archive_reader::state` is immutable through public const operations except for local result construction; each extraction opens its own `std::ifstream` or local scratch buffers.
+- Writer state is mutable during `add_file`/`add_bytes` and read during `write_to`; caller must not mutate one writer concurrently with other operations on that writer.
+- Global mutable state is not used for archive operations; this is documented in `docs/thread-safety.md`.
 
 ## Key Abstractions
 
 **`libbsa::result<T>`:**
-- Purpose: C++20-compatible expected-like return type for public and private recoverable failures.
-- Examples: `include/libbsa/result.hpp`, every `result<...>` function under `src/`.
-- Pattern: Return `error{error_code, message}` for I/O, format, unsupported, not-found, and invalid-argument failures; reserve exceptions for programmer misuse such as calling `value()` on an error result.
+- Purpose: Expected-like public return channel for I/O, format, unsupported, invalid argument, and not-found failures.
+- Examples: `include/libbsa/result.hpp`, `src/archive.cpp`, `src/validation.cpp`, all `src/formats/` modules.
+- Pattern: Return `error{error_code::..., "diagnostic"}` for expected failures; use `value()` only after truth checks.
 
 **`archive_reader`:**
-- Purpose: Own a successfully opened archive and expose metadata, deterministic entries, lookup, single extraction, byte convenience extraction, and bulk extraction.
+- Purpose: Format-neutral opened archive handle with metadata, listing, lookup, extraction, and bulk extraction APIs.
 - Examples: `include/libbsa/archive.hpp`, `src/archive.cpp`.
-- Pattern: Dispatch once by detected bytes, store canonical metadata entries, and route later operations to format readers by parsed metadata.
+- Pattern: Dispatch by parsed `archive_metadata` and private `is_ba2_dx10` state; do not expose parser-owned records.
 
-**`payload_sink` and Bulk Sink Factory:**
-- Purpose: Keep extraction synchronous and caller-owned while supporting bounded streaming and opt-in parallel bulk extraction.
+**`payload_sink` and `bulk_extract_sink_factory`:**
+- Purpose: Caller-owned streaming output boundary for extraction.
 - Examples: `include/libbsa/archive.hpp`, `src/archive.cpp`, `src/formats/*/*reader.cpp`.
-- Pattern: Treat partial sink writes as `io_error`; bulk extraction creates one sink per entry through `bulk_extract_sink_factory`.
+- Pattern: Every sink `write` must accept the complete span; partial acceptance becomes `error_code::io_error`.
 
-**Format Parser Result Structs:**
-- Purpose: Convert raw archive bytes into public `archive_metadata` and sorted `entry_metadata`.
-- Examples: `src/formats/bsa/tes3_bsa_parser.hpp`, `src/formats/bsa/tes4_bsa_parser.hpp`, `src/formats/ba2/ba2_gnrl_parser.hpp`, `src/formats/ba2/ba2_dx10_parser.hpp`.
-- Pattern: Use internal raw-record structs inside `.cpp` files and return only public metadata values across parser boundaries.
-
-**Public Writer Classes:**
-- Purpose: Provide write-new APIs for TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10.
+**Writer Classes:**
+- Purpose: Write-new archive builders for target profiles without raw flag exposure.
 - Examples: `include/libbsa/writer.hpp`, `src/formats/bsa/tes3_bsa_writer.cpp`, `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`.
-- Pattern: Collect normalized entries in object state, then delegate final serialization to format-owned `write_*_archive` functions.
+- Pattern: Store entries in private state, run prepare/layout/serialize on `write_to`, publish through shared writer publication helpers.
 
-**`detail::binary_reader` / `detail::binary_writer`:**
-- Purpose: Read and write little-endian archive fields from bounded spans and owned buffers.
-- Examples: `src/detail/binary_io.hpp`, `src/detail/binary_io.cpp`.
-- Pattern: Never advance after a failed read; report truncation as `format_error`.
+**Format Detectors:**
+- Purpose: Parse only enough prefix bytes to identify supported format family/version/subtype and default compression route.
+- Examples: `src/formats/bsa/bsa_format_detector.*`, `src/formats/ba2/ba2_format_detector.*`, `src/archive.cpp`.
+- Pattern: Detection remains separate from full parsing so the facade can select the correct parser.
 
-**Archive Path Normalization:**
-- Purpose: Convert archive-internal virtual paths to lowercase forward-slash lookup keys.
-- Examples: `src/detail/archive_path.hpp`, `src/detail/archive_path.cpp`.
-- Pattern: Reject empty, rooted, drive-rooted, NUL, `.` segment, and `..` segment paths; preserve display spelling separately in `entry_metadata::original_path`.
+**Parser Primitives:**
+- Purpose: Centralize safe arithmetic, bounded byte reads, archive string conversion, and display separator normalization.
+- Examples: `src/detail/parser_primitives.hpp`, `src/detail/parser_primitives.cpp`, `src/detail/binary_io.hpp`, `src/detail/binary_io.cpp`.
+- Pattern: Use `add_fits`, `multiply_fits`, and `span_fits*` before offset math or allocation.
 
 **Compression Router:**
-- Purpose: Centralize explicit compression route selection across deflate, LZ4 frame, raw LZ4 block, and raw copies.
-- Examples: `src/detail/compression_router.hpp`, `src/detail/compression_router.cpp`, `src/detail/deflate_codec.cpp`, `src/detail/lz4_frame_codec.cpp`, `src/detail/lz4_block_codec.cpp`.
-- Pattern: Format modules translate parsed metadata into `detail::compression_method`; codec helpers verify exact decoded size.
+- Purpose: Map parsed/writer-selected compression methods to private deflate/LZ4 adapters.
+- Examples: `src/detail/compression_router.hpp`, `src/detail/compression_router.cpp`, `src/detail/deflate_codec.*`, `src/detail/lz4_frame_codec.*`, `src/detail/lz4_block_codec.*`.
+- Pattern: Choose codec explicitly from archive family/version/metadata; never infer compression solely from extension.
 
-**DDS Texture Boundary:**
-- Purpose: Hide DirectXTex and represent BA2 DX10 texture shape with libbsa-owned metadata.
-- Examples: `src/texture/directxtex_analyzer.hpp`, `src/texture/directxtex_analyzer.cpp`, `src/texture/dds_layout.hpp`, `src/texture/dds_layout.cpp`.
-- Pattern: Analyze or reconstruct DDS inside `src/texture/`; pass only `texture_metadata`, `dds_texture_layout`, `planned_texture_chunk`, and `logical_texture_segment` to format code.
+**DDS Texture Metadata/Layout:**
+- Purpose: Convert DDS/DirectXTex data into libbsa-native `texture_metadata`, reconstruct DDS DXT10 headers, and plan BA2 DX10 chunk boundaries.
+- Examples: `include/libbsa/archive.hpp`, `src/texture/directxtex_analyzer.cpp`, `src/texture/dds_layout.cpp`, `src/formats/ba2/ba2_dx10_*`.
+- Pattern: Keep DirectXTex in `.cpp` implementation files and expose only numeric DXGI format values plus libbsa metadata.
+
+**Writer Publish Boundary:**
+- Purpose: Prevent partial/corrupt caller-visible archives by writing to a temporary path and publishing after successful serialization.
+- Examples: `src/detail/writer_publish.cpp`, `src/detail/atomic_file_ops.hpp`, writer `write_*_archive` functions.
+- Pattern: Validate overwrite policy first, reserve isolated temp directories, best-effort cleanup, then publish or replace atomically.
 
 ## Entry Points
 
-**Library Target:**
-- Location: `CMakeLists.txt`
-- Triggers: `cmake --build --preset windows-msvc-debug-static`, `cmake --build --preset windows-msvc-debug-shared`
-- Responsibilities: Define `libbsa`, install/export `libbsa::libbsa`, link private vcpkg dependencies, expose public header file set, and include tests when enabled.
-
-**Umbrella Public Header:**
-- Location: `include/libbsa/libbsa.hpp`
-- Triggers: Consumer `#include <libbsa/libbsa.hpp>`
-- Responsibilities: Include archive, result, validation, version, and writer public headers.
-
-**Archive Reader Open:**
+**Public Reader Open:**
 - Location: `src/archive.cpp`
-- Triggers: `libbsa::archive_reader::open(host_path)`
-- Responsibilities: Detect archive family/version, parse metadata tables, create reader state, and expose format-routed operations.
+- Triggers: Caller invokes `archive_reader::open` declared in `include/libbsa/archive.hpp`.
+- Responsibilities: Validate host path, read detection prefix, detect BSA/BA2, parse metadata, construct reader state.
 
-**Validation API:**
-- Location: `src/validation.cpp`
-- Triggers: `libbsa::validate_archive(host_path, options)`
-- Responsibilities: Return structured validation diagnostics/warnings and optional extractability checks.
+**Public Metadata/List/Lookup/Extraction:**
+- Location: `src/archive.cpp`
+- Triggers: Caller invokes `metadata`, `entries`, `find`, `contains`, `extract`, `extract_bytes`, or `extract_entries` on `archive_reader`.
+- Responsibilities: Route to format-specific reader helpers and preserve stable public metadata/error semantics.
 
-**Writer APIs:**
+**Public Writer Finalization:**
 - Location: `src/formats/bsa/tes3_bsa_writer.cpp`, `src/formats/bsa/tes4_bsa_writer.cpp`, `src/formats/ba2/ba2_gnrl_writer.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`
-- Triggers: Public writer construction, `add_file`, `add_bytes`, and `write_to`
-- Responsibilities: Collect entries, enforce writer options, serialize archives, and publish completed output files.
+- Triggers: Caller invokes writer `write_to` declared in `include/libbsa/writer.hpp`.
+- Responsibilities: Validate execution controls, prepare entries, assign layout, serialize, and publish output.
 
-**Test Executable:**
-- Location: `tests/CMakeLists.txt`
-- Triggers: `ctest --preset windows-msvc-debug-static --output-on-failure`
-- Responsibilities: Build `libbsa_tests`, discover Catch2 tests, run fixture manifest validation, and run package-consumer smoke tests.
+**Public Archive Validation:**
+- Location: `src/validation.cpp`
+- Triggers: Caller invokes `validate_archive` declared in `include/libbsa/validation.hpp`.
+- Responsibilities: Open archive, collect stable fatal diagnostics/warnings, optionally extract entries to a discard sink.
 
-**Benchmark Tooling:**
-- Location: `benchmarks/libbsa_benchmarks.cpp`, `benchmarks/README.md`
-- Triggers: `cmake --build --preset windows-msvc-debug-static --target libbsa_benchmark_report`
-- Responsibilities: Generate report-only synthetic benchmarks that reopen/extract through public APIs.
+**CMake Build Entry:**
+- Location: `CMakeLists.txt`
+- Triggers: `cmake --preset windows-msvc-debug-static`, `cmake --preset windows-msvc-debug-shared`, or install/package consumers.
+- Responsibilities: Configure library target, public header file set, dependency links, tests, benchmarks, Doxygen target, and install/export files.
 
 ## Architectural Constraints
 
-- **Threading:** APIs are synchronous by default. Bulk extraction and writer finalization accept positive worker counts and use `src/detail/parallel_work.cpp` with C++20 `std::jthread`. `worker_count == 1` runs serially; `worker_count == 0` returns `invalid_argument`.
-- **Global state:** Archive data is object-owned. Module-level constants are mostly `constexpr`. `src/detail/bethesda_hash.cpp` uses a function-local immutable CRC table, and `src/formats/ba2/ba2_dx10_writer.cpp` uses a function-local atomic counter for snapshot temp directory names.
-- **Circular imports:** Not detected in the source layout. Public headers do not include private format headers. Format modules include public headers and `src/detail/` helpers; `src/archive.cpp` is the reader dispatch point.
-- **Platform:** The project is Windows-only. `src/detail/atomic_file_ops.hpp` contains the Windows `MoveFileExW` publish path and is part of the supported target behavior.
-- **Reference boundary:** `TES5Edit/` is read-only reference material. No implementation, build target, test, fixture generator, package consumer, benchmark, or docs-generation workflow may edit, format, stage, compile, or vendor files from `TES5Edit/`.
-- **Dependency boundary:** `libdeflate`, `lz4`, and DirectXTex are private implementation dependencies. Public headers under `include/libbsa/` must not expose `libdeflate`, `lz4`, DirectXTex, DXGI, Windows handles, or vcpkg types.
-- **Archive paths:** Archive-internal paths are virtual keys normalized by `src/detail/archive_path.cpp`. Use `std::filesystem::path` only for host paths and test/generated output paths.
+- **Threading:** Default public operations are serial. Parallel extraction and writer preparation use explicit `worker_count` options and shared scheduler `src/detail/parallel_work.cpp`. `worker_count == 0` is invalid; `worker_count > 1024` is rejected internally.
+- **Global state:** Archive operations use no global mutable state. State lives in reader/writer `state` objects, local `std::ifstream`/`std::ofstream` instances, local scratch vectors, and caller-owned sinks. See `docs/thread-safety.md`.
+- **Circular imports:** Not detected in the active C++ architecture. Public headers do not include private `src/` headers; private modules include public headers and sibling private headers.
+- **Public dependency boundary:** Public headers must not expose DirectXTex, libdeflate, LZ4, raw parser record structs, or Windows implementation headers. `include/libbsa/export.hpp` is the only public Windows ABI decoration point.
+- **Path boundary:** Use `std::filesystem::path` for host I/O and publishing only (`src/detail/writer_publish.cpp`, writer output code). Use `detail::normalize_archive_path` and string keys for archive-internal paths (`src/detail/archive_path.cpp`).
+- **Reference boundary:** `TES5Edit/` is read-only behavior reference; do not compile it, use it as source, write fixtures into it, modify it, or stage submodule pointer changes.
+- **Error boundary:** Public expected failures use `result<T>` and `error_code`; avoid exceptions for archive bytes, host I/O, compression failures, validation failures, and caller data errors.
+- **Memory boundary:** Streaming readers/writers use 64 KiB chunks for raw payload paths (`src/formats/*/*reader.cpp`, `src/formats/bsa/tes4_bsa_serialize.cpp`). Compressed payload decode remains bounded by parser-declared exact sizes and byte-vector allocation helpers.
 
 ## Anti-Patterns
 
-### Treating `TES5Edit/` As Source
-
-**What happens:** Code, fixtures, build targets, or generated outputs are added under `TES5Edit/` or the submodule pointer is modified.
-**Why it's wrong:** `TES5Edit/` is a read-only compatibility reference, not vendored libbsa implementation or fixture workspace.
-**Do this instead:** Trace behavior from `TES5Edit/` when needed, document non-obvious compatibility constraints in libbsa code, and implement under `src/`, `include/libbsa/`, `tests/`, or `docs/`.
-
 ### Leaking Private Dependencies Through Public Headers
 
-**What happens:** Public APIs expose `DirectXTex`, DXGI, `libdeflate`, `lz4`, Windows handles, or private parser record types.
-**Why it's wrong:** The reusable library contract stays dependency-light and C++20-compatible; implementation dependencies are private details.
-**Do this instead:** Translate dependency data into libbsa-owned values such as `texture_metadata` in `include/libbsa/archive.hpp` and keep adapters in `src/texture/` or `src/detail/`.
+**What happens:** Public headers include DirectXTex, LZ4, libdeflate, private `src/detail/` headers, or format parser records.
+**Why it's wrong:** Public consumers should only depend on stable C++20 libbsa types and must not inherit implementation dependencies or ABI churn.
+**Do this instead:** Keep dependency use inside `src/texture/directxtex_analyzer.cpp`, `src/detail/deflate_codec.cpp`, `src/detail/lz4_frame_codec.cpp`, and `src/detail/lz4_block_codec.cpp`; translate to public values in `include/libbsa/archive.hpp`.
 
-### Using Host Filesystem Semantics For Archive Keys
+### Treating Archive Paths as Host Filesystem Paths
 
-**What happens:** Archive lookup, hashing, duplicate detection, or writer entry storage uses `std::filesystem::path` semantics for virtual archive paths.
-**Why it's wrong:** Bethesda archive paths use archive-specific separator, case, and hashing rules independent from host filesystem interpretation.
-**Do this instead:** Normalize archive-internal paths through `detail::normalize_archive_path` in `src/detail/archive_path.cpp` and preserve original display spelling separately.
+**What happens:** Code stores archive-internal keys as `std::filesystem::path` or applies host separator/case semantics.
+**Why it's wrong:** Bethesda virtual paths require explicit normalization independent of Windows host paths and are used for lookup/hash behavior.
+**Do this instead:** Normalize with `detail::normalize_archive_path` in `src/detail/archive_path.cpp`, preserve display spelling separately as `entry_metadata::original_path`, and use host filesystem paths only for source/output file access.
 
-### Inferring Codec Behavior From Names Or Extensions
+### Skipping Prepare/Layout/Serialize Separation in Writers
 
-**What happens:** Extraction or writing chooses deflate, LZ4 frame, or raw LZ4 block from file extension or path text.
-**Why it's wrong:** Codec routing is archive metadata and target-profile behavior; extension-based routing corrupts valid variants.
-**Do this instead:** Route through `src/detail/compression_router.cpp` using parsed `entry_compression` / `texture_chunk_metadata::compression` or writer target options.
+**What happens:** New writer code computes hashes, compresses payloads, assigns offsets, and writes bytes in one monolithic routine.
+**Why it's wrong:** Existing writer modules need independent validation, deterministic layout tests, dedupe behavior, and safe publish semantics.
+**Do this instead:** Add writer behavior through the existing split: `*_prepare.*` for validation/materialization, `*_layout.*` for offsets/deduplication, `*_serialize.*` for byte output, and `*_writer.cpp` for public routing.
+
+### Inferring Codec From Filename Extension
+
+**What happens:** Reader or writer code chooses deflate/LZ4/raw based only on `.dds`, `.xwm`, or other archive path extensions.
+**Why it's wrong:** Codec route is archive-family/version/metadata-driven; extension-based inference can silently corrupt Starfield and Skyrim SE payloads.
+**Do this instead:** Route through explicit metadata and `detail::compression_method` in `src/detail/compression_router.cpp`, using format-specific decisions in parser/prepare modules.
+
+### Writing Directly to Caller Output Paths
+
+**What happens:** Writer serialization creates or truncates the caller's final path before all metadata and payload writes succeed.
+**Why it's wrong:** A failed write can leave corrupt archives visible at the destination.
+**Do this instead:** Use `detail::publish_writer_output` and helpers in `src/detail/writer_publish.cpp` for validation, temporary output, best-effort cleanup, and final publish.
 
 ## Error Handling
 
-**Strategy:** Recoverable failures use `libbsa::result<T>` and stable `error_code` categories. Public APIs return structured errors for invalid input, I/O failures, unsupported formats, not-found lookups, and malformed archive bytes.
+**Strategy:** Public and private library operations return `result<T>` for recoverable errors. Stable categories are `unsupported`, `invalid_argument`, `not_found`, `io_error`, and `format_error` from `include/libbsa/result.hpp`.
 
 **Patterns:**
-- Use `error_code::invalid_argument` for caller setup errors such as empty host paths or `worker_count == 0` (`src/archive.cpp`, `src/formats/*/*writer.cpp`).
-- Use `error_code::io_error` for host filesystem failures and sink/source failures (`src/formats/*/*reader.cpp`, `src/formats/*/*writer.cpp`).
-- Use `error_code::unsupported` when detected bytes represent a known but unsupported archive shape (`src/formats/bsa/bsa_format_detector.cpp`, `src/formats/ba2/ba2_format_detector.cpp`).
-- Use `error_code::format_error` for malformed supported archives, truncated tables, invalid offsets, invalid sentinels, duplicate canonical paths, size mismatches, and codec decode mismatch (`src/formats/`).
-- Translate archive-controlled allocation failures through `src/detail/byte_vector.hpp` instead of allowing `std::bad_alloc` or `std::length_error` to escape parser/extraction flows.
-- Keep validation report diagnostics separate from setup result errors in `src/validation.cpp`.
+- Validate input early and return `error_code::invalid_argument` for empty paths or invalid worker counts (`src/archive.cpp:99`, `src/archive.cpp:278`, writer `write_to` methods).
+- Use `error_code::unsupported` for recognized-but-not-supported format families or target combinations (`src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`).
+- Use `error_code::format_error` for malformed archive bytes, overflowed metadata, truncated tables, hash mismatches, invalid sentinels, codec exact-size mismatches, and parser-validated constraints.
+- Use `error_code::io_error` for host file open/seek/read/write/publish failures (`src/detail/parser_primitives.cpp`, `src/detail/writer_publish.cpp`, reader/writer modules).
+- Convert `std::bad_alloc`/`std::length_error` at archive-controlled allocation boundaries into `format_error` via byte-vector helpers and validation catch blocks (`src/detail/parser_primitives.cpp`, `src/validation.cpp`).
+- Do not compare exact diagnostic message text in tests or consumers; stable branching uses `error_code` and validation warning codes.
 
 ## Cross-Cutting Concerns
 
-**Logging:** Not detected. The library returns structured errors and leaves logging to consumers.
-
-**Validation:** Structural validation is embedded in parsers under `src/formats/`; public validation reports are produced by `src/validation.cpp`; fixture manifest validation lives in `tests/fixtures/generated/validate_fixture_manifests.py`.
-
-**Authentication:** Not applicable. libbsa is a local archive library with no authentication surface.
-
-**Compression:** `src/detail/deflate_codec.cpp` wraps libdeflate, `src/detail/lz4_frame_codec.cpp` wraps LZ4 frame APIs, `src/detail/lz4_block_codec.cpp` wraps raw LZ4 block APIs, and `src/detail/compression_router.cpp` is the shared dispatch point.
-
-**Texture Metadata:** `src/texture/directxtex_analyzer.cpp` is the DirectXTex boundary; `src/texture/dds_layout.cpp` owns DXT10 header bytes, mip sizing, chunk planning, and parser chunk-order validation.
-
-**Publishing:** Writers emit to a temporary path first, then publish through `src/detail/atomic_file_ops.hpp` or BA2 backup/restore helpers in `src/formats/ba2/ba2_publish.hpp`.
-
-**Documentation:** Public API documentation is generated through Doxygen configuration in `docs/Doxyfile.in`; thread-safety rules are documented in `docs/thread-safety.md`.
+**Logging:** No internal logging framework. Return structured errors and warnings; consumers own logging. Avoid adding `spdlog`, `fmt`, or other logging dependencies.
+**Validation:** Structural validation happens during parsing, public policy validation happens in `src/validation.cpp`, and behavior/policy tests live in `tests/unit/`.
+**Authentication:** Not applicable; libbsa is a local archive library with no auth subsystem.
+**Compression:** Deflate, LZ4 frame, and raw LZ4 block are private codec adapters selected by explicit format metadata through `src/detail/compression_router.cpp`.
+**DDS/Texture:** DirectXTex is isolated to `src/texture/directxtex_analyzer.cpp`; public metadata uses libbsa-owned numeric and value types.
+**Documentation:** Public APIs use Doxygen-style comments in `include/libbsa/`; design policies and target behavior are documented in `docs/thread-safety.md`, `docs/target-format-guide.md`, `docs/compatibility-evidence.md`, and `docs/integration-examples.md`.
+**OpenSpec/GSD workflow:** Project-local OpenSpec skills live in `.claude/skills/openspec-*`; active and archived change artifacts live in `openspec/changes/` and specs in `openspec/specs/`.
 
 ---
 

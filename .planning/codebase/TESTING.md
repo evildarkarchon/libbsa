@@ -5,108 +5,95 @@
 ## Test Framework
 
 **Runner:**
-- Catch2 3 is the C++ test framework. `tests/CMakeLists.txt` uses `find_package(Catch2 CONFIG REQUIRED)` and links `Catch2::Catch2WithMain` into the `libbsa_tests` executable.
-- CTest is the orchestration runner. `CMakeLists.txt` includes `CTest`; `tests/CMakeLists.txt` registers Catch2 cases through `catch_discover_tests(libbsa_tests ADD_TAGS_AS_LABELS DISCOVERY_MODE PRE_TEST DL_PATHS $<TARGET_FILE_DIR:libbsa>)`.
-- Config: `tests/CMakeLists.txt`, root `CMakeLists.txt`, and `CMakePresets.json`.
+- Catch2 v3 via vcpkg and CTest discovery.
+- Config: `tests/CMakeLists.txt` defines `libbsa_tests`, links `Catch2::Catch2WithMain`, and calls `catch_discover_tests(libbsa_tests ADD_TAGS_AS_LABELS DISCOVERY_MODE PRE_TEST DL_PATHS $<TARGET_FILE_DIR:libbsa>)`.
 
 **Assertion Library:**
-- Catch2 macros from `<catch2/catch_test_macros.hpp>` are used throughout `tests/unit/*.cpp`.
-- Use `REQUIRE` for preconditions or when later assertions depend on success, `CHECK` for independent observations after setup succeeds, `REQUIRE_FALSE` and `CHECK_FALSE` for negative cases, `REQUIRE_THROWS_AS` for programmer-misuse exception checks, `INFO` for loop context, `FAIL` for unreachable conversion branches, and `SKIP` for opt-in local fixture gates. Examples: `tests/unit/result_tests.cpp`, `tests/unit/validation_api_tests.cpp`, `tests/unit/local_game_fixture_tests.cpp`, `tests/unit/ba2_dx10_malformed_tests.cpp`.
+- Catch2 macros from `<catch2/catch_test_macros.hpp>`: `REQUIRE`, `REQUIRE_FALSE`, `CHECK`, `INFO`, `FAIL`, `SKIP`, `REQUIRE_THROWS_AS`. Examples: `tests/unit/result_tests.cpp`, `tests/unit/archive_path_tests.cpp`, `tests/unit/local_game_fixture_tests.cpp`.
+- Static API contracts use C++ `static_assert` and `requires` expressions in `tests/unit/public_include_boundary_tests.cpp`.
 
 **Run Commands:**
 ```bash
-cmake --preset windows-msvc-debug-static              # Configure static Windows/MSVC build with tests
-cmake --build --preset windows-msvc-debug-static      # Build libbsa and libbsa_tests
-ctest --preset windows-msvc-debug-static --output-on-failure  # Run all discovered CTest cases
-cmake --preset windows-msvc-debug-shared              # Configure shared Windows/MSVC build with tests
-cmake --build --preset windows-msvc-debug-shared      # Build shared variant
-ctest --preset windows-msvc-debug-shared --output-on-failure  # Run shared variant tests
+cmake --preset windows-msvc-debug-static                         # Configure static Debug build with tests
+cmake --build --preset windows-msvc-debug-static                 # Build library, tests, fixture tools, benchmarks
+ctest --preset windows-msvc-debug-static --output-on-failure     # Run all default tests
+ctest --preset windows-msvc-debug-static -L unit --output-on-failure  # Run unit-labeled tests
+ctest --preset windows-msvc-debug-static -L "fixture|malformed" --output-on-failure  # Run fixture/malformed slices
+cmake --build --preset windows-msvc-debug-static --target generate_tes4_bsa_fixtures  # Regenerate TES4 fixtures
+cmake --build --preset windows-msvc-debug-static --target generate_tes3_bsa_fixtures  # Regenerate TES3 fixtures
+cmake --build --preset windows-msvc-debug-static --target generate_ba2_gnrl_fixtures  # Regenerate BA2 GNRL fixtures
+cmake --build --preset windows-msvc-debug-static --target generate_ba2_dx10_fixtures  # Regenerate BA2 DX10 fixtures
+cmake --build --preset windows-msvc-debug-static --target libbsa_docs                 # Generate Doxygen docs when installed
+cmake --build --preset windows-msvc-debug-static --target libbsa_benchmark_report     # Generate correctness-checked benchmark report
 ```
-
-**Watch Mode:**
-- Not detected. `CMakePresets.json` defines static and shared configure/build/test presets, but no watch command.
-
-**Coverage:**
-- Not detected. No `coverage`, `gcov`, `llvm-cov`, `OpenCppCoverage`, `lcov`, or Codecov setup appears in `CMakeLists.txt`, `CMakePresets.json`, `.github/workflows/ci.yml`, or `tests/`.
 
 ## Test File Organization
 
 **Location:**
-- Unit and policy tests are centralized under `tests/unit/*.cpp`. There are 36 unit test files, all compiled into the single `libbsa_tests` target in `tests/CMakeLists.txt`.
-- Fixture generator source lives under `tests/fixtures/generated/*.cpp`: `tests/fixtures/generated/generate_tes3_bsa_fixtures.cpp`, `tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp`, `tests/fixtures/generated/generate_ba2_gnrl_fixtures.cpp`, `tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp`.
-- Committed legal generated archives, manifests, and DDS sources live under `tests/fixtures/generated/archives/` and `tests/fixtures/generated/source/`.
-- Package-consumer integration smoke tests live under `tests/package-consumer/`: `tests/package-consumer/CMakeLists.txt`, `tests/package-consumer/main.cpp`, `tests/package-consumer/smoke.cmake`, `tests/package-consumer/verify-runtime-dll-copy.cmake`.
-- Local game-derived archives belong only under ignored `tests/fixtures/local/` or outside the repo via `LIBBSA_GAME_FIXTURES`; this policy is documented in `tests/fixtures/README.md` and enforced by `tests/unit/validation_policy_tests.cpp`.
+- Unit, fixture, policy, and integration-style tests are co-located under `tests/unit/` and compiled into one executable target in `tests/CMakeLists.txt`.
+- Package consumption tests live under `tests/package-consumer/` and run as CTest script tests: `tests/package-consumer/smoke.cmake`, `tests/package-consumer/CMakeLists.txt`, `tests/package-consumer/main.cpp`.
+- Export surface tests live under `tests/export-surface/` and run only for shared Windows builds: `tests/export-surface/check-dll-exports.cmake`.
+- Fixture generators and manifest validators live under `tests/fixtures/generated/`: `tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp`, `tests/fixtures/generated/validate_fixture_manifests.py`.
 
 **Naming:**
-- Use `<surface>_tests.cpp` for test files: `tests/unit/binary_io_tests.cpp`, `tests/unit/compression_router_tests.cpp`, `tests/unit/ba2_writer_execution_tests.cpp`.
-- Use `TEST_CASE` names that state the behavior, not the implementation detail alone: `"archive_reader open reports I/O errors for missing host files"` in `tests/unit/archive_reader_tests.cpp`, `"BA2 GNRL disk payload streaming rejects source size changes"` in `tests/unit/ba2_gnrl_writer_tests.cpp`.
-- Use Catch2 tags to classify scope and behavior: `[unit]`, `[fixture]`, `[roundtrip]`, `[compat]`, `[malformed]`, `[slow]`, `[requires-game-fixture]`, `[public-api]`. The label taxonomy is documented in `tests/fixtures/README.md` and checked by `tests/unit/validation_policy_tests.cpp`.
+- Test files use `<area>_tests.cpp`: `tests/unit/binary_io_tests.cpp`, `tests/unit/ba2_dx10_parser_tests.cpp`, `tests/unit/validation_api_tests.cpp`.
+- Catch2 test names are descriptive sentences prefixed by the feature area when useful: `tes3_bsa_metadata opens generated Morrowind archives` in `tests/unit/tes3_bsa_reader_tests.cpp`, `writer_publish refuses an existing destination before writing when overwrite is disabled` in `tests/unit/writer_publish_tests.cpp`.
+- Catch2 tags are bracketed and become CTest labels through `ADD_TAGS_AS_LABELS`: `[unit][fixture][tes3_bsa_metadata]`, `[unit][writer_publish][publish]`, `[requires-game-fixture][unit][compat]`.
 
 **Structure:**
-```text
+```
 tests/
-├── CMakeLists.txt                         # Catch2 target, fixture generator targets, CTest tests
-├── unit/                                  # Catch2 unit, fixture, policy, roundtrip, malformed tests
+├── CMakeLists.txt                         # Catch2 target, fixture generator targets, CTest labels
+├── unit/                                  # Main test executable sources
 ├── fixtures/
-│   ├── README.md                          # Fixture provenance, label, and TES5Edit boundary policy
+│   ├── README.md                          # Fixture provenance, labels, local fixture policy
 │   ├── generated/
-│   │   ├── generate_*_fixtures.cpp        # Legal synthetic fixture generators
-│   │   ├── archives/                      # Committed generated .bsa/.ba2/.json contracts
-│   │   └── source/                        # Committed generated DDS source inputs
-│   └── local/                             # Ignored local-only game-derived fixtures
-└── package-consumer/                      # Installed package and runtime DLL smoke tests
+│   │   ├── archives/                      # Committed legal generated .bsa/.ba2 and JSON manifests
+│   │   ├── source/                        # Committed synthetic DDS source inputs
+│   │   └── validate_fixture_manifests.py  # Manifest schema/evidence validation
+│   └── local/                             # Ignored local game-derived data placeholder
+├── package-consumer/                      # Installed package smoke tests
+└── export-surface/                        # DLL export policy tests
 ```
 
 ## Test Structure
 
 **Suite Organization:**
-```cpp
-#include <catch2/catch_test_macros.hpp>
-
-#include <libbsa/libbsa.hpp>
-
-#include <filesystem>
-#include <fstream>
-#include <string_view>
-#include <vector>
-
-#include <nlohmann/json.hpp>
-
+```typescript
+// C++ Catch2 pattern used in `tests/unit/archive_path_tests.cpp` and `tests/unit/tes3_bsa_reader_tests.cpp`.
 namespace {
-
 std::filesystem::path generated_archive_path(std::string_view filename) {
-  return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" / "archives" /
-         std::string{filename};
+  return generated_archive_dir() / std::string{filename};
 }
-
 } // namespace
 
-TEST_CASE("surface behavior description", "[unit][fixture][surface_tag]") {
-  auto opened = libbsa::archive_reader::open(generated_archive_path("tes3_success.bsa").string());
-  REQUIRE(opened.has_value());
+TEST_CASE("tes3_bsa_metadata opens generated Morrowind archives", "[unit][fixture][tes3_bsa_metadata]") {
+  const auto manifest = read_json_file(generated_archive_path("tes3_success_manifest.json"));
 
+  auto opened = libbsa::archive_reader::open(generated_archive_path("tes3_success.bsa").string());
+
+  REQUIRE(opened.has_value());
   auto metadata = opened.value().metadata();
   REQUIRE(metadata.has_value());
-  CHECK(metadata.value().type == libbsa::archive_type::bsa);
+  REQUIRE(metadata.value().variant == libbsa::archive_variant::tes3);
+  REQUIRE(metadata.value().file_count == manifest.at("file_count").get<std::uint32_t>());
 }
 ```
-- This pattern is used in `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/tes4_bsa_reader_tests.cpp`, `tests/unit/ba2_gnrl_reader_tests.cpp`, and `tests/unit/ba2_dx10_extraction_tests.cpp`.
 
 **Patterns:**
-- Put reusable helpers, test fakes, and conversion routines in an anonymous namespace at the top of each test file: `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/local_game_fixture_tests.cpp`, `tests/unit/validation_api_tests.cpp`.
-- Use `static_assert` and C++20 `requires` expressions for public compile-time API contracts: `tests/unit/archive_reader_tests.cpp`, `tests/unit/public_include_boundary_tests.cpp`.
-- Use manifest-driven loops for generated fixtures and malformed cases, with `INFO` identifying the current archive or case: `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/ba2_dx10_malformed_tests.cpp`, `tests/unit/compatibility_matrix_tests.cpp`.
-- Use `SECTION` for closely related branches inside one behavior case: `tests/unit/ba2_gnrl_writer_tests.cpp`, `tests/unit/dds_layout_tests.cpp`.
-- Prefer deterministic temp output directories under `std::filesystem::temp_directory_path()` for writer tests: `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/validation_api_tests.cpp`, `tests/unit/ba2_writer_execution_tests.cpp`.
-- Use policy tests that inspect repository files when a convention is itself a requirement: `tests/unit/docs_policy_tests.cpp`, `tests/unit/thread_safety_docs_policy_tests.cpp`, `tests/unit/validation_policy_tests.cpp`, `tests/unit/public_include_boundary_tests.cpp`.
+- Put file-local helpers and test doubles in an anonymous namespace before `TEST_CASE`: `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/writer_publish_tests.cpp`, `tests/unit/local_game_fixture_tests.cpp`.
+- Use `REQUIRE` for setup and invariants that make later assertions unsafe, and `CHECK` for multiple independent comparisons after setup: `tests/unit/local_game_fixture_tests.cpp`, `tests/unit/compatibility_matrix_tests.cpp`.
+- Assert stable error codes instead of exact messages for parser and API behavior: `tests/unit/archive_path_tests.cpp`, `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/result_tests.cpp`.
+- Use `INFO` to annotate looped checks over JSON manifests and policy rows: `tests/unit/docs_policy_tests.cpp`, `tests/unit/compatibility_matrix_tests.cpp`.
+- Keep policy/static-boundary tests as first-class regression tests by reading source/config files: `tests/unit/docs_policy_tests.cpp`, `tests/unit/public_include_boundary_tests.cpp`, `tests/unit/benchmark_policy_tests.cpp`, `tests/unit/target_format_policy_tests.cpp`.
 
 ## Mocking
 
-**Framework:** No mocking framework is used.
+**Framework:** Hand-written fakes/stubs; no mocking library is configured.
 
 **Patterns:**
-```cpp
+```typescript
+// C++ sink fake pattern from `tests/unit/tes3_bsa_reader_tests.cpp`.
 class collecting_sink final : public libbsa::payload_sink {
  public:
   libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
@@ -120,106 +107,85 @@ class collecting_sink final : public libbsa::payload_sink {
   std::vector<std::byte> bytes_;
 };
 ```
-- Use concrete test doubles for public callback interfaces instead of mocks. `collecting_sink` appears in `tests/unit/archive_reader_tests.cpp`, `tests/unit/tes3_bsa_reader_tests.cpp`, and `tests/unit/tes4_bsa_writer_tests.cpp`.
-- Use deliberately failing or partial fakes to prove error handling: `partial_sink` and `recording_sink` in `tests/unit/tes3_bsa_reader_tests.cpp`, `fnv1a32_sink` in `tests/unit/local_game_fixture_tests.cpp`, bulk extraction factories in `tests/unit/bulk_extraction_tests.cpp`.
 
 **What to Mock:**
-- Mock only caller-owned callback surfaces and local test I/O seams, such as `payload_sink` and `bulk_extract_sink_factory` from `include/libbsa/archive.hpp`.
-- Use in-memory byte vectors and temporary files for source/archive payloads: `tests/unit/payload_stream_tests.cpp`, `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/ba2_gnrl_writer_tests.cpp`.
+- Mock caller-owned interfaces such as `payload_sink` and sink factories with simple test-local classes: `collecting_sink`, `partial_sink`, and `recording_sink` in `tests/unit/tes3_bsa_reader_tests.cpp`; `fnv1a32_sink` in `tests/unit/local_game_fixture_tests.cpp`.
+- Use callbacks/lambdas to fake writer publish behavior at the helper boundary: `tests/unit/writer_publish_tests.cpp` passes lambdas into `libbsa::detail::publish_writer_output`.
 
 **What NOT to Mock:**
-- Do not mock parser, writer, compression, or texture analysis paths when a fixture or generated archive can exercise the real behavior. Use `tests/fixtures/generated/archives/` and writer roundtrip tests instead, as in `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/ba2_dx10_extraction_tests.cpp`, and `tests/unit/ba2_writer_execution_tests.cpp`.
-- Do not use `TES5Edit/` as a mutable fixture workspace or committed fixture source. This boundary is documented in `tests/fixtures/README.md` and enforced through policy tests in `tests/unit/validation_policy_tests.cpp`.
+- Do not mock parser behavior, compression codecs, generated fixture archives, or public writer/readers when a committed fixture or writer-output archive can exercise the real path. Fixture-backed tests in `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/tes4_bsa_reader_tests.cpp`, `tests/unit/ba2_gnrl_reader_tests.cpp`, and `tests/unit/ba2_dx10_extraction_tests.cpp` use real generated archives.
+- Do not use `TES5Edit/` as a mutable fixture workspace or compiled test dependency. This boundary is documented in `tests/fixtures/README.md` and guarded in `.github/workflows/ci.yml`.
 
 ## Fixtures and Factories
 
 **Test Data:**
-```cpp
-std::filesystem::path generated_archive_dir() {
-  return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" / "archives";
-}
+```typescript
+// C++ manifest-backed fixture pattern from `tests/unit/tes3_bsa_reader_tests.cpp`.
+const auto manifest = read_json_file(generated_archive_path("tes3_success_manifest.json"));
+auto opened = libbsa::archive_reader::open(generated_archive_path("tes3_success.bsa").string());
+REQUIRE(opened.has_value());
 
-nlohmann::json read_json_file(const std::filesystem::path& path) {
-  std::ifstream stream{path};
-  REQUIRE(stream.is_open());
-  return nlohmann::json::parse(stream);
+for (const auto& expected : manifest.at("entries")) {
+  auto found = opened.value().find(expected.at("path").get<std::string>());
+  REQUIRE(found.has_value());
+  REQUIRE(found.value().has_value());
+  REQUIRE(found.value()->raw_size == expected.at("raw_size").get<std::uint64_t>());
 }
 ```
-- This manifest-backed pattern appears in `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/ba2_gnrl_reader_tests.cpp`, `tests/unit/ba2_dx10_malformed_tests.cpp`, and `tests/unit/validation_api_tests.cpp`.
-- Generated fixture targets are declared in `tests/CMakeLists.txt`: `generate_tes4_bsa_fixtures`, `generate_tes3_bsa_fixtures`, `generate_tes3_bsa_writer_fixtures`, `generate_ba2_gnrl_fixtures`, and `generate_ba2_dx10_fixtures`.
-- Fixture manifests encode expected public metadata, payload bytes or hashes, malformed-case error codes, and compatibility evidence. See `tests/fixtures/README.md`, `tests/fixtures/generated/archives/tes3_success_manifest.json`, and `tests/fixtures/generated/archives/ba2_dx10_malformed_manifest.json`.
-- `LIBBSA_SOURCE_DIR` is injected by `tests/CMakeLists.txt` so tests can locate committed fixtures without depending on process working directory.
-- Local BSArchPro-derived comparison data is opt-in through `LIBBSA_GAME_FIXTURES` or `LIBBSA_BSARCHPRO_EXPECTED` in `tests/unit/local_game_fixture_tests.cpp`.
 
 **Location:**
-- Legal committed archive fixtures: `tests/fixtures/generated/archives/`.
-- Legal committed DDS source fixtures: `tests/fixtures/generated/source/`.
-- Fixture generators: `tests/fixtures/generated/*.cpp`.
-- Local ignored game archives: `tests/fixtures/local/`, protected by `.gitignore`.
-- Fixture policy and provenance: `tests/fixtures/README.md`.
+- Committed legal archive fixtures and manifests: `tests/fixtures/generated/archives/`.
+- Synthetic DDS source fixtures: `tests/fixtures/generated/source/`.
+- Fixture policy and manifest schemas: `tests/fixtures/README.md`.
+- Generated archive manifest validator: `tests/fixtures/generated/validate_fixture_manifests.py`.
+- Local game-derived fixtures: `tests/fixtures/local/` or `LIBBSA_GAME_FIXTURES`, skipped unless configured by `tests/unit/local_game_fixture_tests.cpp`.
+- Optional BSArchPro comparison manifests: `LIBBSA_BSARCHPRO_EXPECTED` or `bsarchpro_expected.json` under `LIBBSA_GAME_FIXTURES`, consumed by `tests/unit/local_game_fixture_tests.cpp`.
 
 ## Coverage
 
-**Requirements:** None enforced. Coverage tooling and coverage thresholds are not configured in `CMakeLists.txt`, `tests/CMakeLists.txt`, `CMakePresets.json`, or `.github/workflows/ci.yml`.
+**Requirements:** Not detected. No coverage target, coverage threshold, or coverage report command is configured in `CMakeLists.txt`, `tests/CMakeLists.txt`, `CMakePresets.json`, or `.github/workflows/ci.yml`.
 
 **View Coverage:**
 ```bash
-# Not detected: no repo-native coverage command is configured.
+# Not configured. Use CTest labels and focused fixture/policy slices instead.
+ctest --preset windows-msvc-debug-static --output-on-failure
 ```
 
 ## Test Types
 
 **Unit Tests:**
-- Use Catch2 in `tests/unit/*.cpp` for public API, internal helpers, parser dispatch, compression codecs, archive path normalization, binary I/O, validation, thread-safety docs, and policy checks.
-- Examples: `tests/unit/result_tests.cpp`, `tests/unit/archive_path_tests.cpp`, `tests/unit/binary_io_tests.cpp`, `tests/unit/compression_router_tests.cpp`, `tests/unit/public_include_boundary_tests.cpp`.
+- Small deterministic tests for public and internal units live under `tests/unit/` and carry the `[unit]` tag: `tests/unit/result_tests.cpp`, `tests/unit/archive_path_tests.cpp`, `tests/unit/binary_io_tests.cpp`, `tests/unit/compression_router_tests.cpp`.
 
 **Integration Tests:**
-- Use generated fixture archives and manifests to exercise real parser, extraction, writer, compression, DDS, validation, and roundtrip behavior: `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/ba2_dx10_extraction_tests.cpp`, `tests/unit/validation_api_tests.cpp`.
-- Use package-consumer CMake tests to verify install/export and runtime DLL copy behavior: `tests/package-consumer/smoke.cmake`, `tests/package-consumer/verify-runtime-dll-copy.cmake`, registered from `tests/CMakeLists.txt`.
-- Use Python only for manifest validation through `tests/fixtures/generated/validate_fixture_manifests.py`, registered as the `validate_fixture_manifests` CTest test in `tests/CMakeLists.txt`.
+- Fixture-backed reader/extractor/writer tests use committed generated archives and writer-output archives with `[fixture]`, `[roundtrip]`, `[malformed]`, and format-specific tags: `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/ba2_gnrl_writer_tests.cpp`, `tests/unit/ba2_dx10_writer_tests.cpp`.
+- Package and installed-target integration is covered by `package_consumer_smoke` and `package_consumer_runtime_dll_copy` in `tests/CMakeLists.txt` using `tests/package-consumer/`.
+- Shared-library export integration is covered by `shared_export_surface` in `tests/CMakeLists.txt` and `tests/export-surface/check-dll-exports.cmake` when `WIN32 AND BUILD_SHARED_LIBS`.
+- CI runs both static and shared Windows Debug presets from `.github/workflows/ci.yml` and verifies `TES5Edit/` stays unchanged.
 
 **E2E Tests:**
-- Not used as a separate browser/UI-style category. The closest end-to-end coverage is archive writer to reader roundtrip and package-consumer smoke coverage in `tests/unit/*writer*_tests.cpp`, `tests/unit/ba2_writer_execution_tests.cpp`, and `tests/package-consumer/smoke.cmake`.
-
-**Policy Tests:**
-- Repository policy is tested as code where it affects future implementation: `tests/unit/docs_policy_tests.cpp` for Doxygen input boundaries, `tests/unit/thread_safety_docs_policy_tests.cpp` for thread-safety documentation, `tests/unit/validation_policy_tests.cpp` for Windows-only presets and fixture policy, `tests/unit/public_include_boundary_tests.cpp` for public header isolation.
+- No separate E2E framework is used. End-to-end behavior is represented by public API open/write/extract/validate flows in Catch2 tests and package-consumer CTest scripts: `tests/unit/validation_api_tests.cpp`, `tests/unit/local_game_fixture_tests.cpp`, `tests/package-consumer/smoke.cmake`.
 
 ## Common Patterns
 
 **Async Testing:**
-```cpp
-libbsa::write_execution_options execution;
-execution.worker_count = 4U;
-
-auto written = writer.write_to(output.string(), execution);
-REQUIRE(written.has_value());
+```typescript
+// C++ concurrency/parallel behavior is tested synchronously through worker-count options.
+auto result = libbsa::detail::run_indexed_work(task_count, worker_count, [&](std::size_t index) {
+  // Exercise independent indexed work and return libbsa::result<void>.
+  return libbsa::result<void>{};
+});
+REQUIRE(result.has_value());
 ```
-- There is no async/await test pattern. Concurrency-related behavior is tested through explicit `worker_count` options and deterministic output comparison in `tests/unit/bsa_writer_execution_tests.cpp`, `tests/unit/ba2_writer_execution_tests.cpp`, `tests/unit/writer_execution_options_tests.cpp`, and `tests/unit/bulk_extraction_tests.cpp`.
+- Use worker-count controls rather than async test frameworks. Relevant surfaces are `src/detail/parallel_work.cpp`, `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, `tests/unit/bulk_extraction_tests.cpp`, `tests/unit/writer_execution_options_tests.cpp`, and `tests/unit/thread_safety_docs_policy_tests.cpp`.
 
 **Error Testing:**
-```cpp
-auto opened = libbsa::archive_reader::open(generated_archive_path(archive).string());
-
-REQUIRE_FALSE(opened.has_value());
-REQUIRE(opened.error().code == expected);
+```typescript
+// Stable error-code pattern from `tests/unit/archive_path_tests.cpp`.
+auto key = libbsa::detail::normalize_archive_path("textures/../bad.dds");
+REQUIRE_FALSE(key);
+REQUIRE(key.error().code == libbsa::error_code::invalid_argument);
 ```
-- Compare stable `error_code` values, not full diagnostic messages, for ordinary parser and writer failures. This is the dominant pattern in `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/tes4_bsa_reader_tests.cpp`, `tests/unit/ba2_gnrl_reader_tests.cpp`, and `tests/unit/ba2_dx10_malformed_tests.cpp`.
-- Use `REQUIRE_THROWS_AS` only for programmer misuse of `result`, as in `tests/unit/result_tests.cpp`.
-- Use `SKIP` for environment-dependent local tests rather than failing default CI: `tests/unit/local_game_fixture_tests.cpp`, `tests/unit/validation_api_tests.cpp` for sparse-file support.
-
-**Regression Testing:**
-- Add a generated fixture or manifest row for archive-format regressions when possible, then assert the public metadata, payload bytes, or stable error code. Examples include TES3 raw-offset regression in `tests/fixtures/generated/archives/tes3_raw_offset_absolute_regression.bsa`, malformed manifests under `tests/fixtures/generated/archives/`, and compatibility matrix validation in `tests/unit/compatibility_matrix_tests.cpp`.
-- For wrong-output writer bugs, compare reopened metadata and extracted bytes, or compare serialized bytes between serial and parallel outputs. Examples: `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/ba2_gnrl_writer_tests.cpp`, `tests/unit/ba2_writer_execution_tests.cpp`.
-
-**CI Testing:**
-```bash
-cmake --preset ${{ matrix.preset }}
-cmake --build --preset ${{ matrix.preset }}
-ctest --preset ${{ matrix.preset }} --output-on-failure
-```
-- CI runs Windows MSVC static and shared presets from `.github/workflows/ci.yml` and `CMakePresets.json`.
-- CI provisions CMake `4.3.2` explicitly and verifies `cmake --version` in `.github/workflows/ci.yml`.
-- CI verifies `TES5Edit/` stays read-only by checking `git status --short TES5Edit` in `.github/workflows/ci.yml`.
+- For malformed fixtures, read the malformed manifest, open/extract real fixture files, and compare expected stable error categories: `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/ba2_dx10_malformed_tests.cpp`, `tests/unit/compatibility_matrix_tests.cpp`.
 
 ---
 
