@@ -27,8 +27,14 @@ struct ba2_gnrl_writer::state {
 ba2_gnrl_writer::ba2_gnrl_writer(ba2_gnrl_target target)
     : ba2_gnrl_writer(target, ba2_gnrl_writer_options{}) {}
 
+ba2_gnrl_writer::~ba2_gnrl_writer() = default;
+
+ba2_gnrl_writer::ba2_gnrl_writer(ba2_gnrl_writer&&) noexcept = default;
+
+ba2_gnrl_writer& ba2_gnrl_writer::operator=(ba2_gnrl_writer&&) noexcept = default;
+
 ba2_gnrl_writer::ba2_gnrl_writer(ba2_gnrl_target target, ba2_gnrl_writer_options options)
-    : state_(std::make_shared<state>(state{target, options, {}})) {}
+    : state_(std::make_unique<state>(state{target, options, {}})) {}
 
 ba2_gnrl_target ba2_gnrl_writer::target() const noexcept { return state_->target; }
 

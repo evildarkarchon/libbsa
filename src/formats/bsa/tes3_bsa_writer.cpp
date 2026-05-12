@@ -23,8 +23,14 @@ struct tes3_bsa_writer::state {
 
 tes3_bsa_writer::tes3_bsa_writer() : tes3_bsa_writer(tes3_bsa_writer_options{}) {}
 
+tes3_bsa_writer::~tes3_bsa_writer() = default;
+
+tes3_bsa_writer::tes3_bsa_writer(tes3_bsa_writer&&) noexcept = default;
+
+tes3_bsa_writer& tes3_bsa_writer::operator=(tes3_bsa_writer&&) noexcept = default;
+
 tes3_bsa_writer::tes3_bsa_writer(tes3_bsa_writer_options options)
-    : state_(std::make_shared<state>(state{options, {}})) {}
+    : state_(std::make_unique<state>(state{options, {}})) {}
 
 const tes3_bsa_writer_options& tes3_bsa_writer::options() const noexcept { return state_->options; }
 

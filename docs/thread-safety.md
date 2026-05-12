@@ -24,19 +24,19 @@ Independently opened `archive_reader` objects may be used concurrently by differ
 
 ## tes3_bsa_writer
 
-Independent `tes3_bsa_writer` objects may be used concurrently. Calls that mutate a writer, including `add_file` and `add_bytes`, are not concurrent with other mutation or `write_to` on the same writer object. `write_to` owns any worker scheduling for that finalization call.
+Separately constructed or moved-to `tes3_bsa_writer` objects may be used concurrently. Calls that mutate a writer, including `add_file` and `add_bytes`, are not concurrent with other mutation or `write_to` on the same writer object. `write_to` owns any worker scheduling for that finalization call.
 
 ## tes4_bsa_writer
 
-Independent `tes4_bsa_writer` objects may be used concurrently. Calls that mutate a writer, including `add_file` and `add_bytes`, are not concurrent with other mutation or `write_to` on the same writer object. `write_to` owns any worker scheduling for that finalization call.
+Separately constructed or moved-to `tes4_bsa_writer` objects may be used concurrently. Calls that mutate a writer, including `add_file` and `add_bytes`, are not concurrent with other mutation or `write_to` on the same writer object. `write_to` owns any worker scheduling for that finalization call.
 
 ## ba2_gnrl_writer
 
-Independent `ba2_gnrl_writer` objects may be used concurrently. Calls that mutate a writer, including `add_file` and `add_bytes`, are not concurrent with other mutation or `write_to` on the same writer object. `write_to` owns any worker scheduling for that finalization call.
+Separately constructed or moved-to `ba2_gnrl_writer` objects may be used concurrently. Calls that mutate a writer, including `add_file` and `add_bytes`, are not concurrent with other mutation or `write_to` on the same writer object. `write_to` owns any worker scheduling for that finalization call.
 
 ## ba2_dx10_writer
 
-Independent `ba2_dx10_writer` objects may be used concurrently. Calls that mutate a writer, including `add_file`, are not concurrent with other mutation or `write_to` on the same writer object. `write_to` owns any worker scheduling for that finalization call.
+Separately constructed or moved-to `ba2_dx10_writer` objects may be used concurrently. Calls that mutate a writer, including `add_file`, are not concurrent with other mutation or `write_to` on the same writer object. `write_to` owns any worker scheduling for that finalization call.
 
 ## write_execution_options
 

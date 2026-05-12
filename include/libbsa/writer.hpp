@@ -171,9 +171,9 @@ struct ba2_gnrl_entry_options {
 /// Entries are added with explicit archive-internal paths and finalized to a
 /// host-path archive. Memory-buffer entries are copied into writer-owned state.
 ///
-/// Thread-safety: independent writer objects may be used concurrently, but
-/// mutation is not concurrent with other mutation or `write_to` on the same
-/// writer object. See `docs/thread-safety.md`.
+/// Thread-safety: separately constructed or moved-to writer objects may be used
+/// concurrently, but mutation is not concurrent with other mutation or
+/// `write_to` on the same writer object. See `docs/thread-safety.md`.
 class tes4_bsa_writer {
  public:
   /// Creates a writer for `target` using default writer options.
@@ -181,6 +181,23 @@ class tes4_bsa_writer {
 
   /// Creates a writer for `target` using the supplied compatibility options.
   LIBBSA_API explicit tes4_bsa_writer(tes4_bsa_target target, tes4_bsa_writer_options options);
+
+  /// Destroys the writer and releases any staged archive state it owns.
+  LIBBSA_API ~tes4_bsa_writer();
+
+  /// Copying is disabled because writer copies would alias mutable staged entries.
+  tes4_bsa_writer(const tes4_bsa_writer&) = delete;
+
+  /// Copy assignment is disabled because writer copies would alias mutable staged entries.
+  tes4_bsa_writer& operator=(const tes4_bsa_writer&) = delete;
+
+  /// Transfers staged entries and options from `other`; `other` is valid only for destruction or reassignment.
+  LIBBSA_API tes4_bsa_writer(tes4_bsa_writer&& other) noexcept;
+
+  /// Replaces this writer by taking staged entries and options from `other`.
+  ///
+  /// After the move, `other` is valid only for destruction or reassignment.
+  LIBBSA_API tes4_bsa_writer& operator=(tes4_bsa_writer&& other) noexcept;
 
   /// Returns the target profile selected for this writer.
   [[nodiscard]] LIBBSA_API tes4_bsa_target target() const noexcept;
@@ -219,7 +236,7 @@ class tes4_bsa_writer {
  private:
   struct state;
 
-  std::shared_ptr<state> state_;
+  std::unique_ptr<state> state_;
 };
 
 /// Public writer for creating new TES3/Morrowind BSA archives.
@@ -228,9 +245,9 @@ class tes4_bsa_writer {
 /// no compression, dedupe, or embedded-name controls because Morrowind BSA
 /// archives use one raw payload per archive entry.
 ///
-/// Thread-safety: independent writer objects may be used concurrently, but
-/// mutation is not concurrent with other mutation or `write_to` on the same
-/// writer object. See `docs/thread-safety.md`.
+/// Thread-safety: separately constructed or moved-to writer objects may be used
+/// concurrently, but mutation is not concurrent with other mutation or
+/// `write_to` on the same writer object. See `docs/thread-safety.md`.
 class tes3_bsa_writer {
  public:
   /// Creates a raw/uncompressed TES3 writer using default writer options.
@@ -238,6 +255,23 @@ class tes3_bsa_writer {
 
   /// Creates a raw/uncompressed TES3 writer using explicit finalization options.
   LIBBSA_API explicit tes3_bsa_writer(tes3_bsa_writer_options options);
+
+  /// Destroys the writer and releases any staged archive state it owns.
+  LIBBSA_API ~tes3_bsa_writer();
+
+  /// Copying is disabled because writer copies would alias mutable staged entries.
+  tes3_bsa_writer(const tes3_bsa_writer&) = delete;
+
+  /// Copy assignment is disabled because writer copies would alias mutable staged entries.
+  tes3_bsa_writer& operator=(const tes3_bsa_writer&) = delete;
+
+  /// Transfers staged entries and options from `other`; `other` is valid only for destruction or reassignment.
+  LIBBSA_API tes3_bsa_writer(tes3_bsa_writer&& other) noexcept;
+
+  /// Replaces this writer by taking staged entries and options from `other`.
+  ///
+  /// After the move, `other` is valid only for destruction or reassignment.
+  LIBBSA_API tes3_bsa_writer& operator=(tes3_bsa_writer&& other) noexcept;
 
   /// Returns the immutable TES3 writer options selected at construction time.
   [[nodiscard]] LIBBSA_API const tes3_bsa_writer_options& options() const noexcept;
@@ -270,7 +304,7 @@ class tes3_bsa_writer {
  private:
   struct state;
 
-  std::shared_ptr<state> state_;
+  std::unique_ptr<state> state_;
 };
 
 /// Public writer for creating new BA2 GNRL archives.
@@ -279,9 +313,9 @@ class tes3_bsa_writer {
 /// a host-path archive. Memory-buffer entries are copied into writer-owned state,
 /// and codec implementation details stay private behind the selected target profile.
 ///
-/// Thread-safety: independent writer objects may be used concurrently, but
-/// mutation is not concurrent with other mutation or `write_to` on the same
-/// writer object. See `docs/thread-safety.md`.
+/// Thread-safety: separately constructed or moved-to writer objects may be used
+/// concurrently, but mutation is not concurrent with other mutation or
+/// `write_to` on the same writer object. See `docs/thread-safety.md`.
 class ba2_gnrl_writer {
  public:
   /// Creates a writer for `target` using default BA2 GNRL writer options.
@@ -289,6 +323,23 @@ class ba2_gnrl_writer {
 
   /// Creates a writer for `target` using the supplied compatibility options.
   LIBBSA_API explicit ba2_gnrl_writer(ba2_gnrl_target target, ba2_gnrl_writer_options options);
+
+  /// Destroys the writer and releases any staged archive state it owns.
+  LIBBSA_API ~ba2_gnrl_writer();
+
+  /// Copying is disabled because writer copies would alias mutable staged entries.
+  ba2_gnrl_writer(const ba2_gnrl_writer&) = delete;
+
+  /// Copy assignment is disabled because writer copies would alias mutable staged entries.
+  ba2_gnrl_writer& operator=(const ba2_gnrl_writer&) = delete;
+
+  /// Transfers staged entries and options from `other`; `other` is valid only for destruction or reassignment.
+  LIBBSA_API ba2_gnrl_writer(ba2_gnrl_writer&& other) noexcept;
+
+  /// Replaces this writer by taking staged entries and options from `other`.
+  ///
+  /// After the move, `other` is valid only for destruction or reassignment.
+  LIBBSA_API ba2_gnrl_writer& operator=(ba2_gnrl_writer&& other) noexcept;
 
   /// Returns the BA2 GNRL target profile selected for this writer.
   [[nodiscard]] LIBBSA_API ba2_gnrl_target target() const noexcept;
@@ -335,7 +386,7 @@ class ba2_gnrl_writer {
  private:
   struct state;
 
-  std::shared_ptr<state> state_;
+  std::unique_ptr<state> state_;
 };
 
 /// Public writer for creating new BA2 DX10/DDS texture archives.
@@ -345,9 +396,9 @@ class ba2_gnrl_writer {
 /// at archive level: callers do not choose raw, per-entry, or per-chunk overrides
 /// because uncompressed texture archives are not a stable compatibility target.
 ///
-/// Thread-safety: independent writer objects may be used concurrently, but
-/// mutation is not concurrent with other mutation or `write_to` on the same
-/// writer object. See `docs/thread-safety.md`.
+/// Thread-safety: separately constructed or moved-to writer objects may be used
+/// concurrently, but mutation is not concurrent with other mutation or
+/// `write_to` on the same writer object. See `docs/thread-safety.md`.
 class ba2_dx10_writer {
  public:
   /// Creates a writer for `target` using default BA2 DX10 writer options.
@@ -355,6 +406,26 @@ class ba2_dx10_writer {
 
   /// Creates a writer for `target` using the supplied texture archive options.
   LIBBSA_API explicit ba2_dx10_writer(ba2_dx10_target target, ba2_dx10_writer_options options);
+
+  /// Destroys the writer and releases any staged texture snapshot state it owns.
+  LIBBSA_API ~ba2_dx10_writer();
+
+  /// Copying is disabled because writer copies would alias mutable staged texture snapshots.
+  ba2_dx10_writer(const ba2_dx10_writer&) = delete;
+
+  /// Copy assignment is disabled because writer copies would alias mutable staged texture snapshots.
+  ba2_dx10_writer& operator=(const ba2_dx10_writer&) = delete;
+
+  /// Transfers staged texture snapshots and options from `other`.
+  ///
+  /// After the move, `other` is valid only for destruction or reassignment.
+  LIBBSA_API ba2_dx10_writer(ba2_dx10_writer&& other) noexcept;
+
+  /// Replaces this writer by taking staged texture snapshots and options from `other`.
+  ///
+  /// Any snapshot state previously owned by this writer is cleaned up before ownership transfers.
+  /// After the move, `other` is valid only for destruction or reassignment.
+  LIBBSA_API ba2_dx10_writer& operator=(ba2_dx10_writer&& other) noexcept;
 
   /// Returns the BA2 DX10 target profile selected for this writer.
   [[nodiscard]] LIBBSA_API ba2_dx10_target target() const noexcept;
@@ -384,7 +455,7 @@ class ba2_dx10_writer {
  private:
   struct state;
 
-  std::shared_ptr<state> state_;
+  std::unique_ptr<state> state_;
 };
 
 } // namespace libbsa

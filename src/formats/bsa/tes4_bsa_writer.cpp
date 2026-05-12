@@ -27,8 +27,14 @@ struct tes4_bsa_writer::state {
 tes4_bsa_writer::tes4_bsa_writer(tes4_bsa_target target)
     : tes4_bsa_writer(target, tes4_bsa_writer_options{}) {}
 
+tes4_bsa_writer::~tes4_bsa_writer() = default;
+
+tes4_bsa_writer::tes4_bsa_writer(tes4_bsa_writer&&) noexcept = default;
+
+tes4_bsa_writer& tes4_bsa_writer::operator=(tes4_bsa_writer&&) noexcept = default;
+
 tes4_bsa_writer::tes4_bsa_writer(tes4_bsa_target target, tes4_bsa_writer_options options)
-    : state_(std::make_shared<state>(state{target, options, {}})) {}
+    : state_(std::make_unique<state>(state{target, options, {}})) {}
 
 tes4_bsa_target tes4_bsa_writer::target() const noexcept { return state_->target; }
 

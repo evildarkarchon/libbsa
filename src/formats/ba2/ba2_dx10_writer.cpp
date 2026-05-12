@@ -37,8 +37,14 @@ struct ba2_dx10_writer::state {
 
 ba2_dx10_writer::ba2_dx10_writer(ba2_dx10_target target) : ba2_dx10_writer(target, ba2_dx10_writer_options{}) {}
 
+ba2_dx10_writer::~ba2_dx10_writer() = default;
+
+ba2_dx10_writer::ba2_dx10_writer(ba2_dx10_writer&&) noexcept = default;
+
+ba2_dx10_writer& ba2_dx10_writer::operator=(ba2_dx10_writer&&) noexcept = default;
+
 ba2_dx10_writer::ba2_dx10_writer(ba2_dx10_target target, ba2_dx10_writer_options options)
-    : state_(std::make_shared<state>(target, options)) {}
+    : state_(std::make_unique<state>(target, options)) {}
 
 ba2_dx10_target ba2_dx10_writer::target() const noexcept { return state_->target; }
 
