@@ -291,6 +291,12 @@ TEST_CASE("tes4_bsa_malformed_open rejects inconsistent table offsets",
 
     REQUIRE_FALSE(opened.has_value());
     REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+    auto validated = libbsa::validate_archive(mutated.string());
+    REQUIRE(validated.has_value());
+    CHECK_FALSE(validated.value().is_valid());
+    REQUIRE(validated.value().errors.size() == 1U);
+    CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
   }
 }
 

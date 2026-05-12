@@ -422,6 +422,11 @@ result<void> validate_tables(detail::binary_reader& reader, const header_fields&
     if (folder.offset > archive_size) {
       return error{error_code::format_error, "TES4 BSA folder block offset is outside the archive"};
     }
+    // TES4 folder offsets point to the parser's current folder-block position adjusted by the later
+    // file-name table length; stale but in-range offsets must fail before entry metadata is materialized.
+    if (folder.offset != static_cast<std::uint64_t>(reader.position()) + header.total_file_name_length) {
+      return error{error_code::format_error, "TES4 BSA folder block offset does not match parsed table layout"};
+    }
     const auto name_size = reader.read_u8();
     if (!name_size) {
       return error{error_code::format_error, "TES4 BSA folder name table is truncated"};

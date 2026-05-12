@@ -52,6 +52,7 @@ struct dx10_chunk_record {
 
 struct dx10_record {
   std::uint32_t name_hash;
+  std::array<std::byte, 4> extension;
   std::uint32_t directory_hash;
   std::uint8_t unknown_tex;
   std::uint8_t chunk_count;
@@ -95,6 +96,42 @@ std::pair<std::string_view, std::string_view> split_stem_extension(std::string_v
     return {{}, {}};
   }
   return {file_name.substr(0U, dot), file_name.substr(dot + 1U)};
+}
+
+bool is_ascii_extension_byte(unsigned char value) noexcept { return value > 0x20U && value <= 0x7EU; }
+
+std::byte ascii_lower_byte(std::byte byte) noexcept {
+  auto value = std::to_integer<unsigned char>(byte);
+  if (value >= 'A' && value <= 'Z') {
+    value = static_cast<unsigned char>(value - 'A' + 'a');
+  }
+  return static_cast<std::byte>(value);
+}
+
+bool extension_fourcc_matches(const std::array<std::byte, 4>& stored,
+                              const std::array<std::byte, 4>& expected) noexcept {
+  for (std::size_t index = 0; index < stored.size(); ++index) {
+    if (ascii_lower_byte(stored[index]) != ascii_lower_byte(expected[index])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+result<std::array<std::byte, 4>> extension_fourcc_for_extension(std::string_view extension) {
+  if (extension.size() > 4U) {
+    return error{error_code::format_error, "BA2 DX10 filename table extension exceeds four-byte record field"};
+  }
+
+  std::array<std::byte, 4> fourcc{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
+  for (std::size_t index = 0; index < extension.size(); ++index) {
+    const auto value = static_cast<unsigned char>(extension[index]);
+    if (!is_ascii_extension_byte(value)) {
+      return error{error_code::format_error, "BA2 DX10 filename table extension must contain printable ASCII bytes"};
+    }
+    fourcc[index] = static_cast<std::byte>(value);
+  }
+  return fourcc;
 }
 
 result<void> append_u16_le(std::vector<std::byte>& output, std::uint16_t value) {
@@ -197,7 +234,7 @@ result<std::vector<dx10_record>> read_records(detail::binary_reader& reader, std
   records.reserve(file_count);
   for (std::uint32_t index = 0; index < file_count; ++index) {
     const auto name_hash = reader.read_u32_le();
-    const auto skipped_ext = reader.skip(4U);
+    const auto extension_bytes = reader.read_bytes(4U);
     const auto directory_hash = reader.read_u32_le();
     const auto unknown_tex = reader.read_u8();
     const auto chunk_count = reader.read_u8();
@@ -207,7 +244,7 @@ result<std::vector<dx10_record>> read_records(detail::binary_reader& reader, std
     const auto num_mips = reader.read_u8();
     const auto dxgi_format = reader.read_u8();
     const auto cube_maps_raw = reader.read_u16_le();
-    if (!name_hash || !skipped_ext || !directory_hash || !unknown_tex || !chunk_count || !chunk_header_size || !height ||
+    if (!name_hash || !extension_bytes || !directory_hash || !unknown_tex || !chunk_count || !chunk_header_size || !height ||
         !width || !num_mips || !dxgi_format || !cube_maps_raw) {
       return error{error_code::format_error, "BA2 DX10 record table is truncated"};
     }
@@ -220,7 +257,10 @@ result<std::vector<dx10_record>> read_records(detail::binary_reader& reader, std
       return error{error_code::format_error, "BA2 DX10 chunk_header_size is unsupported"};
     }
 
+    std::array<std::byte, 4> extension{};
+    std::copy(extension_bytes.value().begin(), extension_bytes.value().end(), extension.begin());
     dx10_record record{name_hash.value(),
+                       extension,
                        directory_hash.value(),
                        unknown_tex.value(),
                        chunk_count.value(),
@@ -397,6 +437,14 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     }
     if (records[index].directory_hash != detail::hash_fo4(directory)) {
       return error{error_code::format_error, "BA2 DX10 DirectoryHash does not match filename table"};
+    }
+    auto expected_extension = extension_fourcc_for_extension(extension_text);
+    if (!expected_extension) {
+      return expected_extension.error();
+    }
+    // DX10 extension bytes participate in Bethesda texture lookup independently from the hashed stem.
+    if (!extension_fourcc_matches(records[index].extension, expected_extension.value())) {
+      return error{error_code::format_error, "BA2 DX10 record extension does not match filename table"};
     }
 
     auto chunks = public_chunks_for(records[index], detected);

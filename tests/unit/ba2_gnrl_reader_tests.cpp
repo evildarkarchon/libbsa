@@ -441,6 +441,7 @@ TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
 TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
           "[unit][fixture][malformed][ba2_gnrl_detector][ba2_gnrl_hash_lookup]") {
   constexpr std::size_t first_record_name_hash_offset = 24U;
+  constexpr std::size_t first_record_extension_offset = 28U;
   constexpr std::size_t first_record_directory_hash_offset = 32U;
 
   SECTION("NameHash") {
@@ -449,6 +450,26 @@ TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
                      read_u32_le(bytes, first_record_name_hash_offset) ^ 0x1000U);
 
     const auto mutated = std::filesystem::temp_directory_path() / "libbsa_ba2_gnrl_name_hash_mismatch.ba2";
+    temp_file_cleanup cleanup{mutated};
+    write_binary_file(mutated, bytes);
+
+    auto opened = libbsa::archive_reader::open(mutated.string());
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+    auto validated = libbsa::validate_archive(mutated.string());
+    REQUIRE(validated.has_value());
+    CHECK_FALSE(validated.value().is_valid());
+    REQUIRE(validated.value().errors.size() == 1U);
+    CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+  }
+
+  SECTION("record extension") {
+    auto bytes = read_binary_file(generated_archive_path("ba2_gnrl_fo4.ba2"));
+    const std::array<std::byte, 4U> mismatched_extension{std::byte{'d'}, std::byte{'d'}, std::byte{'s'}, std::byte{0}};
+    std::copy(mismatched_extension.begin(), mismatched_extension.end(), bytes.begin() + first_record_extension_offset);
+
+    const auto mutated = std::filesystem::temp_directory_path() / "libbsa_ba2_gnrl_extension_mismatch.ba2";
     temp_file_cleanup cleanup{mutated};
     write_binary_file(mutated, bytes);
 

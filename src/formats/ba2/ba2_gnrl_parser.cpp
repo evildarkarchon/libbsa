@@ -6,6 +6,7 @@
 #include <detail/parser_primitives.hpp>
 
 #include <algorithm>
+#include <array>
 #include <fstream>
 #include <limits>
 #include <string>
@@ -41,6 +42,7 @@ struct header_fields {
 
 struct gnrl_record {
   std::uint32_t name_hash;
+  std::array<std::byte, 4> extension;
   std::uint32_t directory_hash;
   std::uint32_t unknown;
   std::uint64_t offset;
@@ -70,6 +72,48 @@ std::pair<std::string_view, std::string_view> split_directory_file(std::string_v
     return {{}, archive_path};
   }
   return {archive_path.substr(0U, slash), archive_path.substr(slash + 1U)};
+}
+
+bool is_ascii_extension_byte(unsigned char value) noexcept { return value > 0x20U && value <= 0x7EU; }
+
+std::byte ascii_lower_byte(std::byte byte) noexcept {
+  auto value = std::to_integer<unsigned char>(byte);
+  if (value >= 'A' && value <= 'Z') {
+    value = static_cast<unsigned char>(value - 'A' + 'a');
+  }
+  return static_cast<std::byte>(value);
+}
+
+bool extension_fourcc_matches(const std::array<std::byte, 4>& stored,
+                              const std::array<std::byte, 4>& expected) noexcept {
+  for (std::size_t index = 0; index < stored.size(); ++index) {
+    if (ascii_lower_byte(stored[index]) != ascii_lower_byte(expected[index])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+result<std::array<std::byte, 4>> extension_fourcc_for_file_name(std::string_view file_name) {
+  const auto dot = file_name.find_last_of('.');
+  if (dot == std::string_view::npos || dot + 1U == file_name.size()) {
+    return error{error_code::format_error, "BA2 GNRL filename table path must include a file extension"};
+  }
+
+  const auto extension = file_name.substr(dot + 1U);
+  if (extension.size() > 4U) {
+    return error{error_code::format_error, "BA2 GNRL filename table extension exceeds four-byte record field"};
+  }
+
+  std::array<std::byte, 4> fourcc{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
+  for (std::size_t index = 0; index < extension.size(); ++index) {
+    const auto value = static_cast<unsigned char>(extension[index]);
+    if (!is_ascii_extension_byte(value)) {
+      return error{error_code::format_error, "BA2 GNRL filename table extension must contain printable ASCII bytes"};
+    }
+    fourcc[index] = static_cast<std::byte>(value);
+  }
+  return fourcc;
 }
 
 std::size_t header_size_for(std::uint32_t version) noexcept {
@@ -118,21 +162,23 @@ result<std::vector<gnrl_record>> read_records(detail::binary_reader& reader, std
   records.reserve(file_count);
   for (std::uint32_t index = 0; index < file_count; ++index) {
     const auto name_hash = reader.read_u32_le();
-    auto skipped_ext = reader.skip(4U);
+    auto extension_bytes = reader.read_bytes(4U);
     const auto directory_hash = reader.read_u32_le();
     const auto unknown = reader.read_u32_le();
     const auto offset = reader.read_u64_le();
     const auto packed_size = reader.read_u32_le();
     const auto size = reader.read_u32_le();
     const auto sentinel = reader.read_u32_le();
-    if (!name_hash || !skipped_ext || !directory_hash || !unknown || !offset || !packed_size || !size || !sentinel) {
+    if (!name_hash || !extension_bytes || !directory_hash || !unknown || !offset || !packed_size || !size || !sentinel) {
       return error{error_code::format_error, "BA2 GNRL record table is truncated"};
     }
     if (sentinel.value() != ba2_record_sentinel) {
       return error{error_code::format_error, "BA2 GNRL record BAADF00D sentinel is invalid"};
     }
-    records.push_back(gnrl_record{name_hash.value(), directory_hash.value(), unknown.value(), offset.value(),
-                                  packed_size.value(), size.value()});
+    std::array<std::byte, 4> extension{};
+    std::copy(extension_bytes.value().begin(), extension_bytes.value().end(), extension.begin());
+    records.push_back(gnrl_record{name_hash.value(), extension, directory_hash.value(), unknown.value(), offset.value(),
+                                   packed_size.value(), size.value()});
   }
   return records;
 }
@@ -250,6 +296,15 @@ result<std::vector<entry_metadata>> materialize_entries(std::uint64_t archive_si
     }
     if (records[index].directory_hash != detail::hash_fo4(directory)) {
       return error{error_code::format_error, "BA2 GNRL DirectoryHash does not match filename table"};
+    }
+    auto expected_extension = extension_fourcc_for_file_name(file_name);
+    if (!expected_extension) {
+      return expected_extension.error();
+    }
+    // BA2 extension bytes are lookup metadata separate from the filename text; accepting a mismatch would publish
+    // an entry that Bethesda-style extension lookup cannot resolve consistently.
+    if (!extension_fourcc_matches(records[index].extension, expected_extension.value())) {
+      return error{error_code::format_error, "BA2 GNRL record extension does not match filename table"};
     }
 
     const auto stored_size = records[index].packed_size != 0U ? records[index].packed_size : records[index].size;
