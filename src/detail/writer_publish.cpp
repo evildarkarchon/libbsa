@@ -6,6 +6,16 @@
 #include <string>
 #include <system_error>
 
+#if defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
+
 namespace libbsa::detail {
 namespace {
 
@@ -25,6 +35,26 @@ result<bool> path_exists_noexcept(const std::filesystem::path& path, std::string
   return exists;
 }
 
+result<bool> path_is_reparse_point_noexcept(const std::filesystem::path& path, std::string_view diagnostic_prefix) {
+#if defined(_WIN32)
+  const auto attributes = GetFileAttributesW(path.c_str());
+  if (attributes == INVALID_FILE_ATTRIBUTES) {
+    const auto last_error = GetLastError();
+    if (last_error == ERROR_FILE_NOT_FOUND || last_error == ERROR_PATH_NOT_FOUND) {
+      return false;
+    }
+    return error{error_code::io_error, prefixed_message(diagnostic_prefix, "failed to inspect output host path")};
+  }
+
+  // Symlinks to files can still look regular through std::filesystem, so check the Windows path itself.
+  return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+#else
+  (void)path;
+  (void)diagnostic_prefix;
+  return false;
+#endif
+}
+
 } // namespace
 
 result<void> validate_writer_output_path_before_publish(const std::filesystem::path& output_path,
@@ -40,6 +70,14 @@ result<void> validate_writer_output_path_before_publish(const std::filesystem::p
       return error{error_code::io_error, prefixed_message(diagnostic_prefix, "output host path already exists")};
     }
     return {};
+  }
+
+  auto output_is_reparse_point = path_is_reparse_point_noexcept(output_path, diagnostic_prefix);
+  if (!output_is_reparse_point) {
+    return output_is_reparse_point.error();
+  }
+  if (output_is_reparse_point.value()) {
+    return error{error_code::io_error, prefixed_message(diagnostic_prefix, "refuses to replace reparse-point output host path")};
   }
 
   if (output_exists.value()) {
@@ -85,6 +123,14 @@ result<void> publish_completed_writer_output(const std::filesystem::path& temp_p
                                              bool overwrite_existing,
                                              std::string_view diagnostic_prefix) {
   if (overwrite_existing) {
+    auto output_is_reparse_point = path_is_reparse_point_noexcept(output_path, diagnostic_prefix);
+    if (!output_is_reparse_point) {
+      return output_is_reparse_point.error();
+    }
+    if (output_is_reparse_point.value()) {
+      return error{error_code::io_error, prefixed_message(diagnostic_prefix, "refuses to replace reparse-point output host path")};
+    }
+
     auto published = detail::replace_file_atomically(temp_path, output_path);
     if (!published) {
       return error{error_code::io_error, prefixed_message(diagnostic_prefix, "failed to publish output host path")};

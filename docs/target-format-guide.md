@@ -63,6 +63,14 @@ Public writers use target enums instead of raw archive flags:
 - `write_execution_options::worker_count` is supplied at `write_to` time, must be positive, defaults to serial behavior, and is separate from target compatibility options.
 - `archive_compression_policy` and `entry_compression_policy` select target-default, raw, or compressed entry routing where the archive family supports those choices.
 
+## writer output publication safety
+
+Public `write_to` calls serialize completed archives into a writer-owned temporary directory beside the requested destination, then publish the completed file to the final host path. This same-directory temporary output keeps normal local-filesystem publication on the destination volume and avoids exposing a partial archive at the destination path.
+
+When `overwrite_existing` is false, libbsa uses no-overwrite publication: the call fails if the destination exists before writing or appears before final publication. When `overwrite_existing` is true, the existing destination is expected to be a regular file. Existing directories, other non-regular paths, and detectable Windows reparse point destinations are refused before replacement when the shared writer publish helper can identify them.
+
+Publication relies on Windows host-filesystem rename/replace behavior. Local NTFS paths are the intended baseline; a network filesystem, reparse-point provider, or other filesystem redirector can expose provider-specific atomicity, durability, or permission failures. Writer publication failures are returned as `io_error` results with the writer-specific diagnostic prefix, and libbsa cleans writer-owned temporary output on a best-effort basis.
+
 ## compatibility warnings
 
 Validation warnings use stable public `compatibility_warning_code` values. The warning catalog in `docs/compatibility-evidence.md` gives the rule and evidence for each code.

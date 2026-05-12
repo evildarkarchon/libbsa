@@ -153,6 +153,29 @@ TEST_CASE("target_format_policy guide documents public compatibility_warning_cod
   }
 }
 
+TEST_CASE("target_format_policy guide documents writer output publication safety",
+          "[unit][target_format_policy][doc_structure][publish]") {
+  const auto guide = read_text_file(source_root() / "docs/target-format-guide.md");
+
+  constexpr std::array<std::string_view, 10> required_fragments{
+    "## writer output publication safety",
+    "same-directory temporary output",
+    "writer-owned temporary directory",
+    "overwrite_existing",
+    "regular file",
+    "no-overwrite",
+    "reparse point",
+    "network filesystem",
+    "io_error",
+    "partial archive",
+  };
+
+  for (const auto fragment : required_fragments) {
+    INFO("Missing writer publication safety guidance: " << fragment);
+    REQUIRE(guide.find(std::string{fragment}) != std::string::npos);
+  }
+}
+
 TEST_CASE("target_format_policy guide preserves legal evidence and reference boundaries",
           "[unit][target_format_policy][fixture][static_boundary][doc_structure]") {
   const auto guide = read_text_file(source_root() / "docs/target-format-guide.md");

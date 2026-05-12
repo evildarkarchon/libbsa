@@ -667,6 +667,25 @@ TEST_CASE("tes3_bsa_writer replaces existing output only when overwrite is enabl
   CHECK(read_binary_file(archive) != sentinel);
 }
 
+TEST_CASE("tes3_bsa_writer rejects overwrite targets that are existing directories",
+          "[unit][tes3_bsa_writer][publish][overwrite]") {
+  const auto directory = output_path("overwrite-directory.bsa");
+  std::error_code fs_error;
+  std::filesystem::remove_all(directory, fs_error);
+  REQUIRE(std::filesystem::create_directory(directory));
+  libbsa::tes3_bsa_writer_options options;
+  options.overwrite_existing = true;
+  libbsa::tes3_bsa_writer writer{options};
+  REQUIRE(writer.add_bytes("Meshes/DirectoryTarget.NIF", sample_bytes()).has_value());
+
+  auto written = writer.write_to(directory.string());
+
+  REQUIRE_FALSE(written.has_value());
+  REQUIRE(written.error().code == libbsa::error_code::io_error);
+  CHECK(written.error().message.find("TES3 BSA writer") != std::string::npos);
+  CHECK(std::filesystem::is_directory(directory));
+}
+
 TEST_CASE("tes3_bsa_writer preserves caller-owned temp-name sibling files", "[unit][tes3_bsa_writer]") {
   const auto archive = output_path("safe-temp-collision.bsa");
   const auto collision = archive.string() + ".tmp";

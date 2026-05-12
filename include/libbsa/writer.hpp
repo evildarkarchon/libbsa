@@ -87,13 +87,13 @@ struct tes4_bsa_writer_options {
   /// Shares identical stored payload regions only when explicitly enabled.
   bool deduplicate_payloads{false};
 
-  /// Allows `write_to` to replace an existing host-path archive when true.
+  /// Allows `write_to` to replace an existing regular host-path archive when true.
   bool overwrite_existing{false};
 };
 
 /// Options controlling TES3/Morrowind write-new archive finalization.
 struct tes3_bsa_writer_options {
-  /// Allows `write_to` to replace an existing host-path archive when true.
+  /// Allows `write_to` to replace an existing regular host-path archive when true.
   bool overwrite_existing{false};
 };
 
@@ -102,7 +102,7 @@ struct ba2_gnrl_writer_options {
   /// Archive-wide compression behavior used by entries whose policy is `inherit`.
   archive_compression_policy compression = archive_compression_policy::target_default;
 
-  /// Allows `write_to` to replace an existing host-path archive when true.
+  /// Allows `write_to` to replace an existing regular host-path archive when true.
   bool overwrite_existing = false;
 
   /// Shares identical stored payload regions only when explicitly enabled.
@@ -126,7 +126,7 @@ struct ba2_gnrl_writer_options {
 
 /// Options controlling BA2 DX10/DDS write-new archive finalization.
 struct ba2_dx10_writer_options {
-  /// Allows `write_to` to replace an existing host-path archive when true.
+  /// Allows `write_to` to replace an existing regular host-path archive when true.
   bool overwrite_existing = false;
 
   /// Shares identical final stored texture chunk payloads only when explicitly enabled.
@@ -224,13 +224,15 @@ class tes4_bsa_writer {
   /// Finalizes the writer state into a new archive at `host_path`.
   ///
   /// Existing destinations fail unless `tes4_bsa_writer_options::overwrite_existing`
-  /// was enabled, and compression or I/O failures are returned as structured errors.
+  /// was enabled. Publication uses a writer-owned temporary directory beside `host_path`,
+  /// overwrites only supported regular-file destinations, rejects detectable reparse points,
+  /// and returns compression or I/O failures as structured errors.
   LIBBSA_API result<void> write_to(std::string_view host_path) const;
 
   /// Finalizes the writer state using explicit write-call execution controls.
   ///
   /// `execution.worker_count` must be positive. A value of `1` preserves the
-  /// serial behavior of the one-argument overload.
+  /// serial behavior and output-publication policy of the one-argument overload.
   LIBBSA_API result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:
@@ -291,14 +293,16 @@ class tes3_bsa_writer {
   /// Finalizes the writer state into a raw/uncompressed TES3 archive at `host_path`.
   ///
   /// Existing destinations fail unless `tes3_bsa_writer_options::overwrite_existing`
-  /// was enabled, and validation or I/O failures are returned as structured errors.
+  /// was enabled. Publication uses a writer-owned temporary directory beside `host_path`,
+  /// overwrites only supported regular-file destinations, rejects detectable reparse points,
+  /// and returns validation or I/O failures as structured errors.
   LIBBSA_API result<void> write_to(std::string_view host_path) const;
 
   /// Finalizes the TES3 writer using explicit write-call execution controls.
   ///
   /// `execution.worker_count` must be positive. TES3 output has no compression
   /// work, so values greater than one are accepted for the uniform public shape
-  /// while preserving the existing serial output path.
+  /// while preserving the existing serial output path and publication policy.
   LIBBSA_API result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:
@@ -373,14 +377,15 @@ class ba2_gnrl_writer {
   /// Finalizes the writer state into a new BA2 GNRL archive at `host_path`.
   ///
   /// Existing destinations fail unless `ba2_gnrl_writer_options::overwrite_existing`
-  /// was enabled, and validation, compression, or I/O failures are returned as
-  /// structured errors.
+  /// was enabled. Publication uses a writer-owned temporary directory beside `host_path`,
+  /// overwrites only supported regular-file destinations, rejects detectable reparse points,
+  /// and returns validation, compression, or I/O failures as structured errors.
   LIBBSA_API result<void> write_to(std::string_view host_path) const;
 
   /// Finalizes the BA2 GNRL writer using explicit write-call execution controls.
   ///
   /// `execution.worker_count` must be positive. A value of `1` preserves the
-  /// serial behavior of the one-argument overload.
+  /// serial behavior and output-publication policy of the one-argument overload.
   LIBBSA_API result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:
@@ -442,14 +447,15 @@ class ba2_dx10_writer {
   /// Finalizes the writer state into a new BA2 DX10 archive at `host_path`.
   ///
   /// Existing destinations fail unless `ba2_dx10_writer_options::overwrite_existing`
-  /// was enabled, and validation, compression, or I/O failures are returned as
-  /// structured errors.
+  /// was enabled. Publication uses a writer-owned temporary directory beside `host_path`,
+  /// overwrites only supported regular-file destinations, rejects detectable reparse points,
+  /// and returns validation, compression, or I/O failures as structured errors.
   LIBBSA_API result<void> write_to(std::string_view host_path) const;
 
   /// Finalizes the BA2 DX10 writer using explicit write-call execution controls.
   ///
   /// `execution.worker_count` must be positive. A value of `1` preserves the
-  /// serial behavior of the one-argument overload.
+  /// serial behavior and output-publication policy of the one-argument overload.
   LIBBSA_API result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:

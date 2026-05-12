@@ -686,6 +686,26 @@ TEST_CASE("TES4 BSA writer overwrites existing archives when overwrite_existing 
   require_extracted_bytes(opened.value(), "Meshes/Overwrite/Replacement.nif", source_bytes);
 }
 
+TEST_CASE("TES4 BSA writer rejects overwrite targets that are existing directories",
+          "[unit][tes4_bsa_writer][publish][overwrite]") {
+  const auto directory = output_path("overwrite-directory.bsa");
+  std::error_code fs_error;
+  std::filesystem::remove_all(directory, fs_error);
+  REQUIRE(std::filesystem::create_directory(directory));
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+  REQUIRE(writer.add_bytes("Meshes/DirectoryTarget.nif", sample_bytes()).has_value());
+
+  auto written = writer.write_to(directory.string());
+
+  REQUIRE_FALSE(written.has_value());
+  REQUIRE(written.error().code == libbsa::error_code::io_error);
+  CHECK(written.error().message.find("TES4 BSA writer") != std::string::npos);
+  CHECK(std::filesystem::is_directory(directory));
+}
+
 TEST_CASE("TES4 BSA writer leaves embedded names absent by default and when explicitly disabled",
           "[unit][tes4_bsa_writer]") {
   const std::array targets{libbsa::tes4_bsa_target::fallout3, libbsa::tes4_bsa_target::skyrim_se};

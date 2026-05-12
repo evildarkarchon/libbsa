@@ -13,7 +13,18 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 #include <vector>
+
+#if defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 namespace {
 
@@ -64,6 +75,46 @@ std::string read_text_file(const std::filesystem::path& path) {
   REQUIRE(input.good());
   return {std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
 }
+
+#if defined(_WIN32)
+class read_only_file_guard {
+ public:
+  explicit read_only_file_guard(std::filesystem::path path) : path_(std::move(path)) {}
+
+  void make_read_only() const {
+    const auto attributes = GetFileAttributesW(path_.c_str());
+    REQUIRE(attributes != INVALID_FILE_ATTRIBUTES);
+    REQUIRE(SetFileAttributesW(path_.c_str(), attributes | FILE_ATTRIBUTE_READONLY) != 0);
+  }
+
+  ~read_only_file_guard() {
+    const auto attributes = GetFileAttributesW(path_.c_str());
+    if (attributes != INVALID_FILE_ATTRIBUTES) {
+      // Cleanup must restore write access so the test-owned temp tree can be removed later.
+      SetFileAttributesW(path_.c_str(), attributes & ~FILE_ATTRIBUTE_READONLY);
+    }
+  }
+
+ private:
+  std::filesystem::path path_;
+};
+
+bool is_reparse_point(const std::filesystem::path& path) {
+  const auto attributes = GetFileAttributesW(path.c_str());
+  return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+}
+
+bool try_create_file_symlink(const std::filesystem::path& link_path, const std::filesystem::path& target_path) {
+  std::error_code fs_error;
+  std::filesystem::create_symlink(target_path, link_path, fs_error);
+  if (!fs_error) {
+    return true;
+  }
+
+  WARN("Skipping reparse-point publish test because this host cannot create file symlinks: " << fs_error.message());
+  return false;
+}
+#endif
 
 } // namespace
 
@@ -148,6 +199,103 @@ TEST_CASE("writer_publish overwrites existing regular archives through the atomi
 
   REQUIRE(published.has_value());
   CHECK(read_binary_file(archive) == replacement);
+}
+
+TEST_CASE("writer_publish preserves read-only overwrite targets when replacement is denied",
+          "[unit][writer_publish][publish][overwrite]") {
+#if defined(_WIN32)
+  const auto archive = output_path("read-only-existing.ba2");
+  const auto original = bytes_from_text("read-only original archive");
+  const auto replacement = bytes_from_text("replacement archive");
+  std::filesystem::path observed_temp_dir;
+  write_binary_file(archive, original);
+  read_only_file_guard read_only{archive};
+  read_only.make_read_only();
+
+  auto published = libbsa::detail::publish_writer_output(
+      archive, true, "BA2 GNRL writer", [&](const std::filesystem::path& temp_path) -> libbsa::result<void> {
+        observed_temp_dir = temp_path.parent_path();
+        write_binary_file(temp_path, replacement);
+        return {};
+      });
+
+  REQUIRE_FALSE(published.has_value());
+  CHECK(published.error().code == libbsa::error_code::io_error);
+  CHECK(published.error().message.find("BA2 GNRL writer") != std::string::npos);
+  CHECK(published.error().message.find("failed to publish output host path") != std::string::npos);
+  CHECK(read_binary_file(archive) == original);
+  CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
+#else
+  SUCCEED("read-only overwrite preservation is covered by Windows writer publish tests");
+#endif
+}
+
+TEST_CASE("writer_publish rejects existing reparse-point overwrite targets before writing",
+          "[unit][writer_publish][publish][overwrite]") {
+#if defined(_WIN32)
+  const auto archive = output_path("existing-reparse-output.ba2");
+  const auto target = archive.parent_path() / "existing-reparse-target.bin";
+  const auto target_bytes = bytes_from_text("target bytes remain caller owned");
+  bool callback_called = false;
+  write_binary_file(target, target_bytes);
+  if (!try_create_file_symlink(archive, target)) {
+    return;
+  }
+  REQUIRE(is_reparse_point(archive));
+
+  auto published = libbsa::detail::publish_writer_output(
+      archive, true, "TES4 BSA writer", [&](const std::filesystem::path&) -> libbsa::result<void> {
+        callback_called = true;
+        return {};
+      });
+
+  REQUIRE_FALSE(published.has_value());
+  CHECK(published.error().code == libbsa::error_code::io_error);
+  CHECK(published.error().message.find("TES4 BSA writer") != std::string::npos);
+  CHECK(published.error().message.find("reparse") != std::string::npos);
+  CHECK_FALSE(callback_called);
+  CHECK(is_reparse_point(archive));
+  CHECK(read_binary_file(target) == target_bytes);
+#else
+  SUCCEED("reparse-point overwrite refusal is covered by Windows writer publish tests");
+#endif
+}
+
+TEST_CASE("writer_publish rejects reparse-point overwrite targets introduced before final publication",
+          "[unit][writer_publish][publish][overwrite]") {
+#if defined(_WIN32)
+  const auto archive = output_path("raced-reparse-output.ba2");
+  const auto target = archive.parent_path() / "raced-reparse-target.bin";
+  const auto target_bytes = bytes_from_text("raced target bytes remain caller owned");
+  const auto replacement = bytes_from_text("replacement archive bytes");
+  std::filesystem::path observed_temp_dir;
+  write_binary_file(target, target_bytes);
+
+  auto published = libbsa::detail::publish_writer_output(
+      archive, true, "TES3 BSA writer", [&](const std::filesystem::path& temp_path) -> libbsa::result<void> {
+        observed_temp_dir = temp_path.parent_path();
+        write_binary_file(temp_path, replacement);
+        if (!try_create_file_symlink(archive, target)) {
+          return libbsa::error{libbsa::error_code::io_error, "test host cannot create raced reparse point"};
+        }
+        return {};
+      });
+
+  if (!published.has_value() && published.error().message == "test host cannot create raced reparse point") {
+    WARN("Skipping raced reparse-point publish test because this host cannot create file symlinks");
+    return;
+  }
+
+  REQUIRE_FALSE(published.has_value());
+  CHECK(published.error().code == libbsa::error_code::io_error);
+  CHECK(published.error().message.find("TES3 BSA writer") != std::string::npos);
+  CHECK(published.error().message.find("reparse") != std::string::npos);
+  CHECK(is_reparse_point(archive));
+  CHECK(read_binary_file(target) == target_bytes);
+  CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
+#else
+  SUCCEED("raced reparse-point overwrite refusal is covered by Windows writer publish tests");
+#endif
 }
 
 TEST_CASE("writer_publish rejects non-regular overwrite targets before writing",
