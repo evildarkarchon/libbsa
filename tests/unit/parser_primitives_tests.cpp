@@ -50,6 +50,12 @@ TEST_CASE("parser_primitives validate checked arithmetic", "[unit][parser_primit
   REQUIRE(total == 42U);
 
   REQUIRE_FALSE(libbsa::detail::add_fits(std::numeric_limits<std::size_t>::max(), 1U, total));
+
+  std::uint64_t total64 = 0;
+  REQUIRE(libbsa::detail::add_fits_u64(12U, 30U, total64));
+  REQUIRE(total64 == 42U);
+
+  REQUIRE_FALSE(libbsa::detail::add_fits_u64(std::numeric_limits<std::uint64_t>::max(), 1U, total64));
 }
 
 TEST_CASE("parser_primitives reject spans outside archive bounds", "[unit][parser_primitives][malformed]") {

@@ -23,6 +23,8 @@
 namespace libbsa::formats::ba2 {
 namespace {
 
+constexpr std::uint64_t reconstructed_dds_header_size = 148U;
+
 struct header_fields {
   std::uint32_t magic;
   std::uint32_t version;
@@ -56,6 +58,7 @@ struct dx10_record {
 };
 
 using detail::add_fits;
+using detail::add_fits_u64;
 using detail::archive_string_from_bytes;
 using detail::multiply_fits;
 using detail::normalize_display_separators;
@@ -447,10 +450,21 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     bool has_compressed_chunk = false;
     std::uint64_t payload_offset = std::numeric_limits<std::uint64_t>::max();
     for (const auto& chunk : chunks.value()) {
-      raw_payload_size += chunk.raw_size;
-      stored_payload_size += chunk.stored_size;
+      // Current BA2 DX10 record fields bound these totals below UInt64 max, but keep the public
+      // metadata boundary checked so future chunk-size widening cannot expose wrapped sizes.
+      if (!add_fits_u64(raw_payload_size, chunk.raw_size, raw_payload_size)) {
+        return error{error_code::format_error, "BA2 DX10 raw payload aggregate size overflows"};
+      }
+      if (!add_fits_u64(stored_payload_size, chunk.stored_size, stored_payload_size)) {
+        return error{error_code::format_error, "BA2 DX10 stored payload aggregate size overflows"};
+      }
       payload_offset = std::min(payload_offset, chunk.payload_offset);
       has_compressed_chunk = has_compressed_chunk || chunk.compression != entry_compression::none;
+    }
+
+    std::uint64_t entry_raw_size = 0;
+    if (!add_fits_u64(reconstructed_dds_header_size, raw_payload_size, entry_raw_size)) {
+      return error{error_code::format_error, "BA2 DX10 reconstructed DDS size overflows"};
     }
 
     const auto array_size = inferred_array_size(records[index]);
@@ -467,7 +481,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
 
     entries.push_back(entry_metadata{canonical.value().value,
                                      std::move(original_path),
-                                     148U + raw_payload_size,
+                                     entry_raw_size,
                                      stored_payload_size,
                                      payload_offset,
                                      records[index].name_hash,

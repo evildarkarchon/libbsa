@@ -25,6 +25,14 @@ bool add_fits(std::size_t lhs, std::size_t rhs, std::size_t& total) noexcept {
   return true;
 }
 
+bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept {
+  if (lhs > std::numeric_limits<std::uint64_t>::max() - rhs) {
+    return false;
+  }
+  total = lhs + rhs;
+  return true;
+}
+
 bool span_fits(std::size_t start, std::size_t length, std::size_t total) noexcept {
   return start <= total && length <= total - start;
 }

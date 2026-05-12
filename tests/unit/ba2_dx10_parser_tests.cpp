@@ -378,6 +378,20 @@ TEST_CASE("ba2_dx10_detector returns format_error for oversized declared filenam
   std::filesystem::remove(temp_path, remove_error);
 }
 
+TEST_CASE("ba2_dx10 aggregate overflow fixtures are unreachable under record field bounds",
+          "[unit][fixture][ba2_dx10_detector][allocation]") {
+  constexpr std::uint64_t max_dx10_chunks_per_texture = std::numeric_limits<std::uint8_t>::max();
+  constexpr std::uint64_t max_dx10_chunk_size = std::numeric_limits<std::uint32_t>::max();
+  constexpr std::uint64_t reconstructed_dds_header_size = 148U;
+
+  // BA2 DX10 encodes chunk count as UInt8 and each chunk size as UInt32, so an archive fixture cannot
+  // reach the defensive UInt64 aggregate-overflow branch without first violating the record schema.
+  constexpr std::uint64_t max_payload_aggregate = max_dx10_chunks_per_texture * max_dx10_chunk_size;
+
+  REQUIRE(max_payload_aggregate <= std::numeric_limits<std::uint64_t>::max() - reconstructed_dds_header_size);
+  REQUIRE(max_payload_aggregate + reconstructed_dds_header_size == 1'095'216'660'373ULL);
+}
+
 TEST_CASE("ba2_dx10_detector rejects record hash mismatches",
           "[unit][fixture][malformed][ba2_dx10_detector][ba2_dx10_hash_lookup]") {
   constexpr std::size_t first_record_name_hash_offset = 24U;

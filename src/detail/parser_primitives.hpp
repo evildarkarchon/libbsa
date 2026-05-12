@@ -18,6 +18,9 @@ bool multiply_fits(std::uint32_t count, std::size_t width, std::size_t& total) n
 /// Adds two archive-derived byte counts without wrapping.
 bool add_fits(std::size_t lhs, std::size_t rhs, std::size_t& total) noexcept;
 
+/// Adds two 64-bit archive-derived byte counts without wrapping.
+bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept;
+
 /// Returns true when a `size_t` byte span is fully contained in a bounded archive buffer.
 bool span_fits(std::size_t start, std::size_t length, std::size_t total) noexcept;
 
