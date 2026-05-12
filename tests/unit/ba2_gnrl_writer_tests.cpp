@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include "formats/ba2/ba2_gnrl_layout.hpp"
+#include "formats/ba2/ba2_gnrl_serialize.hpp"
 #include "formats/ba2/ba2_gnrl_writer.hpp"
 
 #include <algorithm>
@@ -40,6 +42,30 @@ std::vector<std::byte> sample_bytes() {
   return {std::byte{0x42}, std::byte{0x41}, std::byte{0x32}, std::byte{0x21}};
 }
 
+libbsa::formats::ba2::ba2_gnrl_prepared_entry disk_stage_entry(const std::filesystem::path& source,
+                                                               std::uint32_t prepared_size) {
+  libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
+  entry.archive_path_original = "Meshes/Payload.bin";
+  entry.archive_path_canonical = "meshes/payload.bin";
+  entry.source_path = source.string();
+  entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
+  entry.raw_size = prepared_size;
+  entry.stream_from_disk = true;
+  entry.owns_payload_bytes = true;
+  return entry;
+}
+
+libbsa::formats::ba2::ba2_gnrl_prepared_entry memory_stage_entry(std::vector<std::byte> bytes) {
+  libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
+  entry.archive_path_original = "Meshes/Payload.bin";
+  entry.archive_path_canonical = "meshes/payload.bin";
+  entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
+  entry.raw_size = static_cast<std::uint32_t>(bytes.size());
+  entry.stored_payload = std::move(bytes);
+  entry.owns_payload_bytes = true;
+  return entry;
+}
+
 std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
   std::ifstream input{path, std::ios::binary};
   REQUIRE(input.good());
@@ -59,11 +85,19 @@ TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
     auto grown = expected;
     grown.push_back(std::byte{0x21});
     const auto source = output_path("stream-source-grew.bin");
+    write_binary_file(source, expected);
+    auto entries = std::vector{disk_stage_entry(source, static_cast<std::uint32_t>(expected.size()))};
+    const auto version = libbsa::formats::ba2::ba2_gnrl_version_for(libbsa::ba2_gnrl_target::fallout4);
+    std::uint64_t file_table_offset = 0;
+    REQUIRE(libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(entries, version, false, file_table_offset).has_value());
     write_binary_file(source, grown);
-    std::ostringstream output;
 
-    auto streamed = libbsa::formats::ba2::gnrl_detail::stream_disk_payload(
-        source.string(), static_cast<std::uint32_t>(expected.size()), output);
+    auto streamed = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(libbsa::ba2_gnrl_target::fallout4,
+                                                                       libbsa::ba2_gnrl_writer_options{},
+                                                                       entries,
+                                                                       version,
+                                                                       file_table_offset,
+                                                                       output_path("stream-source-grew.ba2"));
 
     REQUIRE_FALSE(streamed.has_value());
     CHECK(streamed.error().code == libbsa::error_code::io_error);
@@ -72,11 +106,19 @@ TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
   SECTION("source shrinks after preparation") {
     const std::vector<std::byte> truncated{expected.begin(), expected.end() - 1};
     const auto source = output_path("stream-source-shrank.bin");
+    write_binary_file(source, expected);
+    auto entries = std::vector{disk_stage_entry(source, static_cast<std::uint32_t>(expected.size()))};
+    const auto version = libbsa::formats::ba2::ba2_gnrl_version_for(libbsa::ba2_gnrl_target::fallout4);
+    std::uint64_t file_table_offset = 0;
+    REQUIRE(libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(entries, version, false, file_table_offset).has_value());
     write_binary_file(source, truncated);
-    std::ostringstream output;
 
-    auto streamed = libbsa::formats::ba2::gnrl_detail::stream_disk_payload(
-        source.string(), static_cast<std::uint32_t>(expected.size()), output);
+    auto streamed = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(libbsa::ba2_gnrl_target::fallout4,
+                                                                       libbsa::ba2_gnrl_writer_options{},
+                                                                       entries,
+                                                                       version,
+                                                                       file_table_offset,
+                                                                       output_path("stream-source-shrank.ba2"));
 
     REQUIRE_FALSE(streamed.has_value());
     CHECK(streamed.error().code == libbsa::error_code::io_error);
@@ -93,7 +135,8 @@ TEST_CASE("BA2 GNRL dedupe disk comparisons reject source size changes",
     const auto source = output_path("dedupe-source-grew.bin");
     write_binary_file(source, grown);
 
-    auto equal = libbsa::formats::ba2::gnrl_detail::compare_disk_payload_to_bytes(source.string(), expected);
+    auto equal = libbsa::formats::ba2::ba2_gnrl_payloads_equal(
+        disk_stage_entry(source, static_cast<std::uint32_t>(expected.size())), memory_stage_entry(expected));
 
     REQUIRE_FALSE(equal.has_value());
     CHECK(equal.error().code == libbsa::error_code::io_error);
@@ -104,7 +147,8 @@ TEST_CASE("BA2 GNRL dedupe disk comparisons reject source size changes",
     const auto source = output_path("dedupe-source-shrank.bin");
     write_binary_file(source, truncated);
 
-    auto equal = libbsa::formats::ba2::gnrl_detail::compare_disk_payload_to_bytes(source.string(), expected);
+    auto equal = libbsa::formats::ba2::ba2_gnrl_payloads_equal(
+        disk_stage_entry(source, static_cast<std::uint32_t>(expected.size())), memory_stage_entry(expected));
 
     REQUIRE_FALSE(equal.has_value());
     CHECK(equal.error().code == libbsa::error_code::io_error);
@@ -118,8 +162,9 @@ TEST_CASE("BA2 GNRL dedupe disk comparisons reject source size changes",
     write_binary_file(lhs, grown);
     write_binary_file(rhs, grown);
 
-    auto equal = libbsa::formats::ba2::gnrl_detail::compare_disk_payloads(
-        lhs.string(), rhs.string(), static_cast<std::uint32_t>(expected.size()));
+    auto equal = libbsa::formats::ba2::ba2_gnrl_payloads_equal(
+        disk_stage_entry(lhs, static_cast<std::uint32_t>(expected.size())),
+        disk_stage_entry(rhs, static_cast<std::uint32_t>(expected.size())));
 
     REQUIRE_FALSE(equal.has_value());
     CHECK(equal.error().code == libbsa::error_code::io_error);

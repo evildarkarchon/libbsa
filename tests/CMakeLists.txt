@@ -9,6 +9,7 @@ add_executable(libbsa_tests
   unit/writer_execution_options_tests.cpp
   unit/bsa_writer_execution_tests.cpp
   unit/ba2_writer_execution_tests.cpp
+  unit/writer_stage_tests.cpp
   unit/bounded_memory_policy_tests.cpp
   unit/benchmark_policy_tests.cpp
   unit/docs_policy_tests.cpp

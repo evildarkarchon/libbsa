@@ -99,16 +99,28 @@ target_sources(libbsa
     src/formats/ba2/ba2_format_detector.cpp
     src/formats/ba2/ba2_dx10_parser.cpp
     src/formats/ba2/ba2_dx10_reader.cpp
+    src/formats/ba2/ba2_dx10_prepare.cpp
+    src/formats/ba2/ba2_dx10_layout.cpp
+    src/formats/ba2/ba2_dx10_serialize.cpp
     src/formats/ba2/ba2_dx10_writer.cpp
     src/formats/ba2/ba2_gnrl_parser.cpp
     src/formats/ba2/ba2_gnrl_reader.cpp
+    src/formats/ba2/ba2_gnrl_prepare.cpp
+    src/formats/ba2/ba2_gnrl_layout.cpp
+    src/formats/ba2/ba2_gnrl_serialize.cpp
     src/formats/ba2/ba2_gnrl_writer.cpp
     src/formats/bsa/bsa_format_detector.cpp
     src/formats/bsa/tes3_bsa_parser.cpp
     src/formats/bsa/tes3_bsa_reader.cpp
+    src/formats/bsa/tes3_bsa_prepare.cpp
+    src/formats/bsa/tes3_bsa_layout.cpp
+    src/formats/bsa/tes3_bsa_serialize.cpp
     src/formats/bsa/tes3_bsa_writer.cpp
     src/formats/bsa/tes4_bsa_parser.cpp
     src/formats/bsa/tes4_bsa_reader.cpp
+    src/formats/bsa/tes4_bsa_prepare.cpp
+    src/formats/bsa/tes4_bsa_layout.cpp
+    src/formats/bsa/tes4_bsa_serialize.cpp
     src/formats/bsa/tes4_bsa_writer.cpp
     src/texture/dds_layout.cpp
     src/texture/directxtex_analyzer.cpp
