@@ -191,21 +191,24 @@ struct bulk_extract_request {
   std::string path;
 };
 
-/// Factory used by bulk extraction to create one sink per requested entry.
+/// Factory used by bulk extraction to create sinks for unique requested paths.
 ///
 /// Implementations must return a distinct sink for every successful `create`
-/// call. When `bulk_extract_options::worker_count` is greater than one, `create`
-/// may be called concurrently and the returned sinks may be written on worker
-/// threads. libbsa does not call user factory or sink methods while holding an
-/// internal mutex.
+/// call. `archive_reader::extract_entries` coalesces duplicate exact request
+/// paths before extraction, so duplicate result records mirror the first
+/// occurrence and do not trigger additional `create` calls. When
+/// `bulk_extract_options::worker_count` is greater than one, `create` may be
+/// called concurrently for independent unique paths and the returned sinks may
+/// be written on worker threads. libbsa does not call user factory or sink
+/// methods while holding an internal mutex.
 ///
 /// Thread-safety: caller-owned factories must protect shared state and return
-/// distinct sinks for concurrent entry extraction.
+/// distinct sinks for concurrent unique-path extraction.
 class LIBBSA_API bulk_extract_sink_factory {
  public:
   virtual ~bulk_extract_sink_factory() = default;
 
-  /// Creates the sink that will receive the payload for `path`.
+  /// Creates the sink that will receive the payload for the unique request `path`.
   ///
   /// Returning an error records a per-entry failure and does not abort
   /// independent sibling entries.
@@ -271,12 +274,15 @@ class archive_reader {
   /// Extracts an entry into a bounded in-memory byte vector convenience result.
   [[nodiscard]] LIBBSA_API result<std::vector<std::byte>> extract_bytes(std::string_view path) const;
 
-  /// Extracts multiple entries into caller-created per-entry sinks.
+  /// Extracts multiple request records into caller-created unique-path sinks.
   ///
   /// Setup failures such as an unopened reader or `worker_count == 0` fail the
   /// outer result. Lookup, sink-creation, and extraction failures are recorded
   /// on the corresponding request-order result record so independent sibling
-  /// entries can still complete.
+  /// entries can still complete. Duplicate exact request paths are coalesced:
+  /// the first occurrence owns lookup, sink creation, and extraction, while
+  /// later duplicate result records preserve their request path and mirror the
+  /// first occurrence's entry and failure outcome.
   [[nodiscard]] LIBBSA_API result<std::vector<bulk_extract_entry_result>> extract_entries(
       std::span<const bulk_extract_request> requests,
       bulk_extract_sink_factory& sink_factory,

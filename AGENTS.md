@@ -64,6 +64,7 @@ Deflate and LZ4 compression/decompression support are required.
 
 - Add focused tests for archive parsing, writing, round-tripping, and compatibility behavior as those surfaces are implemented.
 - Prefer fixture-based tests that prove byte-level or metadata-level compatibility with known archive behavior.
+- Never keep production or library code around exclusively for test compatibility. When an API or behavior changes, migrate affected tests to the current API or remove obsolete tests; test-only compatibility shims in product code are not allowed. This is mandatory.
 - Do not use the `TES5Edit/` submodule as a mutable test fixture.
 
 ## MCP Server Usage

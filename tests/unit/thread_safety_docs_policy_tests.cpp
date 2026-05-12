@@ -88,6 +88,9 @@ TEST_CASE("thread_safety_policy documents callback sink writer validation and be
 
   require_all_tokens(docs,
                      {"distinct sink",
+                      "unique exact request paths",
+                      "Duplicate request records mirror the first occurrence result",
+                      "`create` is called at most once for each distinct input path string",
                       "caller-owned synchronization",
                       "bulk_extract_sink_factory::create",
                       "may be called concurrently",
@@ -129,7 +132,9 @@ TEST_CASE("thread_safety_policy public headers point to canonical guidance",
                      {"Thread-safety",
                       "docs/thread-safety.md",
                       "caller-owned synchronization",
-                      "distinct sinks"});
+                      "distinct sinks",
+                      "Duplicate exact request paths",
+                      "unique-path extraction"});
   require_all_tokens(writer_header,
                      {"Thread-safety",
                       "docs/thread-safety.md",

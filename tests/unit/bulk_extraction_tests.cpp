@@ -107,31 +107,78 @@ class capturing_sink final : public libbsa::payload_sink {
   std::shared_ptr<sink_capture> capture_;
 };
 
-class capturing_sink_factory final : public libbsa::bulk_extract_sink_factory {
+struct capture_report {
+  std::map<std::string, std::vector<std::vector<std::byte>>> sink_bytes_by_path;
+  std::map<std::string, std::size_t> create_count_by_path;
+};
+
+class recording_sink_factory final : public libbsa::bulk_extract_sink_factory {
  public:
+  recording_sink_factory() = default;
+
+  explicit recording_sink_factory(std::string failing_path) : failing_path_(std::move(failing_path)) {}
+
   libbsa::result<std::unique_ptr<libbsa::payload_sink>> create(std::string_view path,
-                                                               const libbsa::entry_metadata&) override {
+                                                                const libbsa::entry_metadata&) override {
+    const auto key = std::string{path};
+    {
+      std::lock_guard lock{mutex_};
+      ++create_count_by_path_[key];
+    }
+    if (failing_path_.has_value() && key == *failing_path_) {
+      return libbsa::error{libbsa::error_code::io_error, "test sink factory failure"};
+    }
+
     auto capture = std::make_shared<sink_capture>();
     {
       std::lock_guard lock{mutex_};
-      captures_.emplace(std::string{path}, capture);
+      captures_[key].push_back(capture);
     }
     return std::unique_ptr<libbsa::payload_sink>{new capturing_sink{std::move(capture)}};
   }
 
-  [[nodiscard]] std::map<std::string, std::vector<std::byte>> bytes_by_path() const {
+  [[nodiscard]] capture_report report() const {
     std::lock_guard lock{mutex_};
-    std::map<std::string, std::vector<std::byte>> bytes;
-    for (const auto& [path, capture] : captures_) {
-      bytes.emplace(path, capture->bytes);
+    capture_report report;
+    report.create_count_by_path = create_count_by_path_;
+    for (const auto& [path, captures] : captures_) {
+      auto& bytes = report.sink_bytes_by_path[path];
+      bytes.reserve(captures.size());
+      for (const auto& capture : captures) {
+        bytes.push_back(capture->bytes);
+      }
     }
-    return bytes;
+    return report;
   }
 
  private:
+  std::optional<std::string> failing_path_;
   mutable std::mutex mutex_;
-  std::map<std::string, std::shared_ptr<sink_capture>> captures_;
+  std::map<std::string, std::vector<std::shared_ptr<sink_capture>>> captures_;
+  std::map<std::string, std::size_t> create_count_by_path_;
 };
+
+std::size_t create_count_for(const capture_report& report, std::string_view path) {
+  const auto found = report.create_count_by_path.find(std::string{path});
+  return found == report.create_count_by_path.end() ? 0U : found->second;
+}
+
+std::vector<std::vector<std::byte>> single_sink_bytes(std::string_view text) {
+  return std::vector<std::vector<std::byte>>{bytes_from_text(text)};
+}
+
+void require_matching_entry_metadata(const libbsa::entry_metadata& expected, const libbsa::entry_metadata& actual) {
+  CHECK(actual.path == expected.path);
+  CHECK(actual.original_path == expected.original_path);
+  CHECK(actual.raw_size == expected.raw_size);
+  CHECK(actual.stored_size == expected.stored_size);
+  CHECK(actual.payload_offset == expected.payload_offset);
+  CHECK(actual.archive_hash == expected.archive_hash);
+  CHECK(actual.compression == expected.compression);
+  CHECK(actual.record_flags == expected.record_flags);
+  CHECK(actual.has_embedded_name == expected.has_embedded_name);
+  CHECK(actual.embedded_name_prefix_size == expected.embedded_name_prefix_size);
+}
 
 class partial_sink final : public libbsa::payload_sink {
  public:
@@ -184,19 +231,19 @@ class counting_sink_factory final : public libbsa::bulk_extract_sink_factory {
 
 struct extraction_run {
   std::vector<libbsa::bulk_extract_entry_result> results;
-  std::map<std::string, std::vector<std::byte>> bytes_by_path;
+  capture_report captures;
 };
 
 extraction_run extract_with_workers(const libbsa::archive_reader& reader,
-                                    std::span<const libbsa::bulk_extract_request> requests,
-                                    std::uint32_t worker_count) {
-  capturing_sink_factory sink_factory;
+                                     std::span<const libbsa::bulk_extract_request> requests,
+                                     std::uint32_t worker_count) {
+  recording_sink_factory sink_factory;
   libbsa::bulk_extract_options options;
   options.worker_count = worker_count;
 
   auto extracted = reader.extract_entries(requests, sink_factory, options);
   REQUIRE(extracted.has_value());
-  return extraction_run{std::move(extracted).value(), sink_factory.bytes_by_path()};
+  return extraction_run{std::move(extracted).value(), sink_factory.report()};
 }
 
 std::vector<libbsa::bulk_extract_request> standard_requests() {
@@ -381,7 +428,7 @@ TEST_CASE("bulk_extraction options default to serial extraction", "[unit][bulk_e
 TEST_CASE("bulk_extraction rejects zero workers as an outer argument error", "[unit][bulk_extraction]") {
   const auto reader = create_bulk_test_reader();
   const auto requests = standard_requests();
-  capturing_sink_factory sink_factory;
+  recording_sink_factory sink_factory;
   libbsa::bulk_extract_options options;
   options.worker_count = 0U;
 
@@ -395,7 +442,7 @@ TEST_CASE("bulk_extraction rejects unsupported large worker counts as an outer a
           "[unit][bulk_extraction]") {
   const auto reader = create_bulk_test_reader();
   const auto requests = standard_requests();
-  capturing_sink_factory sink_factory;
+  recording_sink_factory sink_factory;
   libbsa::bulk_extract_options options;
   options.worker_count = 1025U;
 
@@ -425,10 +472,168 @@ TEST_CASE("bulk_extraction preserves request order and bytes in serial and paral
     CHECK(serial.results[index].entry->path == parallel.results[index].entry->path);
   }
 
-  CHECK(serial.bytes_by_path == parallel.bytes_by_path);
-  CHECK(serial.bytes_by_path.at("Docs/Gamma.txt") == bytes_from_text("gamma document bytes"));
-  CHECK(serial.bytes_by_path.at("Meshes/Alpha.NIF") == bytes_from_text("alpha mesh bytes"));
-  CHECK(serial.bytes_by_path.at("Textures/Beta.DDS") == bytes_from_text("beta texture bytes"));
+  CHECK(serial.captures.sink_bytes_by_path == parallel.captures.sink_bytes_by_path);
+  CHECK(serial.captures.create_count_by_path == parallel.captures.create_count_by_path);
+  CHECK(serial.captures.sink_bytes_by_path.at("Docs/Gamma.txt") == single_sink_bytes("gamma document bytes"));
+  CHECK(serial.captures.sink_bytes_by_path.at("Meshes/Alpha.NIF") == single_sink_bytes("alpha mesh bytes"));
+  CHECK(serial.captures.sink_bytes_by_path.at("Textures/Beta.DDS") == single_sink_bytes("beta texture bytes"));
+  CHECK(create_count_for(serial.captures, "Docs/Gamma.txt") == 1U);
+  CHECK(create_count_for(serial.captures, "Meshes/Alpha.NIF") == 1U);
+  CHECK(create_count_for(serial.captures, "Textures/Beta.DDS") == 1U);
+}
+
+TEST_CASE("bulk_extraction coalesces duplicate successes in serial mode", "[unit][bulk_extraction]") {
+  const auto reader = create_bulk_test_reader();
+  const std::vector requests{libbsa::bulk_extract_request{.path = "Meshes/Alpha.NIF"},
+                             libbsa::bulk_extract_request{.path = "Textures/Beta.DDS"},
+                             libbsa::bulk_extract_request{.path = "Meshes/Alpha.NIF"},
+                             libbsa::bulk_extract_request{.path = "Meshes/Alpha.NIF"}};
+  recording_sink_factory sink_factory;
+
+  auto extracted = reader.extract_entries(requests, sink_factory);
+
+  REQUIRE(extracted.has_value());
+  auto& results = extracted.value();
+  REQUIRE(results.size() == requests.size());
+  for (std::size_t index = 0; index < requests.size(); ++index) {
+    CAPTURE(index);
+    CHECK(results[index].path == requests[index].path);
+    CHECK(results[index].succeeded());
+    REQUIRE(results[index].entry.has_value());
+  }
+  require_matching_entry_metadata(*results[0].entry, *results[2].entry);
+  require_matching_entry_metadata(*results[0].entry, *results[3].entry);
+
+  const auto report = sink_factory.report();
+  CHECK(create_count_for(report, "Meshes/Alpha.NIF") == 1U);
+  CHECK(create_count_for(report, "Textures/Beta.DDS") == 1U);
+  CHECK(report.sink_bytes_by_path.at("Meshes/Alpha.NIF") == single_sink_bytes("alpha mesh bytes"));
+  CHECK(report.sink_bytes_by_path.at("Textures/Beta.DDS") == single_sink_bytes("beta texture bytes"));
+}
+
+TEST_CASE("bulk_extraction coalesces duplicate successes in parallel mode", "[unit][bulk_extraction]") {
+  const auto reader = create_bulk_test_reader();
+  const std::vector requests{libbsa::bulk_extract_request{.path = "Docs/Gamma.txt"},
+                             libbsa::bulk_extract_request{.path = "Meshes/Alpha.NIF"},
+                             libbsa::bulk_extract_request{.path = "Docs/Gamma.txt"},
+                             libbsa::bulk_extract_request{.path = "Textures/Beta.DDS"},
+                             libbsa::bulk_extract_request{.path = "Docs/Gamma.txt"}};
+  recording_sink_factory sink_factory;
+
+  auto extracted = reader.extract_entries(requests, sink_factory, libbsa::bulk_extract_options{.worker_count = 4U});
+
+  REQUIRE(extracted.has_value());
+  auto& results = extracted.value();
+  REQUIRE(results.size() == requests.size());
+  for (std::size_t index = 0; index < requests.size(); ++index) {
+    CAPTURE(index);
+    CHECK(results[index].path == requests[index].path);
+    CHECK(results[index].succeeded());
+    REQUIRE(results[index].entry.has_value());
+  }
+  require_matching_entry_metadata(*results[0].entry, *results[2].entry);
+  require_matching_entry_metadata(*results[0].entry, *results[4].entry);
+
+  const auto report = sink_factory.report();
+  CHECK(create_count_for(report, "Docs/Gamma.txt") == 1U);
+  CHECK(create_count_for(report, "Meshes/Alpha.NIF") == 1U);
+  CHECK(create_count_for(report, "Textures/Beta.DDS") == 1U);
+  CHECK(report.sink_bytes_by_path.at("Docs/Gamma.txt") == single_sink_bytes("gamma document bytes"));
+  CHECK(report.sink_bytes_by_path.at("Meshes/Alpha.NIF") == single_sink_bytes("alpha mesh bytes"));
+  CHECK(report.sink_bytes_by_path.at("Textures/Beta.DDS") == single_sink_bytes("beta texture bytes"));
+}
+
+TEST_CASE("bulk_extraction mirrors duplicate missing path failures without aborting siblings",
+          "[unit][bulk_extraction]") {
+  const auto reader = create_bulk_test_reader();
+  const std::vector requests{libbsa::bulk_extract_request{.path = "Missing/Entry.bin"},
+                             libbsa::bulk_extract_request{.path = "Meshes/Alpha.NIF"},
+                             libbsa::bulk_extract_request{.path = "Missing/Entry.bin"}};
+  recording_sink_factory sink_factory;
+
+  auto extracted = reader.extract_entries(requests, sink_factory, libbsa::bulk_extract_options{.worker_count = 4U});
+
+  REQUIRE(extracted.has_value());
+  auto& results = extracted.value();
+  REQUIRE(results.size() == requests.size());
+  CHECK_FALSE(results[0].succeeded());
+  CHECK(results[0].path == "Missing/Entry.bin");
+  CHECK_FALSE(results[0].entry.has_value());
+  REQUIRE(results[0].failure.has_value());
+  CHECK(results[0].failure->code == libbsa::error_code::not_found);
+  CHECK(results[1].succeeded());
+  CHECK(results[1].path == "Meshes/Alpha.NIF");
+  CHECK_FALSE(results[2].succeeded());
+  CHECK(results[2].path == "Missing/Entry.bin");
+  CHECK_FALSE(results[2].entry.has_value());
+  REQUIRE(results[2].failure.has_value());
+  CHECK(results[2].failure->code == results[0].failure->code);
+  CHECK(results[2].failure->message == results[0].failure->message);
+
+  const auto report = sink_factory.report();
+  CHECK(create_count_for(report, "Missing/Entry.bin") == 0U);
+  CHECK(create_count_for(report, "Meshes/Alpha.NIF") == 1U);
+  CHECK(report.sink_bytes_by_path.at("Meshes/Alpha.NIF") == single_sink_bytes("alpha mesh bytes"));
+  CHECK(report.sink_bytes_by_path.find("Missing/Entry.bin") == report.sink_bytes_by_path.end());
+}
+
+TEST_CASE("bulk_extraction mirrors duplicate sink factory failures without aborting siblings",
+          "[unit][bulk_extraction]") {
+  const auto reader = create_bulk_test_reader();
+  const std::vector requests{libbsa::bulk_extract_request{.path = "Meshes/Alpha.NIF"},
+                             libbsa::bulk_extract_request{.path = "Docs/Gamma.txt"},
+                             libbsa::bulk_extract_request{.path = "Meshes/Alpha.NIF"}};
+  recording_sink_factory sink_factory{"Meshes/Alpha.NIF"};
+
+  auto extracted = reader.extract_entries(requests, sink_factory, libbsa::bulk_extract_options{.worker_count = 4U});
+
+  REQUIRE(extracted.has_value());
+  auto& results = extracted.value();
+  REQUIRE(results.size() == requests.size());
+  CHECK_FALSE(results[0].succeeded());
+  CHECK(results[0].path == "Meshes/Alpha.NIF");
+  REQUIRE(results[0].entry.has_value());
+  REQUIRE(results[0].failure.has_value());
+  CHECK(results[0].failure->code == libbsa::error_code::io_error);
+  CHECK(results[1].succeeded());
+  CHECK(results[1].path == "Docs/Gamma.txt");
+  CHECK_FALSE(results[2].succeeded());
+  CHECK(results[2].path == "Meshes/Alpha.NIF");
+  REQUIRE(results[2].entry.has_value());
+  REQUIRE(results[2].failure.has_value());
+  require_matching_entry_metadata(*results[0].entry, *results[2].entry);
+  CHECK(results[2].failure->code == results[0].failure->code);
+  CHECK(results[2].failure->message == results[0].failure->message);
+
+  const auto report = sink_factory.report();
+  CHECK(create_count_for(report, "Meshes/Alpha.NIF") == 1U);
+  CHECK(create_count_for(report, "Docs/Gamma.txt") == 1U);
+  CHECK(report.sink_bytes_by_path.find("Meshes/Alpha.NIF") == report.sink_bytes_by_path.end());
+  CHECK(report.sink_bytes_by_path.at("Docs/Gamma.txt") == single_sink_bytes("gamma document bytes"));
+}
+
+TEST_CASE("bulk_extraction does not pre-merge distinct request strings", "[unit][bulk_extraction]") {
+  const auto reader = create_bulk_test_reader();
+  const std::vector requests{libbsa::bulk_extract_request{.path = "Meshes/Alpha.NIF"},
+                             libbsa::bulk_extract_request{.path = "meshes\\alpha.nif"}};
+  recording_sink_factory sink_factory;
+
+  auto extracted = reader.extract_entries(requests, sink_factory, libbsa::bulk_extract_options{.worker_count = 4U});
+
+  REQUIRE(extracted.has_value());
+  auto& results = extracted.value();
+  REQUIRE(results.size() == requests.size());
+  CHECK(results[0].path == "Meshes/Alpha.NIF");
+  CHECK(results[1].path == "meshes\\alpha.nif");
+  REQUIRE(results[0].entry.has_value());
+  REQUIRE(results[1].entry.has_value());
+  CHECK(results[0].entry->path == results[1].entry->path);
+
+  const auto report = sink_factory.report();
+  CHECK(create_count_for(report, "Meshes/Alpha.NIF") == 1U);
+  CHECK(create_count_for(report, "meshes\\alpha.nif") == 1U);
+  CHECK(report.sink_bytes_by_path.at("Meshes/Alpha.NIF") == single_sink_bytes("alpha mesh bytes"));
+  CHECK(report.sink_bytes_by_path.at("meshes\\alpha.nif") == single_sink_bytes("alpha mesh bytes"));
 }
 
 TEST_CASE("bulk_extraction records per-entry failures without aborting siblings", "[unit][bulk_extraction]") {
@@ -436,7 +641,7 @@ TEST_CASE("bulk_extraction records per-entry failures without aborting siblings"
   const std::vector requests{libbsa::bulk_extract_request{.path = "Meshes/Alpha.NIF"},
                              libbsa::bulk_extract_request{.path = "Missing/Entry.bin"},
                              libbsa::bulk_extract_request{.path = "Textures/Beta.DDS"}};
-  capturing_sink_factory sink_factory;
+  recording_sink_factory sink_factory;
 
   auto extracted = reader.extract_entries(requests, sink_factory, libbsa::bulk_extract_options{.worker_count = 4U});
 
@@ -451,10 +656,10 @@ TEST_CASE("bulk_extraction records per-entry failures without aborting siblings"
   CHECK(extracted.value()[1].failure->code == libbsa::error_code::not_found);
   CHECK(extracted.value()[2].succeeded());
 
-  const auto bytes = sink_factory.bytes_by_path();
-  CHECK(bytes.at("Meshes/Alpha.NIF") == bytes_from_text("alpha mesh bytes"));
-  CHECK(bytes.at("Textures/Beta.DDS") == bytes_from_text("beta texture bytes"));
-  CHECK(bytes.find("Missing/Entry.bin") == bytes.end());
+  const auto report = sink_factory.report();
+  CHECK(report.sink_bytes_by_path.at("Meshes/Alpha.NIF") == single_sink_bytes("alpha mesh bytes"));
+  CHECK(report.sink_bytes_by_path.at("Textures/Beta.DDS") == single_sink_bytes("beta texture bytes"));
+  CHECK(report.sink_bytes_by_path.find("Missing/Entry.bin") == report.sink_bytes_by_path.end());
 }
 
 TEST_CASE("bulk_extraction records partial sink writes as per-entry I/O errors", "[unit][bulk_extraction]") {

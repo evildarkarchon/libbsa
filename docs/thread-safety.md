@@ -4,15 +4,15 @@ libbsa objects are isolated by ownership. The library does not use global mutabl
 
 ## archive_reader
 
-Independently opened `archive_reader` objects may be used concurrently by different threads. A single `archive_reader` object may run concurrent const metadata, lookup, listing, single-entry extraction, and bulk extraction calls when each extraction writes to a distinct caller-owned sink. This distinct sink requirement keeps libbsa responsible for archive parsing and scheduling while callers keep ownership of shared output state and any caller-owned synchronization.
+Independently opened `archive_reader` objects may be used concurrently by different threads. A single `archive_reader` object may run concurrent const metadata, lookup, listing, single-entry extraction, and bulk extraction calls when each unique extraction writes to a distinct caller-owned sink. Duplicate exact request paths in a bulk extraction call share the first occurrence result and do not create additional sinks. This distinct sink requirement keeps libbsa responsible for archive parsing and scheduling while callers keep ownership of shared output state and any caller-owned synchronization.
 
 ## payload_sink
 
-`payload_sink` instances are caller-owned. A sink may be written by libbsa on the thread performing extraction; when parallel bulk extraction is used, every requested entry must receive a distinct sink unless the caller has made a sink explicitly safe for the way it is shared. Partial writes remain extraction failures rather than partial successes.
+`payload_sink` instances are caller-owned. A sink may be written by libbsa on the thread performing extraction; when parallel bulk extraction is used, every unique exact request path that is extracted receives a distinct sink unless the caller has made a sink explicitly safe for the way it is shared. Duplicate request records mirror the first occurrence result for that exact path and do not receive additional sinks. Partial writes remain extraction failures rather than partial successes.
 
 ## bulk_extract_sink_factory
 
-`bulk_extract_sink_factory::create` may be called concurrently when `bulk_extract_options::worker_count` is greater than one. A successful factory call must return a distinct sink for that requested entry, and the factory must protect any caller-owned shared state it touches. libbsa does not call sink factory or sink methods while holding internal locks.
+`bulk_extract_sink_factory::create` may be called concurrently for unique exact request paths when `bulk_extract_options::worker_count` is greater than one. A successful factory call must return a distinct sink for that unique path, and the factory must protect any caller-owned shared state it touches. Duplicate exact request paths are coalesced before worker dispatch, so `create` is called at most once for each distinct input path string. libbsa does not call sink factory or sink methods while holding internal locks.
 
 ## bulk_extract_options
 

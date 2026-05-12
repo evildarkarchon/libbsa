@@ -16,6 +16,7 @@
 
 #include <cstddef>
 #include <fstream>
+#include <map>
 #include <optional>
 #include <string>
 #include <utility>
@@ -92,6 +93,27 @@ result<std::uint64_t> archive_file_size(std::string_view host_path) {
   }
   return static_cast<std::uint64_t>(size);
 }
+
+// Bulk extraction resolves metadata once per unique request, so payload dispatch stays separate from lookup.
+result<void> extract_entry_payload(const archive_metadata& metadata,
+                                   bool is_ba2_dx10,
+                                   std::string_view host_path,
+                                   const entry_metadata& entry,
+                                   payload_sink& sink) {
+  if (metadata.variant == archive_variant::tes3) {
+    return formats::bsa::extract_tes3_bsa_payload(host_path, entry, sink);
+  }
+  if (metadata.type == archive_type::ba2) {
+    return is_ba2_dx10 ? formats::ba2::extract_ba2_dx10_payload(host_path, entry, sink)
+                       : formats::ba2::extract_ba2_gnrl_payload(host_path, entry, sink);
+  }
+  return formats::bsa::extract_tes4_bsa_payload_from_file(host_path, entry, sink);
+}
+
+struct bulk_request_group {
+  std::string path;
+  std::vector<std::size_t> result_indices;
+};
 
 } // namespace
 
@@ -236,14 +258,7 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
   if (!found.value()) {
     return error{error_code::not_found, "archive path was not found"};
   }
-  if (state_->metadata.variant == archive_variant::tes3) {
-    return formats::bsa::extract_tes3_bsa_payload(state_->host_path, *found.value(), sink);
-  }
-  if (state_->metadata.type == archive_type::ba2) {
-    return state_->is_ba2_dx10 ? formats::ba2::extract_ba2_dx10_payload(state_->host_path, *found.value(), sink)
-                               : formats::ba2::extract_ba2_gnrl_payload(state_->host_path, *found.value(), sink);
-  }
-  return formats::bsa::extract_tes4_bsa_payload_from_file(state_->host_path, *found.value(), sink);
+  return extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path, *found.value(), sink);
 }
 
 result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view path) const {
@@ -261,7 +276,7 @@ result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view pa
 
   // Keep the convenience API bounded by the parser-derived size for exactly one entry.
   vector_payload_sink sink{found.value()->raw_size};
-  auto extracted = extract(path, sink);
+  auto extracted = extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path, *found.value(), sink);
   if (!extracted) {
     return extracted.error();
   }
@@ -280,40 +295,66 @@ result<std::vector<bulk_extract_entry_result>> archive_reader::extract_entries(
   }
 
   std::vector<bulk_extract_entry_result> results(requests.size());
-  const auto work = [&](std::size_t index) -> result<void> {
+  std::vector<bulk_request_group> groups;
+  groups.reserve(requests.size());
+  std::map<std::string, std::size_t> group_by_path;
+  for (std::size_t index = 0; index < requests.size(); ++index) {
     const auto& request = requests[index];
-    auto& record = results[index];
-    record.path = request.path;
+    // Coalesce only caller-supplied exact strings; archive-specific normalization remains inside find().
+    const auto [group, inserted] = group_by_path.emplace(request.path, groups.size());
+    if (inserted) {
+      groups.push_back(bulk_request_group{request.path, std::vector<std::size_t>{index}});
+      continue;
+    }
+    groups[group->second].result_indices.push_back(index);
+  }
 
-    auto found = find(request.path);
+  const auto copy_group_result = [&](const bulk_request_group& group, const bulk_extract_entry_result& record) {
+    for (const auto result_index : group.result_indices) {
+      results[result_index] = record;
+      results[result_index].path = requests[result_index].path;
+    }
+  };
+
+  const auto work = [&](std::size_t group_index) -> result<void> {
+    const auto& group = groups[group_index];
+    bulk_extract_entry_result record;
+    record.path = group.path;
+
+    auto found = find(group.path);
     if (!found) {
       record.failure = found.error();
+      copy_group_result(group, record);
       return {};
     }
     if (!found.value()) {
       record.failure = error{error_code::not_found, "archive path was not found"};
+      copy_group_result(group, record);
       return {};
     }
 
     record.entry = *found.value();
-    auto sink = sink_factory.create(request.path, *record.entry);
+    auto sink = sink_factory.create(group.path, *record.entry);
     if (!sink) {
       record.failure = sink.error();
+      copy_group_result(group, record);
       return {};
     }
     if (!sink.value()) {
       record.failure = error{error_code::invalid_argument, "bulk extraction sink factory returned no sink"};
+      copy_group_result(group, record);
       return {};
     }
 
-    auto extracted = extract(request.path, *sink.value());
+    auto extracted = extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path, *record.entry, *sink.value());
     if (!extracted) {
       record.failure = extracted.error();
     }
+    copy_group_result(group, record);
     return {};
   };
 
-  auto worked = detail::run_indexed_work(requests.size(), options.worker_count, work);
+  auto worked = detail::run_indexed_work(groups.size(), options.worker_count, work);
   if (!worked) {
     return worked.error();
   }
