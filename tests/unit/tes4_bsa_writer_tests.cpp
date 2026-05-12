@@ -599,6 +599,37 @@ TEST_CASE("TES4 BSA writer records compressed override metadata while archive de
   }
 }
 
+TEST_CASE("TES4 BSA writer keeps compressed disk entries byte-stable with memory entries",
+          "[unit][tes4_bsa_writer][writer-source-io]") {
+  const auto source_bytes = bytes_from_text("compressed disk source bytes should match memory output");
+  const auto source = output_path("compressed-disk-source.nif");
+  write_binary_file(source, source_bytes);
+
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.overwrite_existing = true;
+
+  libbsa::tes4_bsa_writer disk_writer{libbsa::tes4_bsa_target::fallout3, options};
+  REQUIRE(disk_writer.add_file("Meshes/CompressedDisk.nif", source.string(), libbsa::entry_compression_policy::compressed)
+              .has_value());
+  const auto disk_archive = output_path("compressed-disk-entry.bsa");
+  REQUIRE(disk_writer.write_to(disk_archive.string()).has_value());
+
+  libbsa::tes4_bsa_writer memory_writer{libbsa::tes4_bsa_target::fallout3, options};
+  REQUIRE(memory_writer.add_bytes("Meshes/CompressedDisk.nif", source_bytes, libbsa::entry_compression_policy::compressed)
+              .has_value());
+  const auto memory_archive = output_path("compressed-memory-entry.bsa");
+  REQUIRE(memory_writer.write_to(memory_archive.string()).has_value());
+
+  CHECK(read_binary_file(disk_archive) == read_binary_file(memory_archive));
+
+  auto opened = libbsa::archive_reader::open(disk_archive.string());
+  REQUIRE(opened.has_value());
+  const auto& entry = require_entry(opened.value(), "Meshes/CompressedDisk.nif");
+  CHECK(entry.compression == libbsa::entry_compression::deflate);
+  require_extracted_bytes(opened.value(), "Meshes/CompressedDisk.nif", source_bytes);
+}
+
 TEST_CASE("TES4 BSA writer target-default compression round-trips inherited entries", "[unit][tes4_bsa_writer]") {
   constexpr std::uint32_t archive_compress_by_default = 0x0004U;
   const std::array targets{libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3,
@@ -801,6 +832,38 @@ TEST_CASE("TES4 BSA writer shares offsets for opt-in identical final stored byte
   CHECK(first.stored_size == second.stored_size);
   require_extracted_bytes(opened.value(), "Meshes/Dedupe/First.nif", source_bytes);
   require_extracted_bytes(opened.value(), "Meshes/Dedupe/Second.nif", source_bytes);
+}
+
+TEST_CASE("TES4 BSA writer dedupes matching disk-backed raw payloads",
+          "[unit][tes4_bsa_writer][writer-source-io]") {
+  const auto source_bytes = bytes_from_text("identical disk-backed bytes dedupe without full duplicate buffers");
+  const auto first_source = output_path("dedupe-disk-first.nif");
+  const auto second_source = output_path("dedupe-disk-second.nif");
+  write_binary_file(first_source, source_bytes);
+  write_binary_file(second_source, source_bytes);
+
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.deduplicate_payloads = true;
+  options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+
+  REQUIRE(writer.add_file("Meshes/Dedupe/DiskFirst.nif", first_source.string()).has_value());
+  REQUIRE(writer.add_file("Meshes/Dedupe/DiskSecond.nif", second_source.string()).has_value());
+
+  const auto archive = output_path("dedupe-disk-backed-shared-offsets.bsa");
+  auto written = writer.write_to(archive.string());
+  REQUIRE(written.has_value());
+
+  auto opened = libbsa::archive_reader::open(archive.string());
+  REQUIRE(opened.has_value());
+
+  const auto& first = require_entry(opened.value(), "Meshes/Dedupe/DiskFirst.nif");
+  const auto& second = require_entry(opened.value(), "Meshes/Dedupe/DiskSecond.nif");
+  CHECK(first.payload_offset == second.payload_offset);
+  CHECK(first.stored_size == second.stored_size);
+  require_extracted_bytes(opened.value(), "Meshes/Dedupe/DiskFirst.nif", source_bytes);
+  require_extracted_bytes(opened.value(), "Meshes/Dedupe/DiskSecond.nif", source_bytes);
 }
 
 TEST_CASE("TES4 BSA writer does not dedupe matching source bytes with different compression encodings",

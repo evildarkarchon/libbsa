@@ -1,8 +1,9 @@
 #include "formats/bsa/tes4_bsa_layout.hpp"
 
+#include <detail/writer_disk_source.hpp>
+
 #include <algorithm>
 #include <cstddef>
-#include <fstream>
 #include <limits>
 #include <string>
 #include <string_view>
@@ -47,20 +48,12 @@ result<std::uint8_t> checked_name_size(std::size_t size, std::string_view descri
   return static_cast<std::uint8_t>(size);
 }
 
-result<std::vector<std::byte>> read_disk_source_bytes(const std::string& host_path) {
-  std::ifstream input{host_path, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "TES4 BSA writer failed to open disk source"};
-  }
-  std::vector<std::byte> bytes;
-  for (char ch = 0; input.get(ch);) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
-  }
-  if (input.bad()) {
-    return error{error_code::io_error, "TES4 BSA writer failed while reading disk source"};
-  }
-  return bytes;
-}
+constexpr detail::writer_disk_source_context tes4_dedupe_source_context{
+    "TES4 BSA writer failed to open disk source",
+    "TES4 BSA writer failed to inspect disk source",
+    "TES4 BSA writer failed while reading disk source",
+    "TES4 BSA disk source changed during dedupe preparation",
+    "TES4 BSA disk source"};
 
 result<tes4_layout_result> calculate_table_lengths(std::span<const tes4_prepared_folder> folders) {
   std::uint64_t total_folder_name_length64 = 0;
@@ -100,24 +93,53 @@ result<tes4_layout_result> calculate_table_lengths(std::span<const tes4_prepared
   return tes4_layout_result{total_folder_name_length.value(), total_file_name_length.value(), file_count.value()};
 }
 
-result<std::vector<std::byte>> materialize_stored_payload(const tes4_prepared_entry& entry) {
-  if (!entry.stream_raw_disk) {
-    return entry.stored_payload;
+result<bool> disk_payload_equals_bytes(const tes4_prepared_entry& entry, std::span<const std::byte> expected) {
+  if (expected.size() != entry.raw_disk_size) {
+    return false;
   }
 
-  auto raw_payload = read_disk_source_bytes(entry.raw_disk_host_path);
-  if (!raw_payload) {
-    return raw_payload.error();
+  bool equal = true;
+  std::size_t offset = 0;
+  auto compared = detail::for_each_disk_source_chunk(
+      entry.raw_disk_host_path,
+      entry.raw_disk_size,
+      tes4_dedupe_source_context,
+      [&](std::span<const std::byte> chunk) -> result<void> {
+        if (equal && !std::equal(chunk.begin(), chunk.end(), expected.begin() + static_cast<std::ptrdiff_t>(offset))) {
+          equal = false;
+        }
+        offset += chunk.size();
+        return {};
+      });
+  if (!compared) {
+    return compared.error();
   }
-  if (raw_payload.value().size() != entry.raw_disk_size) {
-    return error{error_code::io_error, "TES4 BSA disk source changed during dedupe preparation"};
+  return equal;
+}
+
+result<bool> disk_stored_payload_equals_bytes(const tes4_prepared_entry& entry,
+                                              std::span<const std::byte> expected) {
+  if (expected.size() != static_cast<std::size_t>(entry.stored_payload.size()) + entry.raw_disk_size) {
+    return false;
+  }
+  if (!std::equal(entry.stored_payload.begin(), entry.stored_payload.end(), expected.begin())) {
+    return false;
+  }
+  return disk_payload_equals_bytes(entry, expected.subspan(entry.stored_payload.size()));
+}
+
+result<bool> disk_stored_payloads_equal(const tes4_prepared_entry& lhs, const tes4_prepared_entry& rhs) {
+  if (lhs.stored_payload != rhs.stored_payload || lhs.raw_disk_size != rhs.raw_disk_size) {
+    return false;
   }
 
-  std::vector<std::byte> bytes;
-  bytes.reserve(entry.stored_payload.size() + raw_payload.value().size());
-  bytes.insert(bytes.end(), entry.stored_payload.begin(), entry.stored_payload.end());
-  bytes.insert(bytes.end(), raw_payload.value().begin(), raw_payload.value().end());
-  return bytes;
+  auto rhs_payload = detail::read_disk_source_exact(rhs.raw_disk_host_path,
+                                                   rhs.raw_disk_size,
+                                                   tes4_dedupe_source_context);
+  if (!rhs_payload) {
+    return rhs_payload.error();
+  }
+  return disk_payload_equals_bytes(lhs, rhs_payload.value());
 }
 
 } // namespace
@@ -129,16 +151,13 @@ result<bool> tes4_stored_payloads_equal(const tes4_prepared_entry& lhs, const te
   if (!lhs.stream_raw_disk && !rhs.stream_raw_disk) {
     return lhs.stored_payload == rhs.stored_payload;
   }
-
-  auto lhs_bytes = materialize_stored_payload(lhs);
-  if (!lhs_bytes) {
-    return lhs_bytes.error();
+  if (lhs.stream_raw_disk && rhs.stream_raw_disk) {
+    return disk_stored_payloads_equal(lhs, rhs);
   }
-  auto rhs_bytes = materialize_stored_payload(rhs);
-  if (!rhs_bytes) {
-    return rhs_bytes.error();
+  if (lhs.stream_raw_disk) {
+    return disk_stored_payload_equals_bytes(lhs, rhs.stored_payload);
   }
-  return lhs_bytes.value() == rhs_bytes.value();
+  return disk_stored_payload_equals_bytes(rhs, lhs.stored_payload);
 }
 
 result<tes4_layout_result> tes4_assign_offsets(std::span<tes4_prepared_folder> folders,

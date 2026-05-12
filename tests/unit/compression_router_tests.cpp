@@ -4,7 +4,10 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <filesystem>
+#include <fstream>
 #include <iterator>
+#include <sstream>
 #include <string_view>
 #include <vector>
 
@@ -17,6 +20,14 @@ std::vector<std::byte> router_vector() {
     std::transform(text.begin(), text.end(), std::back_inserter(bytes), [](char value) { return static_cast<std::byte>(value); });
   }
   return bytes;
+}
+
+std::string read_text_file(const std::filesystem::path& path) {
+  std::ifstream input{path};
+  REQUIRE(input.is_open());
+  std::ostringstream buffer;
+  buffer << input.rdbuf();
+  return buffer.str();
 }
 
 } // namespace
@@ -46,6 +57,14 @@ TEST_CASE("compression_router none method preserves exact input bytes", "[unit][
   auto wrong_size = libbsa::detail::decompress_payload_exact(libbsa::detail::compression_method::none, original, original.size() + 1);
   REQUIRE_FALSE(wrong_size);
   REQUIRE(wrong_size.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("compression_router none method uses result-based byte-vector allocation",
+          "[unit][compression][compression-router][bounded_memory_policy]") {
+  const auto text = read_text_file(std::filesystem::path{LIBBSA_SOURCE_DIR} / "src" / "detail" / "compression_router.cpp");
+
+  CHECK(text.find("make_byte_vector") != std::string::npos);
+  CHECK(text.find("return {input.begin(), input.end()}") == std::string::npos);
 }
 
 TEST_CASE("compression_router rejects unsupported explicit enum values", "[unit][malformed][compression][compression-router]") {

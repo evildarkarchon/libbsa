@@ -4,6 +4,7 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/compression_router.hpp>
 #include <detail/parallel_work.hpp>
+#include <detail/writer_disk_source.hpp>
 
 #include "texture/directxtex_analyzer.hpp"
 
@@ -169,43 +170,18 @@ std::uint32_t file_flag_for_extension(std::string_view extension, std::uint32_t 
   return 0U;
 }
 
-result<std::vector<std::byte>> read_disk_source_bytes(const std::string& host_path) {
-  std::ifstream input{host_path, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "TES4 BSA writer failed to open disk source"};
-  }
-  std::vector<std::byte> bytes;
-  for (char ch = 0; input.get(ch);) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
-  }
-  if (input.bad()) {
-    return error{error_code::io_error, "TES4 BSA writer failed while reading disk source"};
-  }
-  return bytes;
-}
+constexpr detail::writer_disk_source_context tes4_prepare_source_context{
+    "TES4 BSA writer failed to open disk source",
+    "TES4 BSA writer failed to inspect disk source",
+    "TES4 BSA writer failed while reading disk source",
+    "TES4 BSA disk source changed during finalization",
+    "TES4 BSA disk source"};
 
-result<std::vector<std::byte>> read_disk_source_prefix(const std::string& host_path, std::size_t max_bytes) {
-  std::ifstream input{host_path, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "TES4 BSA writer failed to open disk source"};
-  }
-
-  std::vector<std::byte> bytes;
-  bytes.reserve(max_bytes);
-  for (char ch = 0; bytes.size() < max_bytes && input.get(ch);) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
-  }
-  if (input.bad()) {
-    return error{error_code::io_error, "TES4 BSA writer failed while reading disk source"};
-  }
-  return bytes;
-}
-
-result<std::vector<std::byte>> read_source_bytes(const tes4_writer_entry& entry) {
+result<std::vector<std::byte>> read_source_bytes(const tes4_writer_entry& entry, std::uint32_t expected_size) {
   if (entry.from_memory) {
     return entry.memory_bytes;
   }
-  return read_disk_source_bytes(entry.host_path);
+  return detail::read_disk_source_exact(entry.host_path, expected_size, tes4_prepare_source_context);
 }
 
 result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& entry,
@@ -216,7 +192,9 @@ result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& 
   }
 
   auto probe = entry.from_memory ? result<std::vector<std::byte>>{entry.memory_bytes}
-                                 : read_disk_source_prefix(entry.host_path, dds_metadata_probe_size);
+                                 : detail::read_disk_source_prefix(entry.host_path,
+                                                                   dds_metadata_probe_size,
+                                                                   tes4_prepare_source_context);
   if (!probe) {
     return probe.error();
   }
@@ -232,17 +210,11 @@ result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& 
 }
 
 result<std::uint32_t> disk_payload_size(const std::string& host_path) {
-  const auto path = std::filesystem::path{host_path};
-  std::error_code fs_error;
-  const bool regular_file = std::filesystem::is_regular_file(path, fs_error);
-  if (fs_error || !regular_file) {
-    return error{error_code::io_error, "TES4 BSA writer failed to inspect disk source"};
+  auto size = detail::inspect_disk_source_size(host_path, tes4_prepare_source_context);
+  if (!size) {
+    return size.error();
   }
-  const auto size = std::filesystem::file_size(path, fs_error);
-  if (fs_error) {
-    return error{error_code::io_error, "TES4 BSA writer failed to size disk source"};
-  }
-  return checked_u32(size, "TES4 BSA disk source size");
+  return checked_u32(size.value(), "TES4 BSA disk source size");
 }
 
 bool requested_entry_compression(bool archive_default, entry_compression_policy policy) noexcept {
@@ -416,12 +388,9 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
     return prepared_entry_result{std::move(prepared), entry_file_flags};
   }
 
-  auto payload = read_source_bytes(entry);
+  auto payload = read_source_bytes(entry, raw_size);
   if (!payload) {
     return payload.error();
-  }
-  if (!entry.from_memory && payload.value().size() != raw_size) {
-    return error{error_code::io_error, "TES4 BSA disk source changed during finalization"};
   }
 
   auto stored_payload = encode_stored_payload(target, payload.value(), effective_compressed, emit_embedded_names,

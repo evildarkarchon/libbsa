@@ -546,7 +546,27 @@ TEST_CASE("BA2 GNRL writer raw Fallout 4 output reopens with end filename table"
                          libbsa::archive_variant::fallout4,
                          std::nullopt,
                          std::nullopt,
-                         std::nullopt);
+                          std::nullopt);
+}
+
+TEST_CASE("BA2 GNRL writer keeps raw disk hashing byte-stable with memory entries",
+          "[unit][ba2_gnrl_writer][writer-source-io]") {
+  const auto source = output_path("raw-byte-stable-source.bin");
+  const std::vector<std::byte> bytes{std::byte{0x52}, std::byte{0x41}, std::byte{0x57}, std::byte{0x21}};
+  write_binary_file(source, bytes);
+
+  auto options = overwriting_raw_options();
+  libbsa::ba2_gnrl_writer disk_writer{libbsa::ba2_gnrl_target::fallout4, options};
+  REQUIRE(disk_writer.add_file("Meshes/RawStable.bin", source.string()).has_value());
+  const auto disk_archive = output_path("raw-byte-stable-disk.ba2");
+  REQUIRE(disk_writer.write_to(disk_archive.string()).has_value());
+
+  libbsa::ba2_gnrl_writer memory_writer{libbsa::ba2_gnrl_target::fallout4, options};
+  REQUIRE(memory_writer.add_bytes("Meshes/RawStable.bin", bytes).has_value());
+  const auto memory_archive = output_path("raw-byte-stable-memory.ba2");
+  REQUIRE(memory_writer.write_to(memory_archive.string()).has_value());
+
+  CHECK(read_binary_file(disk_archive) == read_binary_file(memory_archive));
 }
 
 TEST_CASE("BA2 GNRL writer raw Starfield v2 and v3 defaults reopen through public metadata",
@@ -650,6 +670,39 @@ TEST_CASE("BA2 GNRL writer all-compressed policy routes through target compressi
                                   test_case.compression_method,
                                   test_case.expected_compression);
   }
+}
+
+TEST_CASE("BA2 GNRL writer keeps compressed disk entries byte-stable with memory entries",
+          "[unit][ba2_gnrl_writer][writer-source-io]") {
+  const auto source = output_path("compressed-byte-stable-source.bin");
+  const std::vector<std::byte> bytes{std::byte{0x43}, std::byte{0x4F}, std::byte{0x4D}, std::byte{0x50},
+                                     std::byte{0x52}, std::byte{0x45}, std::byte{0x53}, std::byte{0x53},
+                                     std::byte{0x21}, std::byte{0x21}, std::byte{0x21}, std::byte{0x21}};
+  write_binary_file(source, bytes);
+
+  libbsa::ba2_gnrl_writer_options options;
+  options.overwrite_existing = true;
+  options.compression = libbsa::archive_compression_policy::all_compressed;
+
+  libbsa::ba2_gnrl_writer disk_writer{libbsa::ba2_gnrl_target::fallout4, options};
+  REQUIRE(disk_writer.add_file("Meshes/CompressedStable.bin", source.string()).has_value());
+  const auto disk_archive = output_path("compressed-byte-stable-disk.ba2");
+  REQUIRE(disk_writer.write_to(disk_archive.string()).has_value());
+
+  libbsa::ba2_gnrl_writer memory_writer{libbsa::ba2_gnrl_target::fallout4, options};
+  REQUIRE(memory_writer.add_bytes("Meshes/CompressedStable.bin", bytes).has_value());
+  const auto memory_archive = output_path("compressed-byte-stable-memory.ba2");
+  REQUIRE(memory_writer.write_to(memory_archive.string()).has_value());
+
+  CHECK(read_binary_file(disk_archive) == read_binary_file(memory_archive));
+
+  auto opened = libbsa::archive_reader::open(disk_archive.string());
+  REQUIRE(opened.has_value());
+  auto found = opened.value().find("Meshes/CompressedStable.bin");
+  REQUIRE(found.has_value());
+  REQUIRE(found.value().has_value());
+  CHECK(found.value()->compression == libbsa::entry_compression::deflate);
+  CHECK(opened.value().extract_bytes("Meshes/CompressedStable.bin").value() == bytes);
 }
 
 TEST_CASE("BA2 GNRL writer per-entry raw and compressed overrides affect only raw versus packed state",

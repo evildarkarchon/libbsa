@@ -119,3 +119,19 @@ TEST_CASE("bounded_memory_policy public API boundary keeps writer.hpp free of pr
     REQUIRE(text.find(token) == std::string::npos);
   }
 }
+
+TEST_CASE("bounded_memory_policy targeted writer stages avoid byte-at-a-time disk source accumulation",
+          "[unit][bounded_memory_policy][writer-source-io]") {
+  constexpr auto writer_sources = std::array{
+      "src/formats/bsa/tes4_bsa_prepare.cpp",
+      "src/formats/bsa/tes4_bsa_layout.cpp",
+      "src/formats/ba2/ba2_gnrl_prepare.cpp",
+      "src/formats/ba2/ba2_dx10_prepare.cpp",
+  };
+
+  for (const auto* source : writer_sources) {
+    const auto text = read_text_file(source_root() / source);
+    INFO("writer source read loop policy source: " << source);
+    CHECK(text.find("input.get(ch)") == std::string::npos);
+  }
+}

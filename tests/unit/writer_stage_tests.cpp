@@ -6,6 +6,7 @@
 #include "formats/bsa/tes3_bsa_prepare.hpp"
 #include "formats/bsa/tes4_bsa_layout.hpp"
 #include "formats/bsa/tes4_bsa_prepare.hpp"
+#include "formats/bsa/tes4_bsa_serialize.hpp"
 #include "texture/dds_layout.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -373,6 +374,59 @@ TEST_CASE("tes4 writer layout stage compares raw disk and memory payloads",
 
   REQUIRE(mismatch.has_value());
   CHECK_FALSE(mismatch.value());
+}
+
+TEST_CASE("tes4 writer serialization stage rejects raw disk source size changes",
+          "[unit][writer-stage][tes4_bsa_writer][writer-source-io]") {
+  const auto payload = bytes_from_text("tes4 raw streaming payload");
+  auto version = libbsa::formats::bsa::tes4_version_for(libbsa::tes4_bsa_target::fallout3);
+  REQUIRE(version.has_value());
+
+  SECTION("source grows after layout") {
+    const auto source = stage_output_path("tes4-stream-grew.bin");
+    write_stage_binary_file(source, payload);
+    std::vector<libbsa::formats::bsa::tes4_prepared_folder> folders{
+        libbsa::formats::bsa::tes4_prepared_folder{
+            "Meshes", 1U, 0U, {tes4_disk_stage_entry(source, static_cast<std::uint32_t>(payload.size()))}}};
+    auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, version.value(), false);
+    REQUIRE(layout.has_value());
+
+    auto grown = payload;
+    grown.push_back(std::byte{0x21});
+    write_stage_binary_file(source, grown);
+    auto written = libbsa::formats::bsa::tes4_write_archive_bytes(folders,
+                                                                  version.value(),
+                                                                  false,
+                                                                  false,
+                                                                  0U,
+                                                                  layout.value(),
+                                                                  stage_output_path("tes4-stream-grew.bsa"));
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::io_error);
+  }
+
+  SECTION("source shrinks after layout") {
+    const auto source = stage_output_path("tes4-stream-shrank.bin");
+    write_stage_binary_file(source, payload);
+    std::vector<libbsa::formats::bsa::tes4_prepared_folder> folders{
+        libbsa::formats::bsa::tes4_prepared_folder{
+            "Meshes", 1U, 0U, {tes4_disk_stage_entry(source, static_cast<std::uint32_t>(payload.size()))}}};
+    auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, version.value(), false);
+    REQUIRE(layout.has_value());
+
+    write_stage_binary_file(source, std::span<const std::byte>{payload.data(), payload.size() - 1U});
+    auto written = libbsa::formats::bsa::tes4_write_archive_bytes(folders,
+                                                                  version.value(),
+                                                                  false,
+                                                                  false,
+                                                                  0U,
+                                                                  layout.value(),
+                                                                  stage_output_path("tes4-stream-shrank.bsa"));
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::io_error);
+  }
 }
 
 TEST_CASE("ba2 dx10 writer preparation stage prepares a single-mip chunk",

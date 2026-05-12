@@ -1,13 +1,23 @@
 #include <detail/compression_router.hpp>
 
+#include <detail/byte_vector.hpp>
 #include <detail/deflate_codec.hpp>
 #include <detail/lz4_block_codec.hpp>
 #include <detail/lz4_frame_codec.hpp>
 
+#include <algorithm>
+
 namespace libbsa::detail {
 namespace {
 
-std::vector<std::byte> copy_bytes(std::span<const std::byte> input) { return {input.begin(), input.end()}; }
+result<std::vector<std::byte>> copy_bytes(std::span<const std::byte> input) {
+  auto output = make_byte_vector(input.size(), "compression router uncompressed payload");
+  if (!output) {
+    return output.error();
+  }
+  std::copy(input.begin(), input.end(), output.value().begin());
+  return std::move(output).value();
+}
 
 libbsa::error unsupported_method_error() {
   return {libbsa::error_code::invalid_argument, "unsupported compression method"};

@@ -4,9 +4,9 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/compression_router.hpp>
 #include <detail/parallel_work.hpp>
+#include <detail/writer_disk_source.hpp>
 
 #include <algorithm>
-#include <array>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -42,32 +42,26 @@ std::pair<std::string_view, std::string_view> split_directory_file(std::string_v
   return {archive_path.substr(0, slash), archive_path.substr(slash + 1U)};
 }
 
-result<std::vector<std::byte>> read_source_bytes(const ba2_gnrl_writer_entry& entry) {
+constexpr detail::writer_disk_source_context ba2_gnrl_prepare_source_context{
+    "BA2 GNRL writer failed to open disk source",
+    "BA2 GNRL writer failed to inspect disk source size",
+    "BA2 GNRL writer failed while reading disk source",
+    "BA2 GNRL disk source changed during preparation",
+    "BA2 GNRL disk source"};
+
+result<std::vector<std::byte>> read_source_bytes(const ba2_gnrl_writer_entry& entry, std::uint64_t expected_size) {
   if (entry.from_memory) {
     return entry.memory_bytes;
   }
-
-  std::ifstream input{entry.host_path, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
-  }
-  std::vector<std::byte> bytes;
-  for (char ch = 0; input.get(ch);) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
-  }
-  if (input.bad()) {
-    return error{error_code::io_error, "BA2 GNRL writer failed while reading disk source"};
-  }
-  return bytes;
+  return detail::read_disk_source_exact(entry.host_path, expected_size, ba2_gnrl_prepare_source_context);
 }
 
 result<std::uint64_t> disk_file_size(const std::string& host_path) {
-  std::error_code fs_error;
-  const auto size = std::filesystem::file_size(host_path, fs_error);
-  if (fs_error) {
-    return error{error_code::io_error, "BA2 GNRL writer failed to inspect disk source size"};
+  auto size = detail::inspect_disk_source_size(host_path, ba2_gnrl_prepare_source_context);
+  if (!size) {
+    return size.error();
   }
-  return size;
+  return size.value();
 }
 
 std::uint64_t hash_bytes(std::span<const std::byte> bytes) noexcept {
@@ -79,24 +73,21 @@ std::uint64_t hash_bytes(std::span<const std::byte> bytes) noexcept {
   return hash;
 }
 
-result<std::uint64_t> hash_disk_payload(const std::string& host_path) {
-  std::ifstream input{host_path, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
-  }
-
+result<std::uint64_t> hash_disk_payload(const std::string& host_path, std::uint64_t expected_size) {
   std::uint64_t hash = 14695981039346656037ULL;
-  std::array<char, 64U * 1024U> scratch{};
-  while (input) {
-    input.read(scratch.data(), static_cast<std::streamsize>(scratch.size()));
-    const auto count = input.gcount();
-    for (std::streamsize index = 0; index < count; ++index) {
-      hash ^= static_cast<std::uint8_t>(static_cast<unsigned char>(scratch[static_cast<std::size_t>(index)]));
-      hash *= 1099511628211ULL;
-    }
-  }
-  if (input.bad()) {
-    return error{error_code::io_error, "BA2 GNRL writer failed while hashing disk source"};
+  auto hashed = detail::for_each_disk_source_chunk(
+      host_path,
+      expected_size,
+      ba2_gnrl_prepare_source_context,
+      [&](std::span<const std::byte> chunk) -> result<void> {
+        for (const auto byte : chunk) {
+          hash ^= std::to_integer<std::uint8_t>(byte);
+          hash *= 1099511628211ULL;
+        }
+        return {};
+      });
+  if (!hashed) {
+    return hashed.error();
   }
   return hash;
 }
@@ -193,7 +184,7 @@ result<ba2_gnrl_prepared_entry> prepare_entry(ba2_gnrl_target target,
   bool stream_from_disk = !entry.from_memory && !entry_compressed;
   std::uint64_t payload_hash = 0U;
   if (entry_compressed || entry.from_memory) {
-    auto payload = read_source_bytes(entry);
+    auto payload = read_source_bytes(entry, source_size);
     if (!payload) {
       return payload.error();
     }
@@ -217,7 +208,7 @@ result<ba2_gnrl_prepared_entry> prepare_entry(ba2_gnrl_target target,
     }
     payload_hash = hash_bytes(stored_payload);
   } else {
-    auto hash = hash_disk_payload(entry.host_path);
+    auto hash = hash_disk_payload(entry.host_path, source_size);
     if (!hash) {
       return hash.error();
     }

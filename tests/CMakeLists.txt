@@ -85,6 +85,7 @@ add_executable(libbsa_tests
   unit/deflate_codec_tests.cpp
   unit/lz4_codec_tests.cpp
   unit/compression_router_tests.cpp
+  unit/writer_disk_source_tests.cpp
   unit/bethesda_hash_tests.cpp
 )
 

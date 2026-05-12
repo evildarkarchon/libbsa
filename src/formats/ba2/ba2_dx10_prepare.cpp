@@ -2,7 +2,9 @@
 
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
+#include <detail/byte_vector.hpp>
 #include <detail/parallel_work.hpp>
+#include <detail/writer_disk_source.hpp>
 
 #include "texture/dds_layout.hpp"
 #include "texture/directxtex_analyzer.hpp"
@@ -55,20 +57,22 @@ std::string preserved_archive_path(std::string_view archive_path) {
   return preserved;
 }
 
-result<std::vector<std::byte>> read_dds_file(std::string_view dds_host_path) {
-  std::ifstream input{std::filesystem::path{dds_host_path}, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "BA2 DX10 writer failed to open DDS source"};
-  }
+constexpr detail::writer_disk_source_context ba2_dx10_dds_source_context{
+    "BA2 DX10 writer failed to open DDS source",
+    "BA2 DX10 writer failed to inspect DDS source",
+    "BA2 DX10 writer failed while reading DDS source",
+    "BA2 DX10 DDS source changed during analysis",
+    "BA2 DX10 DDS source"};
 
-  std::vector<std::byte> bytes;
-  for (char ch = 0; input.get(ch);) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
-  }
-  if (input.bad()) {
-    return error{error_code::io_error, "BA2 DX10 writer failed while reading DDS source"};
-  }
-  return bytes;
+constexpr detail::writer_disk_source_context ba2_dx10_snapshot_source_context{
+    "BA2 DX10 writer failed to open snapshot temp file",
+    "BA2 DX10 writer failed to inspect snapshot temp file",
+    "BA2 DX10 writer failed while reading snapshot temp file",
+    "BA2 DX10 writer failed while reading snapshot temp file",
+    "BA2 DX10 snapshot temp file"};
+
+result<std::vector<std::byte>> read_dds_file(std::string_view dds_host_path) {
+  return detail::read_disk_source_exact(dds_host_path, ba2_dx10_dds_source_context);
 }
 
 result<std::filesystem::path> make_unique_snapshot_directory() {
@@ -172,26 +176,13 @@ result<detail::compression_method> compression_method_for(ba2_dx10_target target
 }
 
 result<void> append_snapshot_bytes(std::vector<std::byte>& bytes, const ba2_dx10_subresource_snapshot& snapshot) {
-  std::ifstream input{snapshot.snapshot_path, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "BA2 DX10 writer failed to open snapshot temp file"};
-  }
-
-  std::array<char, 64U * 1024U> scratch{};
-  std::uint64_t remaining = snapshot.size;
-  while (remaining > 0U) {
-    const auto requested = std::min<std::size_t>(scratch.size(), static_cast<std::size_t>(remaining));
-    input.read(scratch.data(), static_cast<std::streamsize>(requested));
-    const auto count = input.gcount();
-    if (count != static_cast<std::streamsize>(requested)) {
-      return error{error_code::io_error, "BA2 DX10 writer failed while reading snapshot temp file"};
-    }
-    for (std::size_t index = 0; index < requested; ++index) {
-      bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(scratch[index])));
-    }
-    remaining -= requested;
-  }
-  return {};
+  return detail::for_each_disk_source_chunk(
+      snapshot.snapshot_path.string(),
+      snapshot.size,
+      ba2_dx10_snapshot_source_context,
+      [&](std::span<const std::byte> chunk) -> result<void> {
+        return detail::append_byte_vector(bytes, chunk, "BA2 DX10 raw texture chunk bytes");
+      });
 }
 
 result<void> append_subresource_bytes(std::vector<std::byte>& bytes,
