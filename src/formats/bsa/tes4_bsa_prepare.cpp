@@ -6,7 +6,7 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/compression_router.hpp>
 #include <detail/parallel_work.hpp>
-#include <detail/writer_disk_source.hpp>
+#include <detail/host_file.hpp>
 
 #include "texture/directxtex_analyzer.hpp"
 
@@ -161,7 +161,7 @@ std::uint32_t file_flag_for_extension(std::string_view extension, std::uint32_t 
   return 0U;
 }
 
-constexpr detail::writer_disk_source_context tes4_prepare_source_context{
+constexpr detail::host_file_context tes4_prepare_source_context{
     "TES4 BSA writer failed to open disk source",
     "TES4 BSA writer failed to inspect disk source",
     "TES4 BSA writer failed while reading disk source",
@@ -172,7 +172,7 @@ result<std::vector<std::byte>> read_source_bytes(const tes4_writer_entry& entry,
   if (entry.from_memory) {
     return entry.memory_bytes;
   }
-  return detail::read_disk_source_exact(entry.host_path, expected_size, tes4_prepare_source_context);
+  return detail::read_host_file_exact(entry.host_path, expected_size, tes4_prepare_source_context);
 }
 
 result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& entry,
@@ -183,9 +183,9 @@ result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& 
   }
 
   auto probe = entry.from_memory ? result<std::vector<std::byte>>{entry.memory_bytes}
-                                 : detail::read_disk_source_prefix(entry.host_path,
-                                                                   dds_metadata_probe_size,
-                                                                   tes4_prepare_source_context);
+                                 : detail::read_host_file_prefix(entry.host_path,
+                                                                 dds_metadata_probe_size,
+                                                                 tes4_prepare_source_context);
   if (!probe) {
     return probe.error();
   }
@@ -201,7 +201,7 @@ result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& 
 }
 
 result<std::uint32_t> disk_payload_size(const std::string& host_path) {
-  auto size = detail::inspect_disk_source_size(host_path, tes4_prepare_source_context);
+  auto size = detail::inspect_host_file_size(host_path, tes4_prepare_source_context);
   if (!size) {
     return size.error();
   }

@@ -6,7 +6,7 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/byte_vector.hpp>
 #include <detail/parallel_work.hpp>
-#include <detail/writer_disk_source.hpp>
+#include <detail/host_file.hpp>
 
 #include "texture/dds_layout.hpp"
 #include "texture/directxtex_analyzer.hpp"
@@ -59,14 +59,14 @@ std::string preserved_archive_path(std::string_view archive_path) {
   return preserved;
 }
 
-constexpr detail::writer_disk_source_context ba2_dx10_dds_source_context{
+constexpr detail::host_file_context ba2_dx10_dds_source_context{
     "BA2 DX10 writer failed to open DDS source",
     "BA2 DX10 writer failed to inspect DDS source",
     "BA2 DX10 writer failed while reading DDS source",
     "BA2 DX10 DDS source changed during analysis",
     "BA2 DX10 DDS source"};
 
-constexpr detail::writer_disk_source_context ba2_dx10_snapshot_source_context{
+constexpr detail::host_file_context ba2_dx10_snapshot_source_context{
     "BA2 DX10 writer failed to open snapshot temp file",
     "BA2 DX10 writer failed to inspect snapshot temp file",
     "BA2 DX10 writer failed while reading snapshot temp file",
@@ -76,7 +76,7 @@ constexpr detail::writer_disk_source_context ba2_dx10_snapshot_source_context{
 constexpr std::size_t snapshot_random_suffix_bytes = 16U;
 
 result<std::vector<std::byte>> read_dds_file(std::string_view dds_host_path) {
-  return detail::read_disk_source_exact(dds_host_path, ba2_dx10_dds_source_context);
+  return detail::read_host_file_exact(dds_host_path, ba2_dx10_dds_source_context);
 }
 
 /// Generates a 128-bit lowercase hex suffix using the Windows system-preferred RNG.
@@ -216,7 +216,7 @@ result<detail::compression_method> compression_method_for(ba2_dx10_target target
 }
 
 result<void> append_snapshot_bytes(std::vector<std::byte>& bytes, const ba2_dx10_subresource_snapshot& snapshot) {
-  return detail::for_each_disk_source_chunk(
+  return detail::for_each_host_file_chunk(
       snapshot.snapshot_path.string(),
       snapshot.size,
       ba2_dx10_snapshot_source_context,

@@ -6,7 +6,7 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/compression_router.hpp>
 #include <detail/parallel_work.hpp>
-#include <detail/writer_disk_source.hpp>
+#include <detail/host_file.hpp>
 
 #include <algorithm>
 #include <filesystem>
@@ -41,7 +41,7 @@ std::pair<std::string_view, std::string_view> split_directory_file(std::string_v
   return {archive_path.substr(0, slash), archive_path.substr(slash + 1U)};
 }
 
-constexpr detail::writer_disk_source_context ba2_gnrl_prepare_source_context{
+constexpr detail::host_file_context ba2_gnrl_prepare_source_context{
     "BA2 GNRL writer failed to open disk source",
     "BA2 GNRL writer failed to inspect disk source size",
     "BA2 GNRL writer failed while reading disk source",
@@ -52,11 +52,11 @@ result<std::vector<std::byte>> read_source_bytes(const ba2_gnrl_writer_entry& en
   if (entry.from_memory) {
     return entry.memory_bytes;
   }
-  return detail::read_disk_source_exact(entry.host_path, expected_size, ba2_gnrl_prepare_source_context);
+  return detail::read_host_file_exact(entry.host_path, expected_size, ba2_gnrl_prepare_source_context);
 }
 
 result<std::uint64_t> disk_file_size(const std::string& host_path) {
-  auto size = detail::inspect_disk_source_size(host_path, ba2_gnrl_prepare_source_context);
+  auto size = detail::inspect_host_file_size(host_path, ba2_gnrl_prepare_source_context);
   if (!size) {
     return size.error();
   }
@@ -74,7 +74,7 @@ std::uint64_t hash_bytes(std::span<const std::byte> bytes) noexcept {
 
 result<std::uint64_t> hash_disk_payload(const std::string& host_path, std::uint64_t expected_size) {
   std::uint64_t hash = 14695981039346656037ULL;
-  auto hashed = detail::for_each_disk_source_chunk(
+  auto hashed = detail::for_each_host_file_chunk(
       host_path,
       expected_size,
       ba2_gnrl_prepare_source_context,

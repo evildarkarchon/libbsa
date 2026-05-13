@@ -2,7 +2,7 @@
 
 #include "formats/bsa/tes4_bsa_constants.hpp"
 
-#include <detail/writer_disk_source.hpp>
+#include <detail/host_file.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -47,7 +47,7 @@ result<std::uint8_t> checked_name_size(std::size_t size, std::string_view descri
   return static_cast<std::uint8_t>(size);
 }
 
-constexpr detail::writer_disk_source_context tes4_dedupe_source_context{
+constexpr detail::host_file_context tes4_dedupe_source_context{
     "TES4 BSA writer failed to open disk source",
     "TES4 BSA writer failed to inspect disk source",
     "TES4 BSA writer failed while reading disk source",
@@ -99,7 +99,7 @@ result<bool> disk_payload_equals_bytes(const tes4_prepared_entry& entry, std::sp
 
   bool equal = true;
   std::size_t offset = 0;
-  auto compared = detail::for_each_disk_source_chunk(
+  auto compared = detail::for_each_host_file_chunk(
       entry.raw_disk_host_path,
       entry.raw_disk_size,
       tes4_dedupe_source_context,
@@ -132,9 +132,9 @@ result<bool> disk_stored_payloads_equal(const tes4_prepared_entry& lhs, const te
     return false;
   }
 
-  auto rhs_payload = detail::read_disk_source_exact(rhs.raw_disk_host_path,
-                                                   rhs.raw_disk_size,
-                                                   tes4_dedupe_source_context);
+  auto rhs_payload = detail::read_host_file_exact(rhs.raw_disk_host_path,
+                                                  rhs.raw_disk_size,
+                                                  tes4_dedupe_source_context);
   if (!rhs_payload) {
     return rhs_payload.error();
   }
