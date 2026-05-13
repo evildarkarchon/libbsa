@@ -2,9 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: roadmap-created
-last_updated: "2026-05-12T00:00:00Z"
-last_activity: 2026-05-12
+status: planning
+stopped_at: Phase 13 context gathered
+last_updated: "2026-05-13T08:06:12.093Z"
+last_activity: 2026-05-12 — v1.1 hardening roadmap created
 progress:
   total_phases: 5
   completed_phases: 0
@@ -64,6 +65,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-12
-Stopped at: Wrote v1.1 roadmap and requirement traceability for phases 13-17
-Resume file: None
+Last session: 2026-05-13T08:06:12.086Z
+Stopped at: Phase 13 context gathered
+Resume file: .planning/phases/13-host-path-correctness-boundary/13-CONTEXT.md
