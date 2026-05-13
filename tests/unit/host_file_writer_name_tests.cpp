@@ -167,3 +167,11 @@ TEST_CASE("archive_reader extraction dispatch reuses the stored resolved host pa
   REQUIRE(archive_text.find("state_->host_path, *found.value(), sink") != std::string::npos);
   REQUIRE(archive_text.find("state_->host_path.original_utf8, *found.value(), sink") == std::string::npos);
 }
+
+TEST_CASE("validation setup relies on archive_reader open instead of a duplicate readability preflight", "[unit][host_file]") {
+  const auto validation_text = read_text_file(source_root() / "src/validation.cpp");
+
+  REQUIRE(validation_text.find("archive_reader::open(host_path)") != std::string::npos);
+  REQUIRE(validation_text.find("host_path_can_be_opened") == std::string::npos);
+  REQUIRE(validation_text.find("std::ifstream input{std::string{host_path}, std::ios::binary}") == std::string::npos);
+}
