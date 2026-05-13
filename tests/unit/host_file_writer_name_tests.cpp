@@ -99,3 +99,33 @@ TEST_CASE("archive_reader open routes detection and size probes through host_fil
   REQUIRE(archive_text.find("std::ifstream input{std::string{host_path}, std::ios::binary | std::ios::ate}") ==
           std::string::npos);
 }
+
+TEST_CASE("parser entry declarations consume the shared host-file path contract", "[unit][host_file]") {
+  const auto root = source_root();
+  constexpr auto parser_headers = std::to_array<std::string_view>({"src/formats/bsa/tes3_bsa_parser.hpp",
+                                                                   "src/formats/bsa/tes4_bsa_parser.hpp",
+                                                                   "src/formats/ba2/ba2_gnrl_parser.hpp",
+                                                                   "src/formats/ba2/ba2_dx10_parser.hpp"});
+
+  for (const auto relative_path : parser_headers) {
+    const auto text = read_text_file(root / relative_path);
+    INFO("Source file: " << relative_path);
+    REQUIRE(text.find("host_file_path") != std::string::npos);
+    REQUIRE(text.find("std::string_view host_path") == std::string::npos);
+  }
+}
+
+TEST_CASE("parser archive-file opens use the shared host_file seam", "[unit][host_file]") {
+  const auto root = source_root();
+  constexpr auto parser_sources = std::to_array<std::string_view>({"src/formats/bsa/tes3_bsa_parser.cpp",
+                                                                   "src/formats/bsa/tes4_bsa_parser.cpp",
+                                                                   "src/formats/ba2/ba2_gnrl_parser.cpp",
+                                                                   "src/formats/ba2/ba2_dx10_parser.cpp"});
+
+  for (const auto relative_path : parser_sources) {
+    const auto text = read_text_file(root / relative_path);
+    INFO("Source file: " << relative_path);
+    REQUIRE(text.find("open_host_file(") != std::string::npos);
+    REQUIRE(text.find("std::ifstream input{std::string{host_path}, std::ios::binary}") == std::string::npos);
+  }
+}
