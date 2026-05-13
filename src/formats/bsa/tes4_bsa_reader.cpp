@@ -68,18 +68,9 @@ result<void> extract_file_payload(std::ifstream& input, const entry_metadata& en
   if (compressed_payload_offset < payload_offset) {
     return error{error_code::format_error, "TES4 BSA compressed payload offset overflows"};
   }
-  auto compressed_payload = detail::read_payload_bytes_at(input, compressed_payload_offset, payload_size - 4U,
-                                                          "TES4 BSA compressed payload");
-  if (!compressed_payload) {
-    return compressed_payload.error();
-  }
-
-  auto decoded = detail::decompress_payload_exact(compression_method_for(entry.compression), compressed_payload.value(),
-                                                  static_cast<std::size_t>(expected_size));
-  if (!decoded) {
-    return decoded.error();
-  }
-  return detail::write_payload_chunks(sink, decoded.value(), extraction_chunk_size, "TES4 BSA decoded payload");
+  return detail::decompress_payload_exact_to_sink(compression_method_for(entry.compression), input, compressed_payload_offset,
+                                                  payload_size - 4U, expected_size, sink, extraction_chunk_size,
+                                                  "TES4 BSA compressed payload");
 }
 
 } // namespace

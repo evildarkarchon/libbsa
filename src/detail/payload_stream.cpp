@@ -64,6 +64,17 @@ result<std::size_t> checked_payload_size(std::uint64_t value, std::string_view d
   return static_cast<std::size_t>(value);
 }
 
+result<std::size_t> checked_materialized_payload_size(std::uint64_t value, std::string_view description) {
+  auto checked = checked_payload_size(value, description);
+  if (!checked) {
+    return checked.error();
+  }
+  if (checked.value() > std::vector<std::byte>{}.max_size()) {
+    return byte_vector_allocation_error(description);
+  }
+  return checked.value();
+}
+
 result<void> validate_payload_stream_range(std::uint64_t offset,
                                            std::uint64_t size,
                                            std::string_view description) {

@@ -13,6 +13,7 @@
 
 #include <detail/byte_vector.hpp>
 #include <detail/parallel_work.hpp>
+#include <detail/payload_stream.hpp>
 
 #include <cstddef>
 #include <fstream>
@@ -272,6 +273,11 @@ result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view pa
   }
   if (!found.value()) {
     return error{error_code::not_found, "archive path was not found"};
+  }
+
+  auto materialized_size = detail::checked_materialized_payload_size(found.value()->raw_size, "extracted payload");
+  if (!materialized_size) {
+    return materialized_size.error();
   }
 
   // Keep the convenience API bounded by the parser-derived size for exactly one entry.

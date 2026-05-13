@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -98,6 +99,14 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
   return bytes;
 }
 
+std::string read_text_file(const std::filesystem::path& path) {
+  std::ifstream input{path};
+  REQUIRE(input.is_open());
+  std::ostringstream buffer;
+  buffer << input.rdbuf();
+  return buffer.str();
+}
+
 std::vector<std::byte> bytes_from_hex(std::string_view hex) {
   REQUIRE(hex.size() % 2U == 0U);
   std::vector<std::byte> bytes;
@@ -120,6 +129,23 @@ class collecting_sink final : public libbsa::payload_sink {
 
  private:
   std::vector<std::byte> bytes_;
+};
+
+class recording_sink final : public libbsa::payload_sink {
+ public:
+  /// Captures extracted bytes and each write size for bounded sink extraction assertions.
+  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
+    bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
+    write_sizes_.push_back(bytes.size());
+    return bytes.size();
+  }
+
+  [[nodiscard]] const std::vector<std::byte>& bytes() const noexcept { return bytes_; }
+  [[nodiscard]] const std::vector<std::size_t>& write_sizes() const noexcept { return write_sizes_; }
+
+ private:
+  std::vector<std::byte> bytes_;
+  std::vector<std::size_t> write_sizes_;
 };
 
 class partial_sink final : public libbsa::payload_sink {
@@ -537,6 +563,35 @@ TEST_CASE("tes4_bsa_v105_extract routes compressed entries through LZ4 frame dec
   }
 }
 
+TEST_CASE("tes4_bsa_v105_extract writes LZ4 frame payloads through bounded sink chunks",
+          "[unit][fixture][tes4_bsa_v105_extract][tes4_bsa_compression_routing][bounded_memory_policy]") {
+  constexpr std::size_t extraction_chunk_size = 64U * 1024U;
+  const auto manifest = read_json_file(generated_archive_path("tes4_v105_manifest.json"));
+  auto opened = libbsa::archive_reader::open(generated_archive_path("tes4_v105.bsa").string());
+  REQUIRE(opened.has_value());
+  bool saw_lz4_frame = false;
+
+  for (const auto& expected : manifest.at("entries")) {
+    if (expected.at("compression").get<std::string>() != "lz4_frame") {
+      continue;
+    }
+    saw_lz4_frame = true;
+    recording_sink sink;
+
+    auto extracted = opened.value().extract(expected.at("path").get<std::string>(), sink);
+    auto bytes = opened.value().extract_bytes(expected.at("path").get<std::string>());
+
+    REQUIRE(extracted.has_value());
+    REQUIRE(bytes.has_value());
+    REQUIRE(sink.bytes() == bytes.value());
+    for (const auto write_size : sink.write_sizes()) {
+      REQUIRE(write_size <= extraction_chunk_size);
+    }
+  }
+
+  REQUIRE(saw_lz4_frame);
+}
+
 TEST_CASE("tes4_bsa_sink_errors reports partial sink writes as io_error",
           "[unit][fixture][tes4_bsa_sink_errors]") {
   auto opened = libbsa::archive_reader::open(generated_archive_path("tes4_v103.bsa").string());
@@ -630,4 +685,18 @@ TEST_CASE("tes4_bsa_extract_bytes matches extract path errors for invalid and mi
   auto missing = opened.value().extract_bytes("valid/missing/path.txt");
   REQUIRE_FALSE(missing.has_value());
   REQUIRE(missing.error().code == libbsa::error_code::not_found);
+}
+
+TEST_CASE("archive_reader_extract_bytes preflights materialization before payload extraction",
+          "[unit][bounded_memory_policy][allocation]") {
+  const auto text = read_text_file(std::filesystem::path{LIBBSA_SOURCE_DIR} / "src" / "archive.cpp");
+  const auto function_pos = text.find("result<std::vector<std::byte>> archive_reader::extract_bytes");
+  REQUIRE(function_pos != std::string::npos);
+
+  const auto preflight_pos = text.find("checked_materialized_payload_size", function_pos);
+  const auto extraction_pos = text.find("extract_entry_payload", function_pos);
+
+  REQUIRE(preflight_pos != std::string::npos);
+  REQUIRE(extraction_pos != std::string::npos);
+  REQUIRE(preflight_pos < extraction_pos);
 }

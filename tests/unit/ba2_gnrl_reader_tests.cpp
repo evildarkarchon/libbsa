@@ -749,6 +749,36 @@ TEST_CASE("ba2_gnrl_extract streams manifest bytes and extract_bytes matches", "
   REQUIRE(saw_lz4_block);
 }
 
+TEST_CASE("ba2_gnrl_compressed_fallbacks preserve fixture bytes",
+          "[unit][fixture][ba2_gnrl_extract][bounded_memory_policy]") {
+  bool saw_deflate = false;
+  bool saw_lz4_block = false;
+
+  for (const auto& fixture : ba2_success_fixtures()) {
+    const auto manifest = read_json_file(generated_archive_path(fixture.manifest));
+    auto opened = libbsa::archive_reader::open(generated_archive_path(fixture.archive).string());
+    REQUIRE(opened.has_value());
+
+    for (const auto& expected : manifest.at("entries")) {
+      const auto compression = expected.at("compression").get<std::string>();
+      if (compression != "deflate" && compression != "lz4_block") {
+        continue;
+      }
+      saw_deflate = saw_deflate || compression == "deflate";
+      saw_lz4_block = saw_lz4_block || compression == "lz4_block";
+      collecting_sink sink;
+
+      auto extracted = opened.value().extract(expected.at("path").get<std::string>(), sink);
+
+      REQUIRE(extracted.has_value());
+      REQUIRE(sink.bytes() == bytes_from_hex(expected.at("expected").at("bytes_hex").get<std::string>()));
+    }
+  }
+
+  REQUIRE(saw_deflate);
+  REQUIRE(saw_lz4_block);
+}
+
 TEST_CASE("ba2_gnrl_extract helper routes by metadata and detects partial_sink writes",
           "[unit][fixture][ba2_gnrl_extract]") {
   auto fo4 = libbsa::archive_reader::open(generated_archive_path("ba2_gnrl_fo4.ba2").string());

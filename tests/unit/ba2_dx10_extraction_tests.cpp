@@ -189,6 +189,40 @@ TEST_CASE("ba2_dx10_compression routes raw deflate and LZ4 block chunks", "[unit
   REQUIRE(saw_lz4_block);
 }
 
+TEST_CASE("ba2_dx10_compressed_chunk_fallbacks preserve reconstructed fixture bytes",
+          "[unit][fixture][ba2_dx10_compression][bounded_memory_policy]") {
+  bool saw_deflate = false;
+  bool saw_lz4_block = false;
+
+  for (const auto& fixture : success_fixtures()) {
+    const auto manifest = read_json_file(generated_archive_path(fixture.manifest));
+    auto opened = libbsa::archive_reader::open(generated_archive_path(fixture.archive).string());
+    REQUIRE(opened.has_value());
+
+    for (const auto& expected : manifest.at("entries")) {
+      bool has_compressed_fallback = false;
+      for (const auto& chunk : expected.at("chunks")) {
+        const auto route = chunk.at("compression_route").get<std::string>();
+        has_compressed_fallback = has_compressed_fallback || route == "deflate" || route == "lz4_block";
+        saw_deflate = saw_deflate || route == "deflate";
+        saw_lz4_block = saw_lz4_block || route == "lz4_block";
+      }
+      if (!has_compressed_fallback) {
+        continue;
+      }
+      collecting_sink sink;
+
+      auto extracted = opened.value().extract(expected.at("path").get<std::string>(), sink);
+
+      REQUIRE(extracted.has_value());
+      require_payload_matches_validated_manifest_order(sink.bytes(), expected);
+    }
+  }
+
+  REQUIRE(saw_deflate);
+  REQUIRE(saw_lz4_block);
+}
+
 TEST_CASE("ba2_dx10_directxtex validates reconstructed DDS metadata", "[unit][fixture][ba2_dx10_directxtex]") {
   for (const auto& fixture : success_fixtures()) {
     const auto manifest = read_json_file(generated_archive_path(fixture.manifest));

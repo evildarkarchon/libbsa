@@ -47,6 +47,9 @@ result<void> transfer_payload(payload_source& source, payload_sink& sink, std::s
 /// Converts an archive-declared payload size to a platform allocation size.
 result<std::size_t> checked_payload_size(std::uint64_t value, std::string_view description);
 
+/// Converts an archive-declared payload size to a single-vector allocation size.
+result<std::size_t> checked_materialized_payload_size(std::uint64_t value, std::string_view description);
+
 /// Validates that an archive-controlled byte range is representable by host streams.
 result<void> validate_payload_stream_range(std::uint64_t offset, std::uint64_t size, std::string_view description);
 

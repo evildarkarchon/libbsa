@@ -48,25 +48,15 @@ result<void> extract_compressed_payload(std::string_view host_path, const entry_
     return error{error_code::io_error, "failed to open BA2 archive host path for extraction"};
   }
 
-  auto stored = detail::read_payload_bytes_at(input, entry.payload_offset, entry.stored_size, "BA2 GNRL stored payload");
-  if (!stored) {
-    return stored.error();
-  }
-  auto expected_size = detail::checked_payload_size(entry.raw_size, "BA2 GNRL raw payload");
-  if (!expected_size) {
-    return expected_size.error();
-  }
   auto method = compression_method_for(entry);
   if (!method) {
     return method.error();
   }
   // Corrupt BA2 compressed payloads are malformed archive bytes, so preserve the
   // codec's stable format_error result instead of attempting partial extraction.
-  auto decoded = detail::decompress_payload_exact(method.value(), stored.value(), expected_size.value());
-  if (!decoded) {
-    return decoded.error();
-  }
-  return detail::write_payload_chunks(sink, decoded.value(), extraction_chunk_size, "BA2 GNRL decoded payload");
+  return detail::decompress_payload_exact_to_sink(method.value(), input, entry.payload_offset, entry.stored_size,
+                                                  entry.raw_size, sink, extraction_chunk_size,
+                                                  "BA2 GNRL compressed payload");
 }
 
 } // namespace

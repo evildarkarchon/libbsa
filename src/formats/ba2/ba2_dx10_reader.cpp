@@ -40,24 +40,14 @@ result<detail::compression_method> compression_method_for(const texture_chunk_me
 }
 
 result<void> extract_compressed_chunk(std::ifstream& input, const texture_chunk_metadata& chunk, payload_sink& sink) {
-  auto stored = detail::read_payload_bytes_at(input, chunk.payload_offset, chunk.stored_size, "BA2 DX10 stored chunk");
-  if (!stored) {
-    return stored.error();
-  }
-  auto expected_size = detail::checked_payload_size(chunk.raw_size, "BA2 DX10 raw chunk");
-  if (!expected_size) {
-    return expected_size.error();
-  }
   auto method = compression_method_for(chunk);
   if (!method) {
     return method.error();
   }
   // D-32: every compressed texture chunk must decode to exactly the parser-declared raw size.
-  auto decoded = detail::decompress_payload_exact(method.value(), stored.value(), expected_size.value());
-  if (!decoded) {
-    return decoded.error();
-  }
-  return detail::write_payload_chunks(sink, decoded.value(), extraction_chunk_size, "BA2 DX10 decoded chunk");
+  return detail::decompress_payload_exact_to_sink(method.value(), input, chunk.payload_offset, chunk.stored_size,
+                                                  chunk.raw_size, sink, extraction_chunk_size,
+                                                  "BA2 DX10 compressed chunk");
 }
 
 } // namespace

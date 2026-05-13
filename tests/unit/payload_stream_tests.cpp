@@ -181,6 +181,22 @@ TEST_CASE("payload_stream validates archive size and stream ranges", "[unit][mal
   REQUIRE(span_limit.error().code == libbsa::error_code::format_error);
 }
 
+TEST_CASE("payload_stream validates single-vector materialization limits", "[unit][malformed][payload-stream][allocation]") {
+  auto checked = libbsa::detail::checked_materialized_payload_size(42U, "test materialized payload");
+  REQUIRE(checked);
+  REQUIRE(checked.value() == 42U);
+
+  const auto max_size = std::vector<std::byte>{}.max_size();
+  if (max_size == std::numeric_limits<std::uint64_t>::max()) {
+    SKIP("byte vector max_size cannot be overflowed on this standard library");
+  }
+
+  auto rejected = libbsa::detail::checked_materialized_payload_size(
+      static_cast<std::uint64_t>(max_size) + 1U, "test materialized payload");
+  REQUIRE_FALSE(rejected);
+  REQUIRE(rejected.error().code == libbsa::error_code::format_error);
+}
+
 TEST_CASE("payload_stream reads exact archive ranges", "[unit][payload-stream]") {
   auto bytes = payload_bytes();
   temporary_payload_file file{bytes};
