@@ -75,6 +75,19 @@ class temporary_directory_cleanup final {
   std::filesystem::path root_;
 };
 
+class collecting_sink final : public libbsa::payload_sink {
+ public:
+  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
+    bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
+    return bytes.size();
+  }
+
+  [[nodiscard]] const std::vector<std::byte>& bytes() const noexcept { return bytes_; }
+
+ private:
+  std::vector<std::byte> bytes_;
+};
+
 struct representative_archive_case {
   std::string_view archive_file;
   std::string_view manifest_file;
@@ -127,6 +140,10 @@ const nlohmann::json& canonical_entry_from_manifest(const nlohmann::json& manife
   return entries.front();
 }
 
+bool canonical_extraction_matches_manifest(const representative_archive_case&) {
+  return false;
+}
+
 } // namespace
 
 TEST_CASE("host_path_correctness_boundary suite registration is wired into libbsa_tests",
@@ -158,4 +175,14 @@ TEST_CASE("host_path_correctness_boundary smoke setup uses the locked non-ASCII 
   REQUIRE(manifest_path.native().find(root.native()) == std::filesystem::path::string_type::npos);
   REQUIRE(canonical_entry.at("path").get<std::string>().empty() == false);
   REQUIRE_FALSE(bytes_from_hex(canonical_entry.at("expected").at("bytes_hex").get<std::string>()).empty());
+}
+
+TEST_CASE("host_path_correctness_boundary representative archives open validate and extract from non-ASCII paths",
+          "[unit][fixture][host_path_correctness_boundary]") {
+  REQUIRE(representative_archive_cases().size() == 6U);
+
+  for (const auto& archive_case : representative_archive_cases()) {
+    INFO(archive_case.archive_file);
+    REQUIRE(canonical_extraction_matches_manifest(archive_case));
+  }
 }
