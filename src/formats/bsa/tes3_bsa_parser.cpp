@@ -3,6 +3,7 @@
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
+#include <detail/host_file.hpp>
 #include <detail/parser_primitives.hpp>
 
 #include <algorithm>
@@ -345,17 +346,22 @@ result<tes3_bsa_archive> parse_tes3_bsa_archive(std::span<const std::byte> bytes
   return parse_tes3_bsa_archive_impl(bytes, bytes.size(), detected);
 }
 
-result<tes3_bsa_archive> parse_tes3_bsa_archive_file(std::string_view host_path, std::uint64_t archive_size,
+result<tes3_bsa_archive> parse_tes3_bsa_archive_file(const detail::host_file_path& host_path, std::uint64_t archive_size,
                                                      detected_bsa_format detected) {
   if (archive_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
     return error{error_code::format_error, "TES3 BSA archive exceeds platform limits"};
   }
 
-  std::ifstream input{std::string{host_path}, std::ios::binary};
+  const detail::host_file_context host_context{"failed to open archive host path",
+                                                "failed to determine archive host path size",
+                                                "failed while reading archive host path",
+                                                "archive host path changed while reading",
+                                                "TES3 BSA metadata table"};
+  auto input = detail::open_host_file(host_path, host_context);
   if (!input) {
-    return error{error_code::io_error, "failed to open archive host path"};
+    return input.error();
   }
-  auto header_bytes = read_file_bytes_at(input, 0U, fixed_header_size, "TES3 BSA fixed header");
+  auto header_bytes = read_file_bytes_at(input.value(), 0U, fixed_header_size, "TES3 BSA fixed header");
   if (!header_bytes) {
     return header_bytes.error();
   }
@@ -374,7 +380,7 @@ result<tes3_bsa_archive> parse_tes3_bsa_archive_file(std::string_view host_path,
   if (!table_size) {
     return table_size.error();
   }
-  auto table_bytes = read_file_bytes_at(input, 0U, table_size.value(), "TES3 BSA metadata table");
+  auto table_bytes = read_file_bytes_at(input.value(), 0U, table_size.value(), "TES3 BSA metadata table");
   if (!table_bytes) {
     return table_bytes.error();
   }

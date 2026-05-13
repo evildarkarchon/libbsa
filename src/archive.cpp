@@ -139,8 +139,9 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
       return archive_size.error();
     }
     if (detected_ba2.value().is_dx10) {
-      auto ba2_archive =
-          formats::ba2::parse_ba2_dx10_archive_file(host_path, archive_size.value(), detected_ba2.value());
+      auto ba2_archive = formats::ba2::parse_ba2_dx10_archive_file(resolved_host_path.value(),
+                                                                    archive_size.value(),
+                                                                    detected_ba2.value());
       if (!ba2_archive) {
         return ba2_archive.error();
       }
@@ -153,7 +154,9 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
       return reader;
     }
 
-    auto ba2_archive = formats::ba2::parse_ba2_gnrl_archive_file(host_path, archive_size.value(), detected_ba2.value());
+    auto ba2_archive = formats::ba2::parse_ba2_gnrl_archive_file(resolved_host_path.value(),
+                                                                  archive_size.value(),
+                                                                  detected_ba2.value());
     if (!ba2_archive) {
       return ba2_archive.error();
     }
@@ -175,7 +178,8 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     return archive_size.error();
   }
   if (detected.value().variant == archive_variant::tes3) {
-    auto tes3_archive = formats::bsa::parse_tes3_bsa_archive_file(host_path, archive_size.value(), detected.value());
+    auto tes3_archive =
+        formats::bsa::parse_tes3_bsa_archive_file(resolved_host_path.value(), archive_size.value(), detected.value());
     if (!tes3_archive) {
       return tes3_archive.error();
     }
@@ -187,7 +191,8 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     return reader;
   }
 
-  auto tes4_archive = formats::bsa::parse_tes4_bsa_archive_file(host_path, archive_size.value(), detected.value());
+  auto tes4_archive =
+      formats::bsa::parse_tes4_bsa_archive_file(resolved_host_path.value(), archive_size.value(), detected.value());
   if (!tes4_archive) {
     return tes4_archive.error();
   }

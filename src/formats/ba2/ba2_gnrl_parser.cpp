@@ -5,6 +5,7 @@
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
+#include <detail/host_file.hpp>
 #include <detail/parser_primitives.hpp>
 
 #include <algorithm>
@@ -425,17 +426,22 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive(std::span<const std::byte> bytes
   return parse_ba2_gnrl_archive_impl(bytes, bytes.size(), detected);
 }
 
-result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(std::string_view host_path, std::uint64_t archive_size,
-                                                     detected_ba2_format detected) {
+result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(const detail::host_file_path& host_path, std::uint64_t archive_size,
+                                                      detected_ba2_format detected) {
   if (archive_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
     return error{error_code::format_error, "BA2 GNRL archive exceeds platform limits"};
   }
 
-  std::ifstream input{std::string{host_path}, std::ios::binary};
+  const detail::host_file_context host_context{"failed to open archive host path",
+                                                "failed to determine archive host path size",
+                                                "failed while reading archive host path",
+                                                "archive host path changed while reading",
+                                                "BA2 GNRL metadata table"};
+  auto input = detail::open_host_file(host_path, host_context);
   if (!input) {
-    return error{error_code::io_error, "failed to open archive host path"};
+    return input.error();
   }
-  auto fixed_header = read_file_bytes_at(input, 0U, header_size_for(detected.version), "BA2 GNRL fixed header");
+  auto fixed_header = read_file_bytes_at(input.value(), 0U, header_size_for(detected.version), "BA2 GNRL fixed header");
   if (!fixed_header) {
     return fixed_header.error();
   }
@@ -468,7 +474,7 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(std::string_view host_path,
   }
 
   const auto metadata_size = records_end;
-  auto metadata_bytes = read_file_bytes_at(input, 0U, metadata_size, "BA2 GNRL header and record table");
+  auto metadata_bytes = read_file_bytes_at(input.value(), 0U, metadata_size, "BA2 GNRL header and record table");
   if (!metadata_bytes) {
     return metadata_bytes.error();
   }
@@ -487,7 +493,10 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(std::string_view host_path,
   // The writer-required BA2 layout can place payload bytes before the final filename table, so host-file open
   // parses exactly file_count length-prefixed names from FileTableOffset instead of deriving a table size from
   // the first payload offset. This preserves bounded open behavior for both sparse payloads and end tables.
-  auto names = read_names_from_file(input, header.value().file_table_offset, header.value().file_count, archive_size,
+  auto names = read_names_from_file(input.value(),
+                                    header.value().file_table_offset,
+                                    header.value().file_count,
+                                    archive_size,
                                     name_table_consumed);
   if (!names) {
     return names.error();

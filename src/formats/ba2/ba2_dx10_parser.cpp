@@ -7,6 +7,7 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/byte_vector.hpp>
+#include <detail/host_file.hpp>
 #include <detail/parser_primitives.hpp>
 
 #include <algorithm>
@@ -607,17 +608,22 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive(std::span<const std::byte> bytes
   return parse_ba2_dx10_archive_impl(bytes, bytes.size(), detected);
 }
 
-result<ba2_dx10_archive> parse_ba2_dx10_archive_file(std::string_view host_path, std::uint64_t archive_size,
-                                                     detected_ba2_format detected) {
+result<ba2_dx10_archive> parse_ba2_dx10_archive_file(const detail::host_file_path& host_path, std::uint64_t archive_size,
+                                                      detected_ba2_format detected) {
   if (archive_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
     return error{error_code::format_error, "BA2 DX10 archive exceeds platform limits"};
   }
 
-  std::ifstream input{std::string{host_path}, std::ios::binary};
+  const detail::host_file_context host_context{"failed to open archive host path",
+                                                "failed to determine archive host path size",
+                                                "failed while reading archive host path",
+                                                "archive host path changed while reading",
+                                                "BA2 DX10 metadata table"};
+  auto input = detail::open_host_file(host_path, host_context);
   if (!input) {
-    return error{error_code::io_error, "failed to open archive host path"};
+    return input.error();
   }
-  auto fixed_header = read_file_bytes_at(input, 0U, header_size_for(detected.version), "BA2 DX10 fixed header");
+  auto fixed_header = read_file_bytes_at(input.value(), 0U, header_size_for(detected.version), "BA2 DX10 fixed header");
   if (!fixed_header) {
     return fixed_header.error();
   }
@@ -642,7 +648,9 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_file(std::string_view host_path,
     return error{error_code::format_error, "BA2 DX10 FileTableOffset is outside the metadata span"};
   }
 
-  auto metadata_bytes = read_file_bytes_at(input, 0U, static_cast<std::size_t>(header.value().file_table_offset),
+  auto metadata_bytes = read_file_bytes_at(input.value(),
+                                           0U,
+                                           static_cast<std::size_t>(header.value().file_table_offset),
                                            "BA2 DX10 header and texture records");
   if (!metadata_bytes) {
     return metadata_bytes.error();
@@ -666,10 +674,10 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_file(std::string_view host_path,
   }
   // BA2 DX10 filename tables are count-delimited, so sparse padding between the last encoded name
   // and first payload must not be allocated during open/list metadata parsing.
-  auto name_table_bytes = parse_ba2_dx10_names_from_file(input,
-                                                         header.value().file_table_offset,
-                                                         first_payload_offset.value(),
-                                                         header.value().file_count);
+  auto name_table_bytes = parse_ba2_dx10_names_from_file(input.value(),
+                                                          header.value().file_table_offset,
+                                                          first_payload_offset.value(),
+                                                          header.value().file_count);
   if (!name_table_bytes) {
     return name_table_bytes.error();
   }

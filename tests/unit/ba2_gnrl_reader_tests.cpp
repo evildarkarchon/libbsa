@@ -6,6 +6,7 @@
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 
 #include <detail/bethesda_hash.hpp>
+#include <detail/host_file_path.hpp>
 #include <detail/parser_primitives.hpp>
 
 #include <cstdint>
@@ -439,9 +440,11 @@ TEST_CASE("ba2_gnrl_detector rejects unrepresentable high filename table ranges 
   // A non-empty BA2 name table high enough to overflow UInt64 is above normal Windows stream seek limits, so this
   // parser-level host-file fixture documents the malformed layout rejection while parser primitive tests cover the
   // exact aggregate-end arithmetic contract.
-  auto parsed = libbsa::formats::ba2::parse_ba2_gnrl_archive_file(temp_path.string(),
-                                                                  std::numeric_limits<std::uint64_t>::max(),
-                                                                  detected.value());
+  auto resolved = libbsa::detail::resolve_host_file_path(temp_path.string());
+  REQUIRE(resolved.has_value());
+  auto parsed = libbsa::formats::ba2::parse_ba2_gnrl_archive_file(resolved.value(),
+                                                                   std::numeric_limits<std::uint64_t>::max(),
+                                                                   detected.value());
 
   REQUIRE_FALSE(parsed.has_value());
   REQUIRE(parsed.error().code == libbsa::error_code::format_error);
