@@ -31,12 +31,12 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 - [x] v1.0 delivered read, list, lookup, validation, and extraction support for TES3 BSA, TES4-family BSA v103/v104/v105, Fallout 4 BA2 GNRL/DX10, and Starfield BA2 GNRL/DX10 archive families.
 - [x] v1.0 delivered write-new support for TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives, including reader-backed round trips, compression routing, safe publish behavior, and legal generated fixture evidence.
 - [x] v1.0 delivered structured validation reports, typed compatibility warnings, malformed-input hardening coverage, sanitizer-oriented presets, bounded-memory extraction/finalization, opt-in parallel worker execution, benchmark reporting, Doxygen setup, thread-safety guidance, and compile-checked integration examples.
+- [x] v1.1 fixed non-ASCII Windows host-path handling for archive open and validation flows through one shared internal host-file boundary plus representative black-box regression coverage. Validated in Phase 13.
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
 
-- [ ] v1.1 fixes non-ASCII Windows host-path handling for archive open and validation flows.
 - [ ] v1.1 reduces fragility in large parser/preparer and reader-dispatch codepaths through targeted internal refactors.
 - [ ] v1.1 restores or adds stronger hardening verification coverage and aligns planning claims with supported build/test lanes.
 - [ ] v1.1 reduces the most fragile or expensive staging paths in payload dedupe and BA2 DX10 temporary snapshot handling.
@@ -59,7 +59,7 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 
 v1.0 shipped on 2026-05-10 after 12 phases, 75 plans, and 81 completed v1 requirements. The live planning surface is now compact: the full v1 roadmap, requirements, milestone audit, and phase execution artifacts are archived under `.planning/milestones/`.
 
-v1.1 now shifts focus from feature completeness to hardening work driven by the codebase concerns audit. The next milestone will stay internal-facing: correctness fixes, targeted refactors, stronger verification lanes, and performance/temp-data cleanup take priority over new public product surfaces.
+v1.1 now shifts focus from feature completeness to hardening work driven by the codebase concerns audit. Phase 13 is complete: archive open, validation, parser entry, and post-open extraction now route through a shared Windows-correct host-file boundary with committed non-ASCII regression proof. The next focus is Phase 14's verification-lane truthfulness work.
 
 The current codebase exposes public reader, writer, validation, result, metadata, and execution-option APIs from `include/libbsa/`. Public headers remain dependency-light and C++20-compatible. Implementation code owns format parsing, archive writing, compression routing, DDS metadata analysis, validation reports, compatibility warnings, bounded-memory streaming, and optional worker-count execution.
 
@@ -112,6 +112,7 @@ Supported archive families include TES3 BSA, TES4 BSA v103, FO3/FNV/Skyrim LE BS
 | Public parallel worker counts are bounded and result-mapped | Worker-count options are public input, so oversized values and worker startup failures must not escape the `result` error contract | Implemented in Phase 12 |
 | BA2 GNRL disk-backed finalization validates prepared source sizes | Disk sources can change between preparation and streaming; finalization and dedupe comparisons must reject growth or truncation before publishing malformed offsets | Implemented in Phase 12 |
 | BA2 GNRL publish uses no-replace and rollback helpers | No-overwrite mode must preserve raced destinations, and overwrite failures must report backup restoration failures distinctly | Implemented in Phase 12 |
+| Host-file I/O resolves UTF-8 once into `detail::host_file_path` and reopens only from the resolved path | Windows non-ASCII correctness depends on one shared boundary for archive open, validation, parser entry, and post-open extraction instead of repeated narrow-string file opens | Implemented in Phase 13 |
 
 ## Evolution
 
@@ -133,4 +134,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-05-12 after starting v1.1 Hardening*
+*Last updated: 2026-05-13 after completing Phase 13*
