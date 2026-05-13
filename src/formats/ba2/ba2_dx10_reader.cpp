@@ -2,12 +2,12 @@
 
 #include <detail/archive_path.hpp>
 #include <detail/compression_router.hpp>
+#include <detail/host_file.hpp>
 #include <detail/payload_stream.hpp>
 
 #include "texture/dds_layout.hpp"
 
 #include <algorithm>
-#include <fstream>
 #include <span>
 #include <string>
 #include <vector>
@@ -16,6 +16,14 @@ namespace libbsa::formats::ba2 {
 namespace {
 
 constexpr std::size_t extraction_chunk_size = 64U * 1024U;
+
+detail::host_file_context ba2_dx10_extraction_host_context() noexcept {
+  return detail::host_file_context{"failed to open BA2 archive host path for DX10 extraction",
+                                   "failed to inspect BA2 archive host path for DX10 extraction",
+                                   "failed while reading BA2 DX10 chunk payload",
+                                   "BA2 archive host path changed while reading DX10 chunk payload",
+                                   "BA2 DX10 payload bytes"};
+}
 
 result<void> stream_raw_chunk(std::ifstream& input, const texture_chunk_metadata& chunk, payload_sink& sink) {
   if (chunk.raw_size != chunk.stored_size) {
@@ -81,7 +89,9 @@ result<bool> contains_ba2_dx10_entry(std::span<const entry_metadata> entries, st
   return found.value().has_value();
 }
 
-result<void> extract_ba2_dx10_payload(std::string_view host_path, const entry_metadata& entry, payload_sink& sink) {
+result<void> extract_ba2_dx10_payload(const detail::host_file_path& host_path,
+                                      const entry_metadata& entry,
+                                      payload_sink& sink) {
   if (!entry.texture.has_value()) {
     return error{error_code::format_error, "BA2 DX10 extraction requires texture metadata"};
   }
@@ -106,9 +116,9 @@ result<void> extract_ba2_dx10_payload(std::string_view host_path, const entry_me
     return wrote_header.error();
   }
 
-  std::ifstream input{std::string{host_path}, std::ios::binary};
+  auto input = detail::open_host_file(host_path, ba2_dx10_extraction_host_context());
   if (!input) {
-    return error{error_code::io_error, "failed to open BA2 archive host path for DX10 extraction"};
+    return input.error();
   }
 
   // D-12: DirectXTex validation is intentionally not called here; tests validate returned DDS bytes.
@@ -117,13 +127,13 @@ result<void> extract_ba2_dx10_payload(std::string_view host_path, const entry_me
   // D-31: chunk compression comes from parsed metadata, never the texture's archive path or extension.
   for (const auto& chunk : entry.texture->chunks) {
     if (chunk.compression == entry_compression::none) {
-      auto streamed = stream_raw_chunk(input, chunk, sink);
+        auto streamed = stream_raw_chunk(input.value(), chunk, sink);
       if (!streamed) {
         return streamed.error();
       }
       continue;
     }
-    auto extracted = extract_compressed_chunk(input, chunk, sink);
+    auto extracted = extract_compressed_chunk(input.value(), chunk, sink);
     if (!extracted) {
       return extracted.error();
     }

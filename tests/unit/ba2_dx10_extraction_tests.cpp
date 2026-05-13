@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <detail/host_file_path.hpp>
+
 #include "formats/ba2/ba2_dx10_reader.hpp"
 #include "texture/directxtex_analyzer.hpp"
 
@@ -247,8 +249,11 @@ TEST_CASE("ba2_dx10_extract detects partial_sink writes after header output", "[
   REQUIRE(found.value().has_value());
   partial_sink partial;
 
-  auto result = libbsa::formats::ba2::extract_ba2_dx10_payload(generated_archive_path("ba2_dx10_fo4.ba2").string(),
-                                                               *found.value(), partial);
+  auto resolved_host_path = libbsa::detail::resolve_host_file_path(generated_archive_path("ba2_dx10_fo4.ba2").string());
+  REQUIRE(resolved_host_path.has_value());
+
+  auto result =
+      libbsa::formats::ba2::extract_ba2_dx10_payload(resolved_host_path.value(), *found.value(), partial);
 
   REQUIRE_FALSE(result.has_value());
   REQUIRE(result.error().code == libbsa::error_code::io_error);

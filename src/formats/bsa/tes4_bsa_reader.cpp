@@ -2,11 +2,11 @@
 
 #include <detail/archive_path.hpp>
 #include <detail/compression_router.hpp>
+#include <detail/host_file.hpp>
 #include <detail/payload_stream.hpp>
 
 #include <algorithm>
 #include <cstddef>
-#include <fstream>
 #include <span>
 #include <string>
 #include <vector>
@@ -15,6 +15,14 @@ namespace libbsa::formats::bsa {
 namespace {
 
 constexpr std::size_t extraction_chunk_size = 64U * 1024U;
+
+detail::host_file_context tes4_extraction_host_context() noexcept {
+  return detail::host_file_context{"failed to open archive host path for TES4 BSA extraction",
+                                   "failed to inspect archive host path for TES4 BSA extraction",
+                                   "failed while reading TES4 archive payload",
+                                   "archive host path changed while reading TES4 BSA payload",
+                                   "TES4 BSA payload bytes"};
+}
 
 std::uint32_t read_u32_le(std::span<const std::byte> bytes) noexcept {
   return static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[0])) |
@@ -103,14 +111,14 @@ result<bool> contains_tes4_bsa_entry(std::span<const entry_metadata> entries, st
   return found.value().has_value();
 }
 
-result<void> extract_tes4_bsa_payload_from_file(std::string_view host_path,
+result<void> extract_tes4_bsa_payload_from_file(const detail::host_file_path& host_path,
                                                 const entry_metadata& entry,
                                                 payload_sink& sink) {
-  std::ifstream input{std::string{host_path}, std::ios::binary};
+  auto input = detail::open_host_file(host_path, tes4_extraction_host_context());
   if (!input) {
-    return error{error_code::io_error, "failed to open archive host path for TES4 BSA extraction"};
+    return input.error();
   }
-  return extract_file_payload(input, entry, sink);
+  return extract_file_payload(input.value(), entry, sink);
 }
 
 } // namespace libbsa::formats::bsa

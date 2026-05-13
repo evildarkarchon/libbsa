@@ -90,7 +90,7 @@ result<std::uint64_t> archive_file_size(const detail::host_file_path& host_path)
 // Bulk extraction resolves metadata once per unique request, so payload dispatch stays separate from lookup.
 result<void> extract_entry_payload(const archive_metadata& metadata,
                                    bool is_ba2_dx10,
-                                   std::string_view host_path,
+                                   const detail::host_file_path& host_path,
                                    const entry_metadata& entry,
                                    payload_sink& sink) {
   if (metadata.variant == archive_variant::tes3) {
@@ -269,7 +269,7 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
   if (!found.value()) {
     return error{error_code::not_found, "archive path was not found"};
   }
-  return extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path.original_utf8, *found.value(), sink);
+  return extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path, *found.value(), sink);
 }
 
 result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view path) const {
@@ -293,7 +293,7 @@ result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view pa
   // Keep the convenience API bounded by the parser-derived size for exactly one entry.
   vector_payload_sink sink{found.value()->raw_size};
   auto extracted =
-      extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path.original_utf8, *found.value(), sink);
+      extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path, *found.value(), sink);
   if (!extracted) {
     return extracted.error();
   }
@@ -365,7 +365,7 @@ result<std::vector<bulk_extract_entry_result>> archive_reader::extract_entries(
 
     auto extracted = extract_entry_payload(state_->metadata,
                                            state_->is_ba2_dx10,
-                                           state_->host_path.original_utf8,
+                                           state_->host_path,
                                            *record.entry,
                                            *sink.value());
     if (!extracted) {

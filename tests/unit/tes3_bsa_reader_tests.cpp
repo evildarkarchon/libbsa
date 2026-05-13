@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <detail/host_file_path.hpp>
+
 #include "formats/bsa/bsa_format_detector.hpp"
 #include "formats/bsa/tes3_bsa_reader.hpp"
 
@@ -425,13 +427,16 @@ TEST_CASE("tes3_bsa_extract helper is raw-only and enforces sink writes", "[unit
   write_binary_file(host_path, std::vector<std::byte>{payload.begin(), payload.end()});
   collecting_sink sink;
 
-  auto extracted = libbsa::formats::bsa::extract_tes3_bsa_payload(host_path.string(), raw_entry, sink);
+  auto resolved_host_path = libbsa::detail::resolve_host_file_path(host_path.string());
+  REQUIRE(resolved_host_path.has_value());
+
+  auto extracted = libbsa::formats::bsa::extract_tes3_bsa_payload(resolved_host_path.value(), raw_entry, sink);
 
   REQUIRE(extracted.has_value());
   REQUIRE(sink.bytes() == std::vector<std::byte>{payload.begin(), payload.end()});
 
   partial_sink partial;
-  auto partial_result = libbsa::formats::bsa::extract_tes3_bsa_payload(host_path.string(), raw_entry, partial);
+  auto partial_result = libbsa::formats::bsa::extract_tes3_bsa_payload(resolved_host_path.value(), raw_entry, partial);
   REQUIRE_FALSE(partial_result.has_value());
   REQUIRE(partial_result.error().code == libbsa::error_code::io_error);
 
@@ -443,7 +448,11 @@ TEST_CASE("tes3_bsa_extract helper is raw-only and enforces sink writes", "[unit
                                             0U, 0U, libbsa::entry_compression::none, 0U, false, 0U};
   recording_sink recording;
 
-  auto large_result = libbsa::formats::bsa::extract_tes3_bsa_payload(large_host_path.string(), large_entry, recording);
+  auto resolved_large_host_path = libbsa::detail::resolve_host_file_path(large_host_path.string());
+  REQUIRE(resolved_large_host_path.has_value());
+
+  auto large_result =
+      libbsa::formats::bsa::extract_tes3_bsa_payload(resolved_large_host_path.value(), large_entry, recording);
 
   REQUIRE(large_result.has_value());
   REQUIRE(recording.write_sizes.size() > 1U);
@@ -455,7 +464,7 @@ TEST_CASE("tes3_bsa_extract helper is raw-only and enforces sink writes", "[unit
                                                  libbsa::entry_compression::deflate, 0U, false, 0U};
   collecting_sink compressed_sink;
   auto compressed_result =
-      libbsa::formats::bsa::extract_tes3_bsa_payload(host_path.string(), compressed_entry, compressed_sink);
+      libbsa::formats::bsa::extract_tes3_bsa_payload(resolved_host_path.value(), compressed_entry, compressed_sink);
   REQUIRE_FALSE(compressed_result.has_value());
   REQUIRE(compressed_result.error().code == libbsa::error_code::format_error);
   REQUIRE(compressed_sink.bytes().empty());

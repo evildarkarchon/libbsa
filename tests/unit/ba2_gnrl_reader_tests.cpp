@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <detail/host_file_path.hpp>
+
 #include "formats/ba2/ba2_gnrl_parser.hpp"
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 
@@ -792,8 +794,11 @@ TEST_CASE("ba2_gnrl_extract helper routes by metadata and detects partial_sink w
   REQUIRE(raw_entry.value()->compression == libbsa::entry_compression::none);
   partial_sink partial;
 
-  auto partial_result = libbsa::formats::ba2::extract_ba2_gnrl_payload(
-      generated_archive_path("ba2_gnrl_fo4.ba2").string(), *raw_entry.value(), partial);
+  auto resolved_fo4_path = libbsa::detail::resolve_host_file_path(generated_archive_path("ba2_gnrl_fo4.ba2").string());
+  REQUIRE(resolved_fo4_path.has_value());
+
+  auto partial_result =
+      libbsa::formats::ba2::extract_ba2_gnrl_payload(resolved_fo4_path.value(), *raw_entry.value(), partial);
 
   REQUIRE_FALSE(partial_result.has_value());
   REQUIRE(partial_result.error().code == libbsa::error_code::io_error);
@@ -807,8 +812,11 @@ TEST_CASE("ba2_gnrl_extract helper routes by metadata and detects partial_sink w
   REQUIRE(lz4_entry.value()->compression == libbsa::entry_compression::lz4_block);
   collecting_sink lz4_sink;
 
-  auto lz4_result = libbsa::formats::ba2::extract_ba2_gnrl_payload(
-      generated_archive_path("ba2_gnrl_sfv3.ba2").string(), *lz4_entry.value(), lz4_sink);
+  auto resolved_sfv3_path = libbsa::detail::resolve_host_file_path(generated_archive_path("ba2_gnrl_sfv3.ba2").string());
+  REQUIRE(resolved_sfv3_path.has_value());
+
+  auto lz4_result =
+      libbsa::formats::ba2::extract_ba2_gnrl_payload(resolved_sfv3_path.value(), *lz4_entry.value(), lz4_sink);
 
   REQUIRE(lz4_result.has_value());
   const auto& expected_lz4 = *std::find_if(sfv3_manifest.at("entries").begin(), sfv3_manifest.at("entries").end(), [](const auto& entry) {

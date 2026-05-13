@@ -1,10 +1,11 @@
 #include "formats/bsa/tes3_bsa_reader.hpp"
 
 #include <detail/archive_path.hpp>
+#include <detail/host_file.hpp>
+#include <detail/payload_stream.hpp>
 
 #include <algorithm>
 #include <cstddef>
-#include <fstream>
 #include <limits>
 #include <string>
 #include <vector>
@@ -14,18 +15,15 @@ namespace {
 
 constexpr std::size_t extraction_chunk_size = 64U * 1024U;
 
-result<void> write_all(payload_sink& sink, std::span<const std::byte> bytes) {
-  auto written = sink.write(bytes);
-  if (!written) {
-    return written.error();
-  }
-  if (written.value() != bytes.size()) {
-    return error{error_code::io_error, "payload sink accepted a partial chunk"};
-  }
-  return {};
+detail::host_file_context tes3_extraction_host_context() noexcept {
+  return detail::host_file_context{"failed to open TES3 archive host path for extraction",
+                                   "failed to inspect TES3 archive host path for extraction",
+                                   "failed while reading TES3 archive payload",
+                                   "TES3 archive host path changed while reading payload",
+                                   "TES3 archive payload bytes"};
 }
 
-result<void> stream_from_host(std::string_view host_path, const entry_metadata& entry, payload_sink& sink) {
+result<void> stream_from_host(const detail::host_file_path& host_path, const entry_metadata& entry, payload_sink& sink) {
   if (entry.payload_offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max())) {
     return error{error_code::format_error, "TES3 BSA payload offset exceeds stream limits"};
   }
@@ -33,34 +31,13 @@ result<void> stream_from_host(std::string_view host_path, const entry_metadata& 
     return error{error_code::format_error, "TES3 BSA stored payload exceeds stream limits"};
   }
 
-  std::ifstream input{std::string{host_path}, std::ios::binary};
+  auto input = detail::open_host_file(host_path, tes3_extraction_host_context());
   if (!input) {
-    return error{error_code::io_error, "failed to open TES3 archive host path for extraction"};
-  }
-  input.seekg(static_cast<std::streamoff>(entry.payload_offset), std::ios::beg);
-  if (!input) {
-    return error{error_code::io_error, "failed to seek to TES3 archive payload"};
+    return input.error();
   }
 
-  std::vector<std::byte> buffer(extraction_chunk_size);
-  std::uint64_t remaining = entry.stored_size;
-  while (remaining != 0U) {
-    const auto chunk_size = static_cast<std::size_t>(std::min<std::uint64_t>(remaining, buffer.size()));
-    input.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(chunk_size));
-    if (input.bad()) {
-      return error{error_code::io_error, "failed while reading TES3 archive payload"};
-    }
-    if (static_cast<std::size_t>(input.gcount()) != chunk_size) {
-      return error{error_code::format_error, "TES3 BSA entry payload span is outside the archive"};
-    }
-
-    auto written = write_all(sink, std::span<const std::byte>{buffer.data(), chunk_size});
-    if (!written) {
-      return written.error();
-    }
-    remaining -= chunk_size;
-  }
-  return {};
+  return detail::stream_payload_range(input.value(), entry.payload_offset, entry.stored_size, sink, extraction_chunk_size,
+                                      "TES3 archive payload");
 }
 
 } // namespace
@@ -94,7 +71,9 @@ result<bool> contains_tes3_bsa_entry(std::span<const entry_metadata> entries, st
   return found.value().has_value();
 }
 
-result<void> extract_tes3_bsa_payload(std::string_view host_path, const entry_metadata& entry, payload_sink& sink) {
+result<void> extract_tes3_bsa_payload(const detail::host_file_path& host_path,
+                                      const entry_metadata& entry,
+                                      payload_sink& sink) {
   if (entry.compression != entry_compression::none) {
     return error{error_code::format_error, "TES3 BSA entries must be stored without compression"};
   }

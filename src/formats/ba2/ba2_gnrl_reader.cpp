@@ -2,10 +2,10 @@
 
 #include <detail/archive_path.hpp>
 #include <detail/compression_router.hpp>
+#include <detail/host_file.hpp>
 #include <detail/payload_stream.hpp>
 
 #include <algorithm>
-#include <fstream>
 #include <span>
 #include <string>
 #include <vector>
@@ -15,17 +15,25 @@ namespace {
 
 constexpr std::size_t extraction_chunk_size = 64U * 1024U;
 
-result<void> stream_raw_payload(std::string_view host_path, const entry_metadata& entry, payload_sink& sink) {
+detail::host_file_context ba2_gnrl_extraction_host_context() noexcept {
+  return detail::host_file_context{"failed to open BA2 archive host path for extraction",
+                                   "failed to inspect BA2 archive host path for extraction",
+                                   "failed while reading BA2 archive payload",
+                                   "BA2 archive host path changed while reading payload",
+                                   "BA2 archive payload bytes"};
+}
+
+result<void> stream_raw_payload(const detail::host_file_path& host_path, const entry_metadata& entry, payload_sink& sink) {
   if (entry.raw_size != entry.stored_size) {
     return error{error_code::format_error, "BA2 GNRL raw payload size does not match stored size"};
   }
 
-  std::ifstream input{std::string{host_path}, std::ios::binary};
+  auto input = detail::open_host_file(host_path, ba2_gnrl_extraction_host_context());
   if (!input) {
-    return error{error_code::io_error, "failed to open BA2 archive host path for extraction"};
+    return input.error();
   }
-  return detail::stream_payload_range(input, entry.payload_offset, entry.stored_size, sink, extraction_chunk_size,
-                                      "BA2 GNRL entry payload");
+  return detail::stream_payload_range(input.value(), entry.payload_offset, entry.stored_size, sink, extraction_chunk_size,
+                                       "BA2 GNRL entry payload");
 }
 
 result<detail::compression_method> compression_method_for(const entry_metadata& entry) {
@@ -42,10 +50,12 @@ result<detail::compression_method> compression_method_for(const entry_metadata& 
   return error{error_code::format_error, "BA2 GNRL entry has unknown compression metadata"};
 }
 
-result<void> extract_compressed_payload(std::string_view host_path, const entry_metadata& entry, payload_sink& sink) {
-  std::ifstream input{std::string{host_path}, std::ios::binary};
+result<void> extract_compressed_payload(const detail::host_file_path& host_path,
+                                        const entry_metadata& entry,
+                                        payload_sink& sink) {
+  auto input = detail::open_host_file(host_path, ba2_gnrl_extraction_host_context());
   if (!input) {
-    return error{error_code::io_error, "failed to open BA2 archive host path for extraction"};
+    return input.error();
   }
 
   auto method = compression_method_for(entry);
@@ -54,9 +64,9 @@ result<void> extract_compressed_payload(std::string_view host_path, const entry_
   }
   // Corrupt BA2 compressed payloads are malformed archive bytes, so preserve the
   // codec's stable format_error result instead of attempting partial extraction.
-  return detail::decompress_payload_exact_to_sink(method.value(), input, entry.payload_offset, entry.stored_size,
-                                                  entry.raw_size, sink, extraction_chunk_size,
-                                                  "BA2 GNRL compressed payload");
+  return detail::decompress_payload_exact_to_sink(method.value(), input.value(), entry.payload_offset, entry.stored_size,
+                                                   entry.raw_size, sink, extraction_chunk_size,
+                                                   "BA2 GNRL compressed payload");
 }
 
 } // namespace
@@ -90,7 +100,9 @@ result<bool> contains_ba2_gnrl_entry(std::span<const entry_metadata> entries, st
   return found.value().has_value();
 }
 
-result<void> extract_ba2_gnrl_payload(std::string_view host_path, const entry_metadata& entry, payload_sink& sink) {
+result<void> extract_ba2_gnrl_payload(const detail::host_file_path& host_path,
+                                      const entry_metadata& entry,
+                                      payload_sink& sink) {
   if (entry.has_embedded_name || entry.embedded_name_prefix_size != 0U) {
     return error{error_code::format_error, "BA2 GNRL entries must not carry embedded-name prefixes"};
   }
