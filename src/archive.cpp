@@ -30,7 +30,7 @@ namespace libbsa {
 struct archive_reader::state {
   archive_metadata metadata;
   std::vector<entry_metadata> entries;
-  /// Keeps caller UTF-8 text for diagnostics while all reopened host-file I/O uses the resolved path.
+  /// Keeps caller UTF-8 text for diagnostics only; open-time and parser-time host-file I/O stay on the resolved path.
   detail::host_file_path host_path;
   bool is_ba2_dx10{false};
 };
@@ -119,6 +119,7 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
   if (!resolved_host_path) {
     return resolved_host_path.error();
   }
+  // Once the public UTF-8 text resolves successfully, this shared path object is the only open/parser I/O route.
 
   auto prefix = read_detection_prefix(resolved_host_path.value());
   if (!prefix) {

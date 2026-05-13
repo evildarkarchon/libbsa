@@ -24,7 +24,7 @@ struct tes3_bsa_archive {
 /// Parses checked TES3 BSA header, table, name, hash, and entry metadata state.
 result<tes3_bsa_archive> parse_tes3_bsa_archive(std::span<const std::byte> bytes, detected_bsa_format detected);
 
-/// Parses checked TES3 BSA state from a resolved host-file contract and bounded metadata reads.
+/// Parses checked TES3 BSA state from a resolved host-file contract and never reopens from raw caller UTF-8 text.
 result<tes3_bsa_archive> parse_tes3_bsa_archive_file(const detail::host_file_path& host_path, std::uint64_t archive_size,
                                                      detected_bsa_format detected);
 

@@ -24,7 +24,7 @@ struct ba2_dx10_archive {
 /// Parses checked BA2 DX10 header, texture records, chunks, filename table, and metadata state.
 result<ba2_dx10_archive> parse_ba2_dx10_archive(std::span<const std::byte> bytes, detected_ba2_format detected);
 
-/// Parses checked BA2 DX10 state from a resolved host-file contract and bounded filename-table reads.
+/// Parses checked BA2 DX10 state from a resolved host-file contract and never reopens from raw caller UTF-8 text.
 result<ba2_dx10_archive> parse_ba2_dx10_archive_file(const detail::host_file_path& host_path, std::uint64_t archive_size,
                                                      detected_ba2_format detected);
 
