@@ -32,7 +32,7 @@ v1.1 hardens the shipped library rather than broadening it. The milestone follow
 
 ### 🚧 v1.1 Hardening (In Progress)
 
-- [ ] **Phase 13: Host Path Correctness Boundary** - Verification snapshot recorded 2026-05-13, but the current repository still carries uncommitted Phase 13 implementation and summary-repair work.
+- [x] **Phase 13: Host Path Correctness Boundary** - Verification snapshot recorded 2026-05-13, but the current repository still carries uncommitted Phase 13 implementation and summary-repair work. (completed 2026-05-13)
 - [ ] **Phase 14: Verification Lane Truthfulness** - Make Release and ASan verification lanes real, runnable, and policy-aligned.
 - [ ] **Phase 15: Reader Backend Dispatch Cleanup** - Select reader backend once at open time and keep reader behavior stable across operations.
 - [ ] **Phase 16: Parser and Preparer Seam Extraction** - Break the targeted TES4 parser and BA2 DX10 preparer hotspots into smaller, test-backed helpers.
@@ -111,7 +111,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 13. Host Path Correctness Boundary | v1.1 | 4/5 | In Progress|  |
+| 13. Host Path Correctness Boundary | v1.1 | 5/5 | Complete   | 2026-05-13 |
 | 14. Verification Lane Truthfulness | v1.1 | 0/TBD | Not started | - |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 0/TBD | Not started | - |
 | 16. Parser and Preparer Seam Extraction | v1.1 | 0/TBD | Not started | - |

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: executing
-stopped_at: Completed 13-04-PLAN.md
-last_updated: "2026-05-13T23:38:38.243Z"
+status: verifying
+stopped_at: Completed 13-05-PLAN.md
+last_updated: "2026-05-13T23:53:35.644Z"
 last_activity: 2026-05-13
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
-  percent: 0
+  completed_plans: 5
+  percent: 20
 ---
 
 # Project State
@@ -27,19 +27,19 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 
 Phase: 13 (host-path-correctness-boundary) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-13
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 Current note: repository state still contains uncommitted Phase 13 implementation changes, repaired summaries, and an open Phase 13 review blocker, so Phase 14 should not be treated as cleanly ready to plan yet.
 
 ## Performance Metrics
 
-- Total plans completed: 79
-- Current milestone plans completed: 1
+- Total plans completed: 80
+- Current milestone plans completed: 5
 - Historical baseline: v1.0 shipped across 12 phases and 75 plans
-- Latest execution: 13-01 completed in 8 min across 11 files
+- Latest execution: 13-05 completed in 7 min across 2 files
 
 ## Accumulated Context
 
@@ -58,6 +58,9 @@ Current note: repository state still contains uncommitted Phase 13 implementatio
 - [Phase 13]: [Phase 13]: Reader reopen helpers now consume detail::host_file_path so follow-on extraction stays on the stored resolved host path. — Task 1 moved archive dispatch and concrete reader reopens onto detail::host_file_path and shared host_file helpers.
 - [Phase 13]: [Phase 13]: validate_archive now delegates host-path setup to archive_reader::open and preserves direct setup failures vs report-based malformed-archive diagnostics. — Task 2 removed the duplicate readability preflight and kept extractability validation on the public reader path.
 - [Phase 13]: [Phase 13]: Source-policy tests now lock reader reopen and validation seams against raw host-path reopen drift. — Task 1 and Task 2 added source-policy assertions so future seam changes cannot silently reintroduce narrow-string host-path opens.
+- [Phase 13]: The dedicated host-path regression suite creates non-ASCII filesystem paths natively, then converts them back to explicit UTF-8 before calling the unchanged public reader and validation APIs.
+- [Phase 13]: BA2 DX10 canonical extraction expectations are reconstructed from manifest-backed DDS layout metadata plus committed payload bytes, keeping the non-ASCII proof black-box and deterministic.
+- [Phase 13]: A smoke policy gate now locks the host-path proof suite to public open, validate, and extract APIs so Phase 13 coverage does not drift into TES3 or writer-side scope.
 
 ### Pending Todos
 
@@ -87,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-13T23:38:24.347Z
-Stopped at: Completed 13-04-PLAN.md
+Last session: 2026-05-13T23:53:35.637Z
+Stopped at: Completed 13-05-PLAN.md
 Resume file: None
