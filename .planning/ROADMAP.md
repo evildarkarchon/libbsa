@@ -32,7 +32,7 @@ v1.1 hardens the shipped library rather than broadening it. The milestone follow
 
 ### 🚧 v1.1 Hardening (In Progress)
 
-- [ ] **Phase 13: Host Path Correctness Boundary** - Fix non-ASCII Windows host-path handling for archive open and validation flows.
+- [x] **Phase 13: Host Path Correctness Boundary** - Fix non-ASCII Windows host-path handling for archive open and validation flows. (completed 2026-05-13)
 - [ ] **Phase 14: Verification Lane Truthfulness** - Make Release and ASan verification lanes real, runnable, and policy-aligned.
 - [ ] **Phase 15: Reader Backend Dispatch Cleanup** - Select reader backend once at open time and keep reader behavior stable across operations.
 - [ ] **Phase 16: Parser and Preparer Seam Extraction** - Break the targeted TES4 parser and BA2 DX10 preparer hotspots into smaller, test-backed helpers.
@@ -52,16 +52,16 @@ v1.1 hardens the shipped library rather than broadening it. The milestone follow
 
 Plans:
 **Wave 1**
-- [ ] 13-01-PLAN.md - Rename and generalize the shared host-file helper into the locked `host_file` family and remove old helper names.
+- [x] 13-01-PLAN.md - Rename and generalize the shared host-file helper into the locked `host_file` family and remove old helper names.
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 13-02-PLAN.md - Resolve and store host paths once at open time, then migrate parser contracts and parser opens onto that boundary.
+- [x] 13-02-PLAN.md - Resolve and store host paths once at open time, then migrate parser contracts and parser opens onto that boundary.
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 13-03-PLAN.md - Rewire extraction contracts, concrete reader reopens, and validation setup onto the single stored host-path boundary.
+- [x] 13-03-PLAN.md - Rewire extraction contracts, concrete reader reopens, and validation setup onto the single stored host-path boundary.
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 13-04-PLAN.md - Remove validation preflight drift and prove non-ASCII host-path open, validation, and canonical extraction with one dedicated cross-family regression suite.
+- [x] 13-04-PLAN.md - Remove validation preflight drift and prove non-ASCII host-path open, validation, and canonical extraction with one dedicated cross-family regression suite.
 
 ### Phase 14: Verification Lane Truthfulness
 **Goal**: Maintainers can rely on the documented hardening lanes because the supported Release and ASan flows are checked in, runnable, and consistently described.
@@ -108,7 +108,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 13. Host Path Correctness Boundary | v1.1 | 0/4 | Not started | - |
+| 13. Host Path Correctness Boundary | v1.1 | 4/4 | Complete    | 2026-05-13 |
 | 14. Verification Lane Truthfulness | v1.1 | 0/TBD | Not started | - |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 0/TBD | Not started | - |
 | 16. Parser and Preparer Seam Extraction | v1.1 | 0/TBD | Not started | - |

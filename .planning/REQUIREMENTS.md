@@ -9,9 +9,9 @@ Requirements for the v1.1 Hardening milestone. Each maps to exactly one roadmap 
 
 ### Host Path Reliability
 
-- [ ] **HOST-01**: Consumer can open supported archives from Windows host paths containing non-ASCII characters.
-- [ ] **HOST-02**: Consumer can validate supported archives from Windows host paths containing non-ASCII characters.
-- [ ] **HOST-03**: Maintainer can verify non-ASCII host-path open and validate coverage through committed regression tests for representative BSA and BA2 families.
+- [x] **HOST-01**: Consumer can open supported archives from Windows host paths containing non-ASCII characters.
+- [x] **HOST-02**: Consumer can validate supported archives from Windows host paths containing non-ASCII characters.
+- [x] **HOST-03**: Maintainer can verify non-ASCII host-path open and validate coverage through committed regression tests for representative BSA and BA2 families.
 
 ### Verification Lanes
 
@@ -71,9 +71,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HOST-01 | Phase 13 | Pending |
-| HOST-02 | Phase 13 | Pending |
-| HOST-03 | Phase 13 | Pending |
+| HOST-01 | Phase 13 | Complete |
+| HOST-02 | Phase 13 | Complete |
+| HOST-03 | Phase 13 | Complete |
 | VER-01 | Phase 14 | Pending |
 | VER-02 | Phase 14 | Pending |
 | VER-03 | Phase 14 | Pending |
