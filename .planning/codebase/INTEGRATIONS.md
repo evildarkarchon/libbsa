@@ -1,118 +1,104 @@
 # External Integrations
 
-**Analysis Date:** 2026-05-11
+**Analysis Date:** 2026-05-12
 
 ## APIs & External Services
 
-**Compression libraries:**
-- libdeflate - Raw deflate compression and exact-size decompression for BSA/BA2 payload routes.
-  - SDK/Client: `libdeflate` from `vcpkg.json`; C API included in `src/detail/deflate_codec.cpp` with `<libdeflate.h>`.
-  - Auth: Not applicable.
-  - Integration pattern: Keep libdeflate behind `src/detail/deflate_codec.hpp` / `src/detail/deflate_codec.cpp`; public APIs return `libbsa::result<T>` from `include/libbsa/result.hpp` instead of libdeflate statuses.
-- LZ4 frame API - LZ4 frame compression/decompression for frame-based archive payloads.
-  - SDK/Client: `lz4` from `vcpkg.json`; frame API included in `src/detail/lz4_frame_codec.cpp` with `<lz4frame.h>`.
-  - Auth: Not applicable.
-  - Integration pattern: Use `src/detail/lz4_frame_codec.hpp` / `src/detail/lz4_frame_codec.cpp` for frame payloads only.
-- LZ4 raw block API - Raw LZ4 block compression/decompression for Starfield BA2 v3 method `3` payloads.
-  - SDK/Client: `lz4` from `vcpkg.json`; block API included in `src/detail/lz4_block_codec.cpp` with `<lz4.h>`.
-  - Auth: Not applicable.
-  - Integration pattern: Use `src/detail/lz4_block_codec.hpp` / `src/detail/lz4_block_codec.cpp` for raw block payloads only; do not route raw blocks through the frame wrapper.
+**Compression and binary-analysis libraries:**
+- `libdeflate` - raw deflate codec used for BSA and BA2 payload compression/decompression
+  - SDK/Client: vcpkg package declared in `vcpkg.json`, linked from `CMakeLists.txt`, wrapped in `src/detail/deflate_codec.cpp`
+  - Auth: Not applicable
+- `lz4` - LZ4 frame and raw block codec used for Skyrim SE/AE BSA and Starfield BA2 payloads
+  - SDK/Client: vcpkg package declared in `vcpkg.json`, linked from `CMakeLists.txt`, wrapped in `src/detail/lz4_frame_codec.cpp` and `src/detail/lz4_block_codec.cpp`
+  - Auth: Not applicable
+- `DirectXTex` - DDS metadata loading and texture source analysis for BA2 DX10 workflows
+  - SDK/Client: vcpkg package declared in `vcpkg.json`, linked from `CMakeLists.txt`, used privately in `src/texture/directxtex_analyzer.cpp`
+  - Auth: Not applicable
 
-**Texture analysis:**
-- DirectXTex - DDS metadata loading, DDS source validation, DXGI format extraction, cubemap/array/mip analysis, and writer-owned source snapshots for BA2 DX10 workflows.
-  - SDK/Client: `directxtex` from `vcpkg.json`; linked as `Microsoft::DirectXTex` in `CMakeLists.txt`; included privately in `src/texture/directxtex_analyzer.cpp` with `<DirectXTex.h>`.
-  - Auth: Not applicable.
-  - Integration pattern: Keep DirectXTex private to `src/texture/directxtex_analyzer.hpp` / `src/texture/directxtex_analyzer.cpp`; public metadata uses libbsa-native value types from `include/libbsa/archive.hpp` and `include/libbsa/writer.hpp`.
-
-**Windows platform API:**
-- Win32 file publishing primitives - Atomic no-replace and replace publication for completed writer output.
-  - SDK/Client: Windows SDK via `<windows.h>` in `src/detail/atomic_file_ops.hpp`.
-  - Auth: Not applicable.
-  - Integration pattern: Use `MoveFileExW` through `publish_file_without_replace` and `replace_file_atomically`; writer families call shared publish helpers from `src/detail/writer_publish.hpp` / `src/detail/writer_publish.cpp`.
-
-**Build and package services:**
-- Microsoft vcpkg registry - Dependency acquisition and version baselining.
-  - SDK/Client: vcpkg manifest mode through `vcpkg.json` and `vcpkg-configuration.json`.
-  - Auth: None detected.
-- Kitware CMake GitHub releases - CI downloads CMake 4.3.2 in `.github/workflows/ci.yml`.
-  - SDK/Client: PowerShell `Invoke-WebRequest` in `.github/workflows/ci.yml`.
-  - Auth: None detected.
-- GitHub Actions - Windows CI for static/shared presets.
-  - SDK/Client: `.github/workflows/ci.yml`.
-  - Auth: Repository-provided GitHub Actions token only; no explicit secrets referenced.
+**Reference/tooling repositories:**
+- `TES5Edit` - read-only behavioral reference submodule for BSArchPro compatibility
+  - SDK/Client: git submodule declared in `.gitmodules` and constrained by `AGENTS.md`
+  - Auth: Not applicable
+- `microsoft/vcpkg` registry - dependency registry source pinned by baseline
+  - SDK/Client: git registry in `vcpkg-configuration.json`
+  - Auth: Not applicable
 
 ## Data Storage
 
 **Databases:**
-- Not detected.
-  - Connection: Not applicable.
-  - Client: Not applicable.
+- None
+  - Connection: Not applicable
+  - Client: Not applicable
 
 **File Storage:**
-- Local filesystem only.
-  - Archive inputs and outputs are host filesystem paths passed as `std::string_view` in public APIs such as `archive_reader::open`, writer `write_to`, and `validate_archive` in `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, and `include/libbsa/validation.hpp`.
-  - Parsers and readers use `std::ifstream` in files such as `src/archive.cpp`, `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, and `src/formats/ba2/ba2_dx10_parser.cpp`.
-  - Writers serialize via `std::ofstream` in `src/formats/bsa/tes3_bsa_serialize.cpp`, `src/formats/bsa/tes4_bsa_serialize.cpp`, `src/formats/ba2/ba2_gnrl_serialize.cpp`, and `src/formats/ba2/ba2_dx10_serialize.cpp`.
-  - BA2 DX10 writer source snapshots use temporary directories/files in `src/formats/ba2/ba2_dx10_prepare.cpp`.
-  - Generated legal fixtures are stored under `tests/fixtures/generated/archives/` and `tests/fixtures/generated/source/`; they are generated by C++ fixture tools declared in `tests/CMakeLists.txt`.
+- Local filesystem only
+  - Archive reading/writing uses host paths through public APIs in `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, and implementations in `src/archive.cpp` and `src/formats/**/*.cpp`
+  - BA2 DX10 writer snapshots temporary DDS subresources under the system temp root in `src/formats/ba2/ba2_dx10_prepare.cpp`
+  - Writer finalization publishes archives through same-directory temp staging in `src/detail/writer_publish.cpp` and `src/detail/atomic_file_ops.hpp`
 
 **Caching:**
-- No application cache service detected.
-- vcpkg install/cache state exists under `vcpkg_installed/`; treat it as dependency-manager state, not libbsa runtime storage.
-- CMake build outputs and benchmark reports are written under `build/`, including `build/windows-msvc-debug-static/benchmarks/` as documented by `benchmarks/README.md`.
+- None
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- None.
-  - Implementation: libbsa is a local archive library and does not authenticate users or call identity providers.
-  - Public APIs in `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, and `include/libbsa/validation.hpp` accept explicit paths, sinks, options, and data; no credential or session model is present.
+- None
+  - Implementation: Not applicable
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None.
-  - Errors are returned as structured `libbsa::result<T>` and `libbsa::error` values from `include/libbsa/result.hpp`.
-  - Stable categories are `unsupported`, `invalid_argument`, `not_found`, `io_error`, and `format_error` in `include/libbsa/result.hpp`.
+- None
 
 **Logs:**
-- No runtime logging framework detected.
-- CMake and CI emit build/test logs through standard command output in `CMakeLists.txt`, `tests/CMakeLists.txt`, and `.github/workflows/ci.yml`.
-- Benchmark tooling writes explicit JSON/Markdown reports through `benchmarks/libbsa_benchmarks.cpp` and `benchmarks/README.md`.
+- No dedicated logging framework detected; the library returns structured `libbsa::result<T>` errors and `validation_report` diagnostics instead of emitting logs from core runtime paths in `include/libbsa/result.hpp`, `include/libbsa/validation.hpp`, and `src/**/*.cpp`
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- GitHub Actions for CI only, configured in `.github/workflows/ci.yml`.
-- No production hosting platform, package publishing workflow, release workflow, or deployment service detected.
+- Not detected; this repository builds a library package rather than a hosted service
 
 **CI Pipeline:**
-- GitHub Actions workflow `.github/workflows/ci.yml` runs on `push` and `pull_request`.
-- Matrix presets: `windows-msvc-debug-static` and `windows-msvc-debug-shared` from `CMakePresets.json`.
-- CI steps: checkout with submodules, install CMake 4.3.2, verify CMake version, configure with `cmake --preset`, build with `cmake --build --preset`, test with `ctest --preset --output-on-failure`, then verify `TES5Edit/` stayed read-only.
-- Package-consumer smoke coverage is registered in `tests/CMakeLists.txt` and uses `tests/package-consumer/CMakeLists.txt` to verify installed `libbsa::libbsa` consumption.
+- GitHub Actions Windows matrix build in `.github/workflows/ci.yml`
+  - Checks out submodules, installs CMake 4.3.2, configures both presets from `CMakePresets.json`, builds, runs `ctest`, and verifies `TES5Edit` remains unchanged
+- CMake install/export packaging in `CMakeLists.txt`
+- Package-consumer verification in `tests/CMakeLists.txt` and `tests/package-consumer/CMakeLists.txt`
 
 ## Environment Configuration
 
 **Required env vars:**
-- `VCPKG_ROOT` - Required for local CMake presets; referenced in `CMakePresets.json` and documented in `README.md`.
-- `LIBBSA_CMAKE_VERSION` - CI-only CMake version selector in `.github/workflows/ci.yml`.
+- `VCPKG_ROOT` - required by `CMakePresets.json` and documented in `README.md`
+- `LIBBSA_CMAKE_VERSION` - CI-only workflow variable in `.github/workflows/ci.yml`
 
 **Secrets location:**
-- No `.env` files detected at the repository root during the scan.
-- No explicit GitHub Actions secrets references detected in `.github/workflows/ci.yml`.
-- No credential, key, or token integration is part of the library runtime.
+- Not detected
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- None.
+- None
 
 **Outgoing:**
-- None.
-- CI makes an unauthenticated outbound download to `https://github.com/Kitware/CMake/releases/download/...` from `.github/workflows/ci.yml` to install the configured CMake version.
-- vcpkg uses the Microsoft vcpkg Git registry from `vcpkg-configuration.json` during dependency acquisition.
+- None from library runtime
+- CI downloads the requested CMake archive from GitHub Releases in `.github/workflows/ci.yml`
+
+## Tooling Integrations
+
+**Documentation tooling:**
+- Doxygen target `libbsa_docs` reads public headers and docs inputs from `docs/Doxyfile.in` via `CMakeLists.txt`
+
+**Fixture and validation tooling:**
+- Python 3 manifest validator runs through `validate_fixture_manifests` in `tests/CMakeLists.txt` using `tests/fixtures/generated/validate_fixture_manifests.py`
+- Fixture generators are compiled C++ tools declared in `tests/CMakeLists.txt` and write into `tests/fixtures/generated/archives`
+
+**Consumer integration tooling:**
+- Installed-package smoke tests compile and run `tests/package-consumer/main.cpp` against `find_package(libbsa CONFIG REQUIRED)` in `tests/package-consumer/CMakeLists.txt`
+- Public usage examples are mirrored in `docs/integration-examples.md`
+
+**Project workflow skills:**
+- Repository-local OpenSpec workflow skills are present under `.claude/skills/*/SKILL.md` and support proposal/design/task workflows rather than library runtime behavior
+- Additional implementation rule files under `.claude/skills/*/rules/`: Not detected in this scan
 
 ---
 
-*Integration audit: 2026-05-11*
+*Integration audit: 2026-05-12*

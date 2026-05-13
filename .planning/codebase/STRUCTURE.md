@@ -1,331 +1,205 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-05-11
+**Analysis Date:** 2026-05-12
 
 ## Directory Layout
 
 ```text
 libbsa/
-├── include/libbsa/              # Stable public C++20 API headers
-├── src/                         # Private implementation sources
-│   ├── detail/                  # Shared private infrastructure and dependency adapters
-│   ├── formats/                 # Archive-family implementations
-│   │   ├── ba2/                 # BA2 GNRL/DX10 detection, parse, read, write modules
-│   │   └── bsa/                 # TES3 and TES4-family BSA detection, parse, read, write modules
-│   └── texture/                 # DDS layout and DirectXTex-backed analysis adapters
-├── tests/                       # Catch2 tests, generated fixtures, package/export checks
-│   ├── unit/                    # Unit, fixture, policy, parser, writer, reader tests
-│   ├── fixtures/generated/      # Synthetic archive fixture generators, archives, manifests
-│   ├── package-consumer/        # Installed package smoke tests
-│   └── export-surface/          # DLL/shared export checks
-├── docs/                        # Public docs, policy docs, Doxygen mainpage/config
-├── benchmarks/                  # Synthetic benchmark executable and benchmark docs
-├── cmake/                       # Installed package config templates
-├── openspec/                    # Change/spec workflow artifacts
-├── .planning/                   # GSD project planning and codebase map output
-├── .claude/skills/              # Project-local OpenSpec skills
-├── TES5Edit/                    # Read-only behavioral reference submodule
-├── CMakeLists.txt               # Root build target, sources, install/export, tests, benchmarks
-├── CMakePresets.json            # Windows MSVC configure/build/test presets
-├── vcpkg.json                   # vcpkg manifest dependencies
-├── vcpkg-configuration.json     # vcpkg baseline/configuration
-├── README.md                    # Project overview and build instructions
-├── AGENTS.md                    # Repository agent constraints and project rules
-└── CLAUDE.md                    # Assistant-facing project context
+├── include/libbsa/        # Public C++20 headers exported to consumers
+├── src/                   # Library implementation
+│   ├── detail/            # Shared internal helpers and Windows-facing plumbing
+│   ├── formats/bsa/       # TES3 and TES4-family BSA pipelines
+│   ├── formats/ba2/       # BA2 GNRL and DX10 pipelines
+│   └── texture/           # DDS metadata and layout helpers
+├── tests/                 # Unit tests, fixture generators, consumer smoke tests
+├── benchmarks/            # Maintainer benchmark executable
+├── docs/                  # Public policy, compatibility, and API docs
+├── cmake/                 # Package config templates
+├── openspec/              # OpenSpec change/spec workflow artifacts
+├── .claude/skills/        # Project-local OpenSpec automation skills
+├── TES5Edit/              # Read-only reference submodule
+├── CMakeLists.txt         # Root build definition
+├── CMakePresets.json      # Supported Windows configure/build/test presets
+├── vcpkg.json             # Dependency manifest
+└── vcpkg-configuration.json # vcpkg baseline/registry configuration
 ```
 
 ## Directory Purposes
 
 **`include/libbsa/`:**
-- Purpose: Public API and ABI surface for consumers.
-- Contains: Header-only public enums, value types, abstract sink/factory interfaces, reader/writer declarations, validation API, result/error model, version and export macros.
-- Key files: `include/libbsa/libbsa.hpp`, `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, `include/libbsa/validation.hpp`, `include/libbsa/result.hpp`, `include/libbsa/export.hpp`, `include/libbsa/version.hpp`.
-- Guidance: Add public API only here; keep headers C++20-compatible and dependency-light.
+- Purpose: Stable public library surface.
+- Contains: Reader, writer, validation, result, version, and export headers.
+- Key files: `include/libbsa/archive.hpp`, `include/libbsa/writer.hpp`, `include/libbsa/validation.hpp`, `include/libbsa/libbsa.hpp`.
 
 **`src/`:**
-- Purpose: Private implementation for the `libbsa` library target.
-- Contains: Public façade implementations (`src/archive.cpp`, `src/validation.cpp`), private format modules, private detail utilities, texture adapters, and minimal translation unit `src/libbsa.cpp`.
+- Purpose: All shipped implementation code.
+- Contains: Public API implementations, internal helpers, format families, and DDS-specific helpers.
 - Key files: `src/archive.cpp`, `src/validation.cpp`, `src/libbsa.cpp`.
-- Guidance: Put implementation and private helper declarations here; public consumers must not include `src/` headers.
 
 **`src/detail/`:**
-- Purpose: Shared internal mechanisms used across archive families.
-- Contains: Archive path normalization, binary readers/writers, byte vector allocation helpers, parser primitives, Bethesda hashes, payload stream helpers, compression router/codecs, parallel work scheduler, atomic file operations, writer publish helpers.
-- Key files: `src/detail/archive_path.*`, `src/detail/binary_io.*`, `src/detail/parser_primitives.*`, `src/detail/bethesda_hash.*`, `src/detail/compression_router.*`, `src/detail/deflate_codec.*`, `src/detail/lz4_frame_codec.*`, `src/detail/lz4_block_codec.*`, `src/detail/parallel_work.*`, `src/detail/writer_publish.*`, `src/detail/atomic_file_ops.hpp`, `src/detail/payload_stream.*`, `src/detail/byte_vector.hpp`.
-- Guidance: Add reusable private helpers here only when they serve multiple format modules or express a cross-cutting internal policy.
+- Purpose: Shared non-public implementation services.
+- Contains: Path normalization, hashing, binary IO, codec routing, worker scheduling, payload streaming, disk-source helpers, and publish safety helpers.
+- Key files: `src/detail/archive_path.cpp`, `src/detail/binary_io.cpp`, `src/detail/compression_router.cpp`, `src/detail/parallel_work.cpp`, `src/detail/writer_publish.cpp`.
 
 **`src/formats/bsa/`:**
-- Purpose: BSA-family archive detection, parsing, reading, and writing.
-- Contains: Format detector plus TES3 and TES4-family parser/reader/writer modules. Writer modules are split into public façade, prepare, layout, and serialize files.
-- Key files: `src/formats/bsa/bsa_format_detector.*`, `src/formats/bsa/tes3_bsa_parser.*`, `src/formats/bsa/tes3_bsa_reader.*`, `src/formats/bsa/tes3_bsa_writer.*`, `src/formats/bsa/tes3_bsa_prepare.*`, `src/formats/bsa/tes3_bsa_layout.*`, `src/formats/bsa/tes3_bsa_serialize.*`, `src/formats/bsa/tes4_bsa_parser.*`, `src/formats/bsa/tes4_bsa_reader.*`, `src/formats/bsa/tes4_bsa_writer.*`, `src/formats/bsa/tes4_bsa_prepare.*`, `src/formats/bsa/tes4_bsa_layout.*`, `src/formats/bsa/tes4_bsa_serialize.*`.
-- Guidance: Add new BSA variant behavior under this directory and route it from `src/archive.cpp` or BSA writer façades.
+- Purpose: TES3 and TES4-family BSA-specific rules.
+- Contains: Detector, parser, reader, prepare, layout, serialize, writer, constants, and internal headers for BSA families.
+- Key files: `src/formats/bsa/bsa_format_detector.cpp`, `src/formats/bsa/tes3_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/bsa/tes4_bsa_writer.cpp`.
 
 **`src/formats/ba2/`:**
-- Purpose: BA2-family archive detection, parsing, reading, and writing.
-- Contains: Shared BA2 detector plus GNRL and DX10 parser/reader/writer modules. Writer modules are split into public façade, prepare, layout, and serialize files.
-- Key files: `src/formats/ba2/ba2_format_detector.*`, `src/formats/ba2/ba2_gnrl_parser.*`, `src/formats/ba2/ba2_gnrl_reader.*`, `src/formats/ba2/ba2_gnrl_writer.*`, `src/formats/ba2/ba2_gnrl_prepare.*`, `src/formats/ba2/ba2_gnrl_layout.*`, `src/formats/ba2/ba2_gnrl_serialize.*`, `src/formats/ba2/ba2_dx10_parser.*`, `src/formats/ba2/ba2_dx10_reader.*`, `src/formats/ba2/ba2_dx10_writer.*`, `src/formats/ba2/ba2_dx10_prepare.*`, `src/formats/ba2/ba2_dx10_layout.*`, `src/formats/ba2/ba2_dx10_serialize.*`.
-- Guidance: Add GNRL-specific functionality in `ba2_gnrl_*`, texture-specific functionality in `ba2_dx10_*`, and cross-subtype detection in `ba2_format_detector.*`.
+- Purpose: Fallout 4 and Starfield BA2-specific rules.
+- Contains: Detector, parser, reader, prepare, layout, serialize, writer, constants, and internal headers for GNRL and DX10 variants.
+- Key files: `src/formats/ba2/ba2_format_detector.cpp`, `src/formats/ba2/ba2_gnrl_parser.cpp`, `src/formats/ba2/ba2_dx10_parser.cpp`, `src/formats/ba2/ba2_dx10_writer.cpp`.
 
 **`src/texture/`:**
-- Purpose: DDS metadata analysis, DDS DXT10 header reconstruction, and BA2 texture chunk planning.
-- Contains: DirectXTex adapter and independent DDS layout helper.
-- Key files: `src/texture/directxtex_analyzer.*`, `src/texture/dds_layout.*`.
-- Guidance: Put DirectXTex calls only in `src/texture/directxtex_analyzer.cpp`; use libbsa-native metadata types at module boundaries.
+- Purpose: Keep DDS and DirectXTex concerns out of public headers and non-texture formats.
+- Contains: DirectXTex-backed metadata analysis and libbsa-native DDS layout/header logic.
+- Key files: `src/texture/directxtex_analyzer.cpp`, `src/texture/dds_layout.cpp`.
 
 **`tests/unit/`:**
-- Purpose: Catch2 coverage for public API behavior, format parsers/readers/writers, private detail helpers, policy documents, package/export expectations, and compatibility matrix behavior.
-- Contains: One or more focused `*_tests.cpp` files per feature area.
-- Key files: `tests/unit/archive_reader_tests.cpp`, `tests/unit/tes3_bsa_reader_tests.cpp`, `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/ba2_gnrl_reader_tests.cpp`, `tests/unit/ba2_dx10_writer_tests.cpp`, `tests/unit/compression_router_tests.cpp`, `tests/unit/binary_io_tests.cpp`, `tests/unit/parser_primitives_tests.cpp`, `tests/unit/public_include_boundary_tests.cpp`, `tests/unit/export_surface_policy_tests.cpp`.
-- Guidance: Add tests near related existing test files; use generated fixtures in `tests/fixtures/generated/archives/` and helper manifests when testing archive behavior.
+- Purpose: Main Catch2 regression suite.
+- Contains: API tests, parser tests, writer tests, codec tests, policy tests, and compatibility checks.
+- Key files: `tests/unit/archive_reader_tests.cpp`, `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/ba2_dx10_writer_tests.cpp`, `tests/unit/validation_api_tests.cpp`.
 
 **`tests/fixtures/generated/`:**
-- Purpose: Generate legal synthetic fixtures and manifest data for parser, writer, extraction, malformed archive, and compatibility tests.
-- Contains: C++ fixture generator tools under `tests/fixtures/generated/*.cpp`, generated archives/manifests under `tests/fixtures/generated/archives/`, and source manifests under `tests/fixtures/generated/source/`.
-- Key files: `tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp`, `tests/fixtures/generated/generate_tes3_bsa_fixtures.cpp`, `tests/fixtures/generated/generate_ba2_gnrl_fixtures.cpp`, `tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp`, `tests/fixtures/generated/compatibility_matrix.json`.
-- Guidance: Generate or update fixtures through CMake custom targets in `tests/CMakeLists.txt`; do not use `TES5Edit/` as a mutable fixture workspace.
+- Purpose: Legal synthetic fixture corpus and generator sources.
+- Contains: Fixture generator programs, generated archives/manifests, generated DDS sources, and validation scripts.
+- Key files: `tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp`, `tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp`, `tests/fixtures/generated/archives/`.
 
 **`tests/package-consumer/`:**
-- Purpose: Verify installed package consumption and runtime DLL copy behavior.
-- Contains: Consumer CMake project and smoke scripts.
-- Key files: `tests/package-consumer/CMakeLists.txt`, `tests/package-consumer/main.cpp`, `tests/package-consumer/smoke.cmake`, `tests/package-consumer/copy-runtime-dlls.cmake`, `tests/package-consumer/verify-runtime-dll-copy.cmake`.
-- Guidance: Add install/export consumption checks here, not in unit tests.
-
-**`tests/export-surface/`:**
-- Purpose: Validate shared-library export surface policy.
-- Contains: CMake script checks for DLL/export behavior.
-- Key files: `tests/export-surface/check-dll-exports.cmake`.
-- Guidance: Add ABI/export policy checks here when public symbol rules change.
-
-**`docs/`:**
-- Purpose: Consumer and maintainer documentation for API, formats, compatibility, thread safety, integration examples, and Doxygen.
-- Contains: Markdown documentation and Doxygen config/mainpage.
-- Key files: `docs/thread-safety.md`, `docs/target-format-guide.md`, `docs/compatibility-evidence.md`, `docs/integration-examples.md`, `docs/api-mainpage.md`, `docs/PRD.md`, `docs/Doxyfile.in`.
-- Guidance: Keep public behavior docs synchronized with public headers and tests.
+- Purpose: Installed-package smoke test.
+- Contains: A standalone CMake consumer project that links `libbsa::libbsa`.
+- Key files: `tests/package-consumer/CMakeLists.txt`, `tests/package-consumer/main.cpp`.
 
 **`benchmarks/`:**
-- Purpose: Synthetic benchmark executable and benchmark documentation.
-- Contains: Benchmark source and README.
+- Purpose: Maintainer-only benchmark/report tooling built from public APIs.
+- Contains: Benchmark executable and usage docs.
 - Key files: `benchmarks/libbsa_benchmarks.cpp`, `benchmarks/README.md`.
-- Guidance: Keep benchmarks as maintainer tooling; do not make benchmark reports part of runtime behavior.
 
-**`cmake/`:**
-- Purpose: CMake package configuration templates for install/export support.
-- Contains: Package config template.
-- Key files: `cmake/libbsaConfig.cmake.in`.
-- Guidance: Update when installed target names, transitive public dependencies, or package config behavior changes.
+**`docs/`:**
+- Purpose: Human-readable project policy and compatibility guidance.
+- Contains: PRD, API docs input, format policy, compatibility evidence, and thread-safety guidance.
+- Key files: `docs/PRD.md`, `docs/target-format-guide.md`, `docs/thread-safety.md`, `docs/compatibility-evidence.md`.
 
 **`openspec/`:**
-- Purpose: OpenSpec workflow state, specs, active changes, and archived changes.
-- Contains: `openspec/config.yaml`, active changes under `openspec/changes/`, archive under `openspec/changes/archive/`, canonical specs under `openspec/specs/`.
-- Key files: `openspec/specs/archive-writer-layering/spec.md`, `openspec/specs/writer-safe-publish/spec.md`, `openspec/specs/shared-parser-primitives/spec.md`, `openspec/changes/add-explicit-public-export-macro/tasks.md`.
-- Guidance: Use OpenSpec artifacts for planned behavior changes; implementation still belongs in `include/`, `src/`, `tests/`, and `docs/`.
-
-**`.planning/`:**
-- Purpose: GSD project state, roadmap, research, milestone planning, quick plans, and codebase maps.
-- Contains: Planning docs and generated codebase analysis documents.
-- Key files: `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`, `.planning/research/STACK.md`, `.planning/codebase/ARCHITECTURE.md`, `.planning/codebase/STRUCTURE.md`.
-- Guidance: GSD commands manage this directory; code implementation should not depend on `.planning/` at runtime or build time.
+- Purpose: OpenSpec workflow state for planned and active changes.
+- Contains: Change artifacts and synced specs.
+- Key files: `openspec/changes/`, `openspec/specs/`.
 
 **`.claude/skills/`:**
-- Purpose: Project-local OpenSpec skill instructions used by assistants.
+- Purpose: Project-local assistant automation skills.
 - Contains: OpenSpec workflow skill indexes.
-- Key files: `.claude/skills/openspec-propose/SKILL.md`, `.claude/skills/openspec-apply-change/SKILL.md`, `.claude/skills/openspec-verify-change/SKILL.md`, `.claude/skills/openspec-archive-change/SKILL.md`.
-- Guidance: These skills define workflow conventions, not library runtime architecture.
+- Key files: `.claude/skills/openspec-apply-change/SKILL.md`, `.claude/skills/openspec-continue-change/SKILL.md`, `.claude/skills/openspec-explore/SKILL.md`.
 
 **`TES5Edit/`:**
-- Purpose: Read-only behavioral reference submodule for BSArchPro-compatible archive behavior.
-- Contains: Delphi/Pascal reference code such as `TES5Edit/BSArchPro.dpr`, `TES5Edit/BSArch/`, `TES5Edit/Core/wbBSArchive.pas`, and `TES5Edit/Core/wbBSA.pas`.
-- Key files: `TES5Edit/BSArchPro.dpr`, `TES5Edit/Core/wbBSArchive.pas`, `TES5Edit/Core/wbBSA.pas`.
-- Guidance: Never modify, format, stage, compile, or use as writable fixture source.
+- Purpose: Read-only behavioral reference submodule.
+- Contains: Upstream BSArchPro and xEdit reference material.
+- Key files: `TES5Edit/BSArchPro.dpr`, `TES5Edit/BSArch/`, `TES5Edit/Core/wbBSArchive.pas`.
 
 ## Key File Locations
 
 **Entry Points:**
-- `include/libbsa/libbsa.hpp`: Public umbrella include.
-- `include/libbsa/archive.hpp`: Public archive reader and extraction entry point declarations.
-- `include/libbsa/writer.hpp`: Public archive writer entry point declarations.
-- `include/libbsa/validation.hpp`: Public validation entry point declaration.
-- `src/archive.cpp`: `archive_reader` implementation and read/extract dispatch.
-- `src/validation.cpp`: `validate_archive` implementation.
-- `CMakeLists.txt`: Main build target, source list, install/export, tests, benchmarks, and docs target.
+- `include/libbsa/libbsa.hpp`: Aggregate include for consumers.
+- `src/archive.cpp`: Public reader implementation and archive-family dispatch.
+- `src/validation.cpp`: Public validation implementation.
+- `src/formats/bsa/tes3_bsa_writer.cpp`: TES3 write-new facade.
+- `src/formats/bsa/tes4_bsa_writer.cpp`: TES4-family BSA write-new facade.
+- `src/formats/ba2/ba2_gnrl_writer.cpp`: BA2 GNRL write-new facade.
+- `src/formats/ba2/ba2_dx10_writer.cpp`: BA2 DX10 write-new facade.
 
 **Configuration:**
-- `CMakeLists.txt`: Root project configuration and library source list.
-- `CMakePresets.json`: Windows MSVC debug static/shared presets.
-- `tests/CMakeLists.txt`: Test executable, fixture generator targets, and fixture custom targets.
-- `vcpkg.json`: vcpkg manifest dependency declaration.
-- `vcpkg-configuration.json`: vcpkg baseline/configuration.
-- `cmake/libbsaConfig.cmake.in`: Installed package config template.
-- `openspec/config.yaml`: OpenSpec configuration.
+- `CMakeLists.txt`: Root target graph, install/export rules, benchmark and test toggles.
+- `CMakePresets.json`: Supported Windows MSVC static/shared presets.
+- `vcpkg.json`: Declared dependencies.
+- `vcpkg-configuration.json`: vcpkg baseline/registry pinning.
+- `cmake/libbsaConfig.cmake.in`: Installed package-config template.
 
 **Core Logic:**
-- `src/formats/bsa/bsa_format_detector.*`: BSA family/version detection.
-- `src/formats/bsa/tes3_bsa_parser.*`: TES3 BSA parsing and metadata materialization.
-- `src/formats/bsa/tes4_bsa_parser.*`: TES4-family BSA parsing and metadata materialization.
-- `src/formats/ba2/ba2_format_detector.*`: BA2 subtype/version detection.
-- `src/formats/ba2/ba2_gnrl_parser.*`: BA2 GNRL parsing and metadata materialization.
-- `src/formats/ba2/ba2_dx10_parser.*`: BA2 DX10 parsing, chunk metadata, and texture metadata materialization.
-- `src/formats/*/*_reader.*`: Listing, lookup, contains, and extraction for each format/subtype.
-- `src/formats/*/*_prepare.*`: Writer validation, path normalization, hash/materialization, compression, and target-specific preparation.
-- `src/formats/*/*_layout.*`: Writer offset assignment and optional dedupe layout.
-- `src/formats/*/*_serialize.*`: Archive byte serialization and payload streaming.
-- `src/detail/compression_router.*`: Internal compression/decompression dispatch.
-- `src/detail/archive_path.*`: Archive-internal path normalization.
-- `src/detail/binary_io.*`: Little-endian binary reader/writer.
-- `src/detail/parser_primitives.*`: Safe parser arithmetic and bounded file reads.
-- `src/texture/directxtex_analyzer.*`: DirectXTex-backed DDS analysis.
-- `src/texture/dds_layout.*`: DDS layout, mip/chunk planning, and header reconstruction.
+- `src/detail/archive_path.cpp`: Canonical archive virtual path policy.
+- `src/detail/bethesda_hash.cpp`: TES3/TES4/BA2 hash helpers.
+- `src/detail/compression_router.cpp`: Shared compression/decompression dispatch.
+- `src/detail/payload_stream.cpp`: Shared payload read/write streaming utilities.
+- `src/detail/writer_publish.cpp`: Shared writer publication safety layer.
+- `src/texture/directxtex_analyzer.cpp`: DDS metadata/source analysis.
 
 **Testing:**
-- `tests/CMakeLists.txt`: Test build and fixture-generation orchestration.
-- `tests/unit/*_tests.cpp`: Catch2 unit and behavior tests.
-- `tests/fixtures/generated/*.cpp`: Fixture generator tool sources.
-- `tests/fixtures/generated/archives/*.json`: Fixture manifests used by tests.
-- `tests/fixtures/generated/archives/*.bsa`: Generated BSA fixtures.
-- `tests/fixtures/generated/archives/*.ba2`: Generated BA2 fixtures.
-- `tests/package-consumer/`: Install/package consumer checks.
-- `tests/export-surface/check-dll-exports.cmake`: Export surface policy check.
-
-**Documentation:**
-- `README.md`: Project overview, Windows support, and build commands.
-- `docs/thread-safety.md`: Threading/ownership contract for public types.
-- `docs/target-format-guide.md`: Supported target formats and compression routing policy.
-- `docs/compatibility-evidence.md`: Compatibility warning and behavior evidence.
-- `docs/integration-examples.md`: Consumer integration examples.
-- `docs/api-mainpage.md`: Doxygen main page content.
-- `docs/PRD.md`: Product requirements.
-- `AGENTS.md`: Repository implementation constraints.
-
-**Reference:**
-- `TES5Edit/BSArchPro.dpr`: BSArchPro reference entry.
-- `TES5Edit/BSArch/`: BSArchPro-related reference code.
-- `TES5Edit/Core/wbBSArchive.pas`: Archive behavior reference.
-- `TES5Edit/Core/wbBSA.pas`: BSA behavior reference.
+- `tests/CMakeLists.txt`: Test targets and fixture-generation targets.
+- `tests/unit/`: Catch2 regression suite.
+- `tests/fixtures/README.md`: Fixture policy and provenance rules.
+- `tests/package-consumer/`: Install/export smoke test.
 
 ## Naming Conventions
 
 **Files:**
-- Public headers use lowercase nouns under `include/libbsa/`: `archive.hpp`, `writer.hpp`, `validation.hpp`, `result.hpp`.
-- Private shared helpers use lowercase snake_case under `src/detail/`: `archive_path.cpp`, `binary_io.hpp`, `compression_router.cpp`, `writer_publish.cpp`.
-- Format modules use `<format>_<role>.*` naming: `tes4_bsa_parser.cpp`, `tes4_bsa_reader.hpp`, `tes4_bsa_prepare.cpp`, `tes4_bsa_layout.hpp`, `tes4_bsa_serialize.cpp`, `tes4_bsa_writer.cpp`.
-- BA2 subtype modules include subtype in the prefix: `ba2_gnrl_parser.cpp`, `ba2_dx10_reader.cpp`, `ba2_dx10_writer.hpp`.
-- Tests use `<subject>_tests.cpp`: `archive_reader_tests.cpp`, `ba2_dx10_writer_tests.cpp`, `compression_router_tests.cpp`.
-- Fixture generators use `generate_<fixture_family>_fixtures.cpp`: `generate_tes4_bsa_fixtures.cpp`, `generate_ba2_dx10_fixtures.cpp`.
+- Public headers use concise library nouns: `archive.hpp`, `writer.hpp`, `validation.hpp`.
+- Internal implementation files use lowercase snake_case and include the format family in the filename: `tes4_bsa_parser.cpp`, `ba2_dx10_prepare.cpp`, `writer_publish.cpp`.
+- Format pipelines use repeated stage suffixes: `*_parser.*`, `*_reader.*`, `*_prepare.*`, `*_layout.*`, `*_serialize.*`, `*_writer.*`.
 
 **Directories:**
-- Public include namespace is mirrored by `include/libbsa/`.
-- Private implementation namespace groupings map to `src/detail/`, `src/formats/bsa/`, `src/formats/ba2/`, and `src/texture/`.
-- Tests are grouped by role: `tests/unit/`, `tests/fixtures/generated/`, `tests/package-consumer/`, and `tests/export-surface/`.
-- Documentation lives under `docs/`; planning/workflow state lives under `.planning/` and `openspec/`.
+- Top-level runtime code is grouped by responsibility: `include/libbsa/`, `src/detail/`, `src/formats/`, `src/texture/`.
+- Format families live one level deeper under `src/formats/bsa/` and `src/formats/ba2/`.
+- Tests are split by purpose rather than mirroring source one-to-one: `tests/unit/`, `tests/fixtures/`, `tests/package-consumer/`.
 
 ## Where to Add New Code
 
-**New Public Reader Feature:**
-- Primary public API: `include/libbsa/archive.hpp`
-- Facade implementation: `src/archive.cpp`
-- Format-specific parsing/lookup/extraction: `src/formats/bsa/` or `src/formats/ba2/`
-- Shared helpers: `src/detail/`
-- Tests: `tests/unit/archive_reader_tests.cpp` plus format-specific tests such as `tests/unit/tes4_bsa_reader_tests.cpp` or `tests/unit/ba2_dx10_extraction_tests.cpp`
-- Documentation: `docs/target-format-guide.md`, `docs/thread-safety.md`, or `docs/integration-examples.md` as applicable.
+**New public feature:**
+- Primary code: add the public surface in `include/libbsa/` and implement it in the matching `src/` facade file such as `src/archive.cpp`, `src/validation.cpp`, or the relevant `src/formats/*/*_writer.cpp`.
+- Tests: add Catch2 coverage in `tests/unit/` and use fixture generators under `tests/fixtures/generated/` when bytes-on-disk evidence is needed.
 
-**New Public Writer Feature:**
-- Primary public API: `include/libbsa/writer.hpp`
-- Public writer façade: corresponding `src/formats/*/*_writer.cpp`
-- Validation/materialization: corresponding `src/formats/*/*_prepare.*`
-- Offset/dedupe layout: corresponding `src/formats/*/*_layout.*`
-- Byte serialization: corresponding `src/formats/*/*_serialize.*`
-- Publish logic reuse: `src/detail/writer_publish.*`
-- Tests: writer-focused files in `tests/unit/` such as `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/ba2_gnrl_writer_tests.cpp`, or `tests/unit/ba2_dx10_writer_tests.cpp`
+**New archive variant within an existing family:**
+- Detection/parsing: add or extend files under `src/formats/bsa/` or `src/formats/ba2/`.
+- Shared helpers: only add to `src/detail/` if the helper is truly format-agnostic.
+- Public exposure: wire the new variant into `include/libbsa/archive.hpp` or `include/libbsa/writer.hpp` only after the internal pipeline exists.
 
-**New Archive Format Variant:**
-- Detection: `src/formats/bsa/bsa_format_detector.*` or `src/formats/ba2/ba2_format_detector.*`
-- Parser: add or extend `src/formats/<family>/<variant>_parser.*`
-- Reader: add or extend `src/formats/<family>/<variant>_reader.*`
-- Writer: add/extend `*_writer.*`, `*_prepare.*`, `*_layout.*`, and `*_serialize.*` for the relevant family.
-- Public target enums/metadata: `include/libbsa/archive.hpp` and/or `include/libbsa/writer.hpp`
-- Dispatch: `src/archive.cpp`
-- Tests and fixtures: `tests/unit/` and `tests/fixtures/generated/`
+**New component/module:**
+- Implementation: keep format-specific code beside its owning family in `src/formats/bsa/` or `src/formats/ba2/`; keep cross-family services in `src/detail/`; keep DDS-specific code in `src/texture/`.
 
-**New Shared Utility:**
-- Primary code: `src/detail/<utility_name>.hpp` and `src/detail/<utility_name>.cpp`
-- CMake source registration: `CMakeLists.txt` in `libbsa_library_sources`
-- Tests: `tests/unit/<utility_name>_tests.cpp` and `tests/CMakeLists.txt`
-- Use when: The utility serves multiple format modules or enforces an internal architectural policy.
+**Utilities:**
+- Shared helpers: `src/detail/`.
+- Test-only helpers or fixture generators: `tests/fixtures/generated/` or additional files under `tests/unit/`.
 
-**New Texture/DDS Behavior:**
-- DirectXTex-backed metadata/source analysis: `src/texture/directxtex_analyzer.*`
-- DDS math/header/chunk planning independent of DirectXTex: `src/texture/dds_layout.*`
-- BA2 DX10 integration: `src/formats/ba2/ba2_dx10_*`
-- Tests: `tests/unit/dds_layout_tests.cpp`, `tests/unit/ba2_dx10_parser_tests.cpp`, `tests/unit/ba2_dx10_metadata_tests.cpp`, `tests/unit/ba2_dx10_writer_tests.cpp`
-
-**New Validation Rule:**
-- Public warning/error shape: `include/libbsa/validation.hpp`
-- Implementation: `src/validation.cpp`
-- Evidence docs: `docs/compatibility-evidence.md` and `docs/target-format-guide.md`
-- Tests: `tests/unit/validation_api_tests.cpp`, `tests/unit/validation_policy_tests.cpp`, `tests/unit/compatibility_warning_tests.cpp`
-
-**New Test Fixture:**
-- Generator source: `tests/fixtures/generated/generate_<family>_fixtures.cpp`
-- Archive/manifests: `tests/fixtures/generated/archives/`
-- CMake custom target and byproducts: `tests/CMakeLists.txt`
-- Tests consuming fixture: `tests/unit/<subject>_tests.cpp`
-
-**New Package/Export Behavior:**
-- Build config: `CMakeLists.txt` and `cmake/libbsaConfig.cmake.in`
-- Consumer smoke test: `tests/package-consumer/`
-- Export surface check: `tests/export-surface/check-dll-exports.cmake`
-- Public macro/API: `include/libbsa/export.hpp` and public headers requiring `LIBBSA_API`.
-
-**New Documentation:**
-- API docs: Doxygen comments in `include/libbsa/*.hpp` plus `docs/api-mainpage.md`.
-- Consumer guide: `docs/integration-examples.md`.
-- Policy/format docs: `docs/thread-safety.md`, `docs/target-format-guide.md`, `docs/compatibility-evidence.md`.
-- Project scope docs: `README.md`, `docs/PRD.md`, `AGENTS.md`.
+**New documentation or policy:**
+- User/developer guidance: `docs/`.
+- Planning/change workflow artifacts: `openspec/`.
 
 ## Special Directories
 
 **`TES5Edit/`:**
-- Purpose: Behavioral reference for BSArchPro-compatible behavior.
+- Purpose: Read-only compatibility reference.
 - Generated: No.
-- Committed: Yes, as a read-only submodule/reference.
-- Rule: Never modify, format, stage, compile, or use as a writable test fixture.
-
-**`vcpkg_installed/`:**
-- Purpose: Local vcpkg build/install output for dependencies such as DirectXTex.
-- Generated: Yes.
-- Committed: No for normal source changes; treat as build output.
-- Rule: Do not document or depend on generated absolute paths from this directory in source code.
-
-**`build*/` / CMake build trees:**
-- Purpose: CMake configure/build/test outputs.
-- Generated: Yes.
-- Committed: No.
-- Rule: Do not place source, fixtures, docs, or planning artifacts under build output directories.
+- Committed: Yes, as a submodule/reference boundary.
 
 **`tests/fixtures/generated/archives/`:**
-- Purpose: Synthetic archive fixtures and JSON manifests for tests.
-- Generated: Yes, by fixture generator targets in `tests/CMakeLists.txt`.
-- Committed: Yes for stable generated fixtures/manifests that tests consume.
-- Rule: Keep fixtures legal and synthetic; update generator source and byproduct lists with fixture changes.
+- Purpose: Committed synthetic archive fixtures and manifests.
+- Generated: Yes.
+- Committed: Yes.
 
-**`openspec/changes/archive/`:**
-- Purpose: Archived OpenSpec changes and their completed artifacts.
-- Generated: Workflow-managed.
-- Committed: Yes when workflow artifacts are part of project history.
-- Rule: Do not treat archived change artifacts as implementation source; use `openspec/specs/` and active change artifacts for planning context.
+**`tests/fixtures/local/`:**
+- Purpose: Ignored local game-derived fixture location.
+- Generated: Mixed/local-only.
+- Committed: No, except placeholder `.gitkeep`.
+
+**`build/`:**
+- Purpose: Preset-specific build trees.
+- Generated: Yes.
+- Committed: No.
+
+**`vcpkg_installed/`:**
+- Purpose: Local dependency install tree from vcpkg manifest mode.
+- Generated: Yes.
+- Committed: No.
 
 **`.planning/codebase/`:**
-- Purpose: Generated codebase map documents for GSD planning/execution.
+- Purpose: GSD-generated codebase reference documents for later planning/execution commands.
 - Generated: Yes.
-- Committed: Workflow-dependent.
-- Rule: Documents describe current state and guide future agents; code must not include or depend on them.
+- Committed: Yes, when project workflow captures planning artifacts.
 
-**`.claude/skills/`, `.cursor/skills/`, `.codex/skills/`, `.windsurf/skills/`, `.agent/skills/`:**
-- Purpose: Assistant workflow skill instructions, primarily OpenSpec in this repository.
-- Generated: Tool/workflow-managed.
-- Committed: Yes when project-local workflow support is intended.
-- Rule: Skill files guide agent behavior only; do not compile or include them in libbsa.
+**`.claude/skills/`:**
+- Purpose: Project-local assistant skill indexes used by OpenSpec workflow helpers.
+- Generated: No.
+- Committed: Yes.
 
 ---
 
-*Structure analysis: 2026-05-11*
+*Structure analysis: 2026-05-12*
