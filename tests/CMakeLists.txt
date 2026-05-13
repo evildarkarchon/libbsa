@@ -88,6 +88,7 @@ add_executable(libbsa_tests
   unit/compression_router_tests.cpp
   unit/host_file_tests.cpp
   unit/host_file_writer_name_tests.cpp
+  unit/host_path_correctness_boundary_tests.cpp
   unit/bethesda_hash_tests.cpp
 )
 
