@@ -129,3 +129,41 @@ TEST_CASE("parser archive-file opens use the shared host_file seam", "[unit][hos
     REQUIRE(text.find("std::ifstream input{std::string{host_path}, std::ios::binary}") == std::string::npos);
   }
 }
+
+TEST_CASE("reader reopen declarations consume the shared host_file_path contract", "[unit][host_file]") {
+  const auto root = source_root();
+  constexpr auto reader_headers = std::to_array<std::string_view>({"src/formats/bsa/tes3_bsa_reader.hpp",
+                                                                   "src/formats/bsa/tes4_bsa_reader.hpp",
+                                                                   "src/formats/ba2/ba2_gnrl_reader.hpp",
+                                                                   "src/formats/ba2/ba2_dx10_reader.hpp"});
+
+  for (const auto relative_path : reader_headers) {
+    const auto text = read_text_file(root / relative_path);
+    INFO("Source file: " << relative_path);
+    REQUIRE(text.find("host_file_path") != std::string::npos);
+    REQUIRE(text.find("std::string_view host_path") == std::string::npos);
+  }
+}
+
+TEST_CASE("reader reopen implementations use open_host_file instead of raw caller text", "[unit][host_file]") {
+  const auto root = source_root();
+  constexpr auto reader_sources = std::to_array<std::string_view>({"src/formats/bsa/tes3_bsa_reader.cpp",
+                                                                   "src/formats/bsa/tes4_bsa_reader.cpp",
+                                                                   "src/formats/ba2/ba2_gnrl_reader.cpp",
+                                                                   "src/formats/ba2/ba2_dx10_reader.cpp"});
+
+  for (const auto relative_path : reader_sources) {
+    const auto text = read_text_file(root / relative_path);
+    INFO("Source file: " << relative_path);
+    REQUIRE(text.find("open_host_file(") != std::string::npos);
+    REQUIRE(text.find("std::ifstream input{std::string{host_path}, std::ios::binary}") == std::string::npos);
+  }
+}
+
+TEST_CASE("archive_reader extraction dispatch reuses the stored resolved host path", "[unit][host_file]") {
+  const auto archive_text = read_text_file(source_root() / "src/archive.cpp");
+
+  REQUIRE(archive_text.find("detail::host_file_path") != std::string::npos);
+  REQUIRE(archive_text.find("state_->host_path, *found.value(), sink") != std::string::npos);
+  REQUIRE(archive_text.find("state_->host_path.original_utf8, *found.value(), sink") == std::string::npos);
+}
