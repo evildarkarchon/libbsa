@@ -21,7 +21,7 @@ result<std::size_t> checked_buffer_size(std::uint64_t size, const host_file_cont
   return static_cast<std::size_t>(size);
 }
 
-result<void> validate_expected_host_file_size(std::string_view host_path,
+result<void> validate_expected_host_file_size(const std::filesystem::path& host_path,
                                               std::uint64_t expected_size,
                                               const host_file_context& context) {
   auto actual_size = inspect_host_file_size(host_path, context);
@@ -65,30 +65,37 @@ result<void> reject_appended_host_file_byte(std::ifstream& input, const host_fil
 
 } // namespace
 
-result<std::ifstream> open_host_file(std::string_view host_path, const host_file_context& context) {
-  std::ifstream input{std::filesystem::path{std::string{host_path}}, std::ios::binary};
+result<std::ifstream> open_host_file(const std::filesystem::path& host_path, const host_file_context& context) {
+  std::ifstream input{host_path, std::ios::binary};
   if (!input) {
     return io_error(context.open_error);
   }
   return input;
 }
 
-result<std::uint64_t> inspect_host_file_size(std::string_view host_path, const host_file_context& context) {
-  const auto path = std::filesystem::path{std::string{host_path}};
+result<std::ifstream> open_host_file(const host_file_path& host_path, const host_file_context& context) {
+  return open_host_file(host_path.resolved, context);
+}
+
+result<std::uint64_t> inspect_host_file_size(const std::filesystem::path& host_path, const host_file_context& context) {
   std::error_code fs_error;
-  const bool regular_file = std::filesystem::is_regular_file(path, fs_error);
+  const bool regular_file = std::filesystem::is_regular_file(host_path, fs_error);
   if (fs_error || !regular_file) {
     return io_error(context.inspect_error);
   }
 
-  const auto size = std::filesystem::file_size(path, fs_error);
+  const auto size = std::filesystem::file_size(host_path, fs_error);
   if (fs_error) {
     return io_error(context.inspect_error);
   }
   return size;
 }
 
-result<std::vector<std::byte>> read_host_file_exact(std::string_view host_path,
+result<std::uint64_t> inspect_host_file_size(const host_file_path& host_path, const host_file_context& context) {
+  return inspect_host_file_size(host_path.resolved, context);
+}
+
+result<std::vector<std::byte>> read_host_file_exact(const std::filesystem::path& host_path,
                                                     std::uint64_t expected_size,
                                                     const host_file_context& context) {
   auto size_valid = validate_expected_host_file_size(host_path, expected_size, context);
@@ -120,7 +127,14 @@ result<std::vector<std::byte>> read_host_file_exact(std::string_view host_path,
   return std::move(bytes).value();
 }
 
-result<std::vector<std::byte>> read_host_file_exact(std::string_view host_path, const host_file_context& context) {
+result<std::vector<std::byte>> read_host_file_exact(const host_file_path& host_path,
+                                                    std::uint64_t expected_size,
+                                                    const host_file_context& context) {
+  return read_host_file_exact(host_path.resolved, expected_size, context);
+}
+
+result<std::vector<std::byte>> read_host_file_exact(const std::filesystem::path& host_path,
+                                                    const host_file_context& context) {
   auto size = inspect_host_file_size(host_path, context);
   if (!size) {
     return size.error();
@@ -128,7 +142,11 @@ result<std::vector<std::byte>> read_host_file_exact(std::string_view host_path, 
   return read_host_file_exact(host_path, size.value(), context);
 }
 
-result<std::vector<std::byte>> read_host_file_prefix(std::string_view host_path,
+result<std::vector<std::byte>> read_host_file_exact(const host_file_path& host_path, const host_file_context& context) {
+  return read_host_file_exact(host_path.resolved, context);
+}
+
+result<std::vector<std::byte>> read_host_file_prefix(const std::filesystem::path& host_path,
                                                      std::size_t max_bytes,
                                                      const host_file_context& context) {
   auto input = open_host_file(host_path, context);
@@ -159,7 +177,13 @@ result<std::vector<std::byte>> read_host_file_prefix(std::string_view host_path,
   return std::move(bytes).value();
 }
 
-result<void> for_each_host_file_chunk(std::string_view host_path,
+result<std::vector<std::byte>> read_host_file_prefix(const host_file_path& host_path,
+                                                     std::size_t max_bytes,
+                                                     const host_file_context& context) {
+  return read_host_file_prefix(host_path.resolved, max_bytes, context);
+}
+
+result<void> for_each_host_file_chunk(const std::filesystem::path& host_path,
                                       std::uint64_t expected_size,
                                       const host_file_context& context,
                                       const std::function<result<void>(std::span<const std::byte>)>& callback,
@@ -200,6 +224,14 @@ result<void> for_each_host_file_chunk(std::string_view host_path,
   }
 
   return reject_appended_host_file_byte(input.value(), context);
+}
+
+result<void> for_each_host_file_chunk(const host_file_path& host_path,
+                                      std::uint64_t expected_size,
+                                      const host_file_context& context,
+                                      const std::function<result<void>(std::span<const std::byte>)>& callback,
+                                      std::size_t chunk_size) {
+  return for_each_host_file_chunk(host_path.resolved, expected_size, context, callback, chunk_size);
 }
 
 } // namespace libbsa::detail
