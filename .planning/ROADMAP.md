@@ -48,20 +48,23 @@ v1.1 hardens the shipped library rather than broadening it. The milestone follow
   1. Consumer can open representative supported BSA and BA2 archives from Windows host paths containing non-ASCII characters.
   2. Consumer can validate representative supported BSA and BA2 archives from Windows host paths containing non-ASCII characters.
   3. Maintainer can run committed regression tests that prove non-ASCII host-path open and validate coverage for representative BSA and BA2 families.
-**Plans**: 4 plans
+**Plans**: 5 plans
 
 Plans:
 **Wave 1**
 - [x] 13-01-PLAN.md - Rename and generalize the shared host-file helper into the locked `host_file` family and remove old helper names.
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [x] 13-02-PLAN.md - Resolve and store host paths once at open time, then migrate parser contracts and parser opens onto that boundary.
+- [x] 13-02-PLAN.md - Introduce the shared internal `host_file_path` contract and migrate the shared helper plus writer call sites onto it per D-14.
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [x] 13-03-PLAN.md - Rewire extraction contracts, concrete reader reopens, and validation setup onto the single stored host-path boundary.
+- [x] 13-03-PLAN.md - Resolve and store host paths once at open time, then migrate parser contracts and parser opens onto that boundary.
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [x] 13-04-PLAN.md - Remove validation preflight drift and prove non-ASCII host-path open, validation, and canonical extraction with one dedicated cross-family regression suite.
+- [x] 13-04-PLAN.md - Rewire reader reopens and validation setup onto the single stored host-path boundary while preserving public semantics.
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [x] 13-05-PLAN.md - Prove non-ASCII host-path open, validation, and canonical extraction with one dedicated cross-family regression suite.
 
 ### Phase 14: Verification Lane Truthfulness
 **Goal**: Maintainers can rely on the documented hardening lanes because the supported Release and ASan flows are checked in, runnable, and consistently described.
@@ -108,7 +111,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 13. Host Path Correctness Boundary | v1.1 | 4/4 | Repair pending | 2026-05-13 |
+| 13. Host Path Correctness Boundary | v1.1 | 5/5 | Repair pending | 2026-05-13 |
 | 14. Verification Lane Truthfulness | v1.1 | 0/TBD | Not started | - |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 0/TBD | Not started | - |
 | 16. Parser and Preparer Seam Extraction | v1.1 | 0/TBD | Not started | - |

@@ -1,0 +1,10 @@
+{
+  "permission": {
+    "read": {
+      "J:/libbsa/.kilo/get-shit-done/*": "allow"
+    },
+    "external_directory": {
+      "J:/libbsa/.kilo/get-shit-done/*": "allow"
+    }
+  }
+}
