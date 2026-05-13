@@ -1,356 +1,437 @@
-# Architecture Research
+# Architecture Research: v1.1 Hardening Integration
 
-**Domain:** Reusable C++20 Bethesda BSA/BA2 archive-format library  
-**Researched:** 2026-05-07  
-**Confidence:** HIGH for component boundaries and build order; MEDIUM for Starfield edge-case details until fixture validation expands
+**Project:** libbsa  
+**Milestone:** v1.1 Hardening  
+**Researched:** 2026-05-12  
+**Scope:** Integration work only; keep the existing public API and format-family layout intact.  
+**Confidence:** HIGH for integration points and build order; MEDIUM for the exact BA2 DX10 temp-staging redesign until implemented against fixtures.
 
-## Standard Architecture
+## Executive Recommendation
 
-### System Overview
+Treat v1.1 as a **targeted internal-boundary cleanup**, not an architecture rewrite. The existing shape is sound: public API in `include/libbsa/`, orchestration in `src/archive.cpp` / `src/validation.cpp`, and format families under `src/formats/bsa` and `src/formats/ba2`.
 
-libbsa should be structured as a small public facade over format-specific readers/writers, shared binary primitives, and dependency adapters. The public API should describe archives, entries, options, streams, and errors in libbsa-owned types only. Compression libraries, DirectXTex, host filesystem details, and TES5Edit/Delphi concepts belong behind internal boundaries.
+The right integration move is to add **three small internal seams**:
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                              Public API layer                                │
-│  archive_reader  archive_writer  archive_entry  archive_metadata  result<T> │
-│  input_source    output_sink     read_options   write_options     errors    │
-├──────────────────────────────────────┬───────────────────────────────────────┤
-│                 Facade / dispatch layer                                      │
-│  detect_archive() → format registry → selected reader/writer implementation  │
-├──────────────────────────────────────┴───────────────────────────────────────┤
-│                         Format implementation layer                          │
-│  tes3_bsa   tes4_bsa/v103   fo3_sse_bsa/v104-v105   ba2_gnrl   ba2_dx10     │
-│  parsers    serializers     index builders         path/hash rules          │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                         Shared internal services                             │
-│  binary reader/writer  endian helpers  offset/size guards  normalized paths  │
-│  hash algorithms       index model     payload planner      diagnostics      │
-├───────────────────────────────┬───────────────────────────────┬──────────────┤
-│       Compression adapters     │       Texture/DDS adapter      │   I/O core   │
-│  deflate_codec (libdeflate)    │  dds_analyzer (DirectXTex)     │  file/stream │
-│  lz4_frame_codec (SSE BSA)     │  dds_header_builder            │  bounded buf │
-│  lz4_block_codec (SF BA2 v3)   │  mip_chunk_planner             │  sinks       │
-└───────────────────────────────┴───────────────────────────────┴──────────────┘
-```
+1. **One Windows host-path boundary** for all host-file open/read/size operations.
+2. **One open-time reader backend** stored in `archive_reader::state` so dispatch happens once.
+3. **One BA2 DX10 staging/session boundary** so temp-snapshot lifetime is scoped to `write_to`, not the writer object's lifetime.
 
-### Component Responsibilities
+Do **not** redesign the public API, do **not** invent a generic plugin/registry system, and do **not** split every parser/preparer file in the milestone. Extract only the hotspots already called out by the concerns audit.
 
-| Component | Responsibility | Ownership / Boundary | Typical Implementation |
-|-----------|----------------|----------------------|------------------------|
-| Public facade | Open archives, create writers, list/query entries, extract to sinks, finalize new archives | Owns stable user-facing API and ABI policy; no third-party headers | `include/libbsa/archive.hpp`, `reader.hpp`, `writer.hpp`, `types.hpp`, `result.hpp` |
-| Format registry / detector | Read magic/version/type fields and choose TES3, TES4-family BSA, BA2 GNRL, or BA2 DX10 implementation | Internal only; selected by bytes, not file extension | Small ordered detection table plus format-specific `probe()` functions |
-| Format readers | Parse headers, indexes, names, hashes, offsets, flags, and payload descriptors | Own parsed archive model; borrow I/O source for extraction | `tes3_reader`, `bsa_reader`, `ba2_gnrl_reader`, `ba2_dx10_reader` |
-| Format writers | Convert caller inputs into sorted indexes, records, payloads, file tables, and final headers | Own write plan and payload manifest until finalize | Builder/finalizer split: collect entries → plan → stream payloads → emit tables/header |
-| Internal archive model | Canonical in-memory representation for entries, folders, payload chunks, compression method, and texture metadata | Internal compatibility model; public metadata is a projection | POD/value structs with explicit integer widths and checked offsets |
-| Binary I/O core | Bounded reads/writes, little-endian primitives, exact-size reads, seek validation, overflow checks | Internal; no whole-archive loading as default | `input_source`, `random_access_reader`, `output_sink`, `binary_reader`, `binary_writer` |
-| Path normalization | Convert user paths to archive virtual paths; implement case/separator rules per family | Internal rules; public accepts UTF-8/string-like virtual paths | `archive_path` value type internally; avoid `std::filesystem::path` for archive names |
-| Hash algorithms | TES3 hash, TES4 folder/file hash, FO4 CRC/hash behavior | Internal but heavily unit-tested because lookup/order compatibility depends on it | Pure functions in `format/*/hash.*` |
-| Compression adapters | Exact-size compress/decompress for deflate, LZ4 frame, and raw LZ4 block | Internal; owns library handles/buffers; public sees only compression metadata | `deflate_codec`, `lz4_frame_codec`, `lz4_block_codec` |
-| DDS analysis boundary | Parse DDS metadata, reconstruct DDS headers, plan BA2 DX10 mip chunks | Internal; translates DirectXTex data into libbsa-native structs | `texture/dds_analyzer`, `dds_header_builder`, `mip_chunk_planner` |
-| Compatibility oracle process | Trace TES5Edit/BSArchPro behavior and encode findings as tests/comments | Reference only; never compile or copy TES5Edit source | Research notes, fixture expected values, focused tests |
+---
 
-## Recommended Project Structure
+## Current Integration Baseline
 
-```
-include/libbsa/
-├── archive.hpp             # Public reader/writer factories and archive facade
-├── reader.hpp              # Public read/query/extract API
-├── writer.hpp              # Public archive creation/finalization API
-├── types.hpp               # Public enums, metadata, entry descriptors, options
-├── result.hpp              # C++20-compatible result/error API
-└── version.hpp             # Library version and feature macros
+The current architecture already gives good anchors:
 
-src/
-├── public/                 # Thin facade implementations; no format logic
-├── io/                     # Random-access input, output sinks, binary reader/writer
-├── core/                   # Errors, ranges, checked arithmetic, normalized paths
-├── registry/               # Format probing and dispatch
-├── compression/            # libdeflate/lz4 wrappers only
-├── texture/                # DirectXTex adapter and DDS-native metadata
-└── formats/
-    ├── tes3/               # Morrowind BSA parser/writer/hash/offset rules
-    ├── bsa/                # TES4/FO3/FNV/Skyrim LE/SSE BSA shared implementation
-    └── ba2/
-        ├── common/         # BTDX headers, versions, file table helpers
-        ├── gnrl/           # FO4/SF general BA2 records and payloads
-        └── dx10/           # Texture BA2 records, chunk records, DDS reconstruction
+- Public API remains dependency-light and C++20-safe.
+- `archive_reader::open` is the single entry point for read/list/extract state.
+- Format families are already separated by directory.
+- Writers already use staged prepare → layout → serialize → publish flow.
 
-tests/
-├── unit/                   # Hash, binary I/O, compression, serialization units
-├── fixtures/               # Small immutable archives and source file sets
-├── integration/            # Open/extract/list tests by format family
-├── roundtrip/              # Pack → read → extract → compare source
-└── compat/                 # BSArchPro/official-tool comparison expectations
-```
+The hardening issues are integration problems at the seams:
 
-### Structure Rationale
+- host-path I/O is duplicated and inconsistent
+- `archive.cpp` repeats format branching after open
+- large parser/preparer units mix file access, validation, and business rules
+- BA2 DX10 temp snapshots live too long and clean up too late
 
-- **Public headers stay flat and minimal:** Consumers should not include `lz4.h`, `libdeflate.h`, DirectXTex headers, Windows headers, or format-record internals just to open an archive.
-- **Format families own quirks:** TES3 data-section-relative offsets, TES4 embedded-name handling, BSA hash ordering, BA2 file table offsets, and Starfield `CompressionMethod` branches should live with their format implementation rather than in shared generic code.
-- **Shared services are boring and testable:** Binary I/O, overflow checks, normalized archive paths, and compression adapters should be independent of archive families so malformed-input hardening can be tested once and reused everywhere.
-- **DDS is a boundary, not a public concept:** Public APIs can expose texture metadata as libbsa enums/integers. DirectXTex is an implementation detail used to analyze DDS files and reconstruct headers for BA2 DX10.
+---
 
-## Architectural Patterns
+## Recommended Integration Map
 
-### Pattern 1: Public Facade + Internal Format Strategy
+| Concern | Modify Existing | Introduce New | Why This Shape Fits v1.1 |
+|---|---|---|---|
+| Non-ASCII host-path support | `src/archive.cpp`, `src/validation.cpp`, all `*_parser.cpp` / `*_reader.cpp` host-file entry points, `src/detail/writer_disk_source.cpp` | `src/detail/host_path_io.hpp/.cpp` | Centralizes Windows path conversion once without changing public headers. |
+| Reader-dispatch cleanup | `src/archive.cpp` | `src/detail/archive_reader_backend.hpp` or a private backend struct local to `src/archive.cpp` | Keeps open-time format selection but removes repeated runtime branching. |
+| Parser/preparer extraction | `src/formats/bsa/tes4_bsa_parser.cpp`, `src/formats/ba2/ba2_dx10_prepare.cpp` | Focused helpers adjacent to those files | Shrinks fragile units without forcing a cross-format abstraction. |
+| Temp-staging risk reduction | `src/formats/ba2/ba2_dx10_writer.cpp`, `src/formats/ba2/ba2_dx10_prepare.cpp`, `src/formats/ba2/ba2_dx10_prepare.hpp` | `src/formats/ba2/ba2_dx10_stage_session.hpp/.cpp` or `ba2_dx10_snapshot_store.hpp/.cpp` | Shortens temp-data lifetime and makes cleanup explicit inside the write pipeline. |
 
-**What:** Public `archive_reader`/`archive_writer` delegates to an internal `archive_impl` chosen by `detect_archive()` or an explicit target format.  
-**When to use:** Always for archive open/create operations.  
-**Trade-offs:** Adds one indirection, but prevents format-specific details from leaking into the public API and allows new versions to be added by registering a new internal strategy.
+---
+
+## 1. Non-ASCII Host-Path Support
+
+### Architectural decision
+
+Keep the **public API unchanged** (`std::string_view host_path`), but make that string pass through a single internal Windows-aware host-path layer before any file open or size inspection.
+
+### New component
+
+**Introduce:** `src/detail/host_path_io.hpp/.cpp`
+
+Recommended responsibilities:
+
+- convert public UTF-8 host-path text into a Windows `std::filesystem::path`
+- open `std::ifstream` / `std::ofstream` using the filesystem path overloads
+- provide shared helpers for:
+  - `read_prefix`
+  - `file_size`
+  - `open_input`
+  - `open_output`
+  - optional `path_exists` / `is_regular_file`
+
+### Existing files to modify
+
+- `src/archive.cpp`
+  - replace `read_detection_prefix` narrow open
+  - replace `archive_file_size` narrow open
+- `src/validation.cpp`
+  - replace `host_path_can_be_opened`
+- `src/formats/bsa/tes3_bsa_parser.cpp`
+- `src/formats/bsa/tes4_bsa_parser.cpp`
+- `src/formats/ba2/ba2_gnrl_parser.cpp`
+- `src/formats/ba2/ba2_dx10_parser.cpp`
+- `src/formats/bsa/tes3_bsa_reader.cpp`
+- `src/formats/bsa/tes4_bsa_reader.cpp`
+- `src/formats/ba2/ba2_gnrl_reader.cpp`
+- `src/formats/ba2/ba2_dx10_reader.cpp`
+- `src/detail/writer_disk_source.cpp`
+  - rebase its open/inspect logic onto the same helper so writer and reader behavior match
+
+### Integration rule
+
+Do not let parser/reader files construct `std::ifstream{std::string{host_path}}` directly anymore. Host-path conversion should become an internal policy boundary, not a repeated local choice.
+
+### Test impact
+
+Add or extend:
+
+- `tests/unit/archive_reader_tests.cpp`
+- `tests/unit/validation_api_tests.cpp`
+- `tests/unit/writer_disk_source_tests.cpp`
+- one reader test per family that opens a fixture copied to a non-ASCII temp path
+
+### Warning
+
+Do **not** widen the public API to `std::filesystem::path` in v1.1. That is a public-surface decision, not a hardening fix.
+
+---
+
+## 2. Reader-Dispatch Cleanup
+
+### Architectural decision
+
+Dispatch once during `archive_reader::open`, then store backend operations in `archive_reader::state`.
+
+The concerns audit is correct: `entries`, `find`, `contains`, `extract`, and `extract_entries` should not all re-check `archive_variant`, `archive_type`, and `is_ba2_dx10`.
+
+### Recommended shape
+
+Keep `archive_reader::state` private inside `src/archive.cpp`, but add a backend bundle:
 
 ```cpp
-// Public shape: callers depend on libbsa types only.
-libbsa::result<libbsa::archive_reader> archive_reader::open(input_source source,
-                                                            read_options options);
-
-// Internal shape: detection selects a concrete implementation.
-auto probe = registry.probe(source);
-return make_reader_impl(probe.format, std::move(source), options);
-```
-
-### Pattern 2: Payload Descriptor Before Payload Bytes
-
-**What:** Parsers produce `payload_descriptor` values containing offset, packed size, unpacked size, compression method, embedded-name expectations, and chunk metadata before any extraction occurs.  
-**When to use:** All readers; especially BA2 DX10 where one logical DDS file spans multiple chunks.  
-**Trade-offs:** Requires a richer internal model, but makes random access, streaming extraction, validation, and future parallel extraction straightforward.
-
-```cpp
-struct payload_descriptor {
-  std::uint64_t offset;
-  std::uint64_t packed_size;
-  std::uint64_t unpacked_size;
-  compression_kind compression;
-  std::vector<chunk_descriptor> chunks; // Empty for single-payload files.
+struct archive_reader_backend {
+  result<std::vector<entry_metadata>> (*entries)(std::span<const entry_metadata>);
+  result<std::optional<entry_metadata>> (*find)(std::span<const entry_metadata>, std::string_view);
+  result<bool> (*contains)(std::span<const entry_metadata>, std::string_view);
+  result<void> (*extract)(std::string_view host_path, const entry_metadata&, payload_sink&);
 };
 ```
 
-### Pattern 3: Dependency Adapter With Exact-Size Contracts
+Then extend `archive_reader::state` with:
 
-**What:** Wrap third-party compression libraries in small internal adapters that require expected output sizes and return libbsa errors on mismatch.  
-**When to use:** Every compression/decompression call.  
-**Trade-offs:** Slight wrapper code, but it centralizes allocation, library error mapping, and frame-vs-block separation.
+- `archive_reader_backend backend`
+- keep `metadata`, `entries`, `host_path`
+- remove `is_ba2_dx10` once backend selection fully replaces it
 
-```cpp
-result<std::vector<std::byte>> lz4_block_codec::decompress(std::span<const std::byte> packed,
-                                                           std::uint32_t expected_size);
-```
+### Existing files to modify
 
-### Pattern 4: Read-First, Write-From-Parsed-Model
+- `src/archive.cpp` only for the dispatch refactor
 
-**What:** Build readers and parsed internal models before writers. Writers should reuse serialization, hash, ordering, compression, and DDS planning tests derived from reader fixtures.  
-**When to use:** Roadmap/phase ordering.  
-**Trade-offs:** Delays archive creation features, but sharply reduces compatibility risk because write output can be re-opened by libbsa and compared against fixture behavior.
+Optional small follow-up if needed:
 
-### Pattern 5: Reference Behavior as Tests, Not Source
+- reader headers stay unchanged
+- format reader implementations stay unchanged
 
-**What:** Trace TES5Edit/BSArchPro behavior for compatibility constraints, then encode the discovered behavior as test fixtures, expected hashes/orderings, and comments explaining non-obvious WHY.  
-**When to use:** Any behavior that is undocumented or surprising: sorting, embedded names, flags, offset bases, compression method branches, DDS chunk layout.  
-**Trade-offs:** Requires careful documentation, but preserves the hard boundary: no TES5Edit edits, vendoring, formatting, or compiled dependency.
+### Why this is the right boundary
 
-## Public vs Internal API Separation
+- no public ABI change
+- no format-registry framework
+- no virtual inheritance required
+- open-time branching remains explicit and easy to review
+- later archive-family additions touch one open-time selection block instead of every public method
 
-| Keep Public | Keep Internal |
-|-------------|---------------|
-| `archive_reader`, `archive_writer`, `archive_entry`, `archive_metadata` | Raw on-disk header/record structs |
-| `input_source` / `output_sink` abstractions or factory helpers | Concrete file handles, memory mapping details, buffering strategy |
-| `archive_format`, `compression_kind`, `read_options`, `write_options` | Format probe table, version-specific parser classes |
-| `result<T>`, `error`, `error_code`, diagnostic strings | Third-party library status codes and handles |
-| UTF-8 archive virtual paths and entry IDs | Host `std::filesystem::path` normalization rules for archive-internal paths |
-| Texture metadata as libbsa values where useful | DirectXTex types, DXGI helper calls, DDS scratch images |
-| Stable metadata: sizes, flags, hashes, offsets if intentionally exposed | Mutable parse model, sort keys, file table builders, dedup maps |
+### Test impact
 
-Public APIs should avoid promising byte-for-byte writer layout knobs until compatibility behavior is proven. Expose high-level intent first: target format, compression policy, entry path, source bytes/stream, and finalize. Add advanced controls only when tests prove they are necessary for real tools.
+Primary coverage already exists in:
 
-## Data Flow
+- `tests/unit/archive_reader_tests.cpp`
+- `tests/unit/bulk_extraction_tests.cpp`
+- family-specific reader tests
 
-### Read / Extract Flow
+Add targeted tests for:
 
-```
-Caller opens source
-    ↓
-archive_reader::open(source)
-    ↓
-Format detector reads magic/version/type
-    ↓
-Format parser reads header/index/name tables into internal archive model
-    ↓
-Caller lists entries or requests extract(path/hash)
-    ↓
-Path normalizer + hash/index lookup selects payload descriptor
-    ↓
-I/O core reads bounded payload bytes/chunks
-    ↓
-Compression adapter decompresses when descriptor requires it
-    ↓
-BA2 DX10 only: DDS header builder combines metadata + chunks
-    ↓
-Bytes stream to caller-provided output sink
-```
+- `find` / `contains` / `extract` consistency across all families
+- bulk extraction still matching single-entry extraction after backend refactor
 
-Direction is intentionally one-way: public request → internal lookup/model → bounded I/O → adapter transform → caller sink. Format parsers should not call public APIs, and compression/DDS adapters should not know about caller objects.
+### Warning
 
-### Write / Pack Flow
+Do **not** build a generic cross-library plugin registry, RTTI-heavy hierarchy, or heap-owned polymorphic graph here. A tiny internal function-pointer or non-virtual strategy bundle is enough.
 
-```
-Caller creates archive_writer(target_format)
-    ↓
-Caller adds entries from memory or host files with virtual archive paths
-    ↓
-Path normalizer + format rules compute flags, hashes, and validation diagnostics
-    ↓
-For BA2 DX10: DDS analyzer creates libbsa-native texture layout and mip chunks
-    ↓
-Planner sorts indexes, chooses compression methods, detects duplicates, reserves offsets
-    ↓
-Payload writer streams source data through compression adapters into output sink
-    ↓
-Serializer emits format-specific records, file tables, and final header values
-    ↓
-Post-write validation re-opens output where practical for round-trip tests
-```
+---
 
-Direction is collect → plan → stream payloads → serialize metadata. Avoid in-place mutation in early phases because archive tables, offsets, compressed sizes, and deduplication make safe update semantics substantially harder than write-new finalization.
+## 3. Parser / Preparer Extraction
 
-### BA2 DDS Extraction Flow
+### Architectural decision
 
-```
-BA2 DX10 records + chunk records
-    ↓
-texture_layout (internal libbsa struct, not DirectXTex)
-    ↓
-Read/decompress chunks in record order
-    ↓
-DDS header reconstruction from stored metadata
-    ↓
-Header + mip payloads stream to output sink
-```
+Extract **file-I/O and staging helpers**, not the core format rules. The format rules should stay beside their owning parser/preparer.
 
-### BA2 DDS Creation Flow
+### 3A. TES4 BSA parser extraction
 
-```
-Input DDS bytes/file
-    ↓
-DirectXTex adapter parses metadata internally
-    ↓
-Translate to libbsa texture_layout
-    ↓
-Mip chunk planner creates BA2 DX10 chunk descriptors
-    ↓
-Compress chunks according to target BA2 version/method
-    ↓
-Serialize DX10 records and payload chunks
-```
+`src/formats/bsa/tes4_bsa_parser.cpp` is too broad, but the safest v1.1 split is narrow.
 
-## Suggested Build Order and Dependencies
+**Modify:**
 
-| Order | Build Slice | Depends On | Why This Reduces Compatibility Risk |
-|-------|-------------|------------|-------------------------------------|
-| 1 | CMake/vcpkg/Catch2 skeleton, public header shell, `result<T>`, error model | None | Locks down C++20/public dependency boundary before format code grows. |
-| 2 | Binary I/O core, checked arithmetic, endian helpers, bounded buffers | 1 | Every parser/writer needs safe offset and size handling; early hardening prevents repeated bugs. |
-| 3 | Path normalization and hash units for TES3/TES4/FO4 | 1-2 | Lookup and writer ordering compatibility depend on hashes; test them independently before parsing. |
-| 4 | Compression adapters: deflate, LZ4 frame, LZ4 block | 1-2 | Separating frame vs raw block up front avoids SSE/Starfield corruption classes. |
-| 5 | Format detector and TES4-family BSA read path | 1-4 | Covers multiple high-value formats and validates deflate/LZ4 frame plus embedded-name behavior. |
-| 6 | TES3 read path | 1-3 | Adds offset-base variation without compression complexity. |
-| 7 | BA2 GNRL read path | 1-4 | Adds BTDX records, file table parsing, FO4/SF versions, and raw LZ4 block branch. |
-| 8 | DDS analysis boundary and BA2 DX10 read path | 1-4, 7 | Texture archives are more complex; build after common BA2 and compression are proven. |
-| 9 | TES4-family write support | 1-5 | First writer should target the best-understood read model so round-trip can validate immediately. |
-| 10 | BA2 GNRL write support | 1-7, 9 | Reuses BA2 read validation and compression adapters before adding DDS chunk complexity. |
-| 11 | BA2 DX10 write support | 1-8, 10 | DDS chunk planning needs the texture boundary and BA2 serializer to be stable. |
-| 12 | TES3 write support | 1-3, 6, 9 | Simpler format but unique offset/sort behavior; implement once writer framework is proven. |
-| 13 | Performance/multi-threading | All correctness slices | Parallelism should only optimize proven single-threaded behavior to avoid nondeterministic compatibility bugs. |
-| 14 | Hardening/fuzzing/docs/examples | All core features | Malformed input and API docs are most useful once behavior is stable. |
+- `src/formats/bsa/tes4_bsa_parser.cpp`
 
-Recommended roadmap implication: keep the PRD's read-first family sequencing, but ensure the foundation explicitly includes binary I/O, path/hash tests, and compression adapters before the first archive parser. This makes later writer phases less risky because writers can reuse proven readers for round-trip validation.
+**Introduce one or both of:**
 
-## Compatibility Constraints From TES5Edit Reference Behavior
+- `src/formats/bsa/tes4_bsa_file_loader.hpp/.cpp`
+- `src/formats/bsa/tes4_bsa_table_bounds.hpp/.cpp`
 
-These should be treated as compatibility requirements to verify against TES5Edit/BSArchPro and official tool output, not as permission to copy source.
+Recommended extraction targets:
 
-| Constraint | Architectural Placement | Validation Strategy |
-|------------|-------------------------|---------------------|
-| TES5Edit is read-only reference material | Process boundary; never under `src/`, never modified | Git status must not show submodule edits; tests store independent expected values/fixtures. |
-| Hash algorithms and sorted index order drive lookup and writer compatibility | `formats/*/hash.*` and index builders | Unit tests for known path/hash pairs; fixture parse order tests; writer table order round-trips. |
-| TES3 offsets are data-section-relative | `formats/tes3` only | Fixture extraction with non-zero data section base and offset overflow tests. |
-| TES4/FO3/SSE BSA embedded names affect payload offsets and extraction bytes | `formats/bsa` payload descriptor and extractor | Fixtures with/without embedded names; exact extracted bytes compared to reference output. |
-| SSE BSA compressed payloads use LZ4 frame handling, not raw block handling | `compression/lz4_frame_codec` selected by BSA v105 rules | Unit tests reject routing through raw block codec; extraction fixtures. |
-| Starfield BA2 v3 `CompressionMethod == 3` uses raw LZ4 block; other observed methods retain deflate behavior | `formats/ba2` compression selector plus `lz4_block_codec` | Version/method matrix tests with compressed-size/raw-size checks. |
-| BA2 GNRL file names live in a length-prefixed table at `FileTableOffset` | `formats/ba2/common` file table parser | Fixtures with table offset validation, truncation tests, duplicate/empty path diagnostics. |
-| BA2 DX10 logical files are assembled from texture chunk records and reconstructed DDS headers | `formats/ba2/dx10` + `texture` boundary | Extracted DDS must load and match expected metadata/source bytes where possible. |
-| Known Bethesda quirks may require warnings rather than hard failures | Error/diagnostic model | Use structured warnings for compatibility hazards; do not hide them in logs. |
+- file-open + fixed-header + metadata-table read path now in `parse_tes4_bsa_archive_file`
+- table-size / table-span / payload-prefix helper code that can be tested independently
 
-## Scaling and Performance Considerations
+Keep inside `tes4_bsa_parser.cpp`:
 
-| Concern | Baseline Architecture | Later Optimization |
-|---------|----------------------|--------------------|
-| Large Starfield archives | Random-access source plus bounded scratch buffers; no whole-archive reads | Optional memory-mapped source adapter, readahead, larger buffer tuning |
-| Bulk extraction | Single-threaded deterministic flow using payload descriptors | Parallel decompression/extraction by independent descriptors after correctness is proven |
-| Packing large inputs | Stream input files through compression into output sink | Parallel compression jobs writing into planned payload slots or staged temp chunks |
-| DDS archives | Chunk descriptors allow per-chunk processing | Parallel chunk compression/decompression once chunk order and final serialization are stable |
-| Public ABI/API stability | Pimpl/internal impl pointers where needed; libbsa-owned types | Add advanced knobs conservatively after compatibility tests justify them |
+- header interpretation
+- folder/file materialization rules
+- public `entry_metadata` construction
+- compatibility-critical invariant logic
 
-## Anti-Patterns
+### 3B. BA2 DX10 prepare extraction
 
-### Anti-Pattern 1: Leaking Dependency Types Into Public Headers
+`src/formats/ba2/ba2_dx10_prepare.cpp` currently mixes:
 
-**What people do:** Public methods return DirectXTex metadata, accept `libdeflate`/`LZ4F` handles, or expose platform handles.  
-**Why it's wrong:** Consumers inherit implementation dependencies, portability worsens, and changing adapters becomes a breaking API change.  
-**Do this instead:** Translate all dependency data into libbsa-owned values at internal boundaries.
+- temp directory management
+- snapshot file writes
+- DDS analysis
+- chunk collection
+- chunk compression
+- prepared-entry assembly
 
-### Anti-Pattern 2: Generic Archive Abstraction Too Early
+That is the highest-value split in the milestone.
 
-**What people do:** Build a ZIP-like generic archive framework and force BSA/BA2 variants into it.  
-**Why it's wrong:** Bethesda formats depend on variant-specific hashes, sorting, offsets, flags, file tables, compression modes, and DDS chunk records. Generic abstractions hide compatibility rules.  
-**Do this instead:** Use a shared facade and internal services, but keep format-specific parser/writer modules explicit.
+**Modify:**
 
-### Anti-Pattern 3: Whole-Archive Memory Loading
+- `src/formats/ba2/ba2_dx10_prepare.cpp`
+- `src/formats/ba2/ba2_dx10_prepare.hpp`
+- `src/formats/ba2/ba2_dx10_writer.cpp`
 
-**What people do:** Read the full archive into memory, then parse/extract from spans.  
-**Why it's wrong:** Large BA2/Starfield archives can be many gigabytes; memory loading prevents streaming and later parallel I/O.  
-**Do this instead:** Parse only metadata eagerly; read payload ranges on demand into bounded buffers or stream them to sinks.
+**Introduce:**
 
-### Anti-Pattern 4: Inferring Compression From Extension or Game Name
+- `src/formats/ba2/ba2_dx10_snapshot_store.hpp/.cpp`
+  - reserve/remove staging directory
+  - write/read/delete snapshot files
+  - own temp cleanup policy
+- `src/formats/ba2/ba2_dx10_chunk_prepare.hpp/.cpp`
+  - `collect_chunk_snapshots`
+  - `append_snapshot_bytes`
+  - `ba2_dx10_prepare_chunk`
 
-**What people do:** Use `.bsa`, `.ba2`, or a caller-supplied game enum as the compression selector.  
-**Why it's wrong:** Version and per-record metadata matter; Starfield BA2 v3 has explicit `CompressionMethod`, and BA2 records use packed-size semantics.  
-**Do this instead:** Route compression from parsed archive format/version/record fields and target writer options.
+Keep inside `ba2_dx10_prepare.cpp`:
 
-### Anti-Pattern 5: Implementing Writers Before Readers Are Trusted
+- target validation
+- entry validation
+- top-level `prepare_entry` and `ba2_dx10_prepare_entries`
+- high-level ordering/sorting logic
 
-**What people do:** Add archive creation APIs before extraction and parse models are validated.  
-**Why it's wrong:** Writers need hash ordering, offsets, compression, file tables, flags, and DDS chunking; without a trusted reader, failures are hard to diagnose.  
-**Do this instead:** Build read support and fixture tests first, then require every writer to pass re-open/extract/compare round-trip tests.
+### Why this extraction is enough
 
-## Integration Points
+It reduces file size and review scope while preserving current format ownership. It avoids the common failure mode of introducing a “generic preparer framework” that obscures BA2 DX10's DDS-specific behavior.
 
-### External Libraries
+---
 
-| Library | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| libdeflate | Internal `deflate_codec` with exact-size compression/decompression methods | Use for TES4/FO3/Skyrim LE BSA and FO4/SF BA2 deflate payloads. Map library failures into libbsa errors. |
-| official lz4 | Two internal adapters: `lz4_frame_codec` and `lz4_block_codec` | Never share routing between SSE frame payloads and Starfield raw block payloads. |
-| DirectXTex | Internal `dds_analyzer` that emits libbsa `texture_layout` | Do not expose DirectXTex/DXGI types in public headers; keep non-Windows portability path possible. |
-| Catch2/CTest | Test-only dependency | Tests should prove hash values, parser behavior, extraction bytes, writer round-trips, and compatibility quirks. |
+## 4. BA2 DX10 Temp-Staging Risk Reduction
 
-### Internal Boundaries
+### Architectural decision
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Public facade ↔ format impl | Type-erased/pimpl internal calls returning `result<T>` | Public API remains stable while implementation modules evolve. |
-| Format parser ↔ binary I/O | Checked read/seek methods | Parser never performs unchecked pointer arithmetic on archive bytes. |
-| Format impl ↔ compression | `compression_kind` + byte spans + expected sizes | Keeps third-party library status and handles internal. |
-| BA2 DX10 ↔ texture adapter | `texture_layout` and `chunk_descriptor` values | DirectXTex only appears inside `src/texture`. |
-| Writer planner ↔ serializer | Immutable write plan | Reduces offset bugs by separating decision-making from byte emission. |
-| Reference research ↔ implementation | Tests, comments, documented constraints | TES5Edit behavior informs results, not source ownership. |
+Move BA2 DX10 snapshot ownership from **writer-object lifetime** to **write-session lifetime**.
+
+Today `ba2_dx10_writer::state` owns `snapshot_dir`, creates it during `add_file`, and relies on best-effort destructor cleanup. That is the wrong lifetime for hardening.
+
+### Recommended shape
+
+**Introduce:** `ba2_dx10_stage_session.hpp/.cpp` or fold it into `ba2_dx10_snapshot_store.hpp/.cpp`
+
+Recommended responsibilities:
+
+- create temp staging root lazily inside `write_ba2_dx10_archive`
+- own cleanup with explicit scope end in the write pipeline
+- support eager per-entry cleanup after chunk bytes are prepared
+- provide one place to document abnormal-termination temp persistence risk
+
+### Existing files to modify
+
+- `src/formats/ba2/ba2_dx10_writer.cpp`
+  - remove long-lived `snapshot_dir` from writer state
+  - `add_file` should stage logical entry intent, not temp-directory ownership
+- `src/formats/ba2/ba2_dx10_prepare.hpp`
+  - update entry/session types
+- `src/formats/ba2/ba2_dx10_prepare.cpp`
+  - consume a stage session/store during preparation
+
+### Recommended data ownership shift
+
+Current:
+
+- `add_file` analyzes DDS and writes temp snapshot files immediately
+- writer state stores snapshot paths
+
+Recommended v1.1 direction:
+
+- writer state stores normalized archive path + DDS source host path + validated metadata needed for later prep
+- write-time session materializes snapshots only while preparing/writing
+- snapshots are deleted as soon as their prepared chunk payloads are owned in memory
+
+### Why this is worth doing
+
+- materially reduces temp-data residency window
+- makes cleanup deterministic in normal execution
+- keeps public writer API unchanged
+- aligns temp staging with the existing prepare → serialize → publish pipeline
+
+### Test impact
+
+Add or extend:
+
+- `tests/unit/ba2_dx10_writer_tests.cpp`
+- `tests/unit/writer_stage_tests.cpp`
+- `tests/unit/writer_ownership_tests.cpp`
+
+Specific assertions to add:
+
+- temp staging does not exist before `write_to`
+- successful `write_to` removes staging artifacts
+- failed `write_to` removes staging artifacts on normal unwinding
+- remaining abnormal-termination leakage is documented, not silently ignored
+
+### Warning
+
+Do **not** try to solve crash-proof cleanup perfectly in v1.1. You cannot guarantee cleanup after process termination. The goal is to shorten lifetime and centralize cleanup, not promise impossible durability semantics.
+
+---
+
+## New vs Modified Components
+
+### New components to introduce
+
+| Component | Purpose |
+|---|---|
+| `src/detail/host_path_io.hpp/.cpp` | Single Windows-aware host-path conversion and stream-opening boundary for readers, parsers, validation, and disk-source helpers. |
+| `src/detail/archive_reader_backend.hpp` or private backend block in `src/archive.cpp` | Open-time-selected backend operations for `entries`, `find`, `contains`, and `extract`. |
+| `src/formats/bsa/tes4_bsa_file_loader.hpp/.cpp` | Pull host-file metadata-table loading out of the large parser unit. |
+| `src/formats/ba2/ba2_dx10_snapshot_store.hpp/.cpp` | Encapsulate BA2 DX10 temp directory and snapshot file lifecycle. |
+| `src/formats/ba2/ba2_dx10_chunk_prepare.hpp/.cpp` | Isolate chunk assembly/compression helpers from top-level prepare flow. |
+
+### Existing components to modify
+
+| File / Area | Change |
+|---|---|
+| `src/archive.cpp` | Replace repeated type/variant branching with backend dispatch; replace direct narrow host-file opens. |
+| `src/validation.cpp` | Route readability/open checks through host-path helper. |
+| `src/detail/writer_disk_source.cpp` | Reuse shared host-path helper so writer-side path handling matches reader-side behavior. |
+| `src/formats/bsa/tes3_bsa_parser.cpp` | Replace direct narrow host-file open. |
+| `src/formats/bsa/tes4_bsa_parser.cpp` | Replace direct narrow host-file open and extract file-loading helper. |
+| `src/formats/ba2/ba2_gnrl_parser.cpp` | Replace direct narrow host-file open. |
+| `src/formats/ba2/ba2_dx10_parser.cpp` | Replace direct narrow host-file open. |
+| `src/formats/bsa/*_reader.cpp` | Replace direct narrow host-file open. |
+| `src/formats/ba2/*_reader.cpp` | Replace direct narrow host-file open. |
+| `src/formats/ba2/ba2_dx10_writer.cpp` | Remove writer-lifetime snapshot-dir ownership; hand staging to write-time session. |
+| `src/formats/ba2/ba2_dx10_prepare.cpp/.hpp` | Split snapshot/chunk helpers and integrate stage-session boundary. |
+
+---
+
+## Suggested Build Order
+
+| Order | Slice | Why First / Next |
+|---|---|---|
+| 1 | Add `detail/host_path_io` + unit tests | Lowest-risk change with broad correctness payoff; unblock all non-ASCII fixes. |
+| 2 | Rewire `archive.cpp`, `validation.cpp`, parser file-open paths, reader file-open paths, and `writer_disk_source.cpp` | Converts the entire library to one host-path policy before refactoring other seams. |
+| 3 | Add `archive_reader` backend dispatch inside `src/archive.cpp` | Pure internal cleanup after behavior is stabilized by path tests. |
+| 4 | Extract `ba2_dx10_snapshot_store` and move snapshot lifetime into write-time session | Highest-risk hardening change; do it only after path and reader behavior are green. |
+| 5 | Extract `ba2_dx10_chunk_prepare` helpers | Reduces prepare-file fragility once staging ownership is clear. |
+| 6 | Extract narrow TES4 BSA file-loader helper | Finish by shrinking the remaining parser hotspot without reopening prior changes. |
+
+---
+
+## Test-Backed Refactor Plan
+
+### Must-have test additions before or alongside code changes
+
+1. **Non-ASCII host-path regression tests**
+   - open + validate from Unicode temp path
+   - at least one BSA family and one BA2 family fixture
+
+2. **Reader-dispatch equivalence tests**
+   - `find`, `contains`, single extract, and bulk extract all still agree after backend introduction
+
+3. **BA2 DX10 staging lifecycle tests**
+   - no eager staging at `add_file`
+   - cleanup after success
+   - cleanup after ordinary failure paths
+
+4. **Focused helper tests**
+   - `host_path_io`
+   - DX10 snapshot store
+   - DX10 chunk-prepare helper where practical
+
+---
+
+## Over-Refactoring Warnings
+
+### Do not change these in v1.1
+
+- public headers under `include/libbsa/`
+- public result/error model
+- directory structure by format family
+- write-new publish model
+- validation architecture that reuses `archive_reader::open`
+
+### Avoid these traps
+
+#### 1. Generic archive framework rewrite
+Bad move. The problem is duplicated dispatch, not missing abstraction purity.
+
+#### 2. Splitting every large file at once
+Bad move. Extract one seam at a time or you will lose fixture confidence.
+
+#### 3. Moving format rules into `src/detail/`
+Bad move. Shared detail should own generic I/O and staging mechanics, not BA2 DX10 or TES4-specific semantics.
+
+#### 4. Solving temp staging by keeping huge DDS byte vectors alive in writer state
+Bad move. That swaps disk-risk for RAM-risk and defeats earlier ownership decisions.
+
+#### 5. Mixing dedupe optimization into this refactor set
+Bad move. Dedup hotspots are real, but they are separable from these integration seams. Keep them out unless a small helper extraction is unavoidable.
+
+---
+
+## Milestone Planning Implications
+
+Recommended implementation order for roadmap/planning:
+
+1. **Host-path boundary hardening**
+2. **Reader backend dispatch cleanup**
+3. **BA2 DX10 write-session staging redesign**
+4. **BA2 DX10 preparer extraction**
+5. **TES4 parser extraction**
+
+That order minimizes regression risk because it fixes correctness first, then removes duplicated dispatch, then tackles the riskiest writer-lifecycle cleanup with tests already in place.
+
+---
 
 ## Sources
 
-- Project context: `J:\libbsa-gsd\.planning\PROJECT.md` (read 2026-05-07).
-- Source PRD: `J:\libbsa-gsd\docs\PRD.md` (read 2026-05-07).
-- Project constraints: `J:\libbsa-gsd\AGENTS.md` (read 2026-05-07).
-- Existing stack research embedded in project context: C++20, CMake/vcpkg, libdeflate, lz4, DirectXTex, Catch2, and dependency-boundary decisions.
-- Behavioral reference locations identified by project docs: `TES5Edit/BSArchPro.dpr`, `TES5Edit/BSArch/`, `TES5Edit/Core/wbBSArchive.pas`, `TES5Edit/Core/wbBSA.pas` (reference only; not edited or compiled).
-
----
-*Architecture research for: libbsa reusable C++20 BSA/BA2 archive library*  
-*Researched: 2026-05-07*
+- `.planning/PROJECT.md`
+- `.planning/codebase/ARCHITECTURE.md`
+- `.planning/codebase/CONCERNS.md`
+- `src/archive.cpp`
+- `src/validation.cpp`
+- `src/detail/writer_disk_source.cpp`
+- `src/formats/bsa/tes4_bsa_parser.cpp`
+- `src/formats/ba2/ba2_dx10_prepare.cpp`
+- `src/formats/ba2/ba2_dx10_prepare.hpp`
+- `src/formats/ba2/ba2_dx10_writer.cpp`

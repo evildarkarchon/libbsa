@@ -1,492 +1,408 @@
 # Domain Pitfalls
 
-**Domain:** Reusable C++20 Bethesda BSA/BA2 archive reader/writer library  
-**Researched:** 2026-05-07  
-**Confidence:** HIGH for project constraints and compression API pitfalls; MEDIUM for undocumented Bethesda compatibility quirks that require fixture confirmation.
+**Domain:** v1.1 hardening for an existing Windows-only C++20 Bethesda archive library  
+**Researched:** 2026-05-12  
+**Confidence:** HIGH
+
+## Hardening Goal
+
+This milestone is not feature expansion. The risk is breaking a working v1.0 library while fixing host-path correctness, verification-lane drift, internal structure, dedupe cost, and BA2 DX10 temp-data hygiene. The main roadmap mistake would be treating these as independent cleanup tasks; they overlap in parser behavior, staging behavior, and test expectations.
 
 ## Critical Pitfalls
 
-Mistakes that can corrupt archives, produce game-incompatible output, or force a rewrite.
+### Pitfall 1: Fixing Windows host-path Unicode handling in only one entry point
 
-### Pitfall 1: Treating BSA/BA2 as one archive format with minor version switches
+**What goes wrong:**
+`archive_reader::open`, validation, and format-specific parser opens stop agreeing about what a “path” is. One codepath uses `std::filesystem::path`, another still uses narrow `std::ifstream`, and tests only cover the top-level API.
 
-**What goes wrong:**  
-The parser grows one large record model with conditional fields. TES3 offsets, TES4-family folder/file blocks, SSE LZ4 payloads, BA2 GNRL records, BA2 DX10 texture chunks, and Starfield v2/v3 headers get mixed together. Fixing one version later breaks another.
-
-**Why it happens:**  
-All formats use `.bsa` or `.ba2`, and some fields look superficially similar: magic, version, counts, offsets, packed size, unpacked size. The temptation is to build a single generic `ArchiveEntry` too early.
+**Why it happens:**
+The bug is host-path-specific, but path opens are currently spread across `src/archive.cpp`, `src/validation.cpp`, and multiple format readers/parsers.
 
 **Consequences:**
-- Version-specific offset bases are misapplied.
-- Starfield fields such as `Unknown1`, `Unknown2`, and `CompressionMethod` are dropped or guessed.
-- BA2 DDS chunks are treated like normal files instead of texture-streaming mip chunks.
-- Write support becomes a minefield because record serialization cannot preserve format-specific invariants.
-
-**Prevention:**
-- Implement separate internal format modules: `tes3`, `tes4_bsa`, `ba2_gnrl`, `ba2_dx10`, plus shared narrow utilities for endian reads, paths, hashes, and compression.
-- Make auto-detection return a concrete format/version enum before parsing records.
-- Preserve unknown-but-observed fields in metadata and writer options rather than discarding them.
-- Require a new fixture and serialization test whenever adding a format/version branch.
+- Non-ASCII archive paths open successfully in one API and fail in another.
+- Validation can disagree with `archive_reader::open`, violating the existing “validation reuses strict parser” design.
+- Later refactors accidentally reintroduce narrow-path regressions.
 
 **Warning signs:**
-- Code paths switch on version in many unrelated methods.
-- Tests pass for one game but require TODOs/skips for another variant.
-- Internal structs contain fields marked “only for BA2”, “only for TES3”, etc.
-- Writer APIs cannot express Starfield v3 compression method separately from file extension.
+- Fixes touch only one file in the open/validate stack.
+- New helpers return `std::string` paths after initially receiving `std::filesystem::path`.
+- Tests cover ASCII and one direct open path, but not `validate_archive` and every archive family.
 
-**Phase to address:**  
-Milestone 1 must establish the format-registry and module boundary. Milestones 2-4 should add formats only through that boundary. Milestones 5-8 should reuse the same concrete format modules for writers.
+**Prevention:**
+- Introduce one internal host-file open helper that accepts `std::filesystem::path` and is used by every archive open/validate/parser entry.
+- Keep archive-internal virtual paths unchanged; only host-path boundaries should change.
+- Add committed tests that exercise non-ASCII host paths through open, list, lookup, and validation across at least one TES4 BSA and one BA2 family.
 
-**Specific compatibility risk:**  
-Archives may parse enough to list files but extract from wrong offsets or write headers that official tools reject.
+**Detection:**
+- `archive_reader::open(path)` passes while `validate_archive(path)` fails on the same file.
+- Failures reproduce only when the temp directory or fixture root contains non-ASCII characters.
+
+**Absorb in phase:**
+Phase 1 — **Windows host-path correctness**. Do this before refactors so later internal cleanup happens on the correct I/O boundary.
 
 ---
 
-### Pitfall 2: Confusing LZ4 frame data with raw LZ4 block data
+### Pitfall 2: Collapsing host-path fixes into archive-path normalization logic
 
-**What goes wrong:**  
-SSE BSA compressed payloads and Starfield BA2 v3 payloads are both labelled “LZ4” in conversation, but they are not interchangeable. Using `LZ4F_*` frame APIs on raw Starfield blocks, or raw `LZ4_*` APIs on SSE frames, causes failures or silent corruption.
+**What goes wrong:**
+The hardening work “fixes paths” by pushing `std::filesystem::path` deeper into archive entry lookup, hashing, or extraction-key logic.
 
-**Why it happens:**  
-LZ4 exposes both a frame API and a raw block API. The frame format is self-describing and has magic bytes; raw blocks require the archive record to supply exact compressed and decompressed sizes.
+**Why it happens:**
+Host paths and archive member paths are both called “paths,” but they are different domains. The known bug is about Windows filesystem opens, not Bethesda virtual path semantics.
 
 **Consequences:**
-- SSE extraction fails when treated as raw blocks.
-- Starfield BA2 v3 files fail or decompress to wrong bytes when treated as frames.
-- Writer output may be accepted by libbsa round-trip tests but rejected by game engines because the wrong LZ4 container was written.
-
-**Prevention:**
-- Create two separate wrappers: `lz4_frame_codec` for SSE BSA and `lz4_block_codec` for Starfield BA2 v3 `CompressionMethod == 3`.
-- Route compression by concrete archive type/version/record metadata, never by extension or a generic “lz4” boolean.
-- Use `LZ4_decompress_safe` for raw blocks and verify the returned byte count exactly equals the archive record's unpacked size.
-- Use `LZ4F_isError` / `LZ4F_getErrorName` around frame operations and test with actual SSE BSA fixtures.
+- Hash lookups drift.
+- Case/separator behavior changes for archive members.
+- A host-path bug fix creates a compatibility regression in archive internals.
 
 **Warning signs:**
-- A function named only `decompress_lz4` handles every LZ4 payload.
-- Tests check only “decompression succeeded”, not exact output size and byte equality.
-- Starfield v3 `CompressionMethod` is ignored or inferred from archive type.
-- Code probes for LZ4 frame magic rather than trusting the parsed archive version and method.
+- Hash helpers start accepting `std::filesystem::path`.
+- Reader lookup logic changes in the same patch as host-file open changes.
+- Tests for lookup/contains start being rewritten instead of only expanded.
 
-**Phase to address:**  
-Milestone 1 for SSE frame support; Milestone 3 for Starfield raw block support; Milestone 6 for BA2 GNRL writing; Milestone 7 for BA2 DDS chunk writing.
+**Prevention:**
+- Explicitly split “host path” and “archive virtual path” helpers.
+- Scope v1.1 path changes to disk I/O boundaries only unless a separate compatibility bug proves otherwise.
+- Add regression tests proving identical archive-member lookup behavior before and after the host-path fix.
 
-**Specific compatibility risk:**  
-Silent payload corruption in Starfield BA2 v3 and invalid SSE BSA output.
+**Detection:**
+- ASCII fixture opens improve, but previously passing lookup/hash fixtures start failing.
+
+**Absorb in phase:**
+Phase 1 — **Windows host-path correctness**, with a hard no-scope-creep rule.
 
 ---
 
-### Pitfall 3: Deflate wrapper ambiguity and non-exact decompression validation
+### Pitfall 3: Adding sanitizer or Release lanes without first reconciling policy drift
 
-**What goes wrong:**  
-The code assumes all “deflate” data means zlib-wrapped streams, or all data means raw DEFLATE, and does not validate the exact decompressed size. Bad inputs can be accepted with trailing bytes, short output, or accidental partial streams.
+**What goes wrong:**
+The project adds a new preset or CI job, but planning docs, preset names, policy tests, and fixture docs still disagree about what is officially supported.
 
-**Why it happens:**  
-Libraries expose raw DEFLATE, zlib, and gzip APIs with similar names. libdeflate explicitly documents separate `deflate`, `zlib`, and `gzip` functions and distinct result codes for bad data, short output, and insufficient space.
+**Why it happens:**
+The current audit already says `.planning/PROJECT.md` claims sanitizer-oriented presets while checked-in tests enforce their absence.
 
 **Consequences:**
-- FO3/Skyrim/BA2 payloads may fail against fixtures depending on wrapper expectation.
-- Malformed archives can pass partial decompression and then corrupt extracted files.
-- Golden compressed-byte tests become brittle because compression libraries do not promise stable compressed bytes across versions.
-
-**Prevention:**
-- Build a deflate wrapper that records the chosen stream flavor per archive family after compatibility verification.
-- Always allocate/decompress to the archive record's expected unpacked size and treat `SHORT_OUTPUT`, `INSUFFICIENT_SPACE`, and byte-count mismatch as hard format errors.
-- For write tests, compare extracted bytes and game/tool compatibility, not exact compressed byte streams.
-- Add fixture cases for uncompressed files (`PackedSize == 0`) and compressed files that expand exactly to the recorded size.
+- CI goes red for policy reasons unrelated to code correctness.
+- Maintainers stop trusting `.planning/` and test-policy suites.
+- Hardening lanes exist but are treated as experimental and silently rot.
 
 **Warning signs:**
-- Tests compare compressed payload bytes generated by libdeflate to a golden compressed blob.
-- Decompression APIs are called with an oversized output buffer and actual output size is ignored.
-- The parser treats any nonzero decompressor return as a generic I/O error without differentiating corrupt data from size mismatch.
+- `CMakePresets.json` changes land without matching updates to policy tests and docs.
+- CI introduces ad hoc command lines rather than preset-backed lanes.
+- “Temporary” exceptions are added to validation-policy tests.
 
-**Phase to address:**  
-Milestone 1 for TES4-family deflate; Milestone 3 for BA2 deflate; Milestones 5-6 for writer behavior; Milestone 10 for malformed/truncated archive hardening.
+**Prevention:**
+- Decide first whether v1.1 officially supports: (a) Release lane only, (b) Release + opt-in sanitizer preset, or (c) dedicated hardening workflow.
+- Update `.planning/PROJECT.md`, `CMakePresets.json`, `tests/unit/validation_policy_tests.cpp`, and fixture docs in the same phase.
+- Treat presets and policy text as product contracts, not incidental tooling.
 
-**Specific compatibility risk:**  
-Byte-identical extraction will fail, malformed archives may read as valid, and writer output may be needlessly unstable across dependency updates.
+**Detection:**
+- CI passes locally but policy tests fail on required-token checks.
+- Contributors cannot answer which preset is authoritative for hardening.
+
+**Absorb in phase:**
+Phase 2 — **verification-lane reconciliation**. Do this before parser/refactor work so every later change has an agreed validation target.
 
 ---
 
-### Pitfall 4: Reconstructing BA2 DDS files as generic concatenated payloads
+### Pitfall 4: Turning sanitizer work into a false sense of coverage
 
-**What goes wrong:**  
-BA2 DX10 texture archives store DDS texture data without a normal DDS file header and split texture data into mip chunks. Extractors that simply concatenate chunk bytes or write a guessed header produce files that may open in one viewer but fail in game/tool pipelines.
+**What goes wrong:**
+One sanitizer lane is added, but it does not exercise the fragile parser/preparer paths, optional corpus checks, or Release-only behavior. The milestone claims “hardening complete” anyway.
 
-**Why it happens:**  
-BA2 GNRL extraction is straightforward, so developers expect BA2 DDS extraction to be similarly “read bytes, maybe decompress, write bytes.” Documentation and community tools emphasize that texture archives are optimized for streaming and require DDS header reconstruction.
+**Why it happens:**
+It is easy to add instrumentation, hard to ensure it actually runs the right tests. This codebase’s strongest real-corpus compatibility checks are opt-in and usually skipped.
 
 **Consequences:**
-- Reconstructed DDS files have wrong DXGI format, mip count, cubemap/array metadata, or dimensions.
-- Mip ranges are ordered incorrectly or chunk boundaries are lost during write.
-- Fallout 4/Starfield texture BA2s load with visual corruption, missing mips, or runtime streaming problems.
-
-**Prevention:**
-- Isolate DDS logic behind internal `dds_analyzer` / `texture_layout` types backed by DirectXTex metadata.
-- For read support, reconstruct headers from archive metadata and validate extracted DDS through DirectXTex `LoadFromDDSMemory` or metadata loading.
-- For write support, use DirectXTex to parse source DDS metadata, then derive chunk records from mip dimensions and target game/version policy.
-- Maintain separate fixtures for ordinary 2D textures, normal maps, cubemaps, multiple mip counts, and small textures at or below chunk thresholds.
+- Memory-safety bugs in malformed parsing remain undiscovered.
+- Optimization-sensitive regressions survive because only Debug+sanitizer is exercised.
+- Roadmap decisions over-trust the new lane.
 
 **Warning signs:**
-- BA2 DDS tests only assert that output begins with `DDS `.
-- DDS writer has hard-coded header bytes or a hand-maintained DXGI table exposed in public headers.
-- Chunk `StartMip`/`EndMip` values are ignored during extraction.
-- Texture code is mixed into generic archive-file extraction instead of a BA2 DX10-specific path.
+- Sanitizer lanes run only tiny unit tests.
+- Release behavior is still absent from the checked-in matrix.
+- Local game fixture tests stay entirely outside pre-ship verification.
 
-**Phase to address:**  
-Milestone 4 for DDS read/reconstruction; Milestone 7 for DDS write/chunking; Milestone 10 for edge-case texture validation.
+**Prevention:**
+- Require at least one Release preset in the official matrix.
+- Run malformed-fixture suites and core reader/writer round trips under the hardening lane.
+- Keep local corpus checks opt-in, but add a milestone exit step requiring them before release when parser/writer internals changed.
 
-**Specific compatibility risk:**  
-Textures appear extractable but are not valid DDS files or are valid files with wrong mip/cubemap semantics, causing game-visible corruption.
+**Detection:**
+- New lanes pass, but bugs still reproduce only under optimized builds or real corpus checks.
+
+**Absorb in phase:**
+Phase 2 — **verification-lane reconciliation**, plus a Phase 6 ship gate for optional corpus reruns.
 
 ---
 
-### Pitfall 5: Treating archive paths as host filesystem paths or Unicode strings
+### Pitfall 5: Refactoring large parser/preparer files before locking behavior with focused tests
 
-**What goes wrong:**  
-Archive member names are normalized through `std::filesystem::path`, wide strings, locale conversion, or platform separators. Paths change case, separators, encoding, or byte values, so lookups and hashes no longer match game behavior.
+**What goes wrong:**
+Large translation units are split for cleanliness, but offset arithmetic, overflow checks, compatibility warnings, or exception-to-error translation change accidentally.
 
-**Why it happens:**  
-The public API wants friendly paths, but Bethesda archive paths are virtual paths. Existing Rust archive libraries explicitly warn that Creation Engine paths are effectively byte strings and older tools often used the system code page of the machine that created the archive.
+**Why it happens:**
+The concern is structural, but the files named in the audit also own correctness-critical format logic.
 
 **Consequences:**
-- Non-ASCII filenames cannot be found after round-trip.
-- Hashes differ across Windows configurations or locale/encoding settings.
-- Writer output differs from BSArchPro or official tools because normalization happens at the wrong boundary.
-- Extraction can create unsafe host paths if `..`, drive letters, or absolute paths are not sanitized separately.
-
-**Prevention:**
-- Store archive paths internally as normalized byte/UTF-8-like virtual path values, not `std::filesystem::path`.
-- Normalize only archive rules: forward slashes, no leading slash, lower-case/hash behavior where the format requires it, explicit encoding policy for user-facing text.
-- Convert to host filesystem paths only at extraction/write boundaries after rejecting absolute paths, drive roots, `..`, and reserved traversal forms.
-- Add tests for separator normalization, case behavior, duplicate paths, extended-byte names, and extraction traversal rejection.
+- “No functional change” refactors introduce parser drift.
+- Round trips still pass while malformed-input behavior or warning codes change.
+- Review becomes impossible because mechanical moves and semantic edits are mixed.
 
 **Warning signs:**
-- Public APIs accept only `std::filesystem::path` for archive member names.
-- Tests use only ASCII lowercase paths.
-- Hash functions accept host paths directly.
-- Extracting an archive can write outside the requested destination with crafted member names.
+- A refactor PR both extracts helpers and changes arithmetic/validation rules.
+- Existing tests are updated broadly instead of adding narrow new ones first.
+- Files like `ba2_dx10_prepare.cpp` or `tes4_bsa_parser.cpp` shrink dramatically in one step.
 
-**Phase to address:**  
-Milestone 1 must define the archive path type before hash lookup. Milestones 2-8 must use it consistently. Milestone 10 should add malicious path fixtures.
+**Prevention:**
+- Before each extraction, add characterization tests for the exact helper boundary being split out.
+- Move one responsibility at a time: bounds checks, offset math, chunk planning, warning translation, payload routing.
+- Keep semantic changes out of the first refactor pass.
 
-**Specific compatibility risk:**  
-Hash lookup failures, duplicate/missing files, inconsistent Windows host behavior, and path traversal vulnerabilities during extraction.
+**Detection:**
+- Fixture outputs or stable error codes change after a “mechanical” refactor.
+- Diff review cannot separate file movement from logic edits.
+
+**Absorb in phase:**
+Phase 3 — **reader/parser/preparer refactors**, only after Phases 1-2 stabilize path and verification baselines.
 
 ---
 
-### Pitfall 6: Parsing binary structures with packed C++ structs instead of explicit little-endian readers
+### Pitfall 6: Replacing repeated public-reader dispatch with a strategy layer that changes semantics
 
-**What goes wrong:**  
-The parser casts bytes into `#pragma pack` structs or reads host-endian integral fields directly. It works on one compiler and architecture but breaks under different alignment, padding, endian, or integer-width assumptions.
+**What goes wrong:**
+An internal vtable/strategy object removes duplicated branching, but bulk extraction, single-entry extraction, `contains`, and `lookup` no longer behave identically across archive families.
 
-**Why it happens:**  
-Archive record tables look like fixed C structs, and casting is faster to write than building binary readers.
+**Why it happens:**
+The dispatch duplication is real, but the duplicated code currently hides subtle per-operation behavior that can be lost during consolidation.
 
 **Consequences:**
-- BA2 records with 64-bit offsets are misread on alignment-sensitive platforms.
-- Integer overflow in offset + size calculations enables out-of-bounds reads.
-- Compiler, optimization, or architecture changes make parser behavior fragile.
-- Fuzzing finds parser crashes instead of clean format errors.
-
-**Prevention:**
-- Use explicit `read_u16le`, `read_u32le`, `read_u64le`, bounded slice cursors, and checked arithmetic for every offset and size.
-- Validate table sizes before reading records: count * record_size must fit in file size and `size_t`.
-- Keep on-disk serialization functions distinct from in-memory metadata types.
-- Add malformed fixtures for truncated headers, oversized counts, overlapping ranges, and offset+size overflow.
+- Single-entry and bulk-entry paths drift.
+- Some archive families lose operation-specific guard behavior.
+- Public API stays stable while implementation semantics change underneath.
 
 **Warning signs:**
-- `reinterpret_cast<Record*>` appears in parser code.
-- Struct definitions are both public API and on-disk serialization schema.
-- Warnings are disabled around packing/alignment.
-- Parser errors are crashes/assertions rather than typed format errors.
+- Dispatch refactor is validated only by compile success and a few smoke tests.
+- Tests cover open/list, but not the full matrix of lookup/contains/extract/extract_entries.
+- Strategy objects gain stateful caching without clear invalidation rules.
 
-**Phase to address:**  
-Milestone 1 foundation; every parser milestone; Milestone 10 fuzzing/hardening.
+**Prevention:**
+- Build a shared behavior matrix test file before the dispatch refactor.
+- Keep strategy objects thin and immutable after open.
+- Require identical results between single-entry and bulk-entry paths for the same target fixture set.
 
-**Specific compatibility risk:**  
-Valid archives fail on some toolchains, and malformed archives can trigger undefined behavior.
+**Detection:**
+- `contains()` and `lookup()` disagree for the same path after the refactor.
+- Bulk extraction passes while direct extraction fails, or vice versa.
+
+**Absorb in phase:**
+Phase 3 — **reader/parser/preparer refactors**.
 
 ---
 
-### Pitfall 7: Loading whole archives or whole extraction sets into memory
+### Pitfall 7: “Optimizing” dedupe by weakening the exact-byte correctness rule
 
-**What goes wrong:**  
-The library parses by reading entire archive files into memory, extracts all files into `std::vector<std::byte>` before writing them, or repacks by expanding every preserved file first.
+**What goes wrong:**
+TES4 or BA2 dedupe adds a hash-first index, cached digest, or identity shortcut that stops proving payload equality on final stored bytes.
 
-**Why it happens:**  
-Small fixture archives make whole-buffer implementations simple, and whole-buffer compression APIs encourage buffering at file/chunk granularity. Starfield archives and texture BA2s make this strategy fail.
+**Why it happens:**
+The current dedupe paths are expensive. The temptation is to trust a faster key completely instead of using it as a prefilter.
 
 **Consequences:**
-- 10+ GB archives exhaust memory or thrash.
-- Multi-threading later amplifies memory use because each worker owns large buffers.
-- Consumers cannot stream extraction to custom sinks.
-- Rewriter APIs become unusable for asset pipelines.
-
-**Prevention:**
-- Read headers/tables into bounded metadata, then seek and stream payloads per file/chunk.
-- Keep compression wrappers whole-buffer only at payload/chunk granularity; never whole-archive granularity.
-- Writer APIs should defer reading source files until finalization and support caller-provided sinks.
-- Add tests that use fake large offsets/sizes and bounded-memory extraction sinks, not just tiny files.
+- Different payloads share offsets incorrectly.
+- Compression differences or embedded-name differences collapse to one stored payload.
+- Corruption appears only on certain archive mixes, making it hard to triage.
 
 **Warning signs:**
-- `open_archive(path)` returns a structure owning all uncompressed file bytes.
-- Progress callbacks happen only after every file was already extracted.
-- The writer API requires `add_file(path, std::vector<byte>)` for normal disk files.
-- Benchmarks are deferred before proving streaming invariants.
+- The implementation stops calling full equality for collisions.
+- Dedupe keys are based on source bytes instead of final stored bytes.
+- BA2 disk-backed sources are assumed identical because size and hash match once.
 
-**Phase to address:**  
-Milestone 1 must establish streaming extraction interfaces. Milestones 5-8 must implement streaming writers. Milestone 9 optimizes after correctness, not before streaming exists.
+**Prevention:**
+- Preserve the existing rule: optimization may narrow candidates, never replace exact stored-byte comparison.
+- Add adversarial tests where equal size/hash buckets still differ in payload bytes, compression choice, or embedded-name prefixes.
+- Benchmark only after correctness fixtures pass.
 
-**Specific compatibility risk:**  
-Large Starfield/texture archives become practically unusable even if logically supported.
+**Detection:**
+- Archive size shrinks unexpectedly on mixed payload fixtures.
+- Reopened archives contain wrong bytes for one of two near-duplicate entries.
+
+**Absorb in phase:**
+Phase 4 — **dedupe optimization**.
 
 ---
 
-### Pitfall 8: Implementing writers before read compatibility is fixture-proven
+### Pitfall 8: Speeding up BA2 GNRL dedupe by caching stale disk-source state
 
-**What goes wrong:**  
-The project starts emitting archives based on incomplete understanding of sorting, hashes, flags, embedded names, compression decisions, and unknown fields. Later read compatibility fixes require writer rewrites.
+**What goes wrong:**
+To reduce repeated file scans, the code caches disk-backed identity or digest data that becomes stale when source files change between preparation and finalization.
 
-**Why it happens:**  
-Writers are the visible value, and round-trip tests can pass against the same flawed implementation.
+**Why it happens:**
+The concern audit explicitly notes that BA2 GNRL correctness depends on validating prepared source sizes because disk sources can change between preparation and streaming.
 
 **Consequences:**
-- libbsa can read its own archives but official tools, games, or BSArchPro cannot.
-- Hash-sorted indexes are wrong, causing game lookup failures.
-- File/archive flags are missing or over-set, causing assets not to load or inefficient behavior.
-- Embedded-name behavior is wrong for formats where it matters.
-
-**Prevention:**
-- Gate each writer phase on read/extract compatibility for that format family.
-- Writer exit criteria must include extraction by libbsa, comparison to originals, and compatibility checks against BSArchPro/official tools when available.
-- Test hash ordering and serialized table bytes independently of full archive round-trip.
-- Preserve format-specific decisions in writer options instead of guessing from file extension alone.
+- Finalization publishes malformed offsets or wrong payload bytes.
+- Dedupe compares a stale view of disk content.
+- v1.0’s explicit growth/truncation protections are bypassed.
 
 **Warning signs:**
-- Round-trip tests are the only writer tests.
-- No tests compare produced indexes/hashes/flags to known-good fixtures.
-- Writer code constructs records from generic `ArchiveEntry` without format-specific policy.
+- Cached digests are treated as permanent truth.
+- Finalization size rechecks are removed “for performance.”
+- Benchmarks improve, but mutation-between-prepare-and-finalize tests disappear.
 
-**Phase to address:**  
-Milestones 5-8, with prerequisites from Milestones 1-4. Milestone 10 should audit writer edge cases.
+**Prevention:**
+- Keep source-size and source-identity validation at finalization.
+- Cache only as a candidate filter; revalidate before publish.
+- Add regression tests for file growth, truncation, and same-size content replacement.
 
-**Specific compatibility risk:**  
-Archives are self-consistent but not game-loadable.
+**Detection:**
+- Dedupe optimization patches also touch publish/finalization guard code.
+
+**Absorb in phase:**
+Phase 4 — **dedupe optimization**.
 
 ---
 
-### Pitfall 9: Error handling that hides corruption or makes recovery impossible
+### Pitfall 9: Cleaning up BA2 DX10 temp data only on the happy path
 
-**What goes wrong:**  
-Parser and extraction failures collapse into `false`, `nullptr`, generic exceptions, or partial output. Consumers cannot distinguish missing file, unsupported version, corrupt archive, decompression failure, path traversal rejection, and I/O errors.
+**What goes wrong:**
+The writer deletes snapshot files during normal completion, but exceptions, early returns, cancellation, or process termination still leave decoded DDS bytes behind.
 
-**Why it happens:**  
-Binary parser code often starts as exploratory code. It accumulates asserts and exceptions before public API contracts are defined.
+**Why it happens:**
+Current cleanup is best-effort in writer state destruction. Hardening work can improve normal lifecycle handling while still missing failure paths.
 
 **Consequences:**
-- Tools cannot produce actionable diagnostics.
-- Bulk extraction continues after corruption and writes bad files.
-- Malformed archives crash instead of returning typed failures.
-- C++20 API drifts toward C++23-only `std::expected` or exception-heavy behavior.
-
-**Prevention:**
-- Define `libbsa::result<T>` or explicit error-code output in Milestone 1.
-- Use structured error domains: I/O, unsupported format/version, invalid structure, decompression, texture reconstruction, path normalization/security, and precondition violation.
-- Ensure streaming extraction writes to temporary/caller-controlled sinks where partial output can be reported or discarded.
-- Document which operations can partially succeed and how callers recover.
+- Sensitive or large temp data accumulates under the system temp root.
+- Disk usage spikes on failed runs.
+- The project claims cleanup hardening without materially reducing caller risk.
 
 **Warning signs:**
-- `catch (...) { return false; }` exists in library internals.
-- Parser uses `assert` for untrusted archive content.
-- API docs do not say whether a failed extraction may have written partial bytes.
-- Public headers expose `std::expected` while claiming C++20 support.
+- Cleanup logic is added only after successful publish.
+- Tests assert temp cleanup after success but not after prepare failure or publish failure.
+- Design discussion assumes destructor cleanup is enough for all cases.
 
-**Phase to address:**  
-Milestone 1 for result/error model; all parser/writer phases for consistent propagation; Milestone 10 for comprehensive malformed archive handling.
+**Prevention:**
+- Define explicit lifecycle checkpoints: after analysis, after snapshot creation, after chunk planning, after publish, and after failure rollback.
+- Make “best effort after crash/forced termination may still leak temp data” an explicit documented residual risk unless the architecture truly removes temp files.
+- Add tests for normal failure paths and repeated writer construction/destruction.
 
-**Specific compatibility risk:**  
-Corruption is misreported as unsupported format or successful partial extraction, undermining trust in compatibility tests.
+**Detection:**
+- Temp directories remain after failed DX10 writer tests.
+- Cleanup behavior differs between success and publish-failure scenarios.
+
+**Absorb in phase:**
+Phase 5 — **BA2 DX10 temp-data cleanup**.
 
 ---
 
-### Pitfall 10: Weak fixture design that proves demos, not compatibility
+### Pitfall 10: Combining temp-data cleanup with staging redesign in one step
 
-**What goes wrong:**  
-Tests use one or two tiny synthetic archives with ASCII names and uncompressed payloads. They pass while real game archives fail on compression, embedded names, non-ASCII bytes, chunked DDS textures, or odd flags.
+**What goes wrong:**
+The milestone tries to solve cleanup, memory pressure, and I/O amplification at once by redesigning BA2 DX10 staging, making it impossible to tell whether regressions come from lifecycle fixes or data-flow changes.
 
-**Why it happens:**  
-Real Bethesda archives are large and may be license-sensitive, so test corpora are hard to assemble. Synthetic fixtures are convenient but can accidentally mirror the implementation's assumptions.
+**Why it happens:**
+The current temp-file design is both a correctness concern and a performance concern, so it attracts over-scoped fixes.
 
 **Consequences:**
-- Pitfalls are discovered only after users try real games.
-- Writer bugs pass because tests compare libbsa output to libbsa input.
-- Edge cases are delayed to “polish” even though they affect core architecture.
-
-**Prevention:**
-- Build a fixture matrix by format/version/feature: compressed/uncompressed, embedded names, hash-only lookup, BA2 name table, BA2 DDS chunks, Starfield v2/v3 headers, extended-byte paths, malformed/truncated cases.
-- Store tiny generated fixtures where legal, plus scripts/checksums/instructions for optional local validation against real game archives.
-- Add compatibility comparison harnesses that can compare extraction output against BSArchPro without modifying or vendoring TES5Edit.
-- Label tests by `unit`, `fixture`, `roundtrip`, `compat`, `malformed`, and `slow` so CI can run the right subset.
+- Milestone slips into architecture work instead of hardening.
+- DX10 write behavior changes without enough fixture proof.
+- Cleanup bugs and chunk-planning bugs get entangled.
 
 **Warning signs:**
-- “All tests pass” means only synthetic fixtures.
-- No fixture asserts exact record offsets, path hashes, or chunk metadata.
-- Test archives do not include compressed files for every compression mode.
-- Optional real-archive validation is undocumented.
+- The phase introduces new in-memory staging policies, new chunk planners, and cleanup semantics together.
+- No intermediate checkpoint keeps current staging behavior while tightening cleanup only.
 
-**Phase to address:**  
-Milestone 1 test foundation; expand in each format milestone; Milestone 10 adds fuzz/malformed corpus.
+**Prevention:**
+- Phase 5 should harden lifecycle and cleanup first.
+- Any deeper staging redesign belongs in a later milestone unless a minimal targeted change is sufficient and fully testable.
+- Keep chunk layout behavior byte-for-byte stable during cleanup work.
 
-**Specific compatibility risk:**  
-The roadmap declares support for formats that are only partially exercised.
+**Detection:**
+- DX10 fixture outputs change in a cleanup-only phase.
 
----
+**Absorb in phase:**
+Phase 5 now; deeper staging redesign deferred to a future performance milestone.
 
 ## Moderate Pitfalls
 
-### Pitfall 1: Leaking DirectXTex, libdeflate, or LZ4 types into public headers
+### Pitfall 1: Letting hardening refactors leak into public API surface
 
-**What goes wrong:** Public API stability and portability become tied to dependency headers and platform details.  
-**Prevention:** Keep dependency adapters in `src/` and expose libbsa-native metadata/result types only.  
-**Warning signs:** Public headers include `DirectXTex.h`, `lz4.h`, or `libdeflate.h`.  
-**Phase to address:** Milestone 1 API boundary; Milestone 4/7 texture APIs.
+**What goes wrong:** Internal strategy/refactor work changes public types, error semantics, or header dependencies without a product need.
 
-### Pitfall 2: Inferring behavior from file extension instead of archive metadata
+**Prevention:** Treat v1.1 as internal-facing. Keep public API changes out unless they are required for correctness and explicitly documented.
 
-**What goes wrong:** `.dds` or `.ba2` extension drives compression and parsing decisions that should come from magic/version/type/chunk records.  
-**Prevention:** Use magic bytes and parsed metadata as authoritative; extensions are hints only for host UX.  
-**Warning signs:** Compression selection checks `.dds`, `.ba2`, or `.bsa` strings before parsed format/version.  
-**Phase to address:** Milestone 1 detection, Milestone 3 BA2 metadata, Milestones 5-7 writers.
+**Absorb in phase:** Phase 3.
 
-### Pitfall 3: Over-compressing assets that should remain uncompressed or warning-worthy
+### Pitfall 2: Using benchmark wins as a substitute for compatibility proof
 
-**What goes wrong:** Game behavior/performance suffers, especially for assets loaded on demand. Known quirks such as sounds-in-compressed archives and SSE embedded-name issues are easy to miss.  
-**Prevention:** Record archive/file flag policy and add warning diagnostics before writer phases; validate against BSArchPro quirks.  
-**Warning signs:** Writer has one global “compress everything” default with no per-file override or warnings.  
-**Phase to address:** Milestones 5-8 writer policy; Milestone 10 compatibility warnings.
+**What goes wrong:** Dedupe or staging gets faster, but malformed behavior, offset math, or reopened-bytes correctness regresses.
 
-### Pitfall 4: Treating unknown fields as disposable
+**Prevention:** Require fixture and round-trip proof before benchmark comparison. Benchmarks are exit evidence, not design truth.
 
-**What goes wrong:** Starfield and BA2 version fields that are not fully understood get zeroed or omitted in rewritten archives.  
-**Prevention:** Preserve unknown fields from read metadata where possible and require explicit defaults for new archives.  
-**Warning signs:** Fields are named `padding` without fixture evidence that they are always padding.  
-**Phase to address:** Milestones 3-4 reads; Milestones 6-7 writes.
+**Absorb in phase:** Phase 4 and any later performance milestone.
 
-## Minor Pitfalls
+### Pitfall 3: Assuming default CI coverage is enough after internal changes
 
-### Pitfall 1: Using game/tool names inconsistently in API and tests
+**What goes wrong:** Default committed fixtures pass, but optional local game-corpus compatibility drifts.
 
-**What goes wrong:** “FO4 BA2 v1/7/8” and “Starfield v2/v3” become ambiguous in test names and options.  
-**Prevention:** Define canonical format enum names and fixture naming conventions early.  
-**Phase to address:** Milestone 1.
+**Prevention:** Add a pre-ship manual gate for opt-in corpus checks whenever parser, writer, dedupe, or DX10 staging internals change.
 
-### Pitfall 2: Delaying documentation of compatibility constraints
+**Absorb in phase:** Phase 6 ship gate.
 
-**What goes wrong:** Non-obvious constraints discovered from BSArchPro are lost and re-broken later.  
-**Prevention:** Add short comments for format compatibility decisions and Doxygen for public APIs as required by project rules.  
-**Phase to address:** Every phase; formal API docs in Milestone 10.
+## Phase-Specific Warnings
 
-### Pitfall 3: Assuming Archive2/official tool behavior is fully documented
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Phase 1: Windows host-path correctness | Mixing host-path fixes with archive-path semantics | Limit changes to disk I/O boundaries; add non-ASCII open + validate coverage |
+| Phase 2: verification-lane reconciliation | Adding presets/CI without updating policy tests and docs | Change presets, docs, and policy tests together |
+| Phase 3: internal refactors | Semantic drift hidden inside “cleanup” diffs | Add characterization tests first; separate moves from behavior changes |
+| Phase 4: dedupe optimization | Replacing exact equality with hash trust | Use hashes only as candidate filters; preserve final stored-byte equality |
+| Phase 5: BA2 DX10 temp cleanup | Fixing only happy-path cleanup or over-scoping into staging redesign | Harden lifecycle first; defer architectural staging changes |
+| Phase 6: milestone verification/ship | Trusting default CI alone | Rerun Release lane, malformed suites, and opt-in compatibility checks before release |
 
-**What goes wrong:** Writer policy follows incomplete community docs without empirical validation.  
-**Prevention:** Treat community docs as hypotheses; verify with fixtures, official tool output, and BSArchPro behavior.  
-**Phase to address:** Writer milestones 5-8.
+## Recommended Roadmap Sequence
 
-## Technical Debt Patterns
+1. **Phase 1 — Windows host-path correctness**
+   - Fix the known user-visible correctness bug first.
+   - Locks the right file-open boundary before refactors spread it further.
 
-Shortcuts that seem reasonable but create long-term problems.
+2. **Phase 2 — Verification-lane reconciliation**
+   - Decide and codify the supported Release/sanitizer story.
+   - Prevents later hardening work from landing without an agreed validation target.
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Single `ArchiveEntry` record for every format | Fast first parser | Version quirks leak everywhere; writer rewrite likely | Only as a public read-only view backed by format-specific internals |
-| Whole-archive byte vector | Simpler parsing and fuzzing | Fails large archives, blocks streaming API | Tiny unit tests only, never primary API |
-| Golden compressed bytes | Easy snapshot tests | Breaks when libdeflate/lz4 output changes despite equivalent data | Never for dependency-generated compression; compare decompressed bytes/metadata |
-| Host filesystem path as archive key | Friendly API | Encoding/separator/hash bugs | Host I/O boundary only |
-| Treating `PackedSize == 0` as error | Simplifies compressed path | Uncompressed files become unreadable | Never |
-| Deferring malformed-input tests to the end | Faster feature demos | Parser architecture may rely on UB/assertions | Add malformed smoke tests from Milestone 1, expand in Milestone 10 |
+3. **Phase 3 — Reader/parser/preparer structural refactors**
+   - Only after paths and verification baselines are stable.
+   - Split monoliths and unify dispatch with characterization tests already in place.
 
-## Integration Gotchas
+4. **Phase 4 — Dedupe optimization under existing correctness rules**
+   - Performance work comes after structure is safer to change.
+   - Keep exact stored-byte proof and finalization guards intact.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| TES5Edit / BSArchPro | Editing, formatting, compiling, or staging submodule files | Read-only behavioral reference; compare outputs externally; never modify `TES5Edit/` |
-| libdeflate | Ignoring wrapper distinction and actual output size | Use selected raw/zlib API per verified format; require exact decompressed size; map result codes |
-| official lz4 | Using one LZ4 API for both SSE and Starfield | Separate frame and raw block adapters with format-driven routing |
-| DirectXTex | Exposing DirectXTex types in libbsa API | Translate to internal/public libbsa metadata; keep DirectXTex behind texture boundary |
-| vcpkg/CMake | Letting dependency headers leak through transitive public targets | Link privately where possible; keep public headers dependency-light |
-| BSArchPro compatibility checks | Comparing only file lists | Compare extracted bytes, metadata, flags, hashes, ordering, and known warning behavior |
+5. **Phase 5 — BA2 DX10 temp-data lifecycle hardening**
+   - Tighten cleanup and caller-visible risk boundaries without redesigning the whole staging model.
 
-## Performance Traps
+6. **Phase 6 — Milestone verification and release gate**
+   - Run official Release lane, malformed suites, package/export smoke, and opt-in corpus checks for touched families.
+   - Confirm no path, parser, dedupe, or DX10 staging regressions escaped.
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Full archive read into RAM | Huge memory spikes, slow open | Metadata-only open plus seeked payload reads | Large FO4/Starfield archives and texture packs |
-| Extract-all before write | Repacking requires temporary copies of every file | Deferred source reads and streaming writer sinks | Any multi-GB archive rewrite |
-| Per-byte I/O abstractions | Correct but very slow extraction | Buffered readers/writers and chunk-level operations | Thousands of small files or compressed texture chunks |
-| Parallel compression before isolation | Data races and nondeterministic corruption | Immutable work items, per-thread compressor/decompressor instances, deterministic final table assembly | Milestone 9 multi-threading |
-| Hash lookup without normalized cached keys | Repeated path normalization/hash cost | Normalize once at parse/add time; cache format-specific hashes | Large file tables |
+## Why This Order
 
-## Security / Robustness Mistakes
+- **Correctness boundary before cleanup:** host-path fixes are the only known shipped bug and affect every format family.
+- **Verification before structural edits:** without settled presets and policy, later “hardening” changes produce noisy false failures and weak confidence.
+- **Structure before optimization:** refactors reduce review risk in the exact files that dedupe and DX10 staging work must touch next.
+- **Optimization before ship gate:** performance/temp cleanup changes are where subtle regressions hide, so they should be last and followed immediately by broader verification.
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Trusting offsets/counts from archive headers | OOB reads, crashes, huge allocations | Checked arithmetic, file-size bounds, count limits, typed format errors |
-| Extracting paths verbatim | Path traversal / overwrite outside destination | Reject absolute paths, drive roots, `..`, and unsafe separators before host write |
-| Unsafe LZ4 fast decompression | Reads past input on malformed archives | Use safe decompression APIs only for untrusted archive data |
-| Assertions on archive content | Release behavior differs; debug crashes | Return typed `invalid_archive` errors for untrusted input |
-| Partial output on failure | Consumers use corrupted extracted files | Document partial-write semantics and prefer temp/sink-controlled writes |
+## Milestone Exit Criteria
 
-## "Looks Done But Isn't" Checklist
-
-- [ ] **TES4-family read:** Can extract compressed and uncompressed files, validates embedded-name behavior, and matches BSArchPro bytes.
-- [ ] **TES3 read/write:** Offset math is data-section-relative and tested separately from TES4 offsets.
-- [ ] **BA2 GNRL read:** Parses file name table at `FileTableOffset`, handles `PackedSize == 0`, Starfield v2 unknown fields, and v3 `CompressionMethod`.
-- [ ] **BA2 DDS read:** Reconstructed DDS loads through DirectXTex and preserves mip/cubemap metadata, not merely a `DDS ` magic.
-- [ ] **Writer support:** Produced archives are tested outside libbsa self-round-trip against known-good behavior or tools.
-- [ ] **Compression:** Deflate, LZ4 frame, and LZ4 block all have separate exact-size tests and malformed-input failures.
-- [ ] **Paths:** Tests include mixed separators, case behavior, extended-byte names, duplicate/conflicting names, and traversal rejection.
-- [ ] **Streaming:** API can extract a single large file to a sink without loading the whole archive or all files.
-- [ ] **Errors:** Missing file, unsupported version, corrupt record, decompression failure, and unsafe path return distinct errors.
-
-## Recovery Strategies
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Unified format model | HIGH | Freeze public view, split internal modules, add adapter layer, migrate tests by format |
-| LZ4 API confusion | MEDIUM | Add explicit codec wrappers, route by parsed metadata, regenerate affected fixtures, audit writer output |
-| DDS reconstruction wrong | HIGH | Replace hand header logic with DirectXTex-backed metadata, build mip/cubemap fixture suite, revalidate BA2 DX10 writer |
-| Path normalization wrong | HIGH | Introduce archive path type, deprecate path-based APIs, recompute hash tests, add encoding/traversal fixtures |
-| Whole-archive memory design | HIGH | Refactor open/extract/write APIs around readers/sinks, add bounded-memory tests before performance work |
-| Weak fixture corpus | MEDIUM | Create fixture matrix, mark unsupported gaps explicitly, add optional real-archive compatibility harness |
-
-## Pitfall-to-Phase Mapping
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Unified format model | Milestone 1 | Format enum + separate parser modules; no cross-format on-disk record struct |
-| LZ4 frame/block confusion | Milestones 1, 3, 6, 7 | SSE frame fixture and Starfield raw block fixture both pass exact byte extraction |
-| Deflate wrapper/size ambiguity | Milestones 1, 3, 5, 6, 10 | Exact-size decompression tests and malformed compressed-data tests |
-| BA2 DDS reconstruction | Milestones 4, 7, 10 | Reconstructed DDS files load via DirectXTex and match source texture metadata |
-| Archive path normalization | Milestone 1; expanded through 8 and 10 | Hash lookup tests for normalized/extended-byte paths and traversal rejection tests |
-| Packed-struct parsing | Milestone 1; every parser phase | Checked little-endian reader tests plus malformed count/offset fixtures |
-| Whole-archive memory loading | Milestones 1, 5-9 | Extraction/writer tests using streaming sinks and bounded memory expectations |
-| Writer before read proof | Milestones 5-8 | Writer phases blocked until read fixtures for same format are green |
-| Error model collapse | Milestone 1 and 10 | Public `result`/error taxonomy and distinct failure tests |
-| Weak fixtures | Milestone 1 onward | Fixture matrix coverage report by format/version/feature |
+- Non-ASCII host-path tests pass through both open and validation flows.
+- Supported preset/CI policy is internally consistent across `.planning/`, `CMakePresets.json`, docs, and policy tests.
+- Refactor phases show no stable error-code, warning-code, or fixture-behavior drift unless explicitly intended.
+- Dedupe optimizations preserve exact stored-byte correctness and finalization revalidation.
+- BA2 DX10 failure-path cleanup is tested and documented with honest residual-risk wording.
+- Release lane and opt-in compatibility checks are rerun before milestone close.
 
 ## Sources
 
-- Project context and requirements: `J:\libbsa-gsd\.planning\PROJECT.md`, `J:\libbsa-gsd\docs\PRD.md`, `J:\libbsa-gsd\AGENTS.md`.
-- LZ4 official documentation via Context7 `/lz4/lz4`: `LZ4_decompress_safe` requires exact compressed size and destination capacity and returns negative errors; frame API (`LZ4F_*`) produces self-describing frames with magic bytes.
-- libdeflate official header: raw DEFLATE, zlib, and gzip APIs are separate; decompression reports `LIBDEFLATE_BAD_DATA`, `LIBDEFLATE_SHORT_OUTPUT`, and `LIBDEFLATE_INSUFFICIENT_SPACE`; compressed output is not stable across library versions. https://github.com/ebiggers/libdeflate/blob/master/libdeflate.h
-- DirectXTex official documentation via Context7 `/microsoft/directxtex`: `LoadFromDDSMemory`, `GetMetadataFromDDSMemory`, `TexMetadata`, `ScratchImage`, and DDS header helpers support DDS metadata validation/reconstruction.
-- `ba2` Rust documentation: BA2 variants, Starfield LZ4 introduction, texture chunking, and byte-string path warning. https://docs.rs/ba2/latest/ba2/ and https://docs.rs/ba2/latest/ba2/fo4/index.html
-- `dream_archive` Rust documentation: byte-string archive paths, explicit encoding helpers, streaming/deferred builder behavior, BA2 DX10 DDS reconstruction, and unsupported console/XMem scope. https://docs.rs/dream_archive/latest/dream_archive/
-- Bethesda Structs documentation: BSA v105 uses LZ4; BTDX has GNRL and DX10, and DX10 extraction requires rebuilding DDS headers. https://bethesda-structs.readthedocs.io/en/latest/bethesda_structs.archive.html
-- BA2 format notes: little-endian records, no padding/alignment, name table, GNRL records, and texture chunk records. https://miere.ru/posts/ba2-archive-format/
-- GECK BSA documentation: archive/file flags, compression tradeoffs, BSA loading behavior, and asset-type flag expectations. https://geckwiki.com/index.php/BSA_Files
-- STEP Archive2 guide: official Archive2 context, BA2 general vs DDS settings, max chunk count, and texture BA2 streaming rationale. https://stepmodifications.org/wiki/Guide:Archive2
-
----
-*Pitfalls research for: libbsa reusable C++20 Bethesda BSA/BA2 archive library*  
-*Researched: 2026-05-07*
+- `.planning/PROJECT.md`
+- `.planning/codebase/CONCERNS.md`
+- `.planning/codebase/TESTING.md`

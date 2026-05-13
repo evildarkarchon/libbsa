@@ -1,179 +1,134 @@
-# Stack Research
+# Technology Stack — v1.1 Hardening
 
-**Domain:** Windows-only C++20 Bethesda BSA/BA2 archive-format library
 **Project:** libbsa  
-**Researched:** 2026-05-07  
-**Confidence:** HIGH
+**Milestone:** v1.1 Hardening  
+**Researched:** 2026-05-12  
+**Scope:** Only additions or changes needed for the new hardening milestone. Existing archive-format, dependency, benchmark, docs, and packaging choices are intentionally not re-decided here.
 
-## Recommended Stack
+## Recommendation Summary
 
-### Core Technologies
+This milestone should **not add any new runtime/library dependency**. The right stack move is to harden the existing Windows-first toolchain: fix host-path handling with the standard library plus Win32 APIs already in use, add one real optimized verification lane, add one real sanitizer lane, and keep the rest of the repo dependency-light.
 
-| Technology | Version / Policy | Purpose | Why Recommended | Confidence |
-|------------|------------------|---------|-----------------|------------|
-| C++ | C++20 language mode; do not expose C++23-only library types in public headers | Library implementation and public API | The PRD requires C++20. C++20 gives `std::span`, `std::endian`, concepts, `std::jthread`, and strong value-oriented interfaces without forcing newer toolchains. Use a local `libbsa::result<T>` or explicit error-code API rather than public `std::expected`, because `std::expected` is C++23. | HIGH |
-| CMake | Minimum `4.0`; test latest CMake `4.3.x` in CI | Build system, install/export package generation, CTest orchestration | CMake is the standard distribution path for reusable C++ libraries and integrates cleanly with vcpkg. `4.0` is a pragmatic floor for modern target/file-set/install patterns while remaining broadly available; latest-CMake CI catches policy drift early. | HIGH |
-| vcpkg | Manifest mode with committed `vcpkg.json`, `vcpkg-configuration.json`, and a `builtin-baseline` | Reproducible dependency acquisition | Microsoft recommends manifest mode for most projects; it is required for versioning and keeps dependencies project-scoped. A committed baseline gives repeatable libdeflate/lz4/DirectXTex/Catch2 versions without vendoring. | HIGH |
-| TES5Edit / BSArchPro | Read-only git submodule / behavioral reference only | Compatibility oracle for Bethesda archive quirks | The project requires BSArchPro-compatible behavior but forbids editing, formatting, staging, compiling, or vendoring `TES5Edit/`. Trace `TES5Edit/BSArchPro.dpr`, `TES5Edit/BSArch/`, `TES5Edit/Core/wbBSArchive.pas`, and `TES5Edit/Core/wbBSA.pas`; implement clean C++ outside the submodule. | HIGH |
+## Required Changes
 
-### Required Runtime Libraries
+### 1) Keep the library stack unchanged
 
-| Library | Version / Policy | Purpose | When to Use | Why Recommended | Confidence |
-|---------|------------------|---------|-------------|-----------------|------------|
-| libdeflate | vcpkg `libdeflate` `1.25#0`; enable `compression` and `decompression`; do not enable `gzip`/`zlib` unless fixtures prove wrapped-stream need | Deflate compression/decompression | TES4/FO3/FNV/Skyrim LE BSA payloads; Fallout 4 BA2; Starfield BA2 v2 and v3 when not LZ4 | libdeflate is optimized for fast whole-buffer DEFLATE, matching BSA/BA2 chunk payloads better than streaming zlib wrappers. Wrap it behind exact-size helpers that fail if decompressed bytes do not match archive metadata. | HIGH |
-| lz4 | vcpkg `lz4` `1.10.0#0`; link official `lz4::lz4`; do not depend on the CLI | LZ4 frame and raw block compression/decompression | Skyrim SE/AE BSA uses LZ4 frame APIs; Starfield BA2 v3 `CompressionMethod == 3` uses raw LZ4 block APIs | Official liblz4 exposes both `LZ4F_*` frame APIs and `LZ4_*safe*` block APIs. Keeping separate wrappers for frame-vs-block paths prevents a high-risk class of silent corruption. | HIGH |
-| DirectXTex | vcpkg `directxtex` `2026-03-31#0`; use core library, avoid optional image/tool features unless needed | DDS metadata parsing, DXGI format interpretation, mip/cubemap analysis, DDS header reconstruction support | BA2 DX10/DDS read and write phases only | DirectXTex is the maintained Microsoft library for DDS metadata (`GetMetadataFromDDSMemory`, `LoadFromDDSMemory`, `TexMetadata`, `ScratchImage`) and has current vcpkg support. Keep it behind an internal adapter so public headers do not leak DirectX/DXGI or platform details. | HIGH on Windows |
+| Item | Decision | Why it fits this repo |
+|------|----------|-----------------------|
+| Runtime dependencies | **No new runtime deps** | The milestone is about correctness and verification, not new product capability. `libdeflate`, `lz4`, `DirectXTex`, `nlohmann-json`, and Win32 APIs already cover the problem space. |
+| Unicode/path handling | **Use `std::filesystem::path` end-to-end for host paths, with wide Win32 boundaries where needed** | The known bug is Windows host-path correctness, not archive-internal path encoding. This is a codepath fix, not a dependency problem. |
+| Archive-internal path model | **Do not change** | The target issue is host filesystem access. Archive keys/hashes should remain their current normalized archive-string model. |
 
-### Development and Validation Tools
+### 2) Add one compiler/toolchain hardening flag set
 
-| Tool / Library | Version / Policy | Purpose | When to Use | Why Recommended | Confidence |
-|----------------|------------------|---------|-------------|-----------------|------------|
-| Catch2 | vcpkg `catch2` `3.14.0#0`; consider `thread-safe-assertions` feature before parallel test phases | Unit, fixture, round-trip, compatibility, and regression tests | From Milestone 1 | Catch2 is C++-native, concise for data-driven binary fixture tests, and integrates with CTest via `catch_discover_tests`. Prefer it over GoogleTest unless mocking becomes a concrete requirement. | HIGH |
-| CTest | Bundled with CMake | Test orchestration and CI reporting | All milestones | Keeps tests build-system-native. Use labels such as `unit`, `fixture`, `roundtrip`, `compat`, `malformed`, `slow`, and `requires-game-fixture`. | HIGH |
-| CMakePresets.json | Schema compatible with CMake `4.0+` | Repeatable Windows configure/build/test workflows | Project foundation | Presets should encode the vcpkg toolchain, build type, and static/shared Windows variants so contributors do not hand-type fragile CMake commands. | HIGH |
-| Sanitizers | Compiler-provided ASan/UBSan on Clang/GCC; MSVC ASan where practical | Parser/decompressor hardening | Start with parsing and malformed fixture phases | Archive parsers consume untrusted binary data. Sanitizers should run on malformed headers, oversized sizes, truncated payloads, and decompression failure cases. | HIGH |
-| Doxygen | System package or CI/vcpkg tool when docs generation is added | Public API documentation | Once public headers stabilize | Project requires Doxygen comments for public APIs; generate docs in CI later, but do not add it as a runtime dependency. | MEDIUM |
+| Change | Required | Why |
+|--------|----------|-----|
+| MSVC `/utf-8` for all library and test targets | Yes | Microsoft documents `/utf-8` as setting both source and execution character sets to UTF-8. For this repo, that makes non-ASCII test literals and path fixture names deterministic across developer machines and CI. It does **not** fix filesystem opening by itself, but it removes source-encoding drift while the host-path fix lands. |
+| Keep C++20 public API contract | Yes | Hardening does not justify raising the public standard or exposing C++23-only types. |
+| Keep Windows/MSVC-first toolchain | Yes | The repo is explicitly Windows-only; this milestone should reinforce that instead of adding portability work. |
 
-## Installation / Baseline Shape
+### 3) Add two new supported preset/lane families
 
-Use vcpkg manifest mode rather than ad-hoc install instructions.
+#### A. Required: optimized verification lane
 
-```json
-{
-  "name": "libbsa",
-  "version-string": "0.1.0",
-  "dependencies": [
-    {
-      "name": "libdeflate",
-      "features": ["compression", "decompression"]
-    },
-    "lz4",
-    "directxtex",
-    "catch2"
-  ],
-  "builtin-baseline": "<commit from vcpkg x-update-baseline --add-initial-baseline>"
-}
-```
+| Preset | Suggested config | Purpose | Required |
+|--------|------------------|---------|----------|
+| `windows-msvc-release-static` | `Release`, `BUILD_SHARED_LIBS=OFF`, tests on | Catch optimization-sensitive parser/writer regressions and verify the installable static package in a real optimized build | Yes |
 
-Recommended CMake dependency shape:
+**Why static first:** most hardening risks here are parser math, staging lifetime, and dedupe behavior, not DLL boundary behavior. A Release static lane gives the highest value with the least matrix expansion.
 
-```cmake
-cmake_minimum_required(VERSION 4.0)
-project(libbsa VERSION 0.1.0 LANGUAGES CXX)
+#### B. Required: sanitizer lane
 
-add_library(libbsa)
-target_compile_features(libbsa PUBLIC cxx_std_20)
+| Preset | Suggested config | Purpose | Required |
+|--------|------------------|---------|----------|
+| `windows-msvc-asan-static` | `RelWithDebInfo` preferred, `BUILD_SHARED_LIBS=OFF`, `/fsanitize=address`, debug info on | Catch memory-safety bugs in malformed parser, codec, temp-staging, and dedupe paths that normal Debug/Release tests can miss | Yes |
 
-find_package(libdeflate CONFIG REQUIRED)
-find_package(lz4 CONFIG REQUIRED)
-find_package(directxtex CONFIG REQUIRED)
+**Implementation notes:**
 
-target_link_libraries(libbsa
-  PRIVATE
-    libdeflate::libdeflate_static
-    lz4::lz4
-    Microsoft::DirectXTex)
+- Use **MSVC AddressSanitizer**, not a Linux Clang lane.
+- Prefer **`RelWithDebInfo`** over plain Debug so hardening coverage sees more release-like code generation while keeping usable call stacks.
+- Ensure the ASan preset disables incompatible MSVC settings called out by Microsoft docs, especially **Edit-and-Continue (`/ZI`)**, **incremental linking**, and **`/RTC`**.
 
-find_package(Catch2 CONFIG REQUIRED)
-include(CTest)
-include(Catch)
-```
+### 4) Update CI matrix and policy tests together
 
-Validate exact target names against vcpkg usage files during implementation; keep dependency headers out of installed public headers.
+| Area | Required change | Why |
+|------|-----------------|-----|
+| `CMakePresets.json` | Add real configure/build/test presets for `windows-msvc-release-static` and `windows-msvc-asan-static` | The current preset surface only supports Debug static/shared. The planning docs and supported presets must stop drifting. |
+| `.github/workflows/ci.yml` | Run the new lanes in CI | A preset that never runs is not real coverage. |
+| `tests/unit/validation_policy_tests.cpp` | Replace the current “sanitizers absent” assumptions with checks for the supported hardening lane names and Windows-only policy | The current tests intentionally enforce stale policy. They must be updated as part of the milestone, not after it. |
+| Fixture/test docs | Document which tests are expected in ASan and Release lanes, and whether any expensive corpus checks stay opt-in | Maintainers need an honest supported-matrix contract. |
 
-## CMake Project Layout Recommendation
+## Optional but Sensible
 
-- `include/libbsa/` — stable public headers only: archive open/read/write API, metadata value types, error/result types, stream/sink abstractions.
-- `src/formats/tes3/`, `src/formats/bsa/`, `src/formats/ba2/` — format-specific parsing, hashing, sorting, and serialization.
-- `src/compression/deflate_codec.*` — owns libdeflate allocators, compression levels, exact-size decompression, and error translation.
-- `src/compression/lz4_frame_codec.*` — owns SSE BSA LZ4 frame handling via `LZ4F_*`.
-- `src/compression/lz4_block_codec.*` — owns Starfield BA2 raw block handling via `LZ4_*safe*`.
-- `src/texture/dds_analyzer.*` — owns DirectXTex use and converts `TexMetadata` into libbsa-native metadata.
-- `tests/fixtures/` — small legal handcrafted archives and metadata manifests; never mutate `TES5Edit/` or rely on it as a writable fixture location.
-- `tests/compat/` — optional compatibility tests comparing outputs to BSArchPro-generated golden data.
+These are good follow-ons if the required work lands cleanly, but they are **not necessary to complete v1.1**.
 
-## Alternatives Considered
+| Option | Keep Optional Because |
+|-------|------------------------|
+| `windows-msvc-release-shared` lane | Useful for fuller package/export confidence, but the current hardening concerns are not primarily shared-library-specific. |
+| ASan dump-file capture via `ASAN_SAVE_DUMPS` in CI artifacts | Helpful for post-mortem debugging, but not required to establish the lane. |
+| Dedicated fuzz harness target using MSVC `/fsanitize=fuzzer` | Valuable later, but it is a bigger workflow commitment than this milestone needs. Treat as future hardening work, not v1.1 minimum scope. |
+| Workflow presets in `CMakePresets.json` | Nice cleanup for `configure → build → test`, but they are ergonomics, not hardening. |
 
-| Recommended | Alternative | Why Not / When Alternative Makes Sense | Confidence |
-|-------------|-------------|----------------------------------------|------------|
-| CMake + vcpkg manifest mode | Meson, Bazel, Premake, raw Visual Studio solutions | These can build C++, but CMake + vcpkg is the selected Windows library distribution path and aligns with vcpkg package exports. Add another build system only for a real downstream integration need. | HIGH |
-| libdeflate | zlib, miniz, zlib-ng | zlib is slower and oriented around zlib streams; miniz adds speculative vendored code; zlib-ng is unnecessary while libdeflate satisfies required DEFLATE payloads. Add zlib compatibility only if fixtures prove Bethesda data uses wrapped zlib streams. | HIGH |
-| official lz4 | Bundled LZ4 source, game-specific LZ4 reimplementation | Official lz4 has stable frame and block APIs. Reimplementation risks silent corruption; vendoring creates update/security burden. | HIGH |
-| DirectXTex behind an adapter | Hand-written DDS parser, DirectXTK utilities, texconv CLI invocation | A hand parser may be tempting for read-only extraction, but BA2 DDS write support needs robust DXGI, mip, array, and cubemap metadata. Shelling out to tools is not suitable for an embeddable library. Keep DirectXTex internal so the public API stays clean. | MEDIUM-HIGH |
-| Catch2 + CTest | GoogleTest | GoogleTest is strong for large orgs and mocking-heavy code. libbsa primarily needs fixture-driven parser and round-trip tests, where Catch2 is lighter and terser. Switch only if mocks or org standards become real requirements. | MEDIUM |
+## Explicitly Do NOT Add
 
-## What NOT to Use
+| Do not add | Why not |
+|------------|---------|
+| ICU, Boost.Nowide, `fmt`, `spdlog`, or any new Unicode/path helper library | Windows host-path correctness should be solved with `std::filesystem::path` plus the Win32 boundary already present in the repo. New libraries would increase surface area without solving the real archive-specific risks. |
+| Cross-platform sanitizer lanes (`linux-clang-asan-ubsan`, WSL jobs, POSIX fixes) | Out of scope for a Windows-only library and directly conflicts with the repo boundary. |
+| UBSan/TSan as required milestone gates | Microsoft’s current first-party sanitizer story is AddressSanitizer-focused. Do not invent a fake portable sanitizer policy the repo does not actually support. |
+| New archive/runtime dependencies | The milestone is internal hardening only. |
+| A persistent temp-file database, background cleanup service, or service-style helper | Over-engineered for the stated BA2 DX10 temp-staging risk. Fix lifecycle and cleanup behavior inside the existing writer flow first. |
+| A public CLI or GUI just to exercise hardening lanes | Validation should remain library- and test-driven. |
+| Reworking archive-internal path/hash semantics while fixing host-path Unicode | Different problem, high regression risk, not required for the milestone goal. |
 
-| Avoid | Why | Use Instead | Confidence |
-|-------|-----|-------------|------------|
-| Editing, formatting, compiling, staging, or vendoring `TES5Edit/` | Violates the hard project boundary and risks Delphi/UI coupling in libbsa | Treat TES5Edit/BSArchPro as read-only behavior reference; implement clean C++ outside the submodule | HIGH |
-| Public `std::expected` while claiming C++20 | `std::expected` is C++23; exposing it breaks the stated C++20 API contract | `libbsa::result<T>` or explicit `std::error_code`-style APIs; reconsider on an intentional C++23 migration | HIGH |
-| `std::filesystem::path` for archive-internal paths | Bethesda virtual paths are normalized archive keys, not host filesystem paths; host separator/case/encoding rules can corrupt lookups and hashes | Store archive paths as normalized UTF-8/byte strings with explicit normalization; use filesystem paths only at host I/O boundaries | HIGH |
-| LZ4 frame API for Starfield BA2 v3 raw LZ4 blocks | LZ4 frame and raw block formats are different; wrong API selection can fail or corrupt output | Route by archive family/version/`CompressionMethod`: `LZ4F_*` for SSE frames, `LZ4_*safe*` for Starfield raw blocks | HIGH |
-| DirectXTex or DXGI types in public headers | Leaks implementation/platform details into downstream consumers | Internal `dds_metadata` / `texture_layout` value types translated from DirectXTex internally | HIGH |
-| External logging/formatting libraries by default (`spdlog`, `fmt`) | Not required by a reusable archive library and violates minimal-dependency constraints | Return structured errors and let consumers log/format however they choose | HIGH |
-| Boost, libarchive, ZIP/7z libraries | They do not implement Bethesda BSA/BA2 semantics and add large dependency/API surface | Purpose-built BSA/BA2 parsers/writers | HIGH |
-| Whole-archive memory loading as primary design | Starfield archives can be very large; whole-file reads break performance and memory goals | Streaming sources/sinks and bounded scratch buffers | HIGH |
-| In-place archive mutation in early milestones | Hard to make safe with shifting tables, compression, DDS chunks, and deduplication | Open/read/write-new archive flow; defer in-place updates to polish/hardening | HIGH |
+## Practical Version / Policy Guidance
 
-## Stack Patterns by Archive Variant
+| Item | Recommendation |
+|------|----------------|
+| CMake | Keep the repo’s current **CMake 4.3.2** CI install and CMake 4.0 minimum unless a lane implementation proves otherwise. No upgrade is needed for this milestone. |
+| vcpkg | Keep manifest mode and the pinned default-registry baseline already in `vcpkg-configuration.json`. No lockfile or package-manager change is needed. |
+| MSVC / Visual Studio toolset | Require an MSVC toolset with **AddressSanitizer** support. Current Microsoft docs support `/fsanitize=address` on Windows x86/x64 and document CMake-based usage. |
+| Dependency versions | Do not churn dependency versions just to “harden.” Only update a package if the new lane work proves a concrete incompatibility or bugfix need. |
 
-**TES3 / Morrowind BSA**
-- Use standard C++ binary I/O, explicit little-endian reads, TES3 hash/path utilities, and no compression library.
-- Keep data-section-relative offset math isolated in TES3 code.
+## Milestone Planning Cut
 
-**TES4 / FO3 / FNV / Skyrim LE BSA**
-- Use libdeflate for deflate payloads.
-- Keep embedded-name handling, archive flags, file flags, and hash-ordering in format-specific code.
-- Do not add zlib unless compatibility fixtures demonstrate zlib-wrapped streams are required.
+### Must ship in v1.1
 
-**Skyrim SE/AE BSA**
-- Use official LZ4 frame APIs (`LZ4F_*`) only.
-- Keep this wrapper separate from Starfield raw block LZ4 helpers.
+1. **No new dependency policy remains intact**.
+2. **Host-path handling is standardized on `std::filesystem::path` / wide Windows opens**.
+3. **`/utf-8` is applied consistently**.
+4. **`windows-msvc-release-static` preset + CI lane exists and runs tests**.
+5. **`windows-msvc-asan-static` preset + CI lane exists and runs tests**.
+6. **Policy tests and docs are updated to reflect the new supported matrix**.
 
-**Fallout 4 / Starfield BA2 GNRL**
-- Use libdeflate for FO4 and Starfield v2 / non-LZ4 v3 payloads.
-- Use official raw block APIs (`LZ4_*safe*`) when Starfield v3 `CompressionMethod == 3`.
-- Encode compression method as explicit metadata; never infer solely from extension.
+### Safe to defer
 
-**Fallout 4 / Starfield BA2 DDS/DX10**
-- Use DirectXTex only through `dds_analyzer` for dimensions, DXGI format, mip count, array/cubemap metadata, and mip chunk planning.
-- Use libdeflate or raw LZ4 block according to archive version and chunk metadata.
-- Persist libbsa-native metadata, not DirectXTex objects.
+1. Release shared lane.
+2. Fuzz harness.
+3. ASan dump artifact plumbing.
+4. Any broader dependency/toolchain modernization unrelated to the listed concerns.
 
-## Version Compatibility
+## Confidence
 
-| Component | Compatible With | Notes | Confidence |
-|-----------|-----------------|-------|------------|
-| CMake `4.0+` | vcpkg toolchain, Catch2 3.x, DirectXTex current CMake package | CMake current docs show `4.3.2`; use `4.0` as the minimum and a latest-CMake lane to catch policy changes. | HIGH |
-| vcpkg manifest mode | libdeflate `1.25`, lz4 `1.10.0`, DirectXTex `2026-03-31`, Catch2 `3.14.0` | Commit a baseline. Use `version>=` for known minimums; use `overrides` only to force a problematic package version. | HIGH |
-| libdeflate `1.25` | All vcpkg triplets | vcpkg package supports all triplets; whole-buffer API fits archive payload chunks. | HIGH |
-| lz4 `1.10.0` | All vcpkg triplets | vcpkg package supports all triplets; library license is BSD-2-Clause. Do not use CLI GPL terms or CLI behavior as library API. | HIGH |
-| DirectXTex `2026-03-31` | vcpkg Windows triplets | libbsa is Windows-only; validate DirectXTex through Windows vcpkg/MSVC presets. | HIGH |
-| Catch2 `3.14.0` | CMake/CTest | vcpkg package supports all triplets; `catch_discover_tests` has recent fixes and is appropriate for fixture labels. | HIGH |
-
-## CI / Toolchain Recommendation
-
-- Primary lane: Windows + Visual Studio 2026/VS 18.x, vcpkg manifest mode, Debug and Release.
-- Secondary lane: Windows + latest CMake `4.3.x` to expose policy warnings early.
-- No Linux, macOS, POSIX, or cross-platform portability lane is supported unless the user explicitly reopens platform support.
-- Build both static and shared library configurations before publishing an install/export package.
+| Area | Confidence | Notes |
+|------|------------|-------|
+| No-new-dependency recommendation | HIGH | Strongly supported by project constraints and the nature of the bugs. |
+| Release lane recommendation | HIGH | Directly matches the documented gap in current presets/CI. |
+| MSVC ASan lane recommendation | HIGH | Supported by current Microsoft documentation and by the repo’s Windows-only scope. |
+| `/utf-8` recommendation | MEDIUM-HIGH | Officially supported by MSVC docs; valuable for deterministic source/test encoding, though it is supportive rather than sufficient for host-path correctness. |
+| Deferring fuzzing/shared-release expansion | MEDIUM-HIGH | Good tradeoff for milestone focus, but future evidence could justify promoting them later. |
 
 ## Sources
 
-- Project context: `J:\libbsa-gsd\.planning\PROJECT.md`, `J:\libbsa-gsd\docs\PRD.md`, `J:\libbsa-gsd\AGENTS.md` — constraints, milestones, TES5Edit boundary, required dependencies.
-- Context7 `/kitware/cmake` — verified C++20 target features and install/export package patterns.
-- Context7 `/microsoft/vcpkg` and Microsoft Learn — verified manifest mode, `builtin-baseline`, version constraints, overrides, and CMake toolchain behavior: https://learn.microsoft.com/vcpkg/concepts/manifest-mode and https://learn.microsoft.com/vcpkg/users/versioning
-- CMake official docs — current release documentation shows CMake `4.3.2`: https://cmake.org/cmake/help/latest/release/index.html
-- vcpkg package page — `libdeflate` `1.25#0`, features, all-triplet support, MIT license, last updated 2025-11-03: https://vcpkg.io/en/package/libdeflate.html
-- libdeflate GitHub releases — latest `v1.25`: https://github.com/ebiggers/libdeflate/releases
-- vcpkg package page — `lz4` `1.10.0#0`, all-triplet support, BSD-2-Clause license, last updated 2024-07-25: https://vcpkg.io/en/package/lz4.html
-- LZ4 GitHub releases — `v1.10.0` official release, stable library notes, frame/block API context: https://github.com/lz4/lz4/releases
-- Context7 `/microsoft/directxtex` — verified DDS metadata/load APIs (`GetMetadataFromDDSMemory`, `LoadFromDDSMemory`, `TexMetadata`, `ScratchImage`).
-- DirectXTex GitHub releases — March 2026 release, public mip helpers, permissive DDS reader update, VS 2026 support, vcpkg availability: https://github.com/microsoft/DirectXTex/releases
-- vcpkg package page — `directxtex` `2026-03-31#0`, feature/package metadata, last updated 2026-04-01: https://vcpkg.io/en/package/directxtex.html
-- vcpkg package page and Catch2 GitHub releases — `catch2` `3.14.0#0`, thread-safe assertion feature, latest release fixes: https://vcpkg.io/en/package/catch2.html and https://github.com/catchorg/Catch2/releases
-
----
-*Stack research for: libbsa Windows-only C++20 Bethesda BSA/BA2 archive library*
-*Researched: 2026-05-07*
+- Project milestone and scope: `.planning/PROJECT.md`
+- Current concerns and hardening gaps: `.planning/codebase/CONCERNS.md`
+- Current stack snapshot: `.planning/codebase/STACK.md`
+- Current preset surface: `CMakePresets.json`
+- Current CI matrix: `.github/workflows/ci.yml`
+- Current policy enforcement: `tests/unit/validation_policy_tests.cpp`
+- Microsoft Learn — AddressSanitizer overview and MSVC/CMake usage: https://learn.microsoft.com/cpp/sanitizers/asan?view=msvc-170
+- Microsoft Learn — MSVC sanitizer compiler options: https://learn.microsoft.com/cpp/build/reference/fsanitize?view=msvc-170
+- Microsoft Learn — Visual Studio/CMake Presets guidance for AddressSanitizer: https://learn.microsoft.com/cpp/build/cmake-presets-vs?view=msvc-170#enable-addresssanitizer-for-windows-and-linux
+- Microsoft Learn — MSVC `/utf-8`: https://learn.microsoft.com/cpp/build/reference/utf-8-set-source-and-executable-character-sets-to-utf-8?view=msvc-170
+- Context7 `/kitware/cmake` — current `CMakePresets.json` schema and `workflowPresets` support
+- Microsoft Learn — vcpkg manifest mode and version locking concepts: https://learn.microsoft.com/vcpkg/concepts/manifest-mode and https://learn.microsoft.com/vcpkg/consume/lock-package-versions
