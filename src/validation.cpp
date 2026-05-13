@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <fstream>
 #include <new>
 #include <span>
 #include <stdexcept>
@@ -45,11 +44,6 @@ void append_fatal(validation_report& report, error_code code) {
 void append_fatal(validation_report& report, error err) {
   report.valid = false;
   report.errors.push_back(validation_diagnostic{err.code, std::move(err.message)});
-}
-
-bool host_path_can_be_opened(std::string_view host_path) {
-  std::ifstream input{std::string{host_path}, std::ios::binary};
-  return static_cast<bool>(input);
 }
 
 validation_report report_from_open_error(const error& err) {
@@ -178,9 +172,6 @@ bool validation_report::is_valid() const noexcept { return valid && errors.empty
 result<validation_report> validate_archive(std::string_view host_path, validation_options options) {
   if (host_path.empty()) {
     return error{error_code::invalid_argument, "archive path must not be empty"};
-  }
-  if (!host_path_can_be_opened(host_path)) {
-    return error{error_code::io_error, "failed to open archive host path"};
   }
 
   auto opened = archive_reader::open(host_path);
