@@ -1,7 +1,5 @@
 #include <detail/host_file.hpp>
 
-#include <detail/writer_disk_source.hpp>
-
 #include <detail/byte_vector.hpp>
 
 #include <algorithm>
@@ -202,48 +200,6 @@ result<void> for_each_host_file_chunk(std::string_view host_path,
   }
 
   return reject_appended_host_file_byte(input.value(), context);
-}
-
-namespace {
-
-host_file_context as_host_file_context(const writer_disk_source_context& context) {
-  return host_file_context{context.open_error,
-                           context.inspect_error,
-                           context.read_error,
-                           context.changed_error,
-                           context.allocation_description};
-}
-
-} // namespace
-
-result<std::uint64_t> inspect_disk_source_size(std::string_view host_path, const writer_disk_source_context& context) {
-  return inspect_host_file_size(host_path, as_host_file_context(context));
-}
-
-result<std::vector<std::byte>> read_disk_source_exact(std::string_view host_path,
-                                                      std::uint64_t expected_size,
-                                                      const writer_disk_source_context& context) {
-  return read_host_file_exact(host_path, expected_size, as_host_file_context(context));
-}
-
-result<std::vector<std::byte>> read_disk_source_exact(std::string_view host_path,
-                                                      const writer_disk_source_context& context) {
-  return read_host_file_exact(host_path, as_host_file_context(context));
-}
-
-result<std::vector<std::byte>> read_disk_source_prefix(std::string_view host_path,
-                                                       std::size_t max_bytes,
-                                                       const writer_disk_source_context& context) {
-  return read_host_file_prefix(host_path, max_bytes, as_host_file_context(context));
-}
-
-result<void> for_each_disk_source_chunk(
-    std::string_view host_path,
-    std::uint64_t expected_size,
-    const writer_disk_source_context& context,
-    const std::function<result<void>(std::span<const std::byte>)>& callback,
-    std::size_t chunk_size) {
-  return for_each_host_file_chunk(host_path, expected_size, as_host_file_context(context), callback, chunk_size);
 }
 
 } // namespace libbsa::detail

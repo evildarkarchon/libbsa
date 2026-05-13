@@ -24,6 +24,10 @@ std::string read_text_file(const std::filesystem::path& path) {
 
 TEST_CASE("writer call sites use the neutral host_file helper seam", "[unit][host_file]") {
   const auto root = source_root();
+  const auto legacy_include = std::string{"writer_"} + "disk_source";
+  const auto legacy_exact = std::string{"read_"} + "disk_source_";
+  const auto legacy_inspect = std::string{"inspect_"} + "disk_source_size";
+  const auto legacy_chunk = std::string{"for_each_"} + "disk_source_chunk";
   constexpr auto cases = std::to_array<std::pair<std::string_view, std::string_view>>({
       {"src/formats/bsa/tes4_bsa_prepare.cpp", "tes4_prepare_source_context"},
       {"src/formats/bsa/tes4_bsa_layout.cpp", "tes4_dedupe_source_context"},
@@ -37,9 +41,9 @@ TEST_CASE("writer call sites use the neutral host_file helper seam", "[unit][hos
     REQUIRE(text.find("#include <detail/host_file.hpp>") != std::string::npos);
     REQUIRE(text.find("host_file_context") != std::string::npos);
     REQUIRE(text.find(context_name) != std::string::npos);
-    REQUIRE(text.find("writer_disk_source") == std::string::npos);
-    REQUIRE(text.find("read_disk_source_") == std::string::npos);
-    REQUIRE(text.find("inspect_disk_source_size") == std::string::npos);
-    REQUIRE(text.find("for_each_disk_source_chunk") == std::string::npos);
+    REQUIRE(text.find(legacy_include) == std::string::npos);
+    REQUIRE(text.find(legacy_exact) == std::string::npos);
+    REQUIRE(text.find(legacy_inspect) == std::string::npos);
+    REQUIRE(text.find(legacy_chunk) == std::string::npos);
   }
 }
