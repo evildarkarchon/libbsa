@@ -10,6 +10,16 @@ The library reimplements BSArchPro-compatible behavior using clean, idiomatic Wi
 
 libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
 
+## Current Milestone: v1.1 Hardening
+
+**Goal:** Strengthen libbsa's reliability and maintainability by addressing the highest-risk concerns in correctness, internal architecture, hardening coverage, and writer staging/performance without expanding the public product scope.
+
+**Target features:**
+- Fix non-ASCII Windows host-path handling for archive open and validation paths.
+- Refactor fragile reader/parser/preparer hotspots, including repeated public-reader dispatch and oversized format-specific translation units.
+- Reconcile hardening-policy drift and add stronger verification coverage such as sanitizer and/or Release-mode lanes.
+- Reduce high-cost or fragile staging paths such as payload dedupe hotspots and BA2 DX10 temp-file lifecycle risk.
+
 ## Requirements
 
 ### Validated
@@ -26,8 +36,10 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 
 <!-- Current scope. Building toward these. -->
 
-- [ ] Define the next milestone with fresh requirements through `$gsd-new-milestone`.
-- [ ] Decide whether to promote any v2 candidates: optional sample CLI, public fuzzing harnesses, lenient corrupt-archive recovery, or stable binary ABI policy.
+- [ ] v1.1 fixes non-ASCII Windows host-path handling for archive open and validation flows.
+- [ ] v1.1 reduces fragility in large parser/preparer and reader-dispatch codepaths through targeted internal refactors.
+- [ ] v1.1 restores or adds stronger hardening verification coverage and aligns planning claims with supported build/test lanes.
+- [ ] v1.1 reduces the most fragile or expensive staging paths in payload dedupe and BA2 DX10 temporary snapshot handling.
 
 ### Out of Scope
 
@@ -46,6 +58,8 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 ### Current State
 
 v1.0 shipped on 2026-05-10 after 12 phases, 75 plans, and 81 completed v1 requirements. The live planning surface is now compact: the full v1 roadmap, requirements, milestone audit, and phase execution artifacts are archived under `.planning/milestones/`.
+
+v1.1 now shifts focus from feature completeness to hardening work driven by the codebase concerns audit. The next milestone will stay internal-facing: correctness fixes, targeted refactors, stronger verification lanes, and performance/temp-data cleanup take priority over new public product surfaces.
 
 The current codebase exposes public reader, writer, validation, result, metadata, and execution-option APIs from `include/libbsa/`. Public headers remain dependency-light and C++20-compatible. Implementation code owns format parsing, archive writing, compression routing, DDS metadata analysis, validation reports, compatibility warnings, bounded-memory streaming, and optional worker-count execution.
 
@@ -119,4 +133,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-05-10 after v1.0 milestone*
+*Last updated: 2026-05-12 after starting v1.1 Hardening*
