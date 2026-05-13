@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <texture/dds_layout.hpp>
+
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -140,8 +142,71 @@ const nlohmann::json& canonical_entry_from_manifest(const nlohmann::json& manife
   return entries.front();
 }
 
-bool canonical_extraction_matches_manifest(const representative_archive_case&) {
-  return false;
+std::string utf8_string_from_path(const std::filesystem::path& path) {
+  const auto utf8 = path.u8string();
+  return {reinterpret_cast<const char*>(utf8.data()), utf8.size()};
+}
+
+std::vector<std::byte> expected_dds_bytes_from_manifest_entry(const nlohmann::json& entry) {
+  const libbsa::texture::dds_texture_layout layout{.width = entry.at("width").get<std::uint32_t>(),
+                                                   .height = entry.at("height").get<std::uint32_t>(),
+                                                   .mip_count = entry.at("num_mips").get<std::uint32_t>(),
+                                                   .dxgi_format = entry.at("dxgi_format").get<std::uint32_t>(),
+                                                   .array_size = entry.at("array_size").get<std::uint32_t>(),
+                                                   .is_cubemap = entry.at("is_cubemap").get<bool>()};
+  auto header = libbsa::texture::build_dds_dxt10_header(layout);
+  REQUIRE(header.has_value());
+
+  auto expected_bytes = header.value();
+  const auto payload = bytes_from_hex(entry.at("expected_dds_payload").at("bytes_hex").get<std::string>());
+  expected_bytes.insert(expected_bytes.end(), payload.begin(), payload.end());
+  return expected_bytes;
+}
+
+std::vector<std::byte> expected_bytes_from_manifest_entry(const nlohmann::json& entry) {
+  if (entry.contains("expected_dds_payload")) {
+    return expected_dds_bytes_from_manifest_entry(entry);
+  }
+  return bytes_from_hex(entry.at("expected").at("bytes_hex").get<std::string>());
+}
+
+void require_canonical_extraction_matches_manifest(const representative_archive_case& archive_case) {
+  const auto manifest_path = generated_archive_dir() / std::string{archive_case.manifest_file};
+  const auto manifest = read_json_file(manifest_path);
+  const auto& canonical_entry = canonical_entry_from_manifest(manifest);
+  const auto root = unique_non_ascii_root();
+  temporary_directory_cleanup cleanup{root};
+  const auto copied_archive = copy_archive_under_test(archive_case, root);
+  const auto host_path = utf8_string_from_path(copied_archive);
+  const auto expected_bytes = expected_bytes_from_manifest_entry(canonical_entry);
+
+  auto opened = libbsa::archive_reader::open(host_path);
+  REQUIRE(opened.has_value());
+  auto metadata = opened.value().metadata();
+  REQUIRE(metadata.has_value());
+  CHECK(metadata.value().type == archive_case.expected_type);
+  CHECK(metadata.value().variant == archive_case.expected_variant);
+
+  libbsa::validation_options options;
+  options.validate_entry_extractability = true;
+  auto validated = libbsa::validate_archive(host_path, options);
+  REQUIRE(validated.has_value());
+  CHECK(validated.value().valid);
+  CHECK(validated.value().is_valid());
+  CHECK(validated.value().errors.empty());
+  REQUIRE(validated.value().metadata.has_value());
+  CHECK(validated.value().metadata->type == archive_case.expected_type);
+  CHECK(validated.value().metadata->variant == archive_case.expected_variant);
+
+  collecting_sink sink;
+  const auto canonical_path = canonical_entry.at("path").get<std::string>();
+  auto extracted = opened.value().extract(canonical_path, sink);
+  REQUIRE(extracted.has_value());
+  CHECK(sink.bytes() == expected_bytes);
+
+  auto bytes = opened.value().extract_bytes(canonical_path);
+  REQUIRE(bytes.has_value());
+  CHECK(bytes.value() == expected_bytes);
 }
 
 } // namespace
@@ -183,6 +248,6 @@ TEST_CASE("host_path_correctness_boundary representative archives open validate 
 
   for (const auto& archive_case : representative_archive_cases()) {
     INFO(archive_case.archive_file);
-    REQUIRE(canonical_extraction_matches_manifest(archive_case));
+    require_canonical_extraction_matches_manifest(archive_case);
   }
 }
