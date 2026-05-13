@@ -694,6 +694,8 @@ TEST_CASE("ba2_dx10_writer::add_file snapshots DDS bytes before later source fil
   const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
   const auto& source_case = valid_source_case(manifest, "bc1_unorm");
   const auto original_bytes = read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>());
+  auto original_source = libbsa::texture::analyze_dds_source(original_bytes);
+  REQUIRE(original_source.has_value());
   const auto scratch_path = writer_test_dir() / "snapshot-source.dds";
   write_binary_file(scratch_path, original_bytes);
   libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
@@ -704,7 +706,16 @@ TEST_CASE("ba2_dx10_writer::add_file snapshots DDS bytes before later source fil
   const auto malformed_bytes = read_binary_file(generated_source_dir() / "ba2_dx10_malformed_truncated.dds");
   write_binary_file(scratch_path, malformed_bytes);
   std::filesystem::remove(scratch_path);
-  SUCCEED("snapshot add succeeded before the source DDS was overwritten and deleted");
+
+  const auto output_path = unique_output_path("dx10-snapshot-source-mutated");
+  auto written = writer.write_to(output_path.string());
+  REQUIRE(written.has_value());
+  auto opened = libbsa::archive_reader::open(output_path.string());
+  REQUIRE(opened.has_value());
+  auto extracted = opened.value().extract_bytes(source_case.at("archive_path").get<std::string>());
+  REQUIRE(extracted.has_value());
+  require_extracted_matches_source(extracted.value(), original_source.value());
+  std::filesystem::remove(output_path);
 }
 
 TEST_CASE("BA2 DX10 writer state removes snapshot temp directory on teardown",

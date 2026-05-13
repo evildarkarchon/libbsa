@@ -158,6 +158,13 @@ result<std::uint8_t> checked_u8(std::uint64_t value, std::string_view descriptio
   return static_cast<std::uint8_t>(value);
 }
 
+result<std::size_t> checked_size_t(std::uint64_t value, std::string_view description) {
+  if (value > std::numeric_limits<std::size_t>::max()) {
+    return error{error_code::format_error, std::string{description} + " exceeds platform size range"};
+  }
+  return static_cast<std::size_t>(value);
+}
+
 std::pair<std::string_view, std::string_view> split_directory_file(std::string_view archive_path) noexcept {
   const auto slash = archive_path.find_last_of('/');
   if (slash == std::string_view::npos) {
@@ -218,12 +225,24 @@ result<void> append_snapshot_bytes(std::vector<std::byte>& bytes, const ba2_dx10
       });
 }
 
-result<void> append_subresource_bytes(std::vector<std::byte>& bytes,
-                                      const ba2_dx10_writer_entry& source,
-                                      const texture::planned_texture_chunk& chunk) {
+struct ba2_dx10_chunk_snapshot_batch {
+  std::vector<const ba2_dx10_subresource_snapshot*> snapshots;
+  std::uint64_t aggregate_size{};
+};
+
+/// Collects snapshot subresources for one planned BA2 DX10 chunk in archive mip order.
+result<ba2_dx10_chunk_snapshot_batch> collect_chunk_snapshots(const ba2_dx10_writer_entry& source,
+                                                              const texture::planned_texture_chunk& chunk) {
+  if (chunk.start_mip > chunk.end_mip) {
+    return error{error_code::format_error, "BA2 DX10 planned chunk mip range is invalid"};
+  }
+
+  ba2_dx10_chunk_snapshot_batch batch;
+  batch.snapshots.reserve(static_cast<std::size_t>(chunk.end_mip - chunk.start_mip) + 1U);
+
   // The writer does not transform DDS image data: it copies existing subresource bytes in the
   // BA2-required chunk layout without resizing, transcoding, mip generation, repair, or reordering.
-  for (std::uint32_t mip = chunk.start_mip; mip <= chunk.end_mip; ++mip) {
+  for (std::uint32_t mip = chunk.start_mip;; ++mip) {
     const auto found = std::ranges::find_if(source.subresources, [&](const ba2_dx10_subresource_snapshot& subresource) {
       return subresource.array_index == chunk.array_index && subresource.face_index == chunk.face_index &&
              subresource.mip == mip;
@@ -231,12 +250,16 @@ result<void> append_subresource_bytes(std::vector<std::byte>& bytes,
     if (found == source.subresources.end()) {
       return error{error_code::format_error, "BA2 DX10 source DDS is missing a planned subresource"};
     }
-    auto appended = append_snapshot_bytes(bytes, *found);
-    if (!appended) {
-      return appended.error();
+    if (found->size > std::numeric_limits<std::uint64_t>::max() - batch.aggregate_size) {
+      return error{error_code::format_error, "BA2 DX10 planned chunk snapshot size overflows"};
+    }
+    batch.aggregate_size += found->size;
+    batch.snapshots.push_back(&*found);
+    if (mip == chunk.end_mip) {
+      break;
     }
   }
-  return {};
+  return batch;
 }
 
 } // namespace
@@ -370,13 +393,31 @@ result<void> ba2_dx10_validate_entries(ba2_dx10_target target, std::span<const b
 }
 
 result<ba2_dx10_prepared_chunk> ba2_dx10_prepare_chunk(ba2_dx10_target target,
-                                                       const ba2_dx10_writer_options& options,
-                                                       const ba2_dx10_writer_entry& source,
-                                                       const texture::planned_texture_chunk& planned) {
+                                                        const ba2_dx10_writer_options& options,
+                                                        const ba2_dx10_writer_entry& source,
+                                                        const texture::planned_texture_chunk& planned) {
+  auto snapshots = collect_chunk_snapshots(source, planned);
+  if (!snapshots) {
+    return snapshots.error();
+  }
+  if (snapshots.value().aggregate_size != planned.raw_size) {
+    return error{error_code::format_error, "BA2 DX10 planned chunk size does not match source DDS bytes"};
+  }
+  auto raw_capacity = checked_size_t(planned.raw_size, "BA2 DX10 raw chunk size");
+  if (!raw_capacity) {
+    return raw_capacity.error();
+  }
+
   std::vector<std::byte> raw_bytes;
-  auto appended = append_subresource_bytes(raw_bytes, source, planned);
-  if (!appended) {
-    return appended.error();
+  auto reserved = detail::reserve_byte_vector(raw_bytes, raw_capacity.value(), "BA2 DX10 raw texture chunk bytes");
+  if (!reserved) {
+    return reserved.error();
+  }
+  for (const auto* snapshot : snapshots.value().snapshots) {
+    auto appended = append_snapshot_bytes(raw_bytes, *snapshot);
+    if (!appended) {
+      return appended.error();
+    }
   }
   if (raw_bytes.empty()) {
     return error{error_code::format_error, "BA2 DX10 writer refuses to serialize an empty texture chunk"};

@@ -254,7 +254,7 @@ benchmark_result run_ba2_gnrl_pack_extract(const std::filesystem::path& work_dir
           .correctness_passed = true};
 }
 
-benchmark_result run_ba2_dx10_pack_extract(const std::filesystem::path& work_dir, std::uint32_t worker_count) {
+std::vector<benchmark_result> run_ba2_dx10_pack_extract(const std::filesystem::path& work_dir, std::uint32_t worker_count) {
   const auto root = work_dir / ("ba2-dx10-" + std::to_string(worker_count));
   const auto source = root / "synthetic-rgba8.dds";
   const auto dds_bytes = build_rgba8_dds(256U, 256U, 0x73U);
@@ -265,7 +265,10 @@ benchmark_result run_ba2_dx10_pack_extract(const std::filesystem::path& work_dir
   libbsa::ba2_dx10_writer_options options;
   options.overwrite_existing = true;
   libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4, options};
+
+  const auto add_start = std::chrono::steady_clock::now();
   require_success(writer.add_file(archive_path, source.string()), "add BA2 DX10 benchmark source");
+  const auto add_elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - add_start).count();
 
   const auto start = std::chrono::steady_clock::now();
   libbsa::write_execution_options execution;
@@ -284,13 +287,21 @@ benchmark_result run_ba2_dx10_pack_extract(const std::filesystem::path& work_dir
   if (extracted.size() != dds_bytes.size()) {
     throw std::runtime_error("BA2 DX10 benchmark extracted DDS size mismatch");
   }
+  if (extracted != dds_bytes) {
+    throw std::runtime_error("BA2 DX10 benchmark extracted DDS payload mismatch");
+  }
   const auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
 
-  return {.scenario = "ba2_dx10_pack_extract",
-          .worker_count = worker_count,
-          .elapsed_ms = elapsed,
-          .bytes_processed = static_cast<std::uint64_t>(dds_bytes.size()) * 2U,
-          .correctness_passed = true};
+  return {benchmark_result{.scenario = "ba2_dx10_add_snapshot_staging",
+                           .worker_count = worker_count,
+                           .elapsed_ms = add_elapsed,
+                           .bytes_processed = static_cast<std::uint64_t>(dds_bytes.size()),
+                           .correctness_passed = true},
+          benchmark_result{.scenario = "ba2_dx10_write_finalize_extract",
+                           .worker_count = worker_count,
+                           .elapsed_ms = elapsed,
+                           .bytes_processed = static_cast<std::uint64_t>(dds_bytes.size()) * 2U,
+                           .correctness_passed = true}};
 }
 
 struct capture {
@@ -396,7 +407,8 @@ std::vector<benchmark_result> run_benchmarks() {
   for (const auto worker_count : {1U, 4U}) {
     results.push_back(run_tes4_bsa_pack_extract(work_dir, worker_count));
     results.push_back(run_ba2_gnrl_pack_extract(work_dir, worker_count));
-    results.push_back(run_ba2_dx10_pack_extract(work_dir, worker_count));
+    auto dx10_results = run_ba2_dx10_pack_extract(work_dir, worker_count);
+    results.insert(results.end(), dx10_results.begin(), dx10_results.end());
     results.push_back(run_bulk_extract(work_dir, worker_count));
   }
   return results;

@@ -47,6 +47,18 @@ void write_stage_binary_file(const std::filesystem::path& path, std::span<const 
   REQUIRE(output.good());
 }
 
+std::vector<std::byte> read_stage_binary_file(const std::filesystem::path& path) {
+  std::ifstream input{path, std::ios::binary};
+  REQUIRE(input.good());
+
+  std::vector<std::byte> bytes;
+  for (char ch = 0; input.get(ch);) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+  REQUIRE_FALSE(input.bad());
+  return bytes;
+}
+
 libbsa::formats::ba2::ba2_gnrl_prepared_entry ba2_gnrl_memory_stage_entry(std::vector<std::byte> bytes,
                                                                           std::uint64_t hash) {
   libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
@@ -447,6 +459,65 @@ TEST_CASE("ba2 dx10 writer preparation stage prepares a single-mip chunk",
   CHECK(chunk.value().packed_size > 0U);
   CHECK(chunk.value().start_mip == 0U);
   CHECK(chunk.value().end_mip == 0U);
+}
+
+TEST_CASE("ba2 dx10 writer preparation stage preserves multi-mip snapshot chunk order",
+          "[unit][writer-stage][ba2_dx10_writer]") {
+  const libbsa::texture::dds_texture_layout layout{4U, 4U, 3U, 28U, 1U, false};
+  auto source = ba2_dx10_stage_entry("Textures/Stage/MultiChunk.dds", layout, "dx10-multi-chunk");
+  auto planned = libbsa::texture::plan_dx10_chunks(layout, 0U);
+  REQUIRE(planned.has_value());
+  REQUIRE(planned.value().size() == 1U);
+  REQUIRE(planned.value()[0].start_mip < planned.value()[0].end_mip);
+
+  auto chunk = libbsa::formats::ba2::ba2_dx10_prepare_chunk(libbsa::ba2_dx10_target::fallout4,
+                                                            libbsa::ba2_dx10_writer_options{},
+                                                            source,
+                                                            planned.value()[0]);
+
+  REQUIRE(chunk.has_value());
+  CHECK(chunk.value().raw_size == planned.value()[0].raw_size);
+  CHECK(chunk.value().packed_size > 0U);
+  CHECK(chunk.value().start_mip == planned.value()[0].start_mip);
+  CHECK(chunk.value().end_mip == planned.value()[0].end_mip);
+
+  auto decoded = libbsa::detail::decompress_payload_exact(chunk.value().compression,
+                                                          chunk.value().stored_payload,
+                                                          static_cast<std::size_t>(planned.value()[0].raw_size));
+  REQUIRE(decoded.has_value());
+  std::vector<std::byte> expected;
+  expected.reserve(static_cast<std::size_t>(planned.value()[0].raw_size));
+  for (std::uint32_t mip = planned.value()[0].start_mip; mip <= planned.value()[0].end_mip; ++mip) {
+    auto mip_size = libbsa::texture::mip_size_for_format(layout, mip);
+    REQUIRE(mip_size.has_value());
+    auto bytes = repeated_bytes(static_cast<std::size_t>(mip_size.value()), static_cast<std::uint8_t>(mip + 1U));
+    expected.insert(expected.end(), bytes.begin(), bytes.end());
+  }
+  CHECK(decoded.value() == expected);
+}
+
+TEST_CASE("ba2 dx10 writer preparation stage rejects truncated snapshots before publishing output",
+          "[unit][writer-stage][ba2_dx10_writer][publish]") {
+  const libbsa::texture::dds_texture_layout layout{4U, 4U, 2U, 28U, 1U, false};
+  auto source = ba2_dx10_stage_entry("Textures/Stage/Truncated.dds", layout, "dx10-truncated");
+  REQUIRE_FALSE(source.subresources.empty());
+  write_stage_binary_file(source.subresources[0].snapshot_path, bytes_from_text("short"));
+
+  const auto output_path = stage_output_path("dx10-truncated-snapshot.ba2");
+  const auto sentinel = bytes_from_text("existing BA2 DX10 sentinel");
+  write_stage_binary_file(output_path, sentinel);
+  libbsa::ba2_dx10_writer_options options;
+  options.overwrite_existing = true;
+
+  auto written = libbsa::formats::ba2::write_ba2_dx10_archive(libbsa::ba2_dx10_target::fallout4,
+                                                              options,
+                                                              std::span{&source, 1U},
+                                                              output_path.string(),
+                                                              1U);
+
+  REQUIRE_FALSE(written.has_value());
+  CHECK(written.error().code == libbsa::error_code::io_error);
+  CHECK(read_stage_binary_file(output_path) == sentinel);
 }
 
 TEST_CASE("ba2 dx10 writer preparation stage prepares multi-mip and cubemap entries",
