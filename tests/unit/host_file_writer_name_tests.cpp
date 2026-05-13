@@ -82,3 +82,20 @@ TEST_CASE("migrated writer call sites build host_file_path contracts before shar
     REQUIRE(text.find(expected_text) != std::string::npos);
   }
 }
+
+TEST_CASE("archive_reader open stores the shared host_file_path contract", "[unit][host_file]") {
+  const auto archive_text = read_text_file(source_root() / "src/archive.cpp");
+
+  REQUIRE(archive_text.find("detail::host_file_path host_path;") != std::string::npos);
+  REQUIRE(archive_text.find("resolve_host_file_path(host_path)") != std::string::npos);
+}
+
+TEST_CASE("archive_reader open routes detection and size probes through host_file helpers", "[unit][host_file]") {
+  const auto archive_text = read_text_file(source_root() / "src/archive.cpp");
+
+  REQUIRE(archive_text.find("read_host_file_prefix(") != std::string::npos);
+  REQUIRE(archive_text.find("inspect_host_file_size(") != std::string::npos);
+  REQUIRE(archive_text.find("std::ifstream input{std::string{host_path}, std::ios::binary}") == std::string::npos);
+  REQUIRE(archive_text.find("std::ifstream input{std::string{host_path}, std::ios::binary | std::ios::ate}") ==
+          std::string::npos);
+}
