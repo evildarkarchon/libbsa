@@ -143,6 +143,8 @@ const nlohmann::json& canonical_entry_from_manifest(const nlohmann::json& manife
 }
 
 std::string utf8_string_from_path(const std::filesystem::path& path) {
+  // The public reader API still takes UTF-8 text, so the suite must hand it an explicit UTF-8 string rather than
+  // relying on locale-sensitive narrow conversions from a Windows path that already contains non-ASCII segments.
   const auto utf8 = path.u8string();
   return {reinterpret_cast<const char*>(utf8.data()), utf8.size()};
 }
@@ -250,4 +252,23 @@ TEST_CASE("host_path_correctness_boundary representative archives open validate 
     INFO(archive_case.archive_file);
     require_canonical_extraction_matches_manifest(archive_case);
   }
+}
+
+TEST_CASE("host_path_correctness_boundary stays public-API-only and phase-scoped",
+          "[unit][host_path_correctness_boundary][host_path_correctness_boundary_smoke]") {
+  const auto suite_source = read_text_file(suite_source_path());
+  const auto open_call = std::string{"archive_reader::" "open(host_path)"};
+  const auto validate_call = std::string{"validate_" "archive(host_path, options)"};
+  const auto extract_bytes_call = std::string{"extract_" "bytes(canonical_path)"};
+  const auto writer_publish_call = std::string{"write_" "to("};
+  const auto writer_add_file_call = std::string{"add_" "file("};
+  const auto tes3_fixture_name = std::string{"tes3_" "success.bsa"};
+
+  REQUIRE(contains_text(suite_source, open_call));
+  REQUIRE(contains_text(suite_source, validate_call));
+  REQUIRE(contains_text(suite_source, extract_bytes_call));
+
+  REQUIRE_FALSE(contains_text(suite_source, writer_publish_call));
+  REQUIRE_FALSE(contains_text(suite_source, writer_add_file_call));
+  REQUIRE_FALSE(contains_text(suite_source, tes3_fixture_name));
 }
