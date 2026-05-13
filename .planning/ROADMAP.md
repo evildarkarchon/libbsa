@@ -48,7 +48,20 @@ v1.1 hardens the shipped library rather than broadening it. The milestone follow
   1. Consumer can open representative supported BSA and BA2 archives from Windows host paths containing non-ASCII characters.
   2. Consumer can validate representative supported BSA and BA2 archives from Windows host paths containing non-ASCII characters.
   3. Maintainer can run committed regression tests that prove non-ASCII host-path open and validate coverage for representative BSA and BA2 families.
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+- [ ] 13-01-PLAN.md - Rename and generalize the shared host-file helper into the locked `host_file` family and remove old helper names.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 13-02-PLAN.md - Resolve and store host paths once at open time, then migrate parser contracts and parser opens onto that boundary.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 13-03-PLAN.md - Rewire extraction contracts, concrete reader reopens, and validation setup onto the single stored host-path boundary.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 13-04-PLAN.md - Remove validation preflight drift and prove non-ASCII host-path open, validation, and canonical extraction with one dedicated cross-family regression suite.
 
 ### Phase 14: Verification Lane Truthfulness
 **Goal**: Maintainers can rely on the documented hardening lanes because the supported Release and ASan flows are checked in, runnable, and consistently described.
@@ -95,7 +108,7 @@ v1.1 hardens the shipped library rather than broadening it. The milestone follow
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 13. Host Path Correctness Boundary | v1.1 | 0/TBD | Not started | - |
+| 13. Host Path Correctness Boundary | v1.1 | 0/4 | Not started | - |
 | 14. Verification Lane Truthfulness | v1.1 | 0/TBD | Not started | - |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 0/TBD | Not started | - |
 | 16. Parser and Preparer Seam Extraction | v1.1 | 0/TBD | Not started | - |
