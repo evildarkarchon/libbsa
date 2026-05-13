@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
 status: executing
-stopped_at: Completed 13-01-PLAN.md
-last_updated: "2026-05-13T22:57:15.149Z"
-last_activity: 2026-05-13 -- Completed Phase 13 Plan 01
+stopped_at: Completed 13-02-PLAN.md
+last_updated: "2026-05-13T23:13:05.904Z"
+last_activity: 2026-05-13
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
-  percent: 20
+  completed_plans: 2
+  percent: 0
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 13 (host-path-correctness-boundary) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
-Last activity: 2026-05-13 -- Completed Phase 13 Plan 01
+Last activity: 2026-05-13
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 Current note: repository state still contains uncommitted Phase 13 implementation changes, repaired summaries, and an open Phase 13 review blocker, so Phase 14 should not be treated as cleanly ready to plan yet.
 
@@ -50,6 +50,8 @@ Current note: repository state still contains uncommitted Phase 13 implementatio
 - Reader, parser, preparer, dedupe, and DX10 staging changes must stay incremental, semantics-preserving, and test-backed.
 - Land the neutral `host_file` seam before introducing `host_file_path` so later Phase 13 work does not carry helper-rename debt.
 - Preserve caller-owned writer diagnostics while migrating active prepare/layout code to neutral host-file helper names.
+- [Phase 13]: host_file helpers now accept host_file_path or resolved std::filesystem::path inputs so raw UTF-8 text stays diagnostics-only once resolved.
+- [Phase 13]: Migrated writer call sites resolve disk-source paths once per operation and keep caller-owned diagnostic strings unchanged.
 
 ### Pending Todos
 
@@ -65,6 +67,7 @@ None yet.
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
 | 260513-6nl | Repair Phase 13 execution artifacts so the per-plan SUMMARY.md files are GSD-compliant and truthful | 2026-05-13 | Unavailable | Verified | [260513-6nl-i-suspect-that-phase-13-was-not-executed](./quick/260513-6nl-i-suspect-that-phase-13-was-not-executed/) |
+| Phase 13 P02 | 5 min | 3 tasks | 11 files |
 
 ## Deferred Items
 
@@ -76,6 +79,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-13T22:57:15.142Z
-Stopped at: Completed 13-01-PLAN.md
+Last session: 2026-05-13T23:13:05.897Z
+Stopped at: Completed 13-02-PLAN.md
 Resume file: None
