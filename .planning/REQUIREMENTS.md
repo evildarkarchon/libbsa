@@ -71,12 +71,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| HOST-01 | Phase 13 | Pending |
+| HOST-02 | Phase 13 | Pending |
+| HOST-03 | Phase 13 | Pending |
+| VER-01 | Phase 14 | Pending |
+| VER-02 | Phase 14 | Pending |
+| VER-03 | Phase 14 | Pending |
+| DISP-01 | Phase 15 | Pending |
+| DISP-02 | Phase 15 | Pending |
+| REFA-01 | Phase 16 | Pending |
+| REFA-02 | Phase 16 | Pending |
+| DEDU-01 | Phase 17 | Pending |
+| DEDU-02 | Phase 17 | Pending |
+| DX10-01 | Phase 17 | Pending |
+| DX10-02 | Phase 17 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14
+- Mapped to phases: 14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-12*
-*Last updated: 2026-05-12 after initial definition*
+*Last updated: 2026-05-12 after roadmap creation*
