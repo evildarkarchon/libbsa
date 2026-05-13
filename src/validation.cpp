@@ -174,6 +174,8 @@ result<validation_report> validate_archive(std::string_view host_path, validatio
     return error{error_code::invalid_argument, "archive path must not be empty"};
   }
 
+  // Validation intentionally reuses archive_reader::open for all host-path setup so
+  // readable malformed bytes stay report-based while unreadable paths stay direct failures.
   auto opened = archive_reader::open(host_path);
   if (!opened) {
     const auto& err = opened.error();
