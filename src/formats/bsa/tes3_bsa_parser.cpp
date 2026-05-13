@@ -34,6 +34,11 @@ struct file_record {
   std::uint32_t raw_offset;
 };
 
+struct payload_span {
+  std::size_t start;
+  std::size_t end;
+};
+
 using detail::add_fits;
 using detail::archive_string_from_bytes;
 using detail::multiply_fits;
@@ -186,7 +191,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     if (!reserved_hashes) {
       return reserved_hashes.error();
     }
-    std::vector<std::pair<std::size_t, std::size_t>> payload_spans;
+    std::vector<payload_span> payload_spans;
     auto reserved_spans = detail::reserve_metadata_vector(payload_spans, records.size(), "TES3 BSA payload spans");
     if (!reserved_spans) {
       return reserved_spans.error();
@@ -230,13 +235,9 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
         return error{error_code::format_error, "TES3 BSA entry payload span is outside the archive"};
       }
       const auto payload_end = absolute_payload_offset + static_cast<std::size_t>(records[index].size);
-      for (const auto& span : payload_spans) {
-        const auto overlaps = absolute_payload_offset < span.second && span.first < payload_end;
-        if (records[index].size != 0U && overlaps) {
-          return error{error_code::format_error, "TES3 BSA entry payload spans overlap"};
-        }
+      if (records[index].size != 0U) {
+        payload_spans.push_back(payload_span{absolute_payload_offset, payload_end});
       }
-      payload_spans.push_back({absolute_payload_offset, payload_end});
 
       entries.push_back(entry_metadata{canonical.value().value,
                                        std::move(original_path),
@@ -246,8 +247,20 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                                        stored_hash,
                                        entry_compression::none,
                                        0U,
-                                       false,
-                                       0U});
+                                        false,
+                                        0U});
+    }
+
+    std::sort(payload_spans.begin(), payload_spans.end(), [](const payload_span& lhs, const payload_span& rhs) {
+      if (lhs.start != rhs.start) {
+        return lhs.start < rhs.start;
+      }
+      return lhs.end < rhs.end;
+    });
+    for (std::size_t index = 1; index < payload_spans.size(); ++index) {
+      if (payload_spans[index].start < payload_spans[index - 1U].end) {
+        return error{error_code::format_error, "TES3 BSA entry payload spans overlap"};
+      }
     }
 
     std::sort(entries.begin(), entries.end(), [](const entry_metadata& lhs, const entry_metadata& rhs) {

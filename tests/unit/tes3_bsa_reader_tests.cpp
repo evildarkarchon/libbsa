@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -62,6 +63,15 @@ libbsa::error_code error_code_from_manifest(std::string_view value) {
   }
   FAIL("unknown TES3 malformed expected_error: " << value);
   return libbsa::error_code::format_error;
+}
+
+std::vector<std::byte> bytes_from_text(std::string_view value) {
+  std::vector<std::byte> bytes;
+  bytes.reserve(value.size());
+  for (const char ch : value) {
+    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  }
+  return bytes;
 }
 
 std::string archive_original_path_from_manifest(std::string value) {
@@ -116,9 +126,111 @@ void overwrite_u64_le(std::vector<std::byte>& bytes, std::size_t offset, std::ui
   }
 }
 
+void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
+  for (std::uint32_t index = 0; index < 4U; ++index) {
+    bytes.push_back(static_cast<std::byte>((value >> (index * 8U)) & 0xFFU));
+  }
+}
+
+void append_u64_le(std::vector<std::byte>& bytes, std::uint64_t value) {
+  for (std::uint32_t index = 0; index < 8U; ++index) {
+    bytes.push_back(static_cast<std::byte>((value >> (index * 8U)) & 0xFFU));
+  }
+}
+
 void write_binary_file(const std::filesystem::path& path, const std::vector<std::byte>& bytes) {
   std::ofstream output{path, std::ios::binary};
   output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+}
+
+struct synthetic_tes3_entry {
+  std::string path;
+  std::vector<std::byte> payload;
+  std::uint32_t raw_offset{0U};
+  std::uint64_t archive_hash{0U};
+};
+
+struct synthetic_tes3_archive {
+  std::vector<std::byte> bytes;
+  std::vector<synthetic_tes3_entry> hash_ordered_entries;
+  std::uint32_t data_section_start{0U};
+};
+
+std::uint32_t checked_test_u32(std::size_t value, std::string_view description) {
+  INFO(description);
+  REQUIRE(value <= static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()));
+  return static_cast<std::uint32_t>(value);
+}
+
+bool tes3_hash_less(const synthetic_tes3_entry& lhs, const synthetic_tes3_entry& rhs) noexcept {
+  const auto lhs_key = libbsa::detail::tes3_hash_sort_key(lhs.archive_hash);
+  const auto rhs_key = libbsa::detail::tes3_hash_sort_key(rhs.archive_hash);
+  if (lhs_key != rhs_key) {
+    return lhs_key < rhs_key;
+  }
+  return lhs.path < rhs.path;
+}
+
+synthetic_tes3_archive build_synthetic_tes3_archive(std::vector<synthetic_tes3_entry> entries, bool sort_by_hash = true) {
+  for (auto& entry : entries) {
+    entry.archive_hash = libbsa::detail::hash_tes3(entry.path);
+  }
+  if (sort_by_hash) {
+    std::sort(entries.begin(), entries.end(), tes3_hash_less);
+  }
+
+  std::uint32_t name_table_size = 0U;
+  for (const auto& entry : entries) {
+    name_table_size += checked_test_u32(entry.path.size() + 1U, "TES3 synthetic name table size");
+  }
+
+  constexpr std::uint32_t tes3_magic_version = 0x0000'0100U;
+  constexpr std::uint32_t fixed_header_size = 12U;
+  const auto file_count = checked_test_u32(entries.size(), "TES3 synthetic file count");
+  const auto records_size = checked_test_u32(entries.size() * 8U, "TES3 synthetic file records size");
+  const auto name_offsets_size = checked_test_u32(entries.size() * 4U, "TES3 synthetic name offsets size");
+  const auto hash_records_size = checked_test_u32(entries.size() * 8U, "TES3 synthetic hash records size");
+  const auto hash_table_start = checked_test_u32(fixed_header_size + records_size + name_offsets_size + name_table_size,
+                                                "TES3 synthetic hash table start");
+  const auto data_section_start = checked_test_u32(hash_table_start + hash_records_size,
+                                                  "TES3 synthetic data section start");
+
+  std::size_t payload_bytes_size = 0U;
+  for (const auto& entry : entries) {
+    payload_bytes_size = std::max(payload_bytes_size, static_cast<std::size_t>(entry.raw_offset) + entry.payload.size());
+  }
+  std::vector<std::byte> payload_bytes(payload_bytes_size, std::byte{0});
+  for (const auto& entry : entries) {
+    std::copy(entry.payload.begin(), entry.payload.end(), payload_bytes.begin() + static_cast<std::ptrdiff_t>(entry.raw_offset));
+  }
+
+  std::vector<std::byte> bytes;
+  bytes.reserve(data_section_start + payload_bytes.size());
+  append_u32_le(bytes, tes3_magic_version);
+  append_u32_le(bytes, hash_table_start - fixed_header_size);
+  append_u32_le(bytes, file_count);
+  for (const auto& entry : entries) {
+    append_u32_le(bytes, checked_test_u32(entry.payload.size(), "TES3 synthetic payload size"));
+    append_u32_le(bytes, entry.raw_offset);
+  }
+
+  std::uint32_t name_offset = 0U;
+  for (const auto& entry : entries) {
+    append_u32_le(bytes, name_offset);
+    name_offset += checked_test_u32(entry.path.size() + 1U, "TES3 synthetic name offset");
+  }
+  for (const auto& entry : entries) {
+    for (const char ch : entry.path) {
+      bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+    }
+    bytes.push_back(std::byte{0});
+  }
+  for (const auto& entry : entries) {
+    append_u64_le(bytes, entry.archive_hash);
+  }
+  bytes.insert(bytes.end(), payload_bytes.begin(), payload_bytes.end());
+
+  return synthetic_tes3_archive{std::move(bytes), std::move(entries), data_section_start};
 }
 
 class collecting_sink final : public libbsa::payload_sink {
@@ -387,6 +499,121 @@ TEST_CASE("tes3_bsa_malformed rejects generated malformed TES3 cases with stable
     REQUIRE_FALSE(opened.has_value());
     REQUIRE(opened.error().code == expected);
   }
+}
+
+TEST_CASE("tes3_bsa_malformed rejects overlapping non-empty payload spans", "[unit][tes3_bsa_malformed]") {
+  auto archive = build_synthetic_tes3_archive({
+      {.path = "meshes/overlap/a.nif", .payload = bytes_from_text("aaaa"), .raw_offset = 0U},
+      {.path = "meshes/overlap/b.nif", .payload = bytes_from_text("bbbb"), .raw_offset = 2U},
+  });
+  const auto archive_path = std::filesystem::temp_directory_path() / "libbsa_tes3_overlapping_payload_spans.bsa";
+  write_binary_file(archive_path, archive.bytes);
+
+  auto opened = libbsa::archive_reader::open(archive_path.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+  CHECK(opened.error().message.find("payload spans overlap") != std::string::npos);
+}
+
+TEST_CASE("tes3_bsa_entries accepts adjacent spans and zero-byte boundary entries", "[unit][tes3_bsa_metadata]") {
+  auto archive = build_synthetic_tes3_archive({
+      {.path = "meshes/boundary/a.nif", .payload = bytes_from_text("abc"), .raw_offset = 0U},
+      {.path = "meshes/boundary/empty.txt", .payload = {}, .raw_offset = 3U},
+      {.path = "meshes/boundary/b.nif", .payload = bytes_from_text("de"), .raw_offset = 3U},
+  });
+  const auto archive_path = std::filesystem::temp_directory_path() / "libbsa_tes3_adjacent_and_empty_spans.bsa";
+  write_binary_file(archive_path, archive.bytes);
+
+  auto opened = libbsa::archive_reader::open(archive_path.string());
+
+  REQUIRE(opened.has_value());
+  auto entries = opened.value().entries();
+  REQUIRE(entries.has_value());
+  REQUIRE(entries.value().size() == 3U);
+
+  auto first = opened.value().find("meshes/boundary/a.nif");
+  REQUIRE(first.has_value());
+  REQUIRE(first.value().has_value());
+  CHECK(first.value()->payload_offset == archive.data_section_start);
+  CHECK(first.value()->raw_size == 3U);
+
+  auto empty = opened.value().find("meshes/boundary/empty.txt");
+  REQUIRE(empty.has_value());
+  REQUIRE(empty.value().has_value());
+  CHECK(empty.value()->payload_offset == archive.data_section_start + 3U);
+  CHECK(empty.value()->raw_size == 0U);
+
+  auto second = opened.value().find("meshes/boundary/b.nif");
+  REQUIRE(second.has_value());
+  REQUIRE(second.value().has_value());
+  CHECK(second.value()->payload_offset == archive.data_section_start + 3U);
+  CHECK(second.value()->raw_size == 2U);
+}
+
+TEST_CASE("tes3_bsa_malformed reports unsorted hashes before payload overlap", "[unit][tes3_bsa_malformed]") {
+  std::vector<synthetic_tes3_entry> entries{
+      {.path = "meshes/precedence/a.nif", .payload = bytes_from_text("aaaa"), .raw_offset = 0U},
+      {.path = "meshes/precedence/b.nif", .payload = bytes_from_text("bbbb"), .raw_offset = 2U},
+      {.path = "meshes/precedence/c.nif", .payload = bytes_from_text("cccc"), .raw_offset = 8U},
+  };
+  for (auto& entry : entries) {
+    entry.archive_hash = libbsa::detail::hash_tes3(entry.path);
+  }
+  std::sort(entries.begin(), entries.end(), tes3_hash_less);
+  std::swap(entries[0], entries[1]);
+  REQUIRE(libbsa::detail::tes3_hash_sort_key(entries[0].archive_hash) >
+          libbsa::detail::tes3_hash_sort_key(entries[1].archive_hash));
+
+  auto archive = build_synthetic_tes3_archive(std::move(entries), false);
+  const auto archive_path = std::filesystem::temp_directory_path() / "libbsa_tes3_hash_precedes_overlap.bsa";
+  write_binary_file(archive_path, archive.bytes);
+
+  auto opened = libbsa::archive_reader::open(archive_path.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+  CHECK(opened.error().message.find("hash records are not sorted") != std::string::npos);
+  CHECK(opened.error().message.find("payload spans overlap") == std::string::npos);
+}
+
+TEST_CASE("tes3_bsa_entries materializes large non-overlapping spans outside payload order",
+          "[unit][tes3_bsa_metadata]") {
+  constexpr std::size_t entry_count = 1024U;
+  std::vector<synthetic_tes3_entry> entries;
+  entries.reserve(entry_count);
+  for (std::size_t index = 0; index < entry_count; ++index) {
+    entries.push_back(synthetic_tes3_entry{
+        .path = "meshes/large/span_" + std::to_string(index) + ".bin",
+        .payload = {static_cast<std::byte>(index & 0xFFU)},
+        .raw_offset = 0U,
+    });
+  }
+  for (auto& entry : entries) {
+    entry.archive_hash = libbsa::detail::hash_tes3(entry.path);
+  }
+  std::sort(entries.begin(), entries.end(), tes3_hash_less);
+  for (std::size_t index = 0; index < entries.size(); ++index) {
+    entries[index].raw_offset = checked_test_u32((entries.size() - index - 1U) * 2U,
+                                                "TES3 synthetic reverse payload offset");
+  }
+  REQUIRE_FALSE(std::is_sorted(entries.begin(), entries.end(), [](const auto& lhs, const auto& rhs) {
+    return lhs.raw_offset < rhs.raw_offset;
+  }));
+
+  auto archive = build_synthetic_tes3_archive(std::move(entries), false);
+  const auto archive_path = std::filesystem::temp_directory_path() / "libbsa_tes3_large_reverse_payload_order.bsa";
+  write_binary_file(archive_path, archive.bytes);
+
+  auto opened = libbsa::archive_reader::open(archive_path.string());
+
+  REQUIRE(opened.has_value());
+  auto metadata = opened.value().metadata();
+  REQUIRE(metadata.has_value());
+  CHECK(metadata.value().file_count == entry_count);
+  auto parsed_entries = opened.value().entries();
+  REQUIRE(parsed_entries.has_value());
+  CHECK(parsed_entries.value().size() == entry_count);
 }
 
 TEST_CASE("tes3_bsa_malformed returns format_error for oversized declared metadata without exceptions",
