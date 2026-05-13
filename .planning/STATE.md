@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
 status: executing
-stopped_at: Completed 13-02-PLAN.md
-last_updated: "2026-05-13T23:13:05.904Z"
+stopped_at: Completed 13-03-PLAN.md
+last_updated: "2026-05-13T23:25:35.034Z"
 last_activity: 2026-05-13
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 13 (host-path-correctness-boundary) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-05-13
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 Current note: repository state still contains uncommitted Phase 13 implementation changes, repaired summaries, and an open Phase 13 review blocker, so Phase 14 should not be treated as cleanly ready to plan yet.
 
@@ -52,6 +52,9 @@ Current note: repository state still contains uncommitted Phase 13 implementatio
 - Preserve caller-owned writer diagnostics while migrating active prepare/layout code to neutral host-file helper names.
 - [Phase 13]: host_file helpers now accept host_file_path or resolved std::filesystem::path inputs so raw UTF-8 text stays diagnostics-only once resolved.
 - [Phase 13]: Migrated writer call sites resolve disk-source paths once per operation and keep caller-owned diagnostic strings unchanged.
+- [Phase 13]: archive_reader::open now resolves caller UTF-8 text once and stores detail::host_file_path in reader state — Detection and size probes now reuse the resolved host-file boundary instead of repeated raw-text conversion.
+- [Phase 13]: Parser entry seams now accept detail::host_file_path — TES3, TES4, BA2 GNRL, and BA2 DX10 metadata opens now stay on the shared host_file boundary.
+- [Phase 13]: Original UTF-8 host-path text is diagnostics-only across the open/parser seam — Source comments now lock the rule that resolved paths, not caller text, drive later open-time I/O.
 
 ### Pending Todos
 
@@ -68,6 +71,7 @@ None yet.
 |---|-------------|------|--------|--------|-----------|
 | 260513-6nl | Repair Phase 13 execution artifacts so the per-plan SUMMARY.md files are GSD-compliant and truthful | 2026-05-13 | Unavailable | Verified | [260513-6nl-i-suspect-that-phase-13-was-not-executed](./quick/260513-6nl-i-suspect-that-phase-13-was-not-executed/) |
 | Phase 13 P02 | 5 min | 3 tasks | 11 files |
+| Phase 13 P03 | 6 min | 3 tasks | 11 files |
 
 ## Deferred Items
 
@@ -79,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-13T23:13:05.897Z
-Stopped at: Completed 13-02-PLAN.md
+Last session: 2026-05-13T23:25:35.027Z
+Stopped at: Completed 13-03-PLAN.md
 Resume file: None
