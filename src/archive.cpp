@@ -12,6 +12,8 @@
 #include "formats/bsa/tes4_bsa_reader.hpp"
 
 #include <detail/byte_vector.hpp>
+#include <detail/host_file.hpp>
+#include <detail/host_file_path.hpp>
 #include <detail/parallel_work.hpp>
 #include <detail/payload_stream.hpp>
 
@@ -28,7 +30,8 @@ namespace libbsa {
 struct archive_reader::state {
   archive_metadata metadata;
   std::vector<entry_metadata> entries;
-  std::string host_path;
+  /// Keeps caller UTF-8 text for diagnostics while all reopened host-file I/O uses the resolved path.
+  detail::host_file_path host_path;
   bool is_ba2_dx10{false};
 };
 
@@ -68,31 +71,20 @@ class vector_payload_sink final : public payload_sink {
   std::optional<error> allocation_error_;
 };
 
-result<std::vector<std::byte>> read_detection_prefix(std::string_view host_path) {
-  std::ifstream input{std::string{host_path}, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "failed to open archive host path"};
-  }
-
-  std::vector<std::byte> bytes(36U);
-  input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-  if (input.bad()) {
-    return error{error_code::io_error, "failed while reading archive host path"};
-  }
-  bytes.resize(static_cast<std::size_t>(input.gcount()));
-  return bytes;
+detail::host_file_context archive_open_host_context() noexcept {
+  return detail::host_file_context{"failed to open archive host path",
+                                   "failed to determine archive host path size",
+                                   "failed while reading archive host path",
+                                   "archive host path changed while reading",
+                                   "archive host path bytes"};
 }
 
-result<std::uint64_t> archive_file_size(std::string_view host_path) {
-  std::ifstream input{std::string{host_path}, std::ios::binary | std::ios::ate};
-  if (!input) {
-    return error{error_code::io_error, "failed to open archive host path"};
-  }
-  const auto size = input.tellg();
-  if (size < std::streampos{0}) {
-    return error{error_code::io_error, "failed to determine archive host path size"};
-  }
-  return static_cast<std::uint64_t>(size);
+result<std::vector<std::byte>> read_detection_prefix(const detail::host_file_path& host_path) {
+  return detail::read_host_file_prefix(host_path, 36U, archive_open_host_context());
+}
+
+result<std::uint64_t> archive_file_size(const detail::host_file_path& host_path) {
+  return detail::inspect_host_file_size(host_path, archive_open_host_context());
 }
 
 // Bulk extraction resolves metadata once per unique request, so payload dispatch stays separate from lookup.
@@ -123,7 +115,12 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     return error{error_code::invalid_argument, "archive path must not be empty"};
   }
 
-  auto prefix = read_detection_prefix(host_path);
+  auto resolved_host_path = detail::resolve_host_file_path(host_path);
+  if (!resolved_host_path) {
+    return resolved_host_path.error();
+  }
+
+  auto prefix = read_detection_prefix(resolved_host_path.value());
   if (!prefix) {
     return prefix.error();
   }
@@ -137,19 +134,22 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
       return detected_ba2.error();
     }
 
-    auto archive_size = archive_file_size(host_path);
+    auto archive_size = archive_file_size(resolved_host_path.value());
     if (!archive_size) {
       return archive_size.error();
     }
     if (detected_ba2.value().is_dx10) {
-      auto ba2_archive = formats::ba2::parse_ba2_dx10_archive_file(host_path, archive_size.value(), detected_ba2.value());
+      auto ba2_archive =
+          formats::ba2::parse_ba2_dx10_archive_file(host_path, archive_size.value(), detected_ba2.value());
       if (!ba2_archive) {
         return ba2_archive.error();
       }
 
       archive_reader reader{ba2_archive.value().metadata};
-      reader.state_ = std::make_shared<state>(
-          state{ba2_archive.value().metadata, std::move(ba2_archive.value().entries), std::string{host_path}, true});
+      reader.state_ = std::make_shared<state>(state{ba2_archive.value().metadata,
+                                                    std::move(ba2_archive.value().entries),
+                                                    std::move(resolved_host_path).value(),
+                                                    true});
       return reader;
     }
 
@@ -158,8 +158,10 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
       return ba2_archive.error();
     }
     archive_reader reader{ba2_archive.value().metadata};
-    reader.state_ = std::make_shared<state>(
-        state{ba2_archive.value().metadata, std::move(ba2_archive.value().entries), std::string{host_path}, false});
+    reader.state_ = std::make_shared<state>(state{ba2_archive.value().metadata,
+                                                  std::move(ba2_archive.value().entries),
+                                                  std::move(resolved_host_path).value(),
+                                                  false});
     return reader;
   }
 
@@ -168,7 +170,7 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     return detected.error();
   }
 
-  auto archive_size = archive_file_size(host_path);
+  auto archive_size = archive_file_size(resolved_host_path.value());
   if (!archive_size) {
     return archive_size.error();
   }
@@ -179,8 +181,9 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     }
 
     archive_reader reader{tes3_archive.value().metadata};
-    reader.state_ = std::make_shared<state>(
-        state{tes3_archive.value().metadata, std::move(tes3_archive.value().entries), std::string{host_path}});
+    reader.state_ = std::make_shared<state>(state{tes3_archive.value().metadata,
+                                                  std::move(tes3_archive.value().entries),
+                                                  std::move(resolved_host_path).value()});
     return reader;
   }
 
@@ -190,8 +193,9 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
   }
 
   archive_reader reader{tes4_archive.value().metadata};
-  reader.state_ = std::make_shared<state>(
-      state{tes4_archive.value().metadata, std::move(tes4_archive.value().entries), std::string{host_path}});
+  reader.state_ = std::make_shared<state>(state{tes4_archive.value().metadata,
+                                                std::move(tes4_archive.value().entries),
+                                                std::move(resolved_host_path).value()});
   return reader;
 }
 
@@ -259,7 +263,7 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
   if (!found.value()) {
     return error{error_code::not_found, "archive path was not found"};
   }
-  return extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path, *found.value(), sink);
+  return extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path.original_utf8, *found.value(), sink);
 }
 
 result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view path) const {
@@ -282,7 +286,8 @@ result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view pa
 
   // Keep the convenience API bounded by the parser-derived size for exactly one entry.
   vector_payload_sink sink{found.value()->raw_size};
-  auto extracted = extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path, *found.value(), sink);
+  auto extracted =
+      extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path.original_utf8, *found.value(), sink);
   if (!extracted) {
     return extracted.error();
   }
@@ -352,7 +357,11 @@ result<std::vector<bulk_extract_entry_result>> archive_reader::extract_entries(
       return {};
     }
 
-    auto extracted = extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path, *record.entry, *sink.value());
+    auto extracted = extract_entry_payload(state_->metadata,
+                                           state_->is_ba2_dx10,
+                                           state_->host_path.original_utf8,
+                                           *record.entry,
+                                           *sink.value());
     if (!extracted) {
       record.failure = extracted.error();
     }
