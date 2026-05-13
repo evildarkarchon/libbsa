@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <detail/host_file.hpp>
+#include <detail/host_file_path.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -52,7 +53,13 @@ TEST_CASE("host_file reads exact whole-file payloads", "[unit][host_file]") {
   const auto expected = bytes_from_text("exact source bytes");
   write_binary_file(path, expected);
 
-  auto bytes = libbsa::detail::read_host_file_exact(path.string(), static_cast<std::uint64_t>(expected.size()),
+  auto resolved = libbsa::detail::resolve_host_file_path(path.string());
+
+  REQUIRE(resolved.has_value());
+  CHECK(resolved->original_utf8 == path.string());
+  CHECK(resolved->resolved == path);
+
+  auto bytes = libbsa::detail::read_host_file_exact(resolved.value(), static_cast<std::uint64_t>(expected.size()),
                                                     test_context());
 
   REQUIRE(bytes.has_value());
@@ -64,8 +71,12 @@ TEST_CASE("host_file reads bounded short prefixes", "[unit][host_file]") {
   const auto expected = bytes_from_text("abc");
   write_binary_file(path, expected);
 
-  auto short_prefix = libbsa::detail::read_host_file_prefix(path.string(), 8U, test_context());
-  auto bounded_prefix = libbsa::detail::read_host_file_prefix(path.string(), 2U, test_context());
+  auto resolved = libbsa::detail::resolve_host_file_path(path.string());
+
+  REQUIRE(resolved.has_value());
+
+  auto short_prefix = libbsa::detail::read_host_file_prefix(resolved.value(), 8U, test_context());
+  auto bounded_prefix = libbsa::detail::read_host_file_prefix(resolved.value(), 2U, test_context());
 
   REQUIRE(short_prefix.has_value());
   CHECK(short_prefix.value() == expected);
@@ -78,10 +89,14 @@ TEST_CASE("host_file iterates bounded chunks", "[unit][host_file]") {
   const auto expected = bytes_from_text("chunked source bytes");
   write_binary_file(path, expected);
 
+  auto resolved = libbsa::detail::resolve_host_file_path(path.string());
+
+  REQUIRE(resolved.has_value());
+
   std::vector<std::byte> visited;
   std::size_t callback_count = 0;
   auto iterated = libbsa::detail::for_each_host_file_chunk(
-      path.string(),
+      resolved.value(),
       static_cast<std::uint64_t>(expected.size()),
       test_context(),
       [&](std::span<const std::byte> chunk) -> libbsa::result<void> {
@@ -101,7 +116,11 @@ TEST_CASE("host_file reports missing sources with caller diagnostics", "[unit][h
   const auto missing = source_path("missing.bin");
   std::filesystem::remove(missing);
 
-  auto bytes = libbsa::detail::read_host_file_exact(missing.string(), 1U, test_context());
+  auto resolved = libbsa::detail::resolve_host_file_path(missing.string());
+
+  REQUIRE(resolved.has_value());
+
+  auto bytes = libbsa::detail::read_host_file_exact(resolved.value(), 1U, test_context());
 
   REQUIRE_FALSE(bytes.has_value());
   CHECK(bytes.error().code == libbsa::error_code::io_error);
@@ -112,10 +131,14 @@ TEST_CASE("host_file rejects sources that shrink or grow", "[unit][host_file]") 
   const auto path = source_path("changed.bin");
   const auto expected = bytes_from_text("stable");
 
+  auto resolved = libbsa::detail::resolve_host_file_path(path.string());
+
+  REQUIRE(resolved.has_value());
+
   SECTION("shrunk before exact read") {
     write_binary_file(path, std::span<const std::byte>{expected.data(), expected.size() - 1U});
 
-    auto bytes = libbsa::detail::read_host_file_exact(path.string(), static_cast<std::uint64_t>(expected.size()),
+    auto bytes = libbsa::detail::read_host_file_exact(resolved.value(), static_cast<std::uint64_t>(expected.size()),
                                                       test_context());
 
     REQUIRE_FALSE(bytes.has_value());
@@ -128,7 +151,7 @@ TEST_CASE("host_file rejects sources that shrink or grow", "[unit][host_file]") 
     grown.push_back(std::byte{0x21});
     write_binary_file(path, grown);
 
-    auto bytes = libbsa::detail::read_host_file_exact(path.string(), static_cast<std::uint64_t>(expected.size()),
+    auto bytes = libbsa::detail::read_host_file_exact(resolved.value(), static_cast<std::uint64_t>(expected.size()),
                                                       test_context());
 
     REQUIRE_FALSE(bytes.has_value());
@@ -141,7 +164,11 @@ TEST_CASE("host_file reports allocation limits through results", "[unit][host_fi
   const auto path = source_path("allocation.bin");
   write_binary_file(path, bytes_from_text("small"));
 
-  auto bytes = libbsa::detail::read_host_file_prefix(path.string(), std::numeric_limits<std::size_t>::max(),
+  auto resolved = libbsa::detail::resolve_host_file_path(path.string());
+
+  REQUIRE(resolved.has_value());
+
+  auto bytes = libbsa::detail::read_host_file_prefix(resolved.value(), std::numeric_limits<std::size_t>::max(),
                                                      test_context());
 
   REQUIRE_FALSE(bytes.has_value());

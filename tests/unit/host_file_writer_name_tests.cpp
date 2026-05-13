@@ -47,3 +47,20 @@ TEST_CASE("writer call sites use the neutral host_file helper seam", "[unit][hos
     REQUIRE(text.find(legacy_chunk) == std::string::npos);
   }
 }
+
+TEST_CASE("migrated writer call sites build host_file_path contracts before shared helper reads", "[unit][host_file]") {
+  const auto root = source_root();
+  constexpr auto contract_files = std::to_array<std::string_view>({
+      "src/formats/bsa/tes4_bsa_prepare.cpp",
+      "src/formats/bsa/tes4_bsa_layout.cpp",
+      "src/formats/ba2/ba2_gnrl_prepare.cpp",
+      "src/formats/ba2/ba2_dx10_prepare.cpp",
+  });
+
+  for (const auto relative_path : contract_files) {
+    const auto text = read_text_file(root / relative_path);
+    INFO("Source file: " << relative_path);
+    REQUIRE(text.find("host_file_path") != std::string::npos);
+    REQUIRE(text.find("resolve_host_file_path(") != std::string::npos);
+  }
+}
