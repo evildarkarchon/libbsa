@@ -69,9 +69,9 @@ TEST_CASE("host_file helper surface exposes the shared host_file_path contract",
 TEST_CASE("migrated writer call sites build host_file_path contracts before shared helper reads", "[unit][host_file]") {
   const auto root = source_root();
   constexpr auto resolved_contract_cases = std::to_array<std::pair<std::string_view, std::string_view>>({
-      {"src/formats/bsa/tes4_bsa_prepare.cpp", "resolve_host_file_path(entry.host_path)"},
-      {"src/formats/bsa/tes4_bsa_layout.cpp", "resolve_host_file_path(entry.raw_disk_host_path)"},
-      {"src/formats/ba2/ba2_gnrl_prepare.cpp", "resolve_host_file_path(entry.host_path)"},
+      {"src/formats/bsa/tes4_bsa_prepare.cpp", "resolve_tes4_source_path(entry.host_path)"},
+      {"src/formats/bsa/tes4_bsa_layout.cpp", "resolve_tes4_dedupe_source_path(entry.raw_disk_host_path)"},
+      {"src/formats/ba2/ba2_gnrl_prepare.cpp", "resolve_ba2_gnrl_source_path(entry.host_path)"},
       {"src/formats/ba2/ba2_dx10_prepare.cpp", "resolve_host_file_path(dds_host_path)"},
   });
 

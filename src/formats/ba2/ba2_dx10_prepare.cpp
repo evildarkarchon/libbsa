@@ -76,7 +76,11 @@ constexpr detail::host_file_context ba2_dx10_snapshot_source_context{
 constexpr std::size_t snapshot_random_suffix_bytes = 16U;
 
 result<std::vector<std::byte>> read_dds_file(std::string_view dds_host_path) {
-  return detail::read_host_file_exact(dds_host_path, ba2_dx10_dds_source_context);
+  auto source_path = detail::resolve_host_file_path(dds_host_path);
+  if (!source_path) {
+    return source_path.error();
+  }
+  return detail::read_host_file_exact(source_path.value(), ba2_dx10_dds_source_context);
 }
 
 /// Generates a 128-bit lowercase hex suffix using the Windows system-preferred RNG.
@@ -217,7 +221,7 @@ result<detail::compression_method> compression_method_for(ba2_dx10_target target
 
 result<void> append_snapshot_bytes(std::vector<std::byte>& bytes, const ba2_dx10_subresource_snapshot& snapshot) {
   return detail::for_each_host_file_chunk(
-      snapshot.snapshot_path.string(),
+      snapshot.snapshot_path,
       snapshot.size,
       ba2_dx10_snapshot_source_context,
       [&](std::span<const std::byte> chunk) -> result<void> {

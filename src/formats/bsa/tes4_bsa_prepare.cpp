@@ -168,11 +168,20 @@ constexpr detail::host_file_context tes4_prepare_source_context{
     "TES4 BSA disk source changed during finalization",
     "TES4 BSA disk source"};
 
+/// Resolves a TES4 writer disk source once so writer seams share the same host-file contract as later reader work.
+result<detail::host_file_path> resolve_tes4_source_path(std::string_view host_path) {
+  return detail::resolve_host_file_path(host_path);
+}
+
 result<std::vector<std::byte>> read_source_bytes(const tes4_writer_entry& entry, std::uint32_t expected_size) {
   if (entry.from_memory) {
     return entry.memory_bytes;
   }
-  return detail::read_host_file_exact(entry.host_path, expected_size, tes4_prepare_source_context);
+  auto source_path = resolve_tes4_source_path(entry.host_path);
+  if (!source_path) {
+    return source_path.error();
+  }
+  return detail::read_host_file_exact(source_path.value(), expected_size, tes4_prepare_source_context);
 }
 
 result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& entry,
@@ -182,10 +191,14 @@ result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& 
     return {};
   }
 
-  auto probe = entry.from_memory ? result<std::vector<std::byte>>{entry.memory_bytes}
-                                 : detail::read_host_file_prefix(entry.host_path,
-                                                                 dds_metadata_probe_size,
-                                                                 tes4_prepare_source_context);
+  result<std::vector<std::byte>> probe = entry.memory_bytes;
+  if (!entry.from_memory) {
+    auto source_path = resolve_tes4_source_path(entry.host_path);
+    if (!source_path) {
+      return source_path.error();
+    }
+    probe = detail::read_host_file_prefix(source_path.value(), dds_metadata_probe_size, tes4_prepare_source_context);
+  }
   if (!probe) {
     return probe.error();
   }
@@ -201,7 +214,11 @@ result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& 
 }
 
 result<std::uint32_t> disk_payload_size(const std::string& host_path) {
-  auto size = detail::inspect_host_file_size(host_path, tes4_prepare_source_context);
+  auto source_path = resolve_tes4_source_path(host_path);
+  if (!source_path) {
+    return source_path.error();
+  }
+  auto size = detail::inspect_host_file_size(source_path.value(), tes4_prepare_source_context);
   if (!size) {
     return size.error();
   }
@@ -454,7 +471,11 @@ result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries) {
     }
 
     if (!entry.from_memory) {
-      std::ifstream input{entry.host_path, std::ios::binary};
+      auto source_path = resolve_tes4_source_path(entry.host_path);
+      if (!source_path) {
+        return source_path.error();
+      }
+      auto input = detail::open_host_file(source_path.value(), tes4_prepare_source_context);
       if (!input) {
         return error{error_code::io_error, "TES4 BSA writer failed to open disk source"};
       }

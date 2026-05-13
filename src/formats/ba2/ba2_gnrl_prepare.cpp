@@ -48,15 +48,28 @@ constexpr detail::host_file_context ba2_gnrl_prepare_source_context{
     "BA2 GNRL disk source changed during preparation",
     "BA2 GNRL disk source"};
 
+/// Resolves BA2 GNRL disk sources once so writer preparation matches the shared host-file boundary policy.
+result<detail::host_file_path> resolve_ba2_gnrl_source_path(std::string_view host_path) {
+  return detail::resolve_host_file_path(host_path);
+}
+
 result<std::vector<std::byte>> read_source_bytes(const ba2_gnrl_writer_entry& entry, std::uint64_t expected_size) {
   if (entry.from_memory) {
     return entry.memory_bytes;
   }
-  return detail::read_host_file_exact(entry.host_path, expected_size, ba2_gnrl_prepare_source_context);
+  auto source_path = resolve_ba2_gnrl_source_path(entry.host_path);
+  if (!source_path) {
+    return source_path.error();
+  }
+  return detail::read_host_file_exact(source_path.value(), expected_size, ba2_gnrl_prepare_source_context);
 }
 
 result<std::uint64_t> disk_file_size(const std::string& host_path) {
-  auto size = detail::inspect_host_file_size(host_path, ba2_gnrl_prepare_source_context);
+  auto source_path = resolve_ba2_gnrl_source_path(host_path);
+  if (!source_path) {
+    return source_path.error();
+  }
+  auto size = detail::inspect_host_file_size(source_path.value(), ba2_gnrl_prepare_source_context);
   if (!size) {
     return size.error();
   }
@@ -74,8 +87,12 @@ std::uint64_t hash_bytes(std::span<const std::byte> bytes) noexcept {
 
 result<std::uint64_t> hash_disk_payload(const std::string& host_path, std::uint64_t expected_size) {
   std::uint64_t hash = 14695981039346656037ULL;
+  auto source_path = resolve_ba2_gnrl_source_path(host_path);
+  if (!source_path) {
+    return source_path.error();
+  }
   auto hashed = detail::for_each_host_file_chunk(
-      host_path,
+      source_path.value(),
       expected_size,
       ba2_gnrl_prepare_source_context,
       [&](std::span<const std::byte> chunk) -> result<void> {
@@ -288,7 +305,11 @@ result<void> ba2_gnrl_validate_entries(std::span<const ba2_gnrl_writer_entry> en
     }
 
     if (!entry.from_memory) {
-      std::ifstream input{entry.host_path, std::ios::binary};
+      auto source_path = resolve_ba2_gnrl_source_path(entry.host_path);
+      if (!source_path) {
+        return source_path.error();
+      }
+      auto input = detail::open_host_file(source_path.value(), ba2_gnrl_prepare_source_context);
       if (!input) {
         return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
       }

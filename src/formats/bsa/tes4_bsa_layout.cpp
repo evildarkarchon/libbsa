@@ -54,6 +54,11 @@ constexpr detail::host_file_context tes4_dedupe_source_context{
     "TES4 BSA disk source changed during dedupe preparation",
     "TES4 BSA disk source"};
 
+/// Resolves TES4 dedupe disk sources once so equality checks reuse the shared host-file contract.
+result<detail::host_file_path> resolve_tes4_dedupe_source_path(std::string_view host_path) {
+  return detail::resolve_host_file_path(host_path);
+}
+
 result<tes4_layout_result> calculate_table_lengths(std::span<const tes4_prepared_folder> folders) {
   std::uint64_t total_folder_name_length64 = 0;
   std::uint64_t total_file_name_length64 = 0;
@@ -99,8 +104,12 @@ result<bool> disk_payload_equals_bytes(const tes4_prepared_entry& entry, std::sp
 
   bool equal = true;
   std::size_t offset = 0;
+  auto source_path = resolve_tes4_dedupe_source_path(entry.raw_disk_host_path);
+  if (!source_path) {
+    return source_path.error();
+  }
   auto compared = detail::for_each_host_file_chunk(
-      entry.raw_disk_host_path,
+      source_path.value(),
       entry.raw_disk_size,
       tes4_dedupe_source_context,
       [&](std::span<const std::byte> chunk) -> result<void> {
@@ -132,9 +141,11 @@ result<bool> disk_stored_payloads_equal(const tes4_prepared_entry& lhs, const te
     return false;
   }
 
-  auto rhs_payload = detail::read_host_file_exact(rhs.raw_disk_host_path,
-                                                  rhs.raw_disk_size,
-                                                  tes4_dedupe_source_context);
+  auto rhs_source_path = resolve_tes4_dedupe_source_path(rhs.raw_disk_host_path);
+  if (!rhs_source_path) {
+    return rhs_source_path.error();
+  }
+  auto rhs_payload = detail::read_host_file_exact(rhs_source_path.value(), rhs.raw_disk_size, tes4_dedupe_source_context);
   if (!rhs_payload) {
     return rhs_payload.error();
   }
