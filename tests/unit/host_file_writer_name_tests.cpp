@@ -65,3 +65,20 @@ TEST_CASE("host_file helper surface exposes the shared host_file_path contract",
   const auto path_header = read_text_file(root / "src/detail/host_file_path.hpp");
   REQUIRE(path_header.find("resolve_host_file_path(") != std::string::npos);
 }
+
+TEST_CASE("migrated writer call sites build host_file_path contracts before shared helper reads", "[unit][host_file]") {
+  const auto root = source_root();
+  constexpr auto resolved_contract_cases = std::to_array<std::pair<std::string_view, std::string_view>>({
+      {"src/formats/bsa/tes4_bsa_prepare.cpp", "resolve_host_file_path(entry.host_path)"},
+      {"src/formats/bsa/tes4_bsa_layout.cpp", "resolve_host_file_path(entry.raw_disk_host_path)"},
+      {"src/formats/ba2/ba2_gnrl_prepare.cpp", "resolve_host_file_path(entry.host_path)"},
+      {"src/formats/ba2/ba2_dx10_prepare.cpp", "resolve_host_file_path(dds_host_path)"},
+  });
+
+  for (const auto& [relative_path, expected_text] : resolved_contract_cases) {
+    const auto text = read_text_file(root / relative_path);
+    INFO("Source file: " << relative_path);
+    REQUIRE(text.find("host_file_path") != std::string::npos);
+    REQUIRE(text.find(expected_text) != std::string::npos);
+  }
+}
