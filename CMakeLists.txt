@@ -102,7 +102,7 @@ set(libbsa_library_sources
   src/detail/parser_primitives.cpp
   src/detail/payload_stream.cpp
   src/detail/writer_publish.cpp
-  src/detail/writer_disk_source.cpp
+  src/detail/host_file.cpp
   src/formats/ba2/ba2_format_detector.cpp
   src/formats/ba2/ba2_dx10_parser.cpp
   src/formats/ba2/ba2_dx10_reader.cpp
