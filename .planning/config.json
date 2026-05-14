@@ -38,7 +38,9 @@
   "project_code": null,
   "phase_naming": "sequential",
   "agent_skills": {},
-  "features": {},
+  "features": {
+    "global_learnings": true
+  },
   "resolve_model_ids": "omit",
   "mode": "yolo",
   "granularity": "fine",
