@@ -2,9 +2,10 @@ if(NOT DEFINED TARGET_DIR OR TARGET_DIR STREQUAL "")
   message(FATAL_ERROR "TARGET_DIR is required")
 endif()
 
-# Static package-consumer builds can have no runtime DLLs; that case must not
-# collapse into `cmake -E copy <destination>`.
-if(NOT DEFINED RUNTIME_DLLS OR RUNTIME_DLLS STREQUAL "")
+# Static package-consumer builds can have no target runtime DLLs while still needing explicit
+# ASan runtime copies, so only no-op when both caller-provided lists are empty.
+if((NOT DEFINED RUNTIME_DLLS OR RUNTIME_DLLS STREQUAL "")
+   AND (NOT DEFINED EXTRA_RUNTIME_DLLS OR EXTRA_RUNTIME_DLLS STREQUAL ""))
   return()
 endif()
 

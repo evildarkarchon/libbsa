@@ -44,3 +44,25 @@ endif()
 if(NOT EXISTS "${runtime_target_dir}/example-runtime.dll")
   message(FATAL_ERROR "runtime DLL helper did not copy the requested DLL")
 endif()
+
+set(extra_runtime_target_dir "${CMAKE_CURRENT_BINARY_DIR}/package-consumer-extra-runtime-copy-target")
+file(REMOVE_RECURSE "${extra_runtime_target_dir}")
+file(MAKE_DIRECTORY "${extra_runtime_target_dir}")
+set(extra_runtime_dll "${runtime_source_dir}/example-asan-runtime.dll")
+file(WRITE "${extra_runtime_dll}" "asan runtime placeholder")
+
+execute_process(
+  COMMAND ${CMAKE_COMMAND}
+    "-DEXTRA_RUNTIME_DLLS=${extra_runtime_dll}"
+    "-DTARGET_DIR=${extra_runtime_target_dir}"
+    -P "${CMAKE_CURRENT_LIST_DIR}/copy-runtime-dlls.cmake"
+  RESULT_VARIABLE extra_copy_result
+  OUTPUT_VARIABLE extra_copy_output
+  ERROR_VARIABLE extra_copy_error
+)
+if(NOT extra_copy_result EQUAL 0)
+  message(FATAL_ERROR "extra runtime DLL copy failed\n${extra_copy_output}\n${extra_copy_error}")
+endif()
+if(NOT EXISTS "${extra_runtime_target_dir}/example-asan-runtime.dll")
+  message(FATAL_ERROR "runtime DLL helper did not copy the requested extra DLL when target runtime DLLs were empty")
+endif()
