@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Hardening
 status: executing
 stopped_at: Completed 16-02-PLAN.md
-last_updated: "2026-05-14T23:23:33.309Z"
+last_updated: "2026-05-14T23:24:44.448Z"
 last_activity: 2026-05-14
 progress:
   total_phases: 5
@@ -72,6 +72,8 @@ Current note: Phase 15 completed the reader backend dispatch seam cleanup with d
 - [Phase 15-reader-backend-dispatch-cleanup]: archive_reader now selects a file-local backend table once during open and reuses it for entries, find, and payload extraction.
 - [Phase 15-reader-backend-dispatch-cleanup]: contains stays implemented as find plus has_value so invalid archive-path input preserves invalid_argument behavior instead of collapsing into false.
 - [Phase 15-reader-backend-dispatch-cleanup]: extract_entries keeps duplicate exact-request coalescing and result mirroring in facade code while backend callbacks stay limited to lookup and payload extraction primitives.
+- [Phase 16-parser-and-preparer-seam-extraction]: BA2 DX10 snapshot staging now lives in a private snapshot-builder seam while ba2_dx10_make_writer_entry remains the stable coordinator entrypoint. — This keeps source DDS load, target validation, and writer-owned subresource snapshot creation independently reviewable without changing the existing internal preparer surface.
+- [Phase 16-parser-and-preparer-seam-extraction]: BA2 DX10 planned chunk assembly, streamed snapshot reads, size validation, indexed work placement, and compression routing now live in a private chunk-assembler seam. — This separates chunk plan/assembly/compression rules from add-time snapshot creation while preserving detail::run_indexed_work result ordering and post-preparation canonical sorting.
 
 ### Pending Todos
 
