@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: verifying
-stopped_at: Completed 16-03-PLAN.md
-last_updated: "2026-05-14T23:35:17.540Z"
+status: ready_to_plan
+stopped_at: Phase 16 complete; ready for Phase 17 planning
+last_updated: "2026-05-14T23:43:30Z"
 last_activity: 2026-05-14
 progress:
   total_phases: 5
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-14)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 16 — parser-and-preparer-seam-extraction
+**Current focus:** Phase 17 — writer-hotspot-hardening-and-ship-gate
 
 ## Current Position
 
-Phase: 16 (parser-and-preparer-seam-extraction) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 17
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-05-14
 
-Progress: [██████████] 100%
+Progress: [████████░░] 80%
 
-Current note: Phase 15 completed the reader backend dispatch seam cleanup with dedicated runtime and source-policy regression coverage.
+Current note: Phase 16 completed parser/preparer seam extraction with TES4 table/payload seams, BA2 DX10 snapshot/chunk seams, dedicated policy guardrails, and verification evidence.
 
 ## Performance Metrics
 
-- Total plans completed: 91
-- Current milestone plans completed: 8
+- Total plans completed: 94
+- Current milestone plans completed: 11
 - Historical baseline: v1.0 shipped across 12 phases and 75 plans
 - Latest execution: 15-01 completed in 10 min across 4 files
 
@@ -114,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-14T23:35:03.474Z
-Stopped at: Completed 16-03-PLAN.md
+Last session: 2026-05-14T23:43:30Z
+Stopped at: Phase 16 complete; ready for Phase 17 planning
 Resume file: None

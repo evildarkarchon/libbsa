@@ -138,7 +138,7 @@ Plans:
 | 13. Host Path Correctness Boundary | v1.1 | 5/5 | Complete    | 2026-05-14 |
 | 14. Verification Lane Truthfulness | v1.1 | 3/3 | Complete    | 2026-05-14 |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 1/1 | Complete    | 2026-05-14 |
-| 16. Parser and Preparer Seam Extraction | v1.1 | 3/3 | Complete   | 2026-05-14 |
+| 16. Parser and Preparer Seam Extraction | v1.1 | 3/3 | Complete    | 2026-05-14 |
 | 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 0/TBD | Not started | - |
 
 ## Next Scope Candidates
