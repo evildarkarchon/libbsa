@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Hardening
 status: ready_to_plan
 stopped_at: Completed 14-03-PLAN.md
-last_updated: "2026-05-14T05:39:04.444Z"
+last_updated: "2026-05-14T07:13:27.7583141Z"
 last_activity: 2026-05-14
 progress:
   total_phases: 5
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-14)
 Phase: 15
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-05-14
+Last activity: 2026-05-14 - Completed quick task 260513-xar: Decode public host paths as UTF-8 on Windows
 
 Progress: [██████████] 100%
 
@@ -90,6 +90,7 @@ None yet.
 | Phase 14 P01 | 65m | 3 tasks | 7 files |
 | Phase 14 P02 | 2 min | 2 tasks | 2 files |
 | Phase 14-verification-lane-truthfulness P03 | 9m | 3 tasks | 6 files |
+| 260513-xar | Decode public host paths as UTF-8 on Windows | 2026-05-14 | cb1caeb | Verified | [260513-xar-https-github-com-evildarkarchon-libbsa-b](./quick/260513-xar-https-github-com-evildarkarchon-libbsa-b/) |
 
 ## Deferred Items
 
