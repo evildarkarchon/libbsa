@@ -82,6 +82,7 @@ add_executable(libbsa_tests
   unit/writer_publish_tests.cpp
   unit/tes3_bsa_writer_tests.cpp
   unit/tes4_bsa_writer_tests.cpp
+  unit/ba2_dx10_preparer_seam_tests.cpp
   unit/tes4_bsa_parser_seam_tests.cpp
   unit/tes4_bsa_reader_tests.cpp
   unit/tes3_bsa_reader_tests.cpp
