@@ -33,7 +33,7 @@ TEST_CASE("writer call sites use the neutral host_file helper seam", "[unit][hos
       {"src/formats/bsa/tes4_bsa_prepare.cpp", "tes4_prepare_source_context"},
       {"src/formats/bsa/tes4_bsa_layout.cpp", "tes4_dedupe_source_context"},
       {"src/formats/ba2/ba2_gnrl_prepare.cpp", "ba2_gnrl_prepare_source_context"},
-      {"src/formats/ba2/ba2_dx10_prepare.cpp", "ba2_dx10_dds_source_context"},
+      {"src/formats/ba2/ba2_dx10_snapshot_builder.cpp", "ba2_dx10_dds_source_context"},
   });
 
   for (const auto& [relative_path, context_name] : cases) {
@@ -74,7 +74,7 @@ TEST_CASE("migrated writer call sites build host_file_path contracts before shar
       {"src/formats/bsa/tes4_bsa_prepare.cpp", "resolve_tes4_source_path(entry.host_path)"},
       {"src/formats/bsa/tes4_bsa_layout.cpp", "resolve_tes4_dedupe_source_path(entry.raw_disk_host_path)"},
       {"src/formats/ba2/ba2_gnrl_prepare.cpp", "resolve_ba2_gnrl_source_path(entry.host_path)"},
-      {"src/formats/ba2/ba2_dx10_prepare.cpp", "resolve_host_file_path(dds_host_path)"},
+      {"src/formats/ba2/ba2_dx10_snapshot_builder.cpp", "resolve_host_file_path(dds_host_path)"},
   });
 
   for (const auto& [relative_path, expected_text] : resolved_contract_cases) {
