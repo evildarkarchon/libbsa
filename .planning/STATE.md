@@ -32,7 +32,7 @@ Last activity: 2026-05-14
 
 Progress: [██████████] 100%
 
-Current note: Phase 14 closed the truthful supported matrix loop across docs and planning for the Windows debug, Release, and MSVC AddressSanitizer lanes.
+Current note: Phase 14 is closing the truthful supported matrix loop across docs and planning for the Windows debug, Release, and MSVC AddressSanitizer lanes.
 
 ## Performance Metrics
 
