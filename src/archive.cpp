@@ -41,6 +41,7 @@ enum class reader_backend_identity {
   ba2_dx10,
 };
 
+/// File-local reader callbacks selected once at open time so public reader methods share one dispatch seam.
 struct reader_backend {
   result<std::vector<entry_metadata>> (*entries)(std::span<const entry_metadata> entries);
   result<std::optional<entry_metadata>> (*find)(std::span<const entry_metadata> entries, std::string_view path);
@@ -83,7 +84,7 @@ struct archive_reader::state {
   /// Keeps caller UTF-8 text for diagnostics only; post-open payload reads must stay on the resolved host-file path.
   detail::host_file_path host_path;
   reader_backend_identity backend_identity;
-  const reader_backend* backend;
+  const reader_backend* backend_table;
 };
 
 namespace {
@@ -175,6 +176,8 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
   const auto make_opened_reader = [&](archive_metadata metadata,
                                       std::vector<entry_metadata> entries,
                                       reader_backend_identity backend_identity) {
+    // Open already proved the archive family, so later reader calls only need the selected callbacks plus the
+    // resolved host path for payload reopens.
     archive_reader reader{metadata};
     reader.state_ = std::make_shared<state>(state{std::move(metadata),
                                                   std::move(entries),
@@ -264,14 +267,14 @@ result<std::vector<entry_metadata>> archive_reader::entries() const {
   if (!state_) {
     return error{error_code::unsupported, "archive reader is not open"};
   }
-  return state_->backend->entries(state_->entries);
+  return state_->backend_table->entries(state_->entries);
 }
 
 result<std::optional<entry_metadata>> archive_reader::find(std::string_view path) const {
   if (!state_) {
     return error{error_code::unsupported, "archive reader is not open"};
   }
-  return find_entry_metadata(*state_->backend, state_->entries, path);
+  return find_entry_metadata(*state_->backend_table, state_->entries, path);
 }
 
 result<bool> archive_reader::contains(std::string_view path) const {
@@ -296,7 +299,7 @@ result<void> archive_reader::extract(std::string_view path, payload_sink& sink) 
   if (!found.value()) {
     return error{error_code::not_found, "archive path was not found"};
   }
-  return extract_entry_payload(*state_->backend, state_->host_path, *found.value(), sink);
+  return extract_entry_payload(*state_->backend_table, state_->host_path, *found.value(), sink);
 }
 
 result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view path) const {
@@ -319,7 +322,7 @@ result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view pa
 
   // Keep the convenience API bounded by the parser-derived size for exactly one entry.
   vector_payload_sink sink{found.value()->raw_size};
-  auto extracted = extract_entry_payload(*state_->backend, state_->host_path, *found.value(), sink);
+  auto extracted = extract_entry_payload(*state_->backend_table, state_->host_path, *found.value(), sink);
   if (!extracted) {
     return extracted.error();
   }
@@ -389,7 +392,7 @@ result<std::vector<bulk_extract_entry_result>> archive_reader::extract_entries(
       return {};
     }
 
-    auto extracted = extract_entry_payload(*state_->backend, state_->host_path, *record.entry, *sink.value());
+    auto extracted = extract_entry_payload(*state_->backend_table, state_->host_path, *record.entry, *sink.value());
     if (!extracted) {
       record.failure = extracted.error();
     }
