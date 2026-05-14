@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: planning
+status: executing
 stopped_at: Phase 14 context gathered
-last_updated: "2026-05-14T01:00:09.350Z"
+last_updated: "2026-05-14T05:11:46.510Z"
 last_activity: 2026-05-14
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 8
+  completed_plans: 6
   percent: 20
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-12)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 13 — host-path-correctness-boundary
+**Current focus:** Phase 14 — verification-lane-truthfulness
 
 ## Current Position
 
-Phase: 14
-Plan: Not started
-Status: Ready to plan
+Phase: 14 (verification-lane-truthfulness) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-05-14
 
-Progress: [██████████] 100%
+Progress: [████████░░] 75%
 
 Current note: repository state still contains uncommitted Phase 13 implementation changes, repaired summaries, and an open Phase 13 review blocker, so Phase 14 should not be treated as cleanly ready to plan yet.
 
@@ -61,6 +61,9 @@ Current note: repository state still contains uncommitted Phase 13 implementatio
 - [Phase 13]: The dedicated host-path regression suite creates non-ASCII filesystem paths natively, then converts them back to explicit UTF-8 before calling the unchanged public reader and validation APIs.
 - [Phase 13]: BA2 DX10 canonical extraction expectations are reconstructed from manifest-backed DDS layout metadata plus committed payload bytes, keeping the non-ASCII proof black-box and deterministic.
 - [Phase 13]: A smoke policy gate now locks the host-path proof suite to public open, validate, and extract APIs so Phase 13 coverage does not drift into TES3 or writer-side scope.
+- [Phase 14]: Release package proof stays inside the existing CTest-owned package_consumer_smoke and package_consumer_runtime_dll_copy path.
+- [Phase 14]: The supported MSVC ASan lane keeps real /fsanitize=address instrumentation while disabling STL annotation ODR mismatches against prebuilt dependencies.
+- [Phase 14]: Runtime DLL propagation is part of the supported verification lane contract so Catch2 discovery and package-consumer smoke run from checked-in outputs without caller PATH assumptions.
 
 ### Pending Todos
 
@@ -79,6 +82,7 @@ None yet.
 | Phase 13 P02 | 5 min | 3 tasks | 11 files |
 | Phase 13 P03 | 6 min | 3 tasks | 11 files |
 | Phase 13 P04 | 3 min | 3 tasks | 14 files |
+| Phase 14 P01 | 65m | 3 tasks | 7 files |
 
 ## Deferred Items
 
@@ -90,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-14T01:00:09.342Z
+Last session: 2026-05-14T03:48:58.794Z
 Stopped at: Phase 14 context gathered
-Resume file: .planning/phases/14-verification-lane-truthfulness/14-CONTEXT.md
+Resume file: None

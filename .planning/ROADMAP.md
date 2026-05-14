@@ -74,7 +74,17 @@ Plans:
   1. Maintainer can configure and run a checked-in Windows MSVC Release preset for libbsa builds and automated tests.
   2. Maintainer can configure and run a checked-in Windows MSVC ASan preset for libbsa builds and automated tests.
   3. `.planning`, `CMakePresets.json`, CI, and policy tests all describe the same supported verification lanes without drift.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+- [x] 14-01-PLAN.md - Make Release and ASan lanes real in CMake, presets, CTest ownership, and the shared validation-policy contract.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 14-02-PLAN.md - Reshape GitHub Actions into the supported debug/release matrix plus a separate MSVC AddressSanitizer hardening job.
+
+**Wave 3** *(blocked on Waves 1-2 completion)*
+- [ ] 14-03-PLAN.md - Align README, fixture policy, and planning summaries with the supported matrix and close the truthfulness gate across every named surface.
 
 ### Phase 15: Reader Backend Dispatch Cleanup
 **Goal**: Reader behavior is selected once at open time so consumers see unchanged archive operations while maintainers stop repeating family dispatch logic across the public reader surface.
@@ -112,7 +122,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 13. Host Path Correctness Boundary | v1.1 | 5/5 | Complete    | 2026-05-14 |
-| 14. Verification Lane Truthfulness | v1.1 | 0/TBD | Not started | - |
+| 14. Verification Lane Truthfulness | v1.1 | 1/3 | In Progress|  |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 0/TBD | Not started | - |
 | 16. Parser and Preparer Seam Extraction | v1.1 | 0/TBD | Not started | - |
 | 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 0/TBD | Not started | - |
