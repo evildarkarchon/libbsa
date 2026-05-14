@@ -7,6 +7,8 @@
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
+#include <optional>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -104,6 +106,96 @@ constexpr std::array<std::string_view, 2> release_package_proof_tests() {
 
 constexpr std::array<std::string_view, 2> supported_matrix_exclusions() {
   return {{"Windows-only", "requires-game-fixture"}};
+}
+
+/// Parse a small YAML block by indentation so workflow topology tests can stay dependency-light.
+std::optional<std::string> yaml_block(std::string_view text,
+                                      std::string_view header,
+                                      std::size_t indent_spaces) {
+  const auto header_token = std::string(indent_spaces, ' ') + std::string{header} + ":";
+  std::istringstream lines{std::string{text}};
+  std::string line;
+  std::ostringstream block;
+  bool in_block = false;
+
+  while (std::getline(lines, line)) {
+    const auto trimmed_line = trim_copy(line);
+    if (!in_block) {
+      if (trimmed_line == std::string{header} + ":") {
+        in_block = true;
+        block << line << '\n';
+      }
+      continue;
+    }
+
+    if (line.starts_with(header_token)) {
+      block << line << '\n';
+      continue;
+    }
+
+    if (line.size() > indent_spaces &&
+        line.starts_with(std::string(indent_spaces, ' ')) &&
+        line[indent_spaces] != ' ' &&
+        line[indent_spaces] != '-' &&
+        trimmed_line.ends_with(':')) {
+      break;
+    }
+
+    block << line << '\n';
+  }
+
+  if (!in_block) {
+    return std::nullopt;
+  }
+
+  return block.str();
+}
+
+std::vector<std::string> yaml_scalar_values(std::string_view block, std::string_view key) {
+  std::vector<std::string> values;
+  std::istringstream lines{std::string{block}};
+  std::string line;
+  const auto prefix = std::string{key} + ":";
+  while (std::getline(lines, line)) {
+    const auto trimmed = trim_copy(line);
+    if (!trimmed.starts_with(prefix)) {
+      continue;
+    }
+
+    auto value = trim_copy(trimmed.substr(prefix.size()));
+    if (!value.empty() && value.find("${{") == std::string::npos) {
+      values.push_back(std::move(value));
+    }
+  }
+  return values;
+}
+
+std::size_t count_occurrences(std::string_view text, std::string_view needle) {
+  std::size_t count = 0;
+  std::size_t offset = 0;
+  while ((offset = text.find(needle, offset)) != std::string_view::npos) {
+    ++count;
+    offset += needle.size();
+  }
+  return count;
+}
+
+void require_exact_values(const std::vector<std::string>& actual,
+                          std::initializer_list<std::string_view> expected) {
+  INFO("Actual values count: " << actual.size());
+  REQUIRE(actual.size() == expected.size());
+
+  std::vector<std::string> normalized_actual = actual;
+  std::sort(normalized_actual.begin(), normalized_actual.end());
+
+  std::vector<std::string> normalized_expected;
+  normalized_expected.reserve(expected.size());
+  for (const auto value : expected) {
+    normalized_expected.emplace_back(value);
+  }
+  std::sort(normalized_expected.begin(), normalized_expected.end());
+
+  REQUIRE(normalized_actual == normalized_expected);
 }
 
 void require_preset_family(std::string_view presets, const verification_lane_contract& lane) {
@@ -295,4 +387,27 @@ TEST_CASE("validation_policy verification matrix contract keeps release package 
     INFO("Checking contract exclusion token for " << exclusion);
     REQUIRE(tests_cmake.find(std::string{exclusion}) != std::string::npos);
   }
+}
+
+TEST_CASE("validation_policy verification matrix contract keeps the main workflow matrix truthful",
+          "[unit][validation_policy][static_boundary]") {
+  const auto workflow = read_text_file(source_root() / ".github/workflows/ci.yml");
+
+  require_all_tokens(workflow,
+                      {"name: Windows MSVC ${{ matrix.role }} (${{ matrix.preset }})",
+                       "fail-fast: false",
+                       "include:",
+                       "role: Debug quick path",
+                       "role: Debug inner-loop lane",
+                       "role: Release package-proof lane",
+                       "preset: windows-msvc-debug-static",
+                       "preset: windows-msvc-debug-shared",
+                       "preset: windows-msvc-release-static",
+                       "preset: windows-msvc-release-shared",
+                       "cmake --preset ${{ matrix.preset }}",
+                       "cmake --build --preset ${{ matrix.preset }}",
+                       "ctest --preset ${{ matrix.preset }} --output-on-failure"});
+
+  REQUIRE(count_occurrences(workflow, "preset: windows-msvc-") == 4);
+  REQUIRE(workflow.find("preset: windows-msvc-asan-static") == std::string::npos);
 }

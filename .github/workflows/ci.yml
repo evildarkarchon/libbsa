@@ -6,14 +6,20 @@ on:
 
 jobs:
   windows-msvc:
-    name: Windows MSVC (${{ matrix.preset }})
+    name: Windows MSVC ${{ matrix.role }} (${{ matrix.preset }})
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        preset:
-          - windows-msvc-debug-static
-          - windows-msvc-debug-shared
+        include:
+          - role: Debug quick path
+            preset: windows-msvc-debug-static
+          - role: Debug inner-loop lane
+            preset: windows-msvc-debug-shared
+          - role: Release package-proof lane
+            preset: windows-msvc-release-static
+          - role: Release package-proof lane
+            preset: windows-msvc-release-shared
 
     env:
       VCPKG_ROOT: C:\vcpkg
