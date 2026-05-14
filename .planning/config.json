@@ -42,7 +42,7 @@
     "global_learnings": true
   },
   "resolve_model_ids": "omit",
-  "mode": "yolo",
+  "mode": "interactive",
   "granularity": "fine",
   "context_window": 1000000
 }
