@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
 status: executing
-stopped_at: Phase 14 context gathered
-last_updated: "2026-05-14T05:11:46.510Z"
+stopped_at: Completed 14-02-PLAN.md
+last_updated: "2026-05-14T05:26:34.621Z"
 last_activity: 2026-05-14
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
-  percent: 20
+  completed_plans: 7
+  percent: 88
 ---
 
 # Project State
@@ -26,20 +26,20 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Current Position
 
 Phase: 14 (verification-lane-truthfulness) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-05-14
 
-Progress: [████████░░] 75%
+Progress: [█████████░] 88%
 
-Current note: repository state still contains uncommitted Phase 13 implementation changes, repaired summaries, and an open Phase 13 review blocker, so Phase 14 should not be treated as cleanly ready to plan yet.
+Current note: Phase 14 now has truthful CI coverage for the supported Debug/Release matrix plus a separate MSVC AddressSanitizer hardening lane; plan 03 remains to align docs and planning summaries.
 
 ## Performance Metrics
 
 - Total plans completed: 85
-- Current milestone plans completed: 5
+- Current milestone plans completed: 6
 - Historical baseline: v1.0 shipped across 12 phases and 75 plans
-- Latest execution: 13-05 completed in 7 min across 2 files
+- Latest execution: 14-02 completed in 2 min across 2 files
 
 ## Accumulated Context
 
@@ -64,6 +64,8 @@ Current note: repository state still contains uncommitted Phase 13 implementatio
 - [Phase 14]: Release package proof stays inside the existing CTest-owned package_consumer_smoke and package_consumer_runtime_dll_copy path.
 - [Phase 14]: The supported MSVC ASan lane keeps real /fsanitize=address instrumentation while disabling STL annotation ODR mismatches against prebuilt dependencies.
 - [Phase 14]: Runtime DLL propagation is part of the supported verification lane contract so Catch2 discovery and package-consumer smoke run from checked-in outputs without caller PATH assumptions.
+- [Phase 14]: The main Windows CI matrix now uses role-aware matrix.include rows so workflow output names both lane role and concrete preset without changing the preset commands.
+- [Phase 14]: The MSVC AddressSanitizer lane stays a separate top-level job that runs the exact windows-msvc-asan-static preset triad instead of becoming a fifth matrix row.
 
 ### Pending Todos
 
@@ -83,6 +85,7 @@ None yet.
 | Phase 13 P03 | 6 min | 3 tasks | 11 files |
 | Phase 13 P04 | 3 min | 3 tasks | 14 files |
 | Phase 14 P01 | 65m | 3 tasks | 7 files |
+| Phase 14 P02 | 2 min | 2 tasks | 2 files |
 
 ## Deferred Items
 
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-14T03:48:58.794Z
-Stopped at: Phase 14 context gathered
+Last session: 2026-05-14T05:26:12.017Z
+Stopped at: Completed 14-02-PLAN.md
 Resume file: None

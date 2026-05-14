@@ -15,8 +15,8 @@ Requirements for the v1.1 Hardening milestone. Each maps to exactly one roadmap 
 
 ### Verification Lanes
 
-- [ ] **VER-01**: Maintainer can configure and run a checked-in Windows MSVC Release preset for libbsa builds and automated tests.
-- [ ] **VER-02**: Maintainer can configure and run a checked-in Windows MSVC ASan preset for libbsa builds and automated tests.
+- [x] **VER-01**: Maintainer can configure and run a checked-in Windows MSVC Release preset for libbsa builds and automated tests.
+- [x] **VER-02**: Maintainer can configure and run a checked-in Windows MSVC ASan preset for libbsa builds and automated tests.
 - [ ] **VER-03**: Maintainer can rely on `.planning`, `CMakePresets.json`, CI, and policy tests to describe the same supported verification lanes.
 
 ### Reader Dispatch Stability
@@ -74,8 +74,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HOST-01 | Phase 13 | Complete |
 | HOST-02 | Phase 13 | Complete |
 | HOST-03 | Phase 13 | Complete |
-| VER-01 | Phase 14 | Pending |
-| VER-02 | Phase 14 | Pending |
+| VER-01 | Phase 14 | Complete |
+| VER-02 | Phase 14 | Complete |
 | VER-03 | Phase 14 | Pending |
 | DISP-01 | Phase 15 | Pending |
 | DISP-02 | Phase 15 | Pending |
