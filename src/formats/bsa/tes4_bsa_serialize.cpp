@@ -3,6 +3,7 @@
 #include "formats/bsa/tes4_bsa_constants.hpp"
 
 #include <detail/binary_io.hpp>
+#include <detail/host_file.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -31,6 +32,13 @@ result<std::uint8_t> checked_name_size(std::size_t size, std::string_view descri
   }
   return static_cast<std::uint8_t>(size);
 }
+
+constexpr detail::host_file_context tes4_serialize_source_context{
+    "TES4 BSA writer failed to open disk source",
+    "TES4 BSA writer failed to inspect disk source",
+    "TES4 BSA writer failed while reading disk source",
+    "TES4 BSA disk source changed during finalization",
+    "TES4 BSA disk source"};
 
 result<void> write_string_terminated(detail::binary_writer& writer, std::string_view value) {
   for (const char ch : value) {
@@ -68,21 +76,22 @@ result<void> write_span_to_stream(std::ofstream& output,
   return {};
 }
 
-result<void> stream_disk_payload_to_output(const std::string& host_path,
-                                           std::uint32_t expected_size,
-                                           std::ofstream& output) {
-  std::ifstream input{host_path, std::ios::binary};
+result<void> stream_disk_payload_to_output(const detail::host_file_path& host_path,
+                                            std::uint32_t expected_size,
+                                            std::ofstream& output) {
+  auto input = detail::open_host_file(host_path, tes4_serialize_source_context);
   if (!input) {
-    return error{error_code::io_error, "TES4 BSA writer failed to open disk source"};
+    return input.error();
   }
+  auto& stream = input.value();
 
   std::vector<std::byte> scratch(payload_stream_chunk_size);
   std::uint64_t remaining = expected_size;
   while (remaining > 0U) {
     const auto requested = static_cast<std::size_t>(
         std::min<std::uint64_t>(remaining, static_cast<std::uint64_t>(scratch.size())));
-    input.read(reinterpret_cast<char*>(scratch.data()), static_cast<std::streamsize>(requested));
-    if (input.gcount() != static_cast<std::streamsize>(requested)) {
+    stream.read(reinterpret_cast<char*>(scratch.data()), static_cast<std::streamsize>(requested));
+    if (stream.gcount() != static_cast<std::streamsize>(requested)) {
       return error{error_code::io_error, "TES4 BSA writer failed while streaming disk source"};
     }
     auto written = write_span_to_stream(output, std::span<const std::byte>{scratch.data(), requested},
@@ -96,10 +105,10 @@ result<void> stream_disk_payload_to_output(const std::string& host_path,
   // Metadata offsets are assigned before publishing; fail if the caller mutates
   // a disk source while finalization is streaming it into the temporary archive.
   char extra = '\0';
-  if (input.get(extra)) {
+  if (stream.get(extra)) {
     return error{error_code::io_error, "TES4 BSA disk source changed during finalization"};
   }
-  if (input.bad()) {
+  if (stream.bad()) {
     return error{error_code::io_error, "TES4 BSA writer failed while reading disk source"};
   }
   return {};
@@ -195,7 +204,7 @@ result<void> tes4_write_archive_bytes(std::span<const tes4_prepared_folder> fold
         return prefix_written.error();
       }
       if (entry.stream_raw_disk) {
-        auto streamed = stream_disk_payload_to_output(entry.raw_disk_host_path, entry.raw_disk_size, output);
+        auto streamed = stream_disk_payload_to_output(entry.resolved_raw_disk_host_path, entry.raw_disk_size, output);
         if (!streamed) {
           return streamed.error();
         }

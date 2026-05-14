@@ -23,6 +23,8 @@
 
 namespace {
 
+constexpr auto non_ascii_path_token_wide = L"libbsa-Angstrom-日本語";
+
 std::filesystem::path writer_test_dir() {
   auto path = std::filesystem::temp_directory_path() / "libbsa_ba2_gnrl_writer_tests";
   std::filesystem::create_directories(path);
@@ -30,6 +32,18 @@ std::filesystem::path writer_test_dir() {
 }
 
 std::filesystem::path output_path(std::string name) { return writer_test_dir() / std::move(name); }
+
+std::filesystem::path non_ascii_source_dir(std::string_view name) {
+  auto path = writer_test_dir() / std::filesystem::path{std::wstring{non_ascii_path_token_wide}} / std::string{name};
+  std::filesystem::create_directories(path);
+  return path;
+}
+
+std::string utf8_string_from_path(const std::filesystem::path& path) {
+  // The public writer API takes UTF-8 host text, so the regression must avoid ACP-dependent narrow conversions.
+  const auto utf8 = path.u8string();
+  return {reinterpret_cast<const char*>(utf8.data()), utf8.size()};
+}
 
 void write_binary_file(const std::filesystem::path& path, std::vector<std::byte> bytes) {
   std::ofstream output{path, std::ios::binary | std::ios::trunc};
@@ -521,7 +535,7 @@ TEST_CASE("BA2 GNRL writer accepts explicit Fallout 4 disk archive paths", "[uni
 }
 
 TEST_CASE("BA2 GNRL writer raw Fallout 4 output reopens with end filename table", "[unit][ba2_gnrl_writer]") {
-  const auto source = output_path("raw-fo4-disk-source.psc");
+  const auto source = non_ascii_source_dir("raw-fo4-source") / "raw-fo4-disk-source.psc";
   const std::vector<std::byte> disk_bytes{std::byte{0x10}, std::byte{0x20}, std::byte{0x30}};
   write_binary_file(source, disk_bytes);
   std::vector<std::byte> mutable_memory{std::byte{0xAA}, std::byte{0xBB}, std::byte{0xCC}};
@@ -530,7 +544,7 @@ TEST_CASE("BA2 GNRL writer raw Fallout 4 output reopens with end filename table"
 
   libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, overwriting_raw_options()};
   REQUIRE(writer.add_bytes("Meshes/MixedCase/Alpha.nif", mutable_memory).has_value());
-  REQUIRE(writer.add_file("Scripts/Quest.psc", source.string()).has_value());
+  REQUIRE(writer.add_file("Scripts/Quest.psc", utf8_string_from_path(source)).has_value());
   REQUIRE(writer.add_bytes("Zero/Empty.txt", empty_bytes).has_value());
   mutable_memory.assign(mutable_memory.size(), std::byte{0x00});
 

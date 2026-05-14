@@ -236,6 +236,15 @@ result<ba2_gnrl_prepared_entry> prepare_entry(ba2_gnrl_target target,
     return extension.error();
   }
 
+  detail::host_file_path resolved_source_path;
+  if (stream_from_disk) {
+    auto source_path = resolve_ba2_gnrl_source_path(entry.host_path);
+    if (!source_path) {
+      return source_path.error();
+    }
+    resolved_source_path = std::move(source_path.value());
+  }
+
   const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
   if (file_name.empty()) {
     return error{error_code::invalid_argument, "BA2 GNRL archive path must include a file name"};
@@ -244,6 +253,7 @@ result<ba2_gnrl_prepared_entry> prepare_entry(ba2_gnrl_target target,
   return ba2_gnrl_prepared_entry{entry.archive_path_original,
                                  entry.archive_path_canonical,
                                  entry.host_path,
+                                 std::move(resolved_source_path),
                                  extension.value(),
                                  detail::hash_fo4(file_name),
                                  detail::hash_fo4(directory),

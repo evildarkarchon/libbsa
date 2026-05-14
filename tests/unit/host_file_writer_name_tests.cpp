@@ -83,6 +83,19 @@ TEST_CASE("migrated writer call sites build host_file_path contracts before shar
   }
 }
 
+TEST_CASE("raw writer serializers reopen disk sources through the shared host_file seam", "[unit][host_file]") {
+  const auto root = source_root();
+  constexpr auto serializer_sources = std::to_array<std::string_view>({"src/formats/ba2/ba2_gnrl_serialize.cpp",
+                                                                       "src/formats/bsa/tes4_bsa_serialize.cpp"});
+
+  for (const auto relative_path : serializer_sources) {
+    const auto text = read_text_file(root / relative_path);
+    INFO("Source file: " << relative_path);
+    REQUIRE(text.find("open_host_file(") != std::string::npos);
+    REQUIRE(text.find("std::ifstream input{host_path, std::ios::binary}") == std::string::npos);
+  }
+}
+
 TEST_CASE("archive_reader open stores the shared host_file_path contract", "[unit][host_file]") {
   const auto archive_text = read_text_file(source_root() / "src/archive.cpp");
 

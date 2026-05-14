@@ -2,6 +2,8 @@
 
 #include "formats/bsa/tes4_bsa_writer.hpp"
 
+#include <detail/host_file_path.hpp>
+
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -24,6 +26,8 @@ struct tes4_prepared_entry {
   std::uint32_t raw_disk_size{0};
   std::vector<std::byte> stored_payload;
   std::string raw_disk_host_path;
+  // Raw finalization must reuse the prepare-time resolved path so Windows UTF-8 host text is not reinterpreted later.
+  detail::host_file_path resolved_raw_disk_host_path;
 };
 
 struct tes4_prepared_folder {

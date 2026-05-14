@@ -18,6 +18,8 @@
 
 namespace {
 
+constexpr auto non_ascii_path_token_wide = L"libbsa-Angstrom-日本語";
+
 std::filesystem::path writer_test_dir() {
   auto path = std::filesystem::temp_directory_path() / "libbsa_tes4_bsa_writer_tests";
   std::filesystem::create_directories(path);
@@ -29,6 +31,18 @@ std::filesystem::path generated_source_dir() {
 }
 
 std::filesystem::path output_path(std::string name) { return writer_test_dir() / std::move(name); }
+
+std::filesystem::path non_ascii_source_dir(std::string_view name) {
+  auto path = writer_test_dir() / std::filesystem::path{std::wstring{non_ascii_path_token_wide}} / std::string{name};
+  std::filesystem::create_directories(path);
+  return path;
+}
+
+std::string utf8_string_from_path(const std::filesystem::path& path) {
+  // The public writer API takes UTF-8 host text, so the regression must avoid ACP-dependent narrow conversions.
+  const auto utf8 = path.u8string();
+  return {reinterpret_cast<const char*>(utf8.data()), utf8.size()};
+}
 
 void write_binary_file(const std::filesystem::path& path, std::vector<std::byte> bytes) {
   std::ofstream output{path, std::ios::binary | std::ios::trunc};
@@ -179,6 +193,7 @@ TEST_CASE("TES4 BSA writer raw output reopens for every target profile", "[unit]
   for (const auto target : targets) {
     const auto root = writer_test_dir() / target_name(target);
     std::filesystem::create_directories(root / "sources");
+    const auto non_ascii_sources = non_ascii_source_dir(target_name(target));
     const auto output = root / "raw-round-trip.bsa";
     std::filesystem::remove(output);
 
@@ -193,13 +208,13 @@ TEST_CASE("TES4 BSA writer raw output reopens for every target profile", "[unit]
     options.compression_policy = libbsa::archive_compression_policy::all_raw;
     libbsa::tes4_bsa_writer writer{target, options};
 
-    const auto model_source = root / "sources" / "model.nif";
-    const auto diffuse_source = root / "sources" / "diffuse.dds";
+    const auto model_source = non_ascii_sources / "model.nif";
+    const auto diffuse_source = non_ascii_sources / "diffuse.dds";
     write_binary_file(model_source, expected_entries[0].second);
     write_binary_file(diffuse_source, expected_entries[1].second);
 
-    REQUIRE(writer.add_file(expected_entries[0].first, model_source.string()).has_value());
-    REQUIRE(writer.add_file(expected_entries[1].first, diffuse_source.string()).has_value());
+    REQUIRE(writer.add_file(expected_entries[0].first, utf8_string_from_path(model_source)).has_value());
+    REQUIRE(writer.add_file(expected_entries[1].first, utf8_string_from_path(diffuse_source)).has_value());
     REQUIRE(writer.add_bytes(expected_entries[2].first, expected_entries[2].second).has_value());
     REQUIRE(writer.add_bytes(expected_entries[3].first, expected_entries[3].second).has_value());
     REQUIRE(writer.add_bytes(expected_entries[4].first, expected_entries[4].second).has_value());

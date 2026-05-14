@@ -2,6 +2,8 @@
 
 #include "formats/ba2/ba2_gnrl_writer.hpp"
 
+#include <detail/host_file_path.hpp>
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -16,6 +18,8 @@ struct ba2_gnrl_prepared_entry {
   std::string archive_path_original;
   std::string archive_path_canonical;
   std::string source_path;
+  // Raw finalization must reuse the prepare-time resolved path so Windows UTF-8 host text is not reinterpreted later.
+  detail::host_file_path resolved_source_path;
   std::array<std::byte, 4> extension{};
   std::uint32_t name_hash{};
   std::uint32_t directory_hash{};

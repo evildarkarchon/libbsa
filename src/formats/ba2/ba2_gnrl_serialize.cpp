@@ -2,6 +2,8 @@
 
 #include "formats/ba2/ba2_constants.hpp"
 
+#include <detail/host_file.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -74,6 +76,13 @@ result<std::uint16_t> checked_u16(std::uint64_t value, std::string_view descript
   return static_cast<std::uint16_t>(value);
 }
 
+constexpr detail::host_file_context ba2_gnrl_serialize_source_context{
+    "BA2 GNRL writer failed to open disk source",
+    "BA2 GNRL writer failed to inspect disk source size",
+    "BA2 GNRL writer failed while reading disk source",
+    "BA2 GNRL disk source changed during finalization",
+    "BA2 GNRL disk source"};
+
 result<void> write_name(stream_writer& writer, std::string_view name) {
   auto length = checked_u16(name.size(), "BA2 GNRL filename-table entry length");
   if (!length) {
@@ -91,19 +100,22 @@ result<void> write_name(stream_writer& writer, std::string_view name) {
   return {};
 }
 
-result<void> stream_disk_payload(const std::string& host_path, std::uint32_t expected_size, std::ostream& output) {
-  std::ifstream input{host_path, std::ios::binary};
+result<void> stream_disk_payload(const detail::host_file_path& host_path,
+                                 std::uint32_t expected_size,
+                                 std::ostream& output) {
+  auto input = detail::open_host_file(host_path, ba2_gnrl_serialize_source_context);
   if (!input) {
-    return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
+    return input.error();
   }
+  auto& stream = input.value();
 
   std::array<char, 64U * 1024U> scratch{};
   std::uint64_t remaining = expected_size;
   while (remaining > 0U) {
     const auto requested = static_cast<std::size_t>(
         std::min<std::uint64_t>(remaining, static_cast<std::uint64_t>(scratch.size())));
-    input.read(scratch.data(), static_cast<std::streamsize>(requested));
-    if (input.gcount() != static_cast<std::streamsize>(requested)) {
+    stream.read(scratch.data(), static_cast<std::streamsize>(requested));
+    if (stream.gcount() != static_cast<std::streamsize>(requested)) {
       return error{error_code::io_error, "BA2 GNRL disk source changed during finalization"};
     }
     output.write(scratch.data(), static_cast<std::streamsize>(requested));
@@ -115,10 +127,10 @@ result<void> stream_disk_payload(const std::string& host_path, std::uint32_t exp
 
   // Metadata offsets and FileTableOffset are fixed before streaming, so an appended byte must fail the write.
   char extra = '\0';
-  if (input.get(extra)) {
+  if (stream.get(extra)) {
     return error{error_code::io_error, "BA2 GNRL disk source changed during finalization"};
   }
-  if (input.bad()) {
+  if (stream.bad()) {
     return error{error_code::io_error, "BA2 GNRL writer failed while reading disk source"};
   }
   return {};
@@ -179,7 +191,7 @@ result<void> ba2_gnrl_write_archive_bytes(ba2_gnrl_target target,
       continue;
     }
     if (entry.stream_from_disk) {
-      auto streamed = stream_disk_payload(entry.source_path, entry.raw_size, output);
+      auto streamed = stream_disk_payload(entry.resolved_source_path, entry.raw_size, output);
       if (!streamed) {
         return streamed.error();
       }

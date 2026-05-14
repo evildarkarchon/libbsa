@@ -383,6 +383,10 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
     if (!prefix) {
       return prefix.error();
     }
+    auto source_path = resolve_tes4_source_path(entry.host_path);
+    if (!source_path) {
+      return source_path.error();
+    }
     const auto stored_size64 = static_cast<std::uint64_t>(prefix.value().size()) + raw_size;
     auto stored_size = checked_size_flags_payload_size(stored_size64, "TES4 BSA stored payload size");
     if (!stored_size) {
@@ -391,6 +395,7 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
     prepared.stored_size = stored_size.value();
     prepared.stored_payload = std::move(prefix.value());
     prepared.raw_disk_host_path = entry.host_path;
+    prepared.resolved_raw_disk_host_path = std::move(source_path.value());
     prepared.raw_disk_size = raw_size;
     prepared.stream_raw_disk = true;
     return prepared_entry_result{std::move(prepared), entry_file_flags};
