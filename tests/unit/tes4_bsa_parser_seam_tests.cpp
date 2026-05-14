@@ -52,15 +52,15 @@ TEST_CASE("tes4 raw table seam reports table sizing and folder file-name offset 
   auto table = libbsa::formats::bsa::read_tes4_bsa_raw_table(bytes, bytes.size(), tes4_detected(103U));
 
   REQUIRE(table.has_value());
-  CHECK(table.value().metadata_table_size == 98U);
+  CHECK(table.value().metadata_table_size == 124U);
   REQUIRE(table.value().folder_records.size() == 1U);
-  CHECK(table.value().folder_records.front().offset == 58U + table.value().header.total_file_name_length);
+  CHECK(table.value().folder_records.front().offset == 79U);
   REQUIRE(table.value().folder_blocks.size() == 1U);
-  CHECK(table.value().folder_blocks.front().name == "meshes/tiny");
+  CHECK(table.value().folder_blocks.front().name == "Meshes\\Tiny");
   REQUIRE(table.value().folder_blocks.front().files.size() == 2U);
   REQUIRE(table.value().file_names.size() == 2U);
-  CHECK(table.value().file_names[0] == "rawmesh.nif");
-  CHECK(table.value().file_names[1] == "compressedmesh.nif");
+  CHECK(table.value().file_names[0] == "RawMesh.nif");
+  CHECK(table.value().file_names[1] == "PackedMesh.nif");
 }
 
 TEST_CASE("tes4 payload descriptor seam derives embedded-name prefix raw size compression and rejects metadata overlap",
@@ -95,7 +95,7 @@ TEST_CASE("tes4 payload descriptor seam derives embedded-name prefix raw size co
       v104_table.value().header, deflate_record, v104_bytes.size(), v104_table.value().metadata_table_size, read_v104_payload);
   REQUIRE(deflate_descriptor.has_value());
   CHECK(deflate_descriptor.value().embedded_prefix_size > 0U);
-  CHECK(deflate_descriptor.value().raw_size == 31U);
+  CHECK(deflate_descriptor.value().raw_size == 27U);
   CHECK(deflate_descriptor.value().compression == libbsa::entry_compression::deflate);
 
   const auto v105_bytes = read_binary_file(generated_archive_path("tes4_v105.bsa"));

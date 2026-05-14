@@ -145,8 +145,10 @@ set(libbsa_library_sources
   src/formats/bsa/tes3_bsa_layout.cpp
   src/formats/bsa/tes3_bsa_serialize.cpp
   src/formats/bsa/tes3_bsa_writer.cpp
+  src/formats/bsa/tes4_bsa_payload_descriptor.cpp
   src/formats/bsa/tes4_bsa_parser.cpp
   src/formats/bsa/tes4_bsa_reader.cpp
+  src/formats/bsa/tes4_bsa_table.cpp
   src/formats/bsa/tes4_bsa_prepare.cpp
   src/formats/bsa/tes4_bsa_layout.cpp
   src/formats/bsa/tes4_bsa_serialize.cpp
