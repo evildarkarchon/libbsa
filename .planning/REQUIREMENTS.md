@@ -26,7 +26,7 @@ Requirements for the v1.1 Hardening milestone. Each maps to exactly one roadmap 
 
 ### Parser/Preparer Refactor
 
-- [ ] **REFA-01**: Maintainer can modify the targeted TES4 parser hotspot through smaller internal helpers with focused regression coverage.
+- [x] **REFA-01**: Maintainer can modify the targeted TES4 parser hotspot through smaller internal helpers with focused regression coverage.
 - [ ] **REFA-02**: Maintainer can modify the targeted BA2 DX10 preparer/staging hotspot through smaller internal helpers with focused regression coverage.
 
 ### Dedupe Hotspot Cleanup
@@ -79,7 +79,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VER-03 | Phase 14 | Complete |
 | DISP-01 | Phase 15 | Complete |
 | DISP-02 | Phase 15 | Complete |
-| REFA-01 | Phase 16 | Pending |
+| REFA-01 | Phase 16 | Complete |
 | REFA-02 | Phase 16 | Pending |
 | DEDU-01 | Phase 17 | Pending |
 | DEDU-02 | Phase 17 | Pending |

@@ -112,7 +112,7 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 16-01-PLAN.md - Extract TES4 raw table and payload descriptor seams with focused TDD regression coverage.
+- [x] 16-01-PLAN.md - Extract TES4 raw table and payload descriptor seams with focused TDD regression coverage.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 16-02-PLAN.md - Extract BA2 DX10 snapshot builder and chunk assembler seams with focused TDD regression coverage.
@@ -138,7 +138,7 @@ Plans:
 | 13. Host Path Correctness Boundary | v1.1 | 5/5 | Complete    | 2026-05-14 |
 | 14. Verification Lane Truthfulness | v1.1 | 3/3 | Complete    | 2026-05-14 |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 1/1 | Complete    | 2026-05-14 |
-| 16. Parser and Preparer Seam Extraction | v1.1 | 0/3 | Ready to execute | - |
+| 16. Parser and Preparer Seam Extraction | v1.1 | 1/3 | In Progress|  |
 | 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 0/TBD | Not started | - |
 
 ## Next Scope Candidates
