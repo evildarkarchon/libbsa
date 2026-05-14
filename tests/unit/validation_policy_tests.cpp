@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <initializer_list>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -77,6 +78,37 @@ std::vector<std::string> compatibility_warning_codes_from_public_header() {
     }
   }
   return codes;
+}
+
+struct verification_lane_contract {
+  std::string_view preset_name;
+  std::string_view role_name;
+  bool package_proof_lane;
+};
+
+constexpr std::array<verification_lane_contract, 5> verification_matrix_contract() {
+  return {{
+      {"windows-msvc-debug-static", "debug quick path", false},
+      {"windows-msvc-debug-shared", "debug inner-loop lane", false},
+      {"windows-msvc-release-static", "release package-proof lane", true},
+      {"windows-msvc-release-shared", "release package-proof lane", true},
+      {"windows-msvc-asan-static", "MSVC AddressSanitizer hardening lane", false},
+  }};
+}
+
+constexpr std::array<std::string_view, 2> release_package_proof_tests() {
+  return {{"package_consumer_smoke", "package_consumer_runtime_dll_copy"}};
+}
+
+constexpr std::array<std::string_view, 2> supported_matrix_exclusions() {
+  return {{"Windows-only", "requires-game-fixture"}};
+}
+
+void require_all_tokens(std::string_view text, std::initializer_list<std::string_view> tokens) {
+  for (const auto token : tokens) {
+    INFO("Missing token: " << token);
+    REQUIRE(text.find(token) != std::string_view::npos);
+  }
 }
 
 } // namespace
@@ -210,4 +242,46 @@ TEST_CASE("validation_policy configured build profiles are Windows-only and docu
   REQUIRE(readme.find("Windows-only") != std::string::npos);
   REQUIRE(agents.find("Windows-only") != std::string::npos);
   REQUIRE(claude.find("Windows-only") != std::string::npos);
+}
+
+TEST_CASE("validation_policy verification matrix contract requires supported preset triads",
+          "[unit][validation_policy][static_boundary]") {
+  const auto presets = read_text_file(source_root() / "CMakePresets.json");
+
+  for (const auto& lane : verification_matrix_contract()) {
+    INFO("Checking preset family for " << lane.preset_name << " as the " << lane.role_name);
+    REQUIRE(presets.find(std::string{lane.preset_name}) != std::string::npos);
+  }
+}
+
+TEST_CASE("validation_policy verification matrix contract requires checked-in MSVC ASan wiring",
+          "[unit][validation_policy][static_boundary]") {
+  const auto root_cmake = read_text_file(source_root() / "CMakeLists.txt");
+
+  require_all_tokens(root_cmake,
+                     {"LIBBSA_ENABLE_MSVC_ASAN", "MSVC", "/fsanitize=address"});
+}
+
+TEST_CASE("validation_policy verification matrix contract keeps release package proof inside CTest",
+          "[unit][validation_policy][static_boundary]") {
+  const auto tests_cmake = read_text_file(source_root() / "tests/CMakeLists.txt");
+
+  for (const auto& lane : verification_matrix_contract()) {
+    if (!lane.package_proof_lane) {
+      continue;
+    }
+
+    INFO("Release ownership must be spelled out for " << lane.preset_name);
+    REQUIRE(tests_cmake.find(std::string{lane.preset_name}) != std::string::npos);
+  }
+
+  for (const auto test_name : release_package_proof_tests()) {
+    INFO("Checking release package-proof test registration for " << test_name);
+    REQUIRE(tests_cmake.find(std::string{test_name}) != std::string::npos);
+  }
+
+  for (const auto exclusion : supported_matrix_exclusions()) {
+    INFO("Checking contract exclusion token for " << exclusion);
+    REQUIRE(tests_cmake.find(std::string{exclusion}) != std::string::npos);
+  }
 }
