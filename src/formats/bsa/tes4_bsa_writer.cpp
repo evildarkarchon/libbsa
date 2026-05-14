@@ -5,6 +5,7 @@
 #include "formats/bsa/tes4_bsa_serialize.hpp"
 
 #include <detail/writer_publish.hpp>
+#include <detail/host_file_path.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -100,7 +101,10 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target,
     return error{error_code::invalid_argument, "TES4 BSA writer worker_count must be positive"};
   }
 
-  const auto output_path = std::filesystem::path{output_host_path};
+  auto output_path = detail::resolve_host_file_path(output_host_path);
+  if (!output_path) {
+    return output_path.error();
+  }
 
   auto validated = tes4_validate_entries(entries);
   if (!validated) {
@@ -133,7 +137,7 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target,
   }
 
   return detail::publish_writer_output(
-      output_path, options.overwrite_existing, "TES4 BSA writer",
+      output_path.value().resolved, options.overwrite_existing, "TES4 BSA writer",
       [&](const std::filesystem::path& temp_path) -> result<void> {
         return tes4_write_archive_bytes(folders.value(),
                                         version.value(),

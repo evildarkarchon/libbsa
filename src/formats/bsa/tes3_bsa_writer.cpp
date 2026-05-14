@@ -5,6 +5,7 @@
 #include "formats/bsa/tes3_bsa_serialize.hpp"
 
 #include <detail/writer_publish.hpp>
+#include <detail/host_file_path.hpp>
 
 #include <filesystem>
 #include <memory>
@@ -86,7 +87,10 @@ result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
     return validated_host_path.error();
   }
 
-  const auto output_path = std::filesystem::path{output_host_path};
+  auto output_path = detail::resolve_host_file_path(output_host_path);
+  if (!output_path) {
+    return output_path.error();
+  }
 
   auto validated = tes3_validate_entries(entries);
   if (!validated) {
@@ -105,7 +109,7 @@ result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
   // D-16 keeps disk-backed source bytes path-backed until this point, but sizes
   // and source readability are validated before the shared helper reserves a publish path.
   return detail::publish_writer_output(
-      output_path, options.overwrite_existing, "TES3 BSA writer",
+      output_path.value().resolved, options.overwrite_existing, "TES3 BSA writer",
       [&](const std::filesystem::path& temp_path) -> result<void> {
         return tes3_write_archive_bytes(prepared.value(), temp_path);
       });

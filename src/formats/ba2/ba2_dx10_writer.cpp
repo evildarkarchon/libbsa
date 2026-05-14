@@ -5,6 +5,7 @@
 #include "formats/ba2/ba2_dx10_serialize.hpp"
 
 #include <detail/writer_publish.hpp>
+#include <detail/host_file_path.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -101,7 +102,10 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target,
     return target_options.error();
   }
 
-  const auto output_path = std::filesystem::path{output_host_path};
+  auto output_path = detail::resolve_host_file_path(output_host_path);
+  if (!output_path) {
+    return output_path.error();
+  }
 
   auto validated = ba2_dx10_validate_entries(target, entries);
   if (!validated) {
@@ -122,7 +126,7 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target,
   }
 
   return detail::publish_writer_output(
-      output_path, options.overwrite_existing, "BA2 DX10 writer",
+      output_path.value().resolved, options.overwrite_existing, "BA2 DX10 writer",
       [&](const std::filesystem::path& temp_path) -> result<void> {
         return ba2_dx10_write_archive_bytes(options, prepared.value(), version, file_table_offset, temp_path);
       });
