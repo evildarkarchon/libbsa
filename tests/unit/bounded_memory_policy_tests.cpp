@@ -138,7 +138,8 @@ TEST_CASE("bounded_memory_policy targeted writer stages avoid byte-at-a-time dis
 
 TEST_CASE("bounded_memory_policy BA2 DX10 snapshot temp directories use hardened reservation",
           "[unit][bounded_memory_policy][ba2_dx10_writer][security]") {
-  const auto text = read_text_file(source_root() / "src" / "formats" / "ba2" / "ba2_dx10_prepare.cpp");
+  const auto text = read_text_file(source_root() / "src" / "formats" / "ba2" / "ba2_dx10_prepare.cpp") +
+                    read_text_file(source_root() / "src" / "formats" / "ba2" / "ba2_dx10_snapshot_builder.cpp");
 
   constexpr auto required_tokens = std::array<std::string_view, 4U>{
       "BCryptGenRandom",

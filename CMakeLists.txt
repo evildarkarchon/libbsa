@@ -128,7 +128,9 @@ set(libbsa_library_sources
   src/formats/ba2/ba2_format_detector.cpp
   src/formats/ba2/ba2_dx10_parser.cpp
   src/formats/ba2/ba2_dx10_reader.cpp
+  src/formats/ba2/ba2_dx10_chunk_assembler.cpp
   src/formats/ba2/ba2_dx10_prepare.cpp
+  src/formats/ba2/ba2_dx10_snapshot_builder.cpp
   src/formats/ba2/ba2_dx10_layout.cpp
   src/formats/ba2/ba2_dx10_serialize.cpp
   src/formats/ba2/ba2_dx10_writer.cpp
