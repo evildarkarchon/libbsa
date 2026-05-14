@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: planning
-stopped_at: Phase 15 context gathered
-last_updated: "2026-05-14T00:58:38.5446263-07:00"
-last_activity: "2026-05-14 - Completed quick task 260514-11b: Fix BA2 GNRL and TES4 raw streaming to use resolved host paths for non-ASCII Windows paths"
+status: ready
+stopped_at: Completed 15-01-PLAN.md
+last_updated: "2026-05-14T09:18:20.064Z"
+last_activity: 2026-05-14 -- Phase 15 completed
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
-  percent: 40
+  completed_phases: 3
+  total_plans: 9
+  completed_plans: 9
+  percent: 60
 ---
 
 # Project State
@@ -21,25 +21,25 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-14)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 14 — verification-lane-truthfulness
+**Current focus:** Phase 16 — parser-and-preparer-seam-extraction
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-05-14 - Completed quick task 260514-11b: Fix BA2 GNRL and TES4 raw streaming to use resolved host paths for non-ASCII Windows paths
+Phase: 16 (parser-and-preparer-seam-extraction) — READY
+Plan: TBD
+Status: Phase 15 complete; awaiting Phase 16 planning/execution
+Last activity: 2026-05-14 -- Phase 15 completed
 
 Progress: [██████████] 100%
 
-Current note: Phase 14 is closing the truthful supported matrix loop across docs and planning for the Windows debug, Release, and MSVC AddressSanitizer lanes.
+Current note: Phase 15 completed the reader backend dispatch seam cleanup with dedicated runtime and source-policy regression coverage.
 
 ## Performance Metrics
 
-- Total plans completed: 89
-- Current milestone plans completed: 7
+- Total plans completed: 90
+- Current milestone plans completed: 8
 - Historical baseline: v1.0 shipped across 12 phases and 75 plans
-- Latest execution: 14-03 completed in 9 min across 6 files
+- Latest execution: 15-01 completed in 10 min across 4 files
 
 ## Accumulated Context
 
@@ -69,6 +69,9 @@ Current note: Phase 14 is closing the truthful supported matrix loop across docs
 - [Phase 14-verification-lane-truthfulness]: README keeps windows-msvc-debug-static as the quick path, then groups the remaining supported lanes by debug, Release package-proof, and MSVC AddressSanitizer roles. — Plan 14-03 needed one concrete maintainer entry point while still making the supported matrix truthful across docs and tests.
 - [Phase 14-verification-lane-truthfulness]: PROJECT.md, ROADMAP.md, and STATE.md stay summary-scoped while 14-CONTEXT.md remains the detailed lane contract. — Phase 14 explicitly locked planning layering so project-wide summaries do not duplicate command-level matrix prose.
 - [Phase 14-verification-lane-truthfulness]: validation_policy_tests.cpp must validate README, fixture policy, workflow, presets, and planning summaries independently against the same contract. — Independent repo-surface assertions keep one stale file from validating another and complete the truthfulness loop for VER-03.
+- [Phase 15-reader-backend-dispatch-cleanup]: archive_reader now selects a file-local backend table once during open and reuses it for entries, find, and payload extraction.
+- [Phase 15-reader-backend-dispatch-cleanup]: contains stays implemented as find plus has_value so invalid archive-path input preserves invalid_argument behavior instead of collapsing into false.
+- [Phase 15-reader-backend-dispatch-cleanup]: extract_entries keeps duplicate exact-request coalescing and result mirroring in facade code while backend callbacks stay limited to lookup and payload extraction primitives.
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-14T07:42:48.050Z
-Stopped at: Phase 15 context gathered
-Resume file: .planning/phases/15-reader-backend-dispatch-cleanup/15-CONTEXT.md
+Last session: 2026-05-14T09:18:20.064Z
+Stopped at: Completed 15-01-PLAN.md
+Resume file: None

@@ -21,8 +21,8 @@ Requirements for the v1.1 Hardening milestone. Each maps to exactly one roadmap 
 
 ### Reader Dispatch Stability
 
-- [ ] **DISP-01**: Consumer can list, look up, check, extract, and bulk extract entries through one open-time reader backend selection with unchanged behavior across supported archive families.
-- [ ] **DISP-02**: Maintainer can add or adjust reader-backend behavior without duplicating archive-family branching across each public reader operation.
+- [x] **DISP-01**: Consumer can list, look up, check, extract, and bulk extract entries through one open-time reader backend selection with unchanged behavior across supported archive families.
+- [x] **DISP-02**: Maintainer can add or adjust reader-backend behavior without duplicating archive-family branching across each public reader operation.
 
 ### Parser/Preparer Refactor
 
@@ -77,8 +77,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VER-01 | Phase 14 | Complete |
 | VER-02 | Phase 14 | Complete |
 | VER-03 | Phase 14 | Complete |
-| DISP-01 | Phase 15 | Pending |
-| DISP-02 | Phase 15 | Pending |
+| DISP-01 | Phase 15 | Complete |
+| DISP-02 | Phase 15 | Complete |
 | REFA-01 | Phase 16 | Pending |
 | REFA-02 | Phase 16 | Pending |
 | DEDU-01 | Phase 17 | Pending |
@@ -93,4 +93,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-12*
-*Last updated: 2026-05-12 after roadmap creation*
+*Last updated: 2026-05-14 after Phase 15 completion*
