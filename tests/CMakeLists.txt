@@ -65,6 +65,8 @@ endfunction()
 add_executable(libbsa_tests
   unit/result_tests.cpp
   unit/archive_reader_tests.cpp
+  unit/archive_reader_dispatch_tests.cpp
+  unit/archive_reader_dispatch_policy_tests.cpp
   unit/bulk_extraction_tests.cpp
   unit/writer_execution_options_tests.cpp
   unit/bsa_writer_execution_tests.cpp
