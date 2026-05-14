@@ -9,6 +9,7 @@
 namespace libbsa::formats::ba2 {
 
 /// Assembles and compresses one BA2 DX10 texture chunk from writer-owned snapshot files.
+/// Snapshot bytes are streamed into only the current chunk buffer to preserve bounded-memory staging.
 result<ba2_dx10_prepared_chunk> ba2_dx10_assemble_chunk(ba2_dx10_target target,
                                                         const ba2_dx10_writer_options& options,
                                                         const ba2_dx10_writer_entry& source,

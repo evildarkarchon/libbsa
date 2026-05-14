@@ -16,6 +16,7 @@ result<void> ba2_dx10_validate_texture_format_for_target(ba2_dx10_target target,
 result<void> ba2_dx10_ensure_snapshot_directory(std::filesystem::path& snapshot_dir_path);
 
 /// Builds a BA2 DX10 writer entry by loading, validating, and snapshotting DDS source bytes.
+/// Snapshot files intentionally outlive the source path so add_file owns later write input.
 result<ba2_dx10_writer_entry> ba2_dx10_build_writer_entry_snapshot(std::string_view archive_path,
                                                                     std::string_view dds_host_path,
                                                                     ba2_dx10_target target,
