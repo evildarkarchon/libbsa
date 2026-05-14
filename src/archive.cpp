@@ -27,16 +27,64 @@
 
 namespace libbsa {
 
+archive_reader::archive_reader(archive_metadata metadata)
+    : state_(nullptr) {
+  (void)metadata;
+}
+
+namespace {
+
+enum class reader_backend_identity {
+  tes3_bsa,
+  tes4_bsa,
+  ba2_gnrl,
+  ba2_dx10,
+};
+
+struct reader_backend {
+  result<std::vector<entry_metadata>> (*entries)(std::span<const entry_metadata> entries);
+  result<std::optional<entry_metadata>> (*find)(std::span<const entry_metadata> entries, std::string_view path);
+  result<void> (*extract)(const detail::host_file_path& host_path, const entry_metadata& entry, payload_sink& sink);
+};
+
+constexpr reader_backend tes3_bsa_backend{formats::bsa::tes3_bsa_entries,
+                                          formats::bsa::find_tes3_bsa_entry,
+                                          formats::bsa::extract_tes3_bsa_payload};
+constexpr reader_backend tes4_bsa_backend{formats::bsa::tes4_bsa_entries,
+                                          formats::bsa::find_tes4_bsa_entry,
+                                          formats::bsa::extract_tes4_bsa_payload_from_file};
+constexpr reader_backend ba2_gnrl_backend{formats::ba2::ba2_gnrl_entries,
+                                          formats::ba2::find_ba2_gnrl_entry,
+                                          formats::ba2::extract_ba2_gnrl_payload};
+constexpr reader_backend ba2_dx10_backend{formats::ba2::ba2_dx10_entries,
+                                          formats::ba2::find_ba2_dx10_entry,
+                                          formats::ba2::extract_ba2_dx10_payload};
+
+const reader_backend& reader_backend_table(reader_backend_identity identity) {
+  switch (identity) {
+    case reader_backend_identity::tes3_bsa:
+      return tes3_bsa_backend;
+    case reader_backend_identity::tes4_bsa:
+      return tes4_bsa_backend;
+    case reader_backend_identity::ba2_gnrl:
+      return ba2_gnrl_backend;
+    case reader_backend_identity::ba2_dx10:
+      return ba2_dx10_backend;
+  }
+
+  return tes4_bsa_backend;
+}
+
+} // namespace
+
 struct archive_reader::state {
   archive_metadata metadata;
   std::vector<entry_metadata> entries;
-  /// Keeps caller UTF-8 text for diagnostics only; open-time and parser-time host-file I/O stay on the resolved path.
+  /// Keeps caller UTF-8 text for diagnostics only; post-open payload reads must stay on the resolved host-file path.
   detail::host_file_path host_path;
-  bool is_ba2_dx10{false};
+  reader_backend_identity backend_identity;
+  const reader_backend* backend;
 };
-
-archive_reader::archive_reader(archive_metadata metadata)
-    : state_(std::make_shared<state>(state{metadata, {}, {}})) {}
 
 namespace {
 
@@ -87,20 +135,18 @@ result<std::uint64_t> archive_file_size(const detail::host_file_path& host_path)
   return detail::inspect_host_file_size(host_path, archive_open_host_context());
 }
 
-// Bulk extraction resolves metadata once per unique request, so payload dispatch stays separate from lookup.
-result<void> extract_entry_payload(const archive_metadata& metadata,
-                                   bool is_ba2_dx10,
+result<void> extract_entry_payload(const reader_backend& backend,
                                    const detail::host_file_path& host_path,
                                    const entry_metadata& entry,
                                    payload_sink& sink) {
-  if (metadata.variant == archive_variant::tes3) {
-    return formats::bsa::extract_tes3_bsa_payload(host_path, entry, sink);
-  }
-  if (metadata.type == archive_type::ba2) {
-    return is_ba2_dx10 ? formats::ba2::extract_ba2_dx10_payload(host_path, entry, sink)
-                       : formats::ba2::extract_ba2_gnrl_payload(host_path, entry, sink);
-  }
-  return formats::bsa::extract_tes4_bsa_payload_from_file(host_path, entry, sink);
+  // Phase 13 locked reopened payload reads to the resolved host path captured at open time, never raw caller UTF-8 text.
+  return backend.extract(host_path, entry, sink);
+}
+
+result<std::optional<entry_metadata>> find_entry_metadata(const reader_backend& backend,
+                                                          std::span<const entry_metadata> entries,
+                                                          std::string_view path) {
+  return backend.find(entries, path);
 }
 
 struct bulk_request_group {
@@ -126,6 +172,18 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     return prefix.error();
   }
 
+  const auto make_opened_reader = [&](archive_metadata metadata,
+                                      std::vector<entry_metadata> entries,
+                                      reader_backend_identity backend_identity) {
+    archive_reader reader{metadata};
+    reader.state_ = std::make_shared<state>(state{std::move(metadata),
+                                                  std::move(entries),
+                                                  std::move(resolved_host_path).value(),
+                                                  backend_identity,
+                                                  &reader_backend_table(backend_identity)});
+    return reader;
+  };
+
   if (prefix.value().size() >= 4U && prefix.value()[0] == static_cast<std::byte>(static_cast<unsigned char>('B')) &&
       prefix.value()[1] == static_cast<std::byte>(static_cast<unsigned char>('T')) &&
       prefix.value()[2] == static_cast<std::byte>(static_cast<unsigned char>('D')) &&
@@ -147,12 +205,9 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
         return ba2_archive.error();
       }
 
-      archive_reader reader{ba2_archive.value().metadata};
-      reader.state_ = std::make_shared<state>(state{ba2_archive.value().metadata,
-                                                    std::move(ba2_archive.value().entries),
-                                                    std::move(resolved_host_path).value(),
-                                                    true});
-      return reader;
+      return make_opened_reader(ba2_archive.value().metadata,
+                                std::move(ba2_archive.value().entries),
+                                reader_backend_identity::ba2_dx10);
     }
 
     auto ba2_archive = formats::ba2::parse_ba2_gnrl_archive_file(resolved_host_path.value(),
@@ -161,12 +216,9 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     if (!ba2_archive) {
       return ba2_archive.error();
     }
-    archive_reader reader{ba2_archive.value().metadata};
-    reader.state_ = std::make_shared<state>(state{ba2_archive.value().metadata,
-                                                  std::move(ba2_archive.value().entries),
-                                                  std::move(resolved_host_path).value(),
-                                                  false});
-    return reader;
+    return make_opened_reader(ba2_archive.value().metadata,
+                              std::move(ba2_archive.value().entries),
+                              reader_backend_identity::ba2_gnrl);
   }
 
   auto detected = formats::bsa::detect_bsa_format(prefix.value());
@@ -185,11 +237,9 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
       return tes3_archive.error();
     }
 
-    archive_reader reader{tes3_archive.value().metadata};
-    reader.state_ = std::make_shared<state>(state{tes3_archive.value().metadata,
-                                                  std::move(tes3_archive.value().entries),
-                                                  std::move(resolved_host_path).value()});
-    return reader;
+    return make_opened_reader(tes3_archive.value().metadata,
+                              std::move(tes3_archive.value().entries),
+                              reader_backend_identity::tes3_bsa);
   }
 
   auto tes4_archive =
@@ -198,11 +248,9 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     return tes4_archive.error();
   }
 
-  archive_reader reader{tes4_archive.value().metadata};
-  reader.state_ = std::make_shared<state>(state{tes4_archive.value().metadata,
-                                                std::move(tes4_archive.value().entries),
-                                                std::move(resolved_host_path).value()});
-  return reader;
+  return make_opened_reader(tes4_archive.value().metadata,
+                            std::move(tes4_archive.value().entries),
+                            reader_backend_identity::tes4_bsa);
 }
 
 result<archive_metadata> archive_reader::metadata() const {
@@ -216,60 +264,39 @@ result<std::vector<entry_metadata>> archive_reader::entries() const {
   if (!state_) {
     return error{error_code::unsupported, "archive reader is not open"};
   }
-  if (state_->metadata.variant == archive_variant::tes3) {
-    return formats::bsa::tes3_bsa_entries(state_->entries);
-  }
-  if (state_->metadata.type == archive_type::ba2) {
-    return state_->is_ba2_dx10 ? formats::ba2::ba2_dx10_entries(state_->entries) : formats::ba2::ba2_gnrl_entries(state_->entries);
-  }
-  return formats::bsa::tes4_bsa_entries(state_->entries);
+  return state_->backend->entries(state_->entries);
 }
 
 result<std::optional<entry_metadata>> archive_reader::find(std::string_view path) const {
   if (!state_) {
     return error{error_code::unsupported, "archive reader is not open"};
   }
-  if (state_->metadata.variant == archive_variant::tes3) {
-    return formats::bsa::find_tes3_bsa_entry(state_->entries, path);
-  }
-  if (state_->metadata.type == archive_type::ba2) {
-    return state_->is_ba2_dx10 ? formats::ba2::find_ba2_dx10_entry(state_->entries, path)
-                               : formats::ba2::find_ba2_gnrl_entry(state_->entries, path);
-  }
-  return formats::bsa::find_tes4_bsa_entry(state_->entries, path);
+  return find_entry_metadata(*state_->backend, state_->entries, path);
 }
 
 result<bool> archive_reader::contains(std::string_view path) const {
   if (!state_) {
     return error{error_code::unsupported, "archive reader is not open"};
   }
-  if (state_->metadata.variant == archive_variant::tes3) {
-    return formats::bsa::contains_tes3_bsa_entry(state_->entries, path);
+  auto found = find(path);
+  if (!found) {
+    return found.error();
   }
-  if (state_->metadata.type == archive_type::ba2) {
-    return state_->is_ba2_dx10 ? formats::ba2::contains_ba2_dx10_entry(state_->entries, path)
-                               : formats::ba2::contains_ba2_gnrl_entry(state_->entries, path);
-  }
-  return formats::bsa::contains_tes4_bsa_entry(state_->entries, path);
+  return found.value().has_value();
 }
 
 result<void> archive_reader::extract(std::string_view path, payload_sink& sink) const {
   if (!state_) {
     return error{error_code::unsupported, "archive reader is not open"};
   }
-  auto found = state_->metadata.variant == archive_variant::tes3
-                    ? formats::bsa::find_tes3_bsa_entry(state_->entries, path)
-                    : state_->metadata.type == archive_type::ba2
-                          ? (state_->is_ba2_dx10 ? formats::ba2::find_ba2_dx10_entry(state_->entries, path)
-                                                 : formats::ba2::find_ba2_gnrl_entry(state_->entries, path))
-                          : formats::bsa::find_tes4_bsa_entry(state_->entries, path);
+  auto found = find(path);
   if (!found) {
     return found.error();
   }
   if (!found.value()) {
     return error{error_code::not_found, "archive path was not found"};
   }
-  return extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path, *found.value(), sink);
+  return extract_entry_payload(*state_->backend, state_->host_path, *found.value(), sink);
 }
 
 result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view path) const {
@@ -292,8 +319,7 @@ result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view pa
 
   // Keep the convenience API bounded by the parser-derived size for exactly one entry.
   vector_payload_sink sink{found.value()->raw_size};
-  auto extracted =
-      extract_entry_payload(state_->metadata, state_->is_ba2_dx10, state_->host_path, *found.value(), sink);
+  auto extracted = extract_entry_payload(*state_->backend, state_->host_path, *found.value(), sink);
   if (!extracted) {
     return extracted.error();
   }
@@ -363,11 +389,7 @@ result<std::vector<bulk_extract_entry_result>> archive_reader::extract_entries(
       return {};
     }
 
-    auto extracted = extract_entry_payload(state_->metadata,
-                                           state_->is_ba2_dx10,
-                                           state_->host_path,
-                                           *record.entry,
-                                           *sink.value());
+    auto extracted = extract_entry_payload(*state_->backend, state_->host_path, *record.entry, *sink.value());
     if (!extracted) {
       record.failure = extracted.error();
     }
