@@ -32,13 +32,13 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 - [x] v1.0 delivered write-new support for TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives, including reader-backed round trips, compression routing, safe publish behavior, and legal generated fixture evidence.
 - [x] v1.0 delivered structured validation reports, typed compatibility warnings, malformed-input hardening coverage, bounded-memory extraction/finalization, opt-in parallel worker execution, benchmark reporting, Doxygen setup, thread-safety guidance, and compile-checked integration examples.
 - [x] v1.1 fixed non-ASCII Windows host-path handling for archive open and validation flows through one shared internal host-file boundary plus representative black-box regression coverage. Validated in Phase 13.
+- [x] v1.1 restored truthful hardening verification coverage and aligned planning claims with the supported debug, Release package-proof, and MSVC AddressSanitizer build/test lanes. Validated in Phase 14.
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
 
 - [ ] v1.1 reduces fragility in large parser/preparer and reader-dispatch codepaths through targeted internal refactors.
-- [ ] v1.1 restores or adds stronger hardening verification coverage and aligns planning claims with the supported debug, Release package-proof, and MSVC AddressSanitizer build/test lanes.
 - [ ] v1.1 reduces the most fragile or expensive staging paths in payload dedupe and BA2 DX10 temporary snapshot handling.
 
 ### Out of Scope
@@ -135,4 +135,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-05-14 during Phase 14 verification-matrix alignment*
+*Last updated: 2026-05-14 after Phase 14 verification and completion*
