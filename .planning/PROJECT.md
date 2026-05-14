@@ -59,11 +59,11 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 
 v1.0 shipped on 2026-05-10 after 12 phases, 75 plans, and 81 completed v1 requirements. The live planning surface is now compact: the full v1 roadmap, requirements, milestone audit, and phase execution artifacts are archived under `.planning/milestones/`.
 
-v1.1 now shifts focus from feature completeness to hardening work driven by the codebase concerns audit. Phase 13 is complete: archive open, validation, parser entry, and post-open extraction now route through a shared Windows-correct host-file boundary with committed non-ASCII regression proof. The next focus is Phase 14's verification-lane truthfulness work.
+v1.1 now shifts focus from feature completeness to hardening work driven by the codebase concerns audit. Phase 13 is complete and verified: archive open, validation, parser entry, and post-open extraction now route through a shared Windows-correct host-file boundary with committed non-ASCII regression proof. The next focus is Phase 14's verification-lane truthfulness work.
 
 The current codebase exposes public reader, writer, validation, result, metadata, and execution-option APIs from `include/libbsa/`. Public headers remain dependency-light and C++20-compatible. Implementation code owns format parsing, archive writing, compression routing, DDS metadata analysis, validation reports, compatibility warnings, bounded-memory streaming, and optional worker-count execution.
 
-The latest audit accepted the milestone with no requirement gaps, no integration gaps, no E2E flow gaps, and no milestone-blocking tech debt. The last full validation snapshot passed the Windows MSVC static build, 245 runnable CTest tests with 2 expected opt-in fixture skips, the benchmark report target, and the TES5Edit cleanliness guard.
+The latest audit accepted the milestone with no requirement gaps, no integration gaps, no E2E flow gaps, and no milestone-blocking tech debt. The latest Phase 13 verification snapshot passed the Windows MSVC static build and 362 runnable CTest tests with 2 expected opt-in skips, including the cross-family non-ASCII host-path proof suite. Advisory review still found writer finalize/dedupe host-path migration work, but verification confirmed that gap is outside Phase 13's locked read/open/validate boundary.
 
 ### Reference Boundary
 
@@ -134,4 +134,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-05-13 after completing Phase 13*
+*Last updated: 2026-05-14 after verifying Phase 13*

@@ -111,7 +111,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 13. Host Path Correctness Boundary | v1.1 | 5/5 | Complete   | 2026-05-13 |
+| 13. Host Path Correctness Boundary | v1.1 | 5/5 | Complete    | 2026-05-14 |
 | 14. Verification Lane Truthfulness | v1.1 | 0/TBD | Not started | - |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 0/TBD | Not started | - |
 | 16. Parser and Preparer Seam Extraction | v1.1 | 0/TBD | Not started | - |
