@@ -96,6 +96,7 @@ None yet.
 | 260513-xar | Decode public host paths as UTF-8 on Windows | 2026-05-14 | cb1caeb | Verified | [260513-xar-https-github-com-evildarkarchon-libbsa-b](./quick/260513-xar-https-github-com-evildarkarchon-libbsa-b/) |
 | 260514-11b | Fix BA2 GNRL and TES4 raw streaming to use resolved host paths for non-ASCII Windows paths | 2026-05-14 | 553a687 | Verified | [260514-11b-fix-ba2-gnrl-and-tes4-raw-streaming-to-u](./quick/260514-11b-fix-ba2-gnrl-and-tes4-raw-streaming-to-u/) |
 | 260514-5h7 | Resolve TES3 disk source paths and BSA/BA2 writer output paths through shared UTF-8 host path helpers | 2026-05-14 | 152306a | Verified | [260514-5h7-resolve-tes3-disk-source-paths-and-bsa-b](./quick/260514-5h7-resolve-tes3-disk-source-paths-and-bsa-b/) |
+| 260514-6lb | Audited Phase 16 completion evidence and corrected ROADMAP.md only if supported by artifacts; completion was not proven, so ROADMAP.md was left unchanged | 2026-05-14 | Unavailable | Verified | [260514-6lb-phase-16-is-complete-but-the-roadmap-is-](./quick/260514-6lb-phase-16-is-complete-but-the-roadmap-is-/) |
 
 ## Deferred Items
 
