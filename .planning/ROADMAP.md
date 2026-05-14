@@ -108,7 +108,17 @@ Plans:
   1. Maintainer can modify the targeted TES4 parser hotspot through smaller internal helpers with focused regression coverage catching behavior drift.
   2. Maintainer can modify the targeted BA2 DX10 preparer and staging hotspot through smaller internal helpers with focused regression coverage catching behavior drift.
   3. Supported parser and preparer fixture behavior remains unchanged while those seams are split into smaller helpers.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+- [ ] 16-01-PLAN.md - Extract TES4 raw table and payload descriptor seams with focused TDD regression coverage.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 16-02-PLAN.md - Extract BA2 DX10 snapshot builder and chunk assembler seams with focused TDD regression coverage.
+
+**Wave 3** *(blocked on Wave 1 and Wave 2 completion)*
+- [ ] 16-03-PLAN.md - Add role-based seam policy guardrails and run the Phase 16 verification sweep.
 
 ### Phase 17: Writer Hotspot Hardening and Ship Gate
 **Goal**: The remaining high-cost and fragile writer staging paths are hardened under existing semantics, and the milestone closes with verified ship-ready evidence rather than a broad redesign.
@@ -128,7 +138,7 @@ Plans:
 | 13. Host Path Correctness Boundary | v1.1 | 5/5 | Complete    | 2026-05-14 |
 | 14. Verification Lane Truthfulness | v1.1 | 3/3 | Complete    | 2026-05-14 |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 1/1 | Complete    | 2026-05-14 |
-| 16. Parser and Preparer Seam Extraction | v1.1 | 0/TBD | Not started | - |
+| 16. Parser and Preparer Seam Extraction | v1.1 | 0/3 | Ready to execute | - |
 | 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 0/TBD | Not started | - |
 
 ## Next Scope Candidates
