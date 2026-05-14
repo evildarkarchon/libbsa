@@ -38,6 +38,19 @@ if(NOT build_result EQUAL 0)
   message(FATAL_ERROR "package consumer build failed: ${build_result}")
 endif()
 
+# Static package installs can still depend on runtime DLLs from transitive vcpkg libraries, so
+# mirror the configured prefix bin directories into the consumer output before its ctest run.
+foreach(prefix IN LISTS consumer_prefix_path)
+  foreach(runtime_bin_dir IN ITEMS "${prefix}/bin" "${prefix}/debug/bin")
+    if(IS_DIRECTORY "${runtime_bin_dir}")
+      file(GLOB runtime_dlls "${runtime_bin_dir}/*.dll")
+      if(runtime_dlls)
+        file(COPY ${runtime_dlls} DESTINATION "${CONSUMER_BUILD_DIR}/${CONFIG}")
+      endif()
+    endif()
+  endforeach()
+endforeach()
+
 execute_process(
   COMMAND ${CMAKE_CTEST_COMMAND} --test-dir "${CONSUMER_BUILD_DIR}" -C "${CONFIG}" --output-on-failure
   RESULT_VARIABLE test_result

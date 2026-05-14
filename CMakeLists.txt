@@ -18,8 +18,17 @@ function(libbsa_enable_msvc_asan target_name)
   if(MSVC AND LIBBSA_ENABLE_MSVC_ASAN)
     # Preset names alone are not trustworthy hardening claims; the checked-in build graph
     # must apply real MSVC AddressSanitizer instrumentation to the compiled target.
+    # Some prebuilt vcpkg static libraries in the test graph are not rebuilt with the lane's
+    # STL annotations, so keep the core /fsanitize=address instrumentation while disabling the
+    # container-annotation ODR checks that would otherwise break the supported ASan lane.
+    target_compile_definitions(${target_name} PRIVATE
+      _DISABLE_VECTOR_ANNOTATION
+      _DISABLE_STRING_ANNOTATION
+      _DISABLE_OPTIONAL_ANNOTATION
+    )
+    # MSVC's compiler flag injects the AddressSanitizer runtime libraries for us; passing the
+    # same switch through the linker only produces noisy unsupported-option warnings.
     target_compile_options(${target_name} PRIVATE /fsanitize=address)
-    target_link_options(${target_name} PRIVATE /fsanitize=address)
   endif()
 endfunction()
 

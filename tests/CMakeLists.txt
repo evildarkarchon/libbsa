@@ -45,6 +45,21 @@ function(libbsa_link_internal_test_support target_name)
   endif()
 
   libbsa_enable_msvc_asan(${target_name})
+
+  if(MSVC AND LIBBSA_ENABLE_MSVC_ASAN)
+    cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH libbsa_test_compiler_dir)
+
+    # Catch2 test discovery runs the compiled executable before CTest proper, so copy the
+    # inferred ASan runtime DLLs beside each test/tool binary instead of depending on caller PATHs.
+    add_custom_command(TARGET ${target_name} POST_BUILD
+      COMMAND ${CMAKE_COMMAND}
+        "-DRUNTIME_DLLS=$<TARGET_RUNTIME_DLLS:${target_name}>"
+        "-DEXTRA_RUNTIME_DLLS=${libbsa_test_compiler_dir}/clang_rt.asan_dynamic-x86_64.dll;${libbsa_test_compiler_dir}/clang_rt.asan_dbg_dynamic-x86_64.dll"
+        "-DTARGET_DIR=$<TARGET_FILE_DIR:${target_name}>"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/package-consumer/copy-runtime-dlls.cmake"
+      VERBATIM
+    )
+  endif()
 endfunction()
 
 add_executable(libbsa_tests

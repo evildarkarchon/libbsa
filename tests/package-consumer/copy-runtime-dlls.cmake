@@ -15,3 +15,13 @@ foreach(runtime_dll IN LISTS RUNTIME_DLLS)
 
   file(COPY "${runtime_dll}" DESTINATION "${TARGET_DIR}")
 endforeach()
+
+foreach(extra_runtime_dll IN LISTS EXTRA_RUNTIME_DLLS)
+  if(extra_runtime_dll STREQUAL "")
+    continue()
+  endif()
+
+  if(EXISTS "${extra_runtime_dll}")
+    file(COPY "${extra_runtime_dll}" DESTINATION "${TARGET_DIR}")
+  endif()
+endforeach()
