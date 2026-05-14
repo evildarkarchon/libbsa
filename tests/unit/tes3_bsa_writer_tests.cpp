@@ -22,6 +22,8 @@
 
 namespace {
 
+constexpr auto non_ascii_path_token_wide = L"libbsa-Angstrom-日本語";
+
 std::filesystem::path writer_test_dir() {
   auto path = std::filesystem::temp_directory_path() / "libbsa_tes3_bsa_writer_tests";
   std::filesystem::create_directories(path);
@@ -33,6 +35,20 @@ std::filesystem::path output_path(std::string name) {
   auto path = writer_test_dir() / std::to_string(counter.fetch_add(1, std::memory_order_relaxed));
   std::filesystem::create_directories(path);
   return path / std::move(name);
+}
+
+std::filesystem::path non_ascii_output_path(std::string_view name) {
+  static std::atomic_uint64_t counter{0};
+  auto path = writer_test_dir() / std::filesystem::path{std::wstring{non_ascii_path_token_wide}}
+              / std::to_wstring(counter.fetch_add(1, std::memory_order_relaxed));
+  std::filesystem::create_directories(path);
+  return path / std::string{name};
+}
+
+std::string utf8_string_from_path(const std::filesystem::path& path) {
+  // Public writer APIs take UTF-8 host text, so tests must avoid Windows ACP-dependent narrow conversions.
+  const auto utf8 = path.u8string();
+  return {reinterpret_cast<const char*>(utf8.data()), utf8.size()};
 }
 
 void write_binary_file(const std::filesystem::path& path, const std::vector<std::byte>& bytes) {
@@ -588,6 +604,27 @@ TEST_CASE("tes3_bsa_writer refuses overwrite by default and preserves existing b
   REQUIRE(written.error().code == libbsa::error_code::io_error);
   CHECK(written.error().message.find("TES3 BSA writer") != std::string::npos);
   CHECK(read_binary_file(archive) == sentinel);
+}
+
+TEST_CASE("tes3_bsa_writer resolves non-ASCII UTF-8 disk source and output host paths",
+          "[unit][tes3_bsa_writer]") {
+  const auto source = non_ascii_output_path("disk-source.nif");
+  const auto archive = non_ascii_output_path("round-trip.bsa");
+  const auto disk_bytes = bytes_from_text("tes3 non-ascii source payload");
+  const auto memory_bytes = bytes_from_text("tes3 memory payload");
+  write_binary_file(source, disk_bytes);
+
+  libbsa::tes3_bsa_writer_options options;
+  options.overwrite_existing = true;
+  libbsa::tes3_bsa_writer writer{options};
+  REQUIRE(writer.add_file("Meshes/NonAscii/Disk.NIF", utf8_string_from_path(source)).has_value());
+  REQUIRE(writer.add_bytes("Textures/NonAscii/Memory.DDS", memory_bytes).has_value());
+
+  REQUIRE(writer.write_to(utf8_string_from_path(archive)).has_value());
+  auto opened = libbsa::archive_reader::open(utf8_string_from_path(archive));
+  REQUIRE(opened.has_value());
+  require_extracts_bytes(opened.value(), "Meshes/NonAscii/Disk.NIF", disk_bytes);
+  require_extracts_bytes(opened.value(), "Textures/NonAscii/Memory.DDS", memory_bytes);
 }
 
 TEST_CASE("tes3_bsa_writer publish helper never replaces an existing destination", "[unit][tes3_bsa_writer]") {

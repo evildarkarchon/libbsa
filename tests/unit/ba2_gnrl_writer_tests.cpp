@@ -33,6 +33,12 @@ std::filesystem::path writer_test_dir() {
 
 std::filesystem::path output_path(std::string name) { return writer_test_dir() / std::move(name); }
 
+std::filesystem::path non_ascii_output_path(std::string_view name) {
+  auto path = writer_test_dir() / std::filesystem::path{std::wstring{non_ascii_path_token_wide}} / "outputs";
+  std::filesystem::create_directories(path);
+  return path / std::string{name};
+}
+
 std::filesystem::path non_ascii_source_dir(std::string_view name) {
   auto path = writer_test_dir() / std::filesystem::path{std::wstring{non_ascii_path_token_wide}} / std::string{name};
   std::filesystem::create_directories(path);
@@ -561,6 +567,21 @@ TEST_CASE("BA2 GNRL writer raw Fallout 4 output reopens with end filename table"
                          std::nullopt,
                          std::nullopt,
                           std::nullopt);
+}
+
+TEST_CASE("BA2 GNRL writer resolves non-ASCII UTF-8 output host paths", "[unit][ba2_gnrl_writer]") {
+  const auto output = non_ascii_output_path("gnrl-output.ba2");
+  const auto payload = sample_bytes();
+
+  libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, overwriting_raw_options()};
+  REQUIRE(writer.add_bytes("Meshes/Utf8Output.bin", payload).has_value());
+
+  REQUIRE(writer.write_to(utf8_string_from_path(output)).has_value());
+  auto opened = libbsa::archive_reader::open(utf8_string_from_path(output));
+  REQUIRE(opened.has_value());
+  auto extracted = opened.value().extract_bytes("Meshes/Utf8Output.bin");
+  REQUIRE(extracted.has_value());
+  CHECK(extracted.value() == payload);
 }
 
 TEST_CASE("BA2 GNRL writer keeps raw disk hashing byte-stable with memory entries",

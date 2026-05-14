@@ -53,6 +53,12 @@ std::filesystem::path writer_test_dir() {
   return path;
 }
 
+std::string utf8_string_from_path(const std::filesystem::path& path) {
+  // Public writer APIs take UTF-8 host text, so tests must avoid Windows ACP-dependent narrow conversions.
+  const auto utf8 = path.u8string();
+  return {reinterpret_cast<const char*>(utf8.data()), utf8.size()};
+}
+
 struct collecting_sink final : libbsa::payload_sink {
   std::vector<std::byte> bytes;
 
@@ -98,6 +104,15 @@ constexpr auto writer_proof_matrix = std::to_array<writer_proof_case>({
 std::filesystem::path unique_output_path(std::string_view stem) {
   static std::uint32_t counter = 0;
   auto path = writer_test_dir() / (std::string{stem} + "-" + std::to_string(++counter) + ".ba2");
+  std::filesystem::remove(path);
+  return path;
+}
+
+std::filesystem::path unique_non_ascii_output_path(std::string_view stem) {
+  static std::uint32_t counter = 0;
+  auto root = writer_test_dir() / std::filesystem::path{L"libbsa-Angstrom-日本語"} / "outputs";
+  std::filesystem::create_directories(root);
+  auto path = root / (std::string{stem} + "-" + std::to_string(++counter) + ".ba2");
   std::filesystem::remove(path);
   return path;
 }
@@ -623,6 +638,22 @@ TEST_CASE("ba2_dx10_writer::add_file accepts a valid DDS source", "[unit][ba2_dx
                                (generated_source_dir() / source_case.at("file").get<std::string>()).string());
 
   REQUIRE(added.has_value());
+}
+
+TEST_CASE("BA2 DX10 writer resolves non-ASCII UTF-8 output host paths", "[unit][ba2_dx10_writer]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto archive_path = source_case.at("archive_path").get<std::string>();
+  const auto source_path = generated_source_dir() / source_case.at("file").get<std::string>();
+  const auto output_path = unique_non_ascii_output_path("dx10-output");
+
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+  REQUIRE(writer.add_file(archive_path, source_path.string()).has_value());
+
+  REQUIRE(writer.write_to(utf8_string_from_path(output_path)).has_value());
+  auto opened = libbsa::archive_reader::open(utf8_string_from_path(output_path));
+  REQUIRE(opened.has_value());
+  require_reader_backed_entry(opened.value(), source_case, libbsa::entry_compression::deflate);
 }
 
 TEST_CASE("BA2 DX10 writer records use canonical stem hash and extension metadata",

@@ -32,6 +32,12 @@ std::filesystem::path generated_source_dir() {
 
 std::filesystem::path output_path(std::string name) { return writer_test_dir() / std::move(name); }
 
+std::filesystem::path non_ascii_output_path(std::string_view name) {
+  auto path = writer_test_dir() / std::filesystem::path{std::wstring{non_ascii_path_token_wide}} / "outputs";
+  std::filesystem::create_directories(path);
+  return path / std::string{name};
+}
+
 std::filesystem::path non_ascii_source_dir(std::string_view name) {
   auto path = writer_test_dir() / std::filesystem::path{std::wstring{non_ascii_path_token_wide}} / std::string{name};
   std::filesystem::create_directories(path);
@@ -278,6 +284,22 @@ TEST_CASE("TES4 BSA writer raw output reopens for every target profile", "[unit]
     REQUIRE(copied_extracted.has_value());
     CHECK(copied_extracted.value() == original_copy);
   }
+}
+
+TEST_CASE("TES4 BSA writer resolves non-ASCII UTF-8 output host paths", "[unit][tes4_bsa_writer]") {
+  const auto archive = non_ascii_output_path("tes4-output.bsa");
+  const auto payload = bytes_from_text("tes4 utf8 output payload");
+
+  libbsa::tes4_bsa_writer_options options;
+  options.compression_policy = libbsa::archive_compression_policy::all_raw;
+  options.overwrite_existing = true;
+  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+  REQUIRE(writer.add_bytes("Meshes/Utf8Output.NIF", payload).has_value());
+
+  REQUIRE(writer.write_to(utf8_string_from_path(archive)).has_value());
+  auto opened = libbsa::archive_reader::open(utf8_string_from_path(archive));
+  REQUIRE(opened.has_value());
+  require_extracted_bytes(opened.value(), "Meshes/Utf8Output.NIF", payload);
 }
 
 TEST_CASE("TES4 BSA writer serializes derived file flags and hash-sorted tables", "[unit][tes4_bsa_writer]") {
