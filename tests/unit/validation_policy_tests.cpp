@@ -411,3 +411,27 @@ TEST_CASE("validation_policy verification matrix contract keeps the main workflo
   REQUIRE(count_occurrences(workflow, "preset: windows-msvc-") == 4);
   REQUIRE(workflow.find("preset: windows-msvc-asan-static") == std::string::npos);
 }
+
+TEST_CASE("validation_policy verification matrix contract keeps ASan as a separate hardening job",
+          "[unit][validation_policy][static_boundary]") {
+  const auto workflow = read_text_file(source_root() / ".github/workflows/ci.yml");
+  const auto windows_job = yaml_block(workflow, "windows-msvc", 2);
+  const auto asan_job = yaml_block(workflow, "windows-msvc-asan-static", 2);
+  REQUIRE(windows_job.has_value());
+  REQUIRE(asan_job.has_value());
+
+  require_all_tokens(*asan_job,
+                     {"name: Windows MSVC AddressSanitizer hardening lane (windows-msvc-asan-static)",
+                      "cmake --preset windows-msvc-asan-static",
+                      "cmake --build --preset windows-msvc-asan-static",
+                      "ctest --preset windows-msvc-asan-static --output-on-failure",
+                      "git status --short TES5Edit"});
+
+  REQUIRE(asan_job->find("matrix:") == std::string::npos);
+  REQUIRE(asan_job->find("${{ matrix.preset }}") == std::string::npos);
+  REQUIRE(asan_job->find("needs:") == std::string::npos);
+  REQUIRE(asan_job->find("windows-msvc-release-static") == std::string::npos);
+  REQUIRE(asan_job->find("windows-msvc-release-shared") == std::string::npos);
+
+  REQUIRE(windows_job->find("windows-msvc-asan-static") == std::string::npos);
+}
