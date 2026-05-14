@@ -33,7 +33,7 @@ v1.1 hardens the shipped library rather than broadening it. The milestone follow
 ### 🚧 v1.1 Hardening (In Progress)
 
 - [x] **Phase 13: Host Path Correctness Boundary** - Verification snapshot recorded 2026-05-13, but the current repository still carries uncommitted Phase 13 implementation and summary-repair work. (completed 2026-05-13)
-- [ ] **Phase 14: Verification Lane Truthfulness** - Make Release and ASan verification lanes real, runnable, and policy-aligned.
+- [ ] **Phase 14: Verification Lane Truthfulness** - Make the supported Windows debug, Release package-proof, and MSVC AddressSanitizer verification lanes real, runnable, and policy-aligned.
 - [ ] **Phase 15: Reader Backend Dispatch Cleanup** - Select reader backend once at open time and keep reader behavior stable across operations.
 - [ ] **Phase 16: Parser and Preparer Seam Extraction** - Break the targeted TES4 parser and BA2 DX10 preparer hotspots into smaller, test-backed helpers.
 - [ ] **Phase 17: Writer Hotspot Hardening and Ship Gate** - Harden dedupe and BA2 DX10 temp staging under existing semantics and close the milestone with ship-ready evidence.

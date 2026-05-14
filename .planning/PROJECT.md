@@ -30,7 +30,7 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 - [x] v1.0 delivered safe binary, path, hash, payload-streaming, compression, and DDS support behind internal boundaries, including libdeflate, official lz4 frame/raw-block routes, and DirectXTex analysis without public dependency leakage.
 - [x] v1.0 delivered read, list, lookup, validation, and extraction support for TES3 BSA, TES4-family BSA v103/v104/v105, Fallout 4 BA2 GNRL/DX10, and Starfield BA2 GNRL/DX10 archive families.
 - [x] v1.0 delivered write-new support for TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives, including reader-backed round trips, compression routing, safe publish behavior, and legal generated fixture evidence.
-- [x] v1.0 delivered structured validation reports, typed compatibility warnings, malformed-input hardening coverage, sanitizer-oriented presets, bounded-memory extraction/finalization, opt-in parallel worker execution, benchmark reporting, Doxygen setup, thread-safety guidance, and compile-checked integration examples.
+- [x] v1.0 delivered structured validation reports, typed compatibility warnings, malformed-input hardening coverage, bounded-memory extraction/finalization, opt-in parallel worker execution, benchmark reporting, Doxygen setup, thread-safety guidance, and compile-checked integration examples.
 - [x] v1.1 fixed non-ASCII Windows host-path handling for archive open and validation flows through one shared internal host-file boundary plus representative black-box regression coverage. Validated in Phase 13.
 
 ### Active
@@ -38,7 +38,7 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 <!-- Current scope. Building toward these. -->
 
 - [ ] v1.1 reduces fragility in large parser/preparer and reader-dispatch codepaths through targeted internal refactors.
-- [ ] v1.1 restores or adds stronger hardening verification coverage and aligns planning claims with supported build/test lanes.
+- [ ] v1.1 restores or adds stronger hardening verification coverage and aligns planning claims with the supported debug, Release package-proof, and MSVC AddressSanitizer build/test lanes.
 - [ ] v1.1 reduces the most fragile or expensive staging paths in payload dedupe and BA2 DX10 temporary snapshot handling.
 
 ### Out of Scope
@@ -59,7 +59,7 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 
 v1.0 shipped on 2026-05-10 after 12 phases, 75 plans, and 81 completed v1 requirements. The live planning surface is now compact: the full v1 roadmap, requirements, milestone audit, and phase execution artifacts are archived under `.planning/milestones/`.
 
-v1.1 now shifts focus from feature completeness to hardening work driven by the codebase concerns audit. Phase 13 is complete and verified: archive open, validation, parser entry, and post-open extraction now route through a shared Windows-correct host-file boundary with committed non-ASCII regression proof. The next focus is Phase 14's verification-lane truthfulness work.
+v1.1 now shifts focus from feature completeness to hardening work driven by the codebase concerns audit. Phase 13 is complete and verified: archive open, validation, parser entry, and post-open extraction now route through a shared Windows-correct host-file boundary with committed non-ASCII regression proof. Phase 14 is the truthful verification-matrix hardening slice: it makes the supported debug inner-loop lanes, Release package-proof lanes, and the MSVC AddressSanitizer hardening lane agree across presets, CI, docs, and planning without rewriting v1.0 history.
 
 The current codebase exposes public reader, writer, validation, result, metadata, and execution-option APIs from `include/libbsa/`. Public headers remain dependency-light and C++20-compatible. Implementation code owns format parsing, archive writing, compression routing, DDS metadata analysis, validation reports, compatibility warnings, bounded-memory streaming, and optional worker-count execution.
 
@@ -95,6 +95,7 @@ Supported archive families include TES3 BSA, TES4 BSA v103, FO3/FNV/Skyrim LE BS
 | Treat TES5Edit/BSArchPro as read-only reference material | Preserves clean ownership, avoids Delphi/UI coupling, and respects the submodule boundary | Implemented in v1.0 |
 | Use C++20 with CMake and vcpkg | Matches project constraints and supports Windows reusable library packaging | Implemented in v1.0 |
 | Treat libbsa as Windows-only | Review agents should not spend effort on Linux, macOS, POSIX, or cross-platform portability concerns | Active after v1.0 |
+| Treat the supported verification matrix as a role-based Windows contract | v1.1 Phase 14 needs truthful agreement across quick-path debug work, Release package proof, and the MSVC AddressSanitizer hardening lane | Implemented in Phase 14 |
 | Use libdeflate for deflate payloads | Required dependency and a good fit for archive chunk compression/decompression | Implemented in v1.0 |
 | Use official lz4 for both frame and raw block paths | SSE BSA uses LZ4 frame while Starfield BA2 v3 uses raw LZ4 blocks; separate APIs reduce corruption risk | Implemented in v1.0 |
 | Use DirectXTex only behind an internal texture-analysis boundary | DDS metadata work needs robust DXGI handling without leaking DirectXTex into public headers | Implemented in v1.0 |
@@ -134,4 +135,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-05-14 after verifying Phase 13*
+*Last updated: 2026-05-14 during Phase 14 verification-matrix alignment*
