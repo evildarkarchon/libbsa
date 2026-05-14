@@ -203,6 +203,13 @@ void require_preset_family(std::string_view presets, const verification_lane_con
   REQUIRE(presets.find(lane.preset_name) != std::string_view::npos);
 }
 
+void require_lane_names(std::string_view text) {
+  for (const auto& lane : verification_matrix_contract()) {
+    INFO("Missing supported lane token: " << lane.preset_name);
+    REQUIRE(text.find(lane.preset_name) != std::string_view::npos);
+  }
+}
+
 void require_release_package_proof_comment(std::string_view tests_cmake,
                                            const verification_lane_contract& lane) {
   INFO("Release ownership must be spelled out for " << lane.preset_name);
@@ -335,18 +342,85 @@ TEST_CASE("validation_policy configured build profiles are Windows-only and docu
 
   REQUIRE(presets.find("windows-msvc-debug-static") != std::string::npos);
   REQUIRE(presets.find("windows-msvc-debug-shared") != std::string::npos);
+  REQUIRE(presets.find("windows-msvc-release-static") != std::string::npos);
+  REQUIRE(presets.find("windows-msvc-release-shared") != std::string::npos);
+  REQUIRE(presets.find("windows-msvc-asan-static") != std::string::npos);
   REQUIRE(presets.find("linux-clang-asan-ubsan") == std::string::npos);
   REQUIRE(presets.find("-fsanitize=address,undefined") == std::string::npos);
 
   REQUIRE(workflow.find("windows-msvc-debug-static") != std::string::npos);
   REQUIRE(workflow.find("windows-msvc-debug-shared") != std::string::npos);
+  REQUIRE(workflow.find("windows-msvc-release-static") != std::string::npos);
+  REQUIRE(workflow.find("windows-msvc-release-shared") != std::string::npos);
+  REQUIRE(workflow.find("windows-msvc-asan-static") != std::string::npos);
   REQUIRE(workflow.find("git status --short TES5Edit") != std::string::npos);
+  REQUIRE(workflow.find("windows-latest") != std::string::npos);
 
   REQUIRE(fixture_policy.find("Windows-only") != std::string::npos);
   REQUIRE(fixture_policy.find("linux-clang-asan-ubsan") == std::string::npos);
   REQUIRE(readme.find("Windows-only") != std::string::npos);
   REQUIRE(agents.find("Windows-only") != std::string::npos);
   REQUIRE(claude.find("Windows-only") != std::string::npos);
+}
+
+TEST_CASE("validation_policy verification matrix contract keeps README truthful",
+          "[unit][validation_policy][doc_structure]") {
+  const auto readme = read_text_file(source_root() / "README.md");
+
+  require_lane_names(readme);
+  require_all_tokens(readme,
+                     {"quick day-to-day path",
+                      "Debug inner-loop lanes",
+                      "Release package-proof lanes",
+                      "MSVC AddressSanitizer hardening lane",
+                      "package_consumer_smoke",
+                      "Windows-only",
+                      "requires-game-fixture",
+                      "skipped by default"});
+}
+
+TEST_CASE("validation_policy verification matrix contract keeps fixture policy truthful",
+          "[unit][validation_policy][doc_structure]") {
+  const auto fixture_policy = read_text_file(source_root() / "tests/fixtures/README.md");
+
+  require_lane_names(fixture_policy);
+  require_all_tokens(fixture_policy,
+                     {"Debug inner-loop lanes",
+                      "Release package-proof lanes",
+                      "MSVC AddressSanitizer hardening lane",
+                      "package_consumer_smoke",
+                      "Windows-only",
+                      "requires-game-fixture",
+                      "skipped by default",
+                      "WSL",
+                      "extra sanitizer families"});
+}
+
+TEST_CASE("validation_policy verification matrix contract keeps planning summaries truthful",
+          "[unit][validation_policy][doc_structure]") {
+  const auto root = source_root();
+  const auto project = read_text_file(root / ".planning/PROJECT.md");
+  const auto roadmap = read_text_file(root / ".planning/ROADMAP.md");
+  const auto state = read_text_file(root / ".planning/STATE.md");
+
+  require_all_tokens(project,
+                     {"v1.0 shipped on 2026-05-10",
+                      "Phase 14 is the truthful verification-matrix hardening slice",
+                      "Release package-proof lanes",
+                      "MSVC AddressSanitizer hardening lane",
+                      "without rewriting v1.0 history"});
+  REQUIRE(project.find("cmake --preset") == std::string::npos);
+
+  require_all_tokens(roadmap,
+                     {"Phase 14: Verification Lane Truthfulness",
+                      "supported Windows debug, Release package-proof, and MSVC AddressSanitizer verification lanes",
+                      "14-03-PLAN.md"});
+  REQUIRE(roadmap.find("cmake --preset") == std::string::npos);
+
+  require_all_tokens(state,
+                     {"Phase 14 is closing the truthful supported matrix loop across docs and planning",
+                      "MSVC AddressSanitizer"});
+  REQUIRE(state.find("cmake --preset") == std::string::npos);
 }
 
 TEST_CASE("validation_policy verification matrix contract requires supported preset triads",
