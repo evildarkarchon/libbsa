@@ -94,7 +94,11 @@ Plans:
   1. Consumer can list, look up, check, extract, and bulk extract entries after one open-time backend selection across supported archive families.
   2. Those reader operations continue to behave the same as before across supported archive families.
   3. Maintainer can adjust reader-backend behavior without duplicating archive-family branching across each public reader operation.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+**Wave 1**
+- [ ] 15-01-PLAN.md - Introduce one open-time-selected file-local reader backend seam in `src/archive.cpp` and lock it with dedicated runtime plus policy regression suites.
 
 ### Phase 16: Parser and Preparer Seam Extraction
 **Goal**: The targeted TES4 parser and BA2 DX10 preparer hotspots become smaller internal seams that are safer to change because behavior is locked down by focused regression coverage.
@@ -123,7 +127,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 13. Host Path Correctness Boundary | v1.1 | 5/5 | Complete    | 2026-05-14 |
 | 14. Verification Lane Truthfulness | v1.1 | 3/3 | Complete    | 2026-05-14 |
-| 15. Reader Backend Dispatch Cleanup | v1.1 | 0/TBD | Not started | - |
+| 15. Reader Backend Dispatch Cleanup | v1.1 | 0/1 | Planned     | - |
 | 16. Parser and Preparer Seam Extraction | v1.1 | 0/TBD | Not started | - |
 | 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 0/TBD | Not started | - |
 
