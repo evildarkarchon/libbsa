@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: ready
+status: ready_to_plan
 stopped_at: Completed 15-01-PLAN.md
 last_updated: "2026-05-14T09:18:20.064Z"
 last_activity: 2026-05-14 -- Phase 15 completed
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 9
   completed_plans: 9
-  percent: 60
+  percent: 80
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-14)
 
 ## Current Position
 
-Phase: 16 (parser-and-preparer-seam-extraction) — READY
-Plan: TBD
-Status: Phase 15 complete; awaiting Phase 16 planning/execution
-Last activity: 2026-05-14 -- Phase 15 completed
+Phase: 16
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-05-14
 
 Progress: [██████████] 100%
 
@@ -36,7 +36,7 @@ Current note: Phase 15 completed the reader backend dispatch seam cleanup with d
 
 ## Performance Metrics
 
-- Total plans completed: 90
+- Total plans completed: 91
 - Current milestone plans completed: 8
 - Historical baseline: v1.0 shipped across 12 phases and 75 plans
 - Latest execution: 15-01 completed in 10 min across 4 files
