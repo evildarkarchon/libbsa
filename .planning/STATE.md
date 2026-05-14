@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Hardening
 status: planning
 stopped_at: Phase 16 context gathered
-last_updated: "2026-05-14T10:54:31.971Z"
+last_updated: "2026-05-14T11:22:26Z"
 last_activity: 2026-05-14
 progress:
   total_phases: 5
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-14)
 Phase: 16
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-05-14
+Last activity: 2026-05-14 - Completed quick task 260514-5h7: Resolve TES3 disk source paths and BSA/BA2 writer output paths through shared UTF-8 host path helpers
 
 Progress: [██████████] 100%
 
@@ -95,6 +95,7 @@ None yet.
 | Phase 14-verification-lane-truthfulness P03 | 9m | 3 tasks | 6 files |
 | 260513-xar | Decode public host paths as UTF-8 on Windows | 2026-05-14 | cb1caeb | Verified | [260513-xar-https-github-com-evildarkarchon-libbsa-b](./quick/260513-xar-https-github-com-evildarkarchon-libbsa-b/) |
 | 260514-11b | Fix BA2 GNRL and TES4 raw streaming to use resolved host paths for non-ASCII Windows paths | 2026-05-14 | 553a687 | Verified | [260514-11b-fix-ba2-gnrl-and-tes4-raw-streaming-to-u](./quick/260514-11b-fix-ba2-gnrl-and-tes4-raw-streaming-to-u/) |
+| 260514-5h7 | Resolve TES3 disk source paths and BSA/BA2 writer output paths through shared UTF-8 host path helpers | 2026-05-14 | 152306a | Verified | [260514-5h7-resolve-tes3-disk-source-paths-and-bsa-b](./quick/260514-5h7-resolve-tes3-disk-source-paths-and-bsa-b/) |
 
 ## Deferred Items
 
