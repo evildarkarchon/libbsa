@@ -86,6 +86,8 @@ struct verification_lane_contract {
   bool package_proof_lane;
 };
 
+// Keep the supported lane matrix in one place so future role or lane changes must update
+// the shared contract before the per-surface assertions can pass again.
 constexpr std::array<verification_lane_contract, 5> verification_matrix_contract() {
   return {{
       {"windows-msvc-debug-static", "debug quick path", false},
@@ -102,6 +104,17 @@ constexpr std::array<std::string_view, 2> release_package_proof_tests() {
 
 constexpr std::array<std::string_view, 2> supported_matrix_exclusions() {
   return {{"Windows-only", "requires-game-fixture"}};
+}
+
+void require_preset_family(std::string_view presets, const verification_lane_contract& lane) {
+  INFO("Checking preset family for " << lane.preset_name << " as the " << lane.role_name);
+  REQUIRE(presets.find(lane.preset_name) != std::string_view::npos);
+}
+
+void require_release_package_proof_comment(std::string_view tests_cmake,
+                                           const verification_lane_contract& lane) {
+  INFO("Release ownership must be spelled out for " << lane.preset_name);
+  REQUIRE(tests_cmake.find(lane.preset_name) != std::string_view::npos);
 }
 
 void require_all_tokens(std::string_view text, std::initializer_list<std::string_view> tokens) {
@@ -249,8 +262,7 @@ TEST_CASE("validation_policy verification matrix contract requires supported pre
   const auto presets = read_text_file(source_root() / "CMakePresets.json");
 
   for (const auto& lane : verification_matrix_contract()) {
-    INFO("Checking preset family for " << lane.preset_name << " as the " << lane.role_name);
-    REQUIRE(presets.find(std::string{lane.preset_name}) != std::string::npos);
+    require_preset_family(presets, lane);
   }
 }
 
@@ -271,8 +283,7 @@ TEST_CASE("validation_policy verification matrix contract keeps release package 
       continue;
     }
 
-    INFO("Release ownership must be spelled out for " << lane.preset_name);
-    REQUIRE(tests_cmake.find(std::string{lane.preset_name}) != std::string::npos);
+    require_release_package_proof_comment(tests_cmake, lane);
   }
 
   for (const auto test_name : release_package_proof_tests()) {
