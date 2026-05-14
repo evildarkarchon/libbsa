@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: ready_to_plan
-stopped_at: Completed 14-03-PLAN.md
-last_updated: "2026-05-14T07:13:27.7583141Z"
-last_activity: 2026-05-14
+status: planning
+stopped_at: Phase 15 context gathered
+last_updated: "2026-05-14T00:58:38.5446263-07:00"
+last_activity: "2026-05-14 - Completed quick task 260514-11b: Fix BA2 GNRL and TES4 raw streaming to use resolved host paths for non-ASCII Windows paths"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 2
   total_plans: 8
   completed_plans: 8
-  percent: 60
+  percent: 40
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-14)
 Phase: 15
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-05-14 - Completed quick task 260513-xar: Decode public host paths as UTF-8 on Windows
+Last activity: 2026-05-14 - Completed quick task 260514-11b: Fix BA2 GNRL and TES4 raw streaming to use resolved host paths for non-ASCII Windows paths
 
 Progress: [██████████] 100%
 
@@ -91,6 +91,7 @@ None yet.
 | Phase 14 P02 | 2 min | 2 tasks | 2 files |
 | Phase 14-verification-lane-truthfulness P03 | 9m | 3 tasks | 6 files |
 | 260513-xar | Decode public host paths as UTF-8 on Windows | 2026-05-14 | cb1caeb | Verified | [260513-xar-https-github-com-evildarkarchon-libbsa-b](./quick/260513-xar-https-github-com-evildarkarchon-libbsa-b/) |
+| 260514-11b | Fix BA2 GNRL and TES4 raw streaming to use resolved host paths for non-ASCII Windows paths | 2026-05-14 | 553a687 | Verified | [260514-11b-fix-ba2-gnrl-and-tes4-raw-streaming-to-u](./quick/260514-11b-fix-ba2-gnrl-and-tes4-raw-streaming-to-u/) |
 
 ## Deferred Items
 
@@ -102,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-14T05:38:48.683Z
-Stopped at: Completed 14-03-PLAN.md
-Resume file: None
+Last session: 2026-05-14T07:42:48.050Z
+Stopped at: Phase 15 context gathered
+Resume file: .planning/phases/15-reader-backend-dispatch-cleanup/15-CONTEXT.md
