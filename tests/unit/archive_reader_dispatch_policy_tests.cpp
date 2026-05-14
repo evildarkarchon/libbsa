@@ -70,6 +70,8 @@ TEST_CASE("archive_reader_dispatch_policy forbids repeated family dispatch in pu
       "metadata.variant",
       "metadata.type",
       "is_ba2_dx10",
+      "backend_identity",
+      "reader_backend_identity::",
       "tes3_bsa_entries",
       "tes4_bsa_entries",
       "ba2_gnrl_entries",

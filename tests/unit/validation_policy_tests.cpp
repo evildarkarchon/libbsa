@@ -418,7 +418,8 @@ TEST_CASE("validation_policy verification matrix contract keeps planning summari
   REQUIRE(roadmap.find("cmake --preset") == std::string::npos);
 
   require_all_tokens(state,
-                     {"supported MSVC ASan lane keeps real /fsanitize=address instrumentation",
+                     {"package_consumer_smoke",
+                      "/fsanitize=address",
                       "MSVC AddressSanitizer"});
   REQUIRE(state.find("cmake --preset") == std::string::npos);
 }

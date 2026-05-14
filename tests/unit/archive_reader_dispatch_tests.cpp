@@ -260,6 +260,15 @@ TEST_CASE("reader_backend_dispatch preserves reader operations across representa
     REQUIRE_FALSE(missing_extract_bytes.has_value());
     REQUIRE(missing_extract_bytes.error().code == libbsa::error_code::not_found);
 
+    collecting_sink invalid_sink;
+    auto invalid_extract = reader.extract(fixture.invalid_archive_path, invalid_sink);
+    REQUIRE_FALSE(invalid_extract.has_value());
+    REQUIRE(invalid_extract.error().code == libbsa::error_code::invalid_argument);
+
+    auto invalid_extract_bytes = reader.extract_bytes(fixture.invalid_archive_path);
+    REQUIRE_FALSE(invalid_extract_bytes.has_value());
+    REQUIRE(invalid_extract_bytes.error().code == libbsa::error_code::invalid_argument);
+
     recording_sink_factory sink_factory;
     std::vector requests{libbsa::bulk_extract_request{.path = fixture.expected_extract_path},
                          libbsa::bulk_extract_request{.path = fixture.expected_extract_path},
