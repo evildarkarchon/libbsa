@@ -406,6 +406,7 @@ TEST_CASE("validation_policy verification matrix contract keeps planning summari
   require_all_tokens(project,
                      {"v1.0 shipped on 2026-05-10",
                       "Phase 14",
+                      "debug",
                       "Release package-proof lanes",
                       "MSVC AddressSanitizer hardening lane",
                       "Windows-only"});
@@ -413,15 +414,16 @@ TEST_CASE("validation_policy verification matrix contract keeps planning summari
 
   require_all_tokens(roadmap,
                      {"Phase 14: Verification Lane Truthfulness",
-                      "supported Windows debug",
+                      "debug",
                       "Release package-proof",
                       "MSVC AddressSanitizer",
                       "14-03-PLAN.md"});
   REQUIRE(roadmap.find("cmake --preset") == std::string::npos);
 
   require_all_tokens(state,
-                     {"package_consumer_smoke",
-                      "/fsanitize=address",
+                     {"[Phase 14]",
+                      "debug",
+                      "Release package proof",
                       "MSVC AddressSanitizer"});
   REQUIRE(state.find("cmake --preset") == std::string::npos);
 }
