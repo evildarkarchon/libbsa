@@ -12,6 +12,16 @@ find_package(directxtex CONFIG REQUIRED)
 
 option(LIBBSA_BUILD_TESTS "Build libbsa tests" ${BUILD_TESTING})
 option(LIBBSA_BUILD_BENCHMARKS "Build libbsa benchmark tools" ON)
+option(LIBBSA_ENABLE_MSVC_ASAN "Build targets with MSVC AddressSanitizer instrumentation" OFF)
+
+function(libbsa_enable_msvc_asan target_name)
+  if(MSVC AND LIBBSA_ENABLE_MSVC_ASAN)
+    # Preset names alone are not trustworthy hardening claims; the checked-in build graph
+    # must apply real MSVC AddressSanitizer instrumentation to the compiled target.
+    target_compile_options(${target_name} PRIVATE /fsanitize=address)
+    target_link_options(${target_name} PRIVATE /fsanitize=address)
+  endif()
+endfunction()
 
 if(TARGET LZ4::lz4_static)
   set(libbsa_lz4_target LZ4::lz4_static)
@@ -87,6 +97,8 @@ target_link_libraries(libbsa
     Microsoft::DirectXTex
     bcrypt
 )
+
+libbsa_enable_msvc_asan(libbsa)
 
 set(libbsa_library_sources
   src/archive.cpp

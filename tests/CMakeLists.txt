@@ -43,6 +43,8 @@ function(libbsa_link_internal_test_support target_name)
         libbsa::libbsa
     )
   endif()
+
+  libbsa_enable_msvc_asan(${target_name})
 endfunction()
 
 add_executable(libbsa_tests
@@ -291,6 +293,10 @@ add_test(
     -DCONFIG=$<CONFIG>
     -P ${CMAKE_CURRENT_SOURCE_DIR}/package-consumer/smoke.cmake
 )
+
+# The supported windows-msvc-release-static and windows-msvc-release-shared lanes own this
+# Windows-only package proof inside the normal CTest graph. Keep opt-in requires-game-fixture
+# corpus checks separate so Release proof stays runnable from committed repository assets.
 
 add_test(
   NAME package_consumer_runtime_dll_copy
