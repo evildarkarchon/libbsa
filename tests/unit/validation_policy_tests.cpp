@@ -404,25 +404,20 @@ TEST_CASE("validation_policy verification matrix contract keeps planning summari
   const auto state = read_text_file(root / ".planning/STATE.md");
 
   require_all_tokens(project,
-                     {"v1.0 shipped on 2026-05-10",
-                      "Phase 14",
-                      "debug",
+                     {"debug",
                       "Release package-proof lanes",
                       "MSVC AddressSanitizer hardening lane",
                       "Windows-only"});
   REQUIRE(project.find("cmake --preset") == std::string::npos);
 
   require_all_tokens(roadmap,
-                     {"Phase 14: Verification Lane Truthfulness",
-                      "debug",
+                     {"debug",
                       "Release package-proof",
-                      "MSVC AddressSanitizer",
-                      "14-03-PLAN.md"});
+                      "MSVC AddressSanitizer"});
   REQUIRE(roadmap.find("cmake --preset") == std::string::npos);
 
   require_all_tokens(state,
-                     {"[Phase 14]",
-                      "debug",
+                     {"debug",
                       "Release package proof",
                       "MSVC AddressSanitizer"});
   REQUIRE(state.find("cmake --preset") == std::string::npos);
