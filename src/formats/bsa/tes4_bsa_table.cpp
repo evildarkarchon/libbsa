@@ -312,17 +312,26 @@ result<std::size_t> tes4_bsa_metadata_table_size(const tes4_bsa_header_fields& h
   return total;
 }
 
-result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> table_bytes,
-                                                   std::size_t archive_size,
-                                                   detected_bsa_format detected) {
-  if (table_bytes.size() < tes4_bsa_header_size) {
+result<tes4_bsa_header_fields> read_tes4_bsa_header(std::span<const std::byte> header_bytes) {
+  if (header_bytes.size() < tes4_bsa_header_size) {
     return error{error_code::format_error, "TES4 BSA header is truncated"};
   }
 
-  detail::binary_reader reader{table_bytes};
-  auto header = read_header(reader);
+  detail::binary_reader reader{header_bytes};
+  return read_header(reader);
+}
+
+result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> table_bytes,
+                                                   std::size_t archive_size,
+                                                   detected_bsa_format detected) {
+  auto header = read_tes4_bsa_header(table_bytes);
   if (!header) {
     return header.error();
+  }
+  detail::binary_reader reader{table_bytes};
+  auto skipped_header = reader.skip(tes4_bsa_header_size);
+  if (!skipped_header) {
+    return skipped_header.error();
   }
   if (header.value().version != detected.version) {
     return error{error_code::format_error, "TES4 BSA detected version does not match parsed header"};

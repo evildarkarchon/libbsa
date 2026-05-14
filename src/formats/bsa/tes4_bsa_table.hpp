@@ -58,6 +58,9 @@ result<std::size_t> tes4_bsa_metadata_table_size(const tes4_bsa_header_fields& h
                                                  std::size_t folder_record_size,
                                                  std::size_t archive_size);
 
+/// Reads the fixed TES4 header for callers that must size a file-backed metadata table before loading it.
+result<tes4_bsa_header_fields> read_tes4_bsa_header(std::span<const std::byte> header_bytes);
+
 /// Reads and validates TES4 header, folder records/blocks, and file names without materializing entries.
 result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> table_bytes,
                                                    std::size_t archive_size,

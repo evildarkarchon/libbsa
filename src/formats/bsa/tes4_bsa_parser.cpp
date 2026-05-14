@@ -6,7 +6,6 @@
 
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
-#include <detail/binary_io.hpp>
 #include <detail/byte_vector.hpp>
 #include <detail/host_file.hpp>
 #include <detail/parser_primitives.hpp>
@@ -161,57 +160,30 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_file(const detail::host_file_pat
     return header_bytes.error();
   }
 
-  auto header_table = read_tes4_bsa_raw_table(header_bytes.value(), static_cast<std::size_t>(archive_size), detected);
-  std::size_t table_size = 0;
-  if (header_table) {
-    table_size = header_table.value().metadata_table_size;
-  } else if (header_table.error().code != error_code::format_error || header_bytes.value().size() < tes4_bsa_header_size) {
-    return header_table.error();
-  } else {
-    detail::binary_reader header_reader{header_bytes.value()};
-    const auto magic = header_reader.read_u32_le();
-    const auto version = header_reader.read_u32_le();
-    const auto folder_offset = header_reader.read_u32_le();
-    const auto archive_flags = header_reader.read_u32_le();
-    const auto folder_count = header_reader.read_u32_le();
-    const auto file_count = header_reader.read_u32_le();
-    const auto total_folder_name_length = header_reader.read_u32_le();
-    const auto total_file_name_length = header_reader.read_u32_le();
-    const auto file_flags = header_reader.read_u32_le();
-    if (!magic || !version || !folder_offset || !archive_flags || !folder_count || !file_count || !total_folder_name_length ||
-        !total_file_name_length || !file_flags || magic.value() != tes4_bsa_magic) {
-      return header_table.error();
-    }
-    const tes4_bsa_header_fields header{version.value(),
-                                        folder_offset.value(),
-                                        archive_flags.value(),
-                                        folder_count.value(),
-                                        file_count.value(),
-                                        total_folder_name_length.value(),
-                                        total_file_name_length.value(),
-                                        file_flags.value()};
-    auto folder_count_limit = detail::validate_metadata_count(header.folder_count,
-                                                             detail::metadata_bsa_folder_count_limit,
-                                                             "TES4 BSA folder count");
-    if (!folder_count_limit) {
-      return folder_count_limit.error();
-    }
-    auto file_count_limit = detail::validate_metadata_count(header.file_count,
-                                                           detail::metadata_entry_count_limit,
-                                                           "TES4 BSA file count");
-    if (!file_count_limit) {
-      return file_count_limit.error();
-    }
-    const auto folder_record_size = detected.version == tes4_bsa_skyrim_se_version ? tes4_bsa_sse_folder_record_size
-                                                                                   : tes4_bsa_legacy_folder_record_size;
-    auto computed_table_size = tes4_bsa_metadata_table_size(header, folder_record_size, static_cast<std::size_t>(archive_size));
-    if (!computed_table_size) {
-      return computed_table_size.error();
-    }
-    table_size = computed_table_size.value();
+  auto header = read_tes4_bsa_header(header_bytes.value());
+  if (!header) {
+    return header.error();
+  }
+  auto folder_count_limit = detail::validate_metadata_count(header.value().folder_count,
+                                                           detail::metadata_bsa_folder_count_limit,
+                                                           "TES4 BSA folder count");
+  if (!folder_count_limit) {
+    return folder_count_limit.error();
+  }
+  auto file_count_limit = detail::validate_metadata_count(header.value().file_count,
+                                                         detail::metadata_entry_count_limit,
+                                                         "TES4 BSA file count");
+  if (!file_count_limit) {
+    return file_count_limit.error();
+  }
+  const auto folder_record_size = detected.version == tes4_bsa_skyrim_se_version ? tes4_bsa_sse_folder_record_size
+                                                                                 : tes4_bsa_legacy_folder_record_size;
+  auto table_size = tes4_bsa_metadata_table_size(header.value(), folder_record_size, static_cast<std::size_t>(archive_size));
+  if (!table_size) {
+    return table_size.error();
   }
 
-  auto table_bytes = read_file_bytes_at(input.value(), 0U, table_size, "TES4 BSA metadata table");
+  auto table_bytes = read_file_bytes_at(input.value(), 0U, table_size.value(), "TES4 BSA metadata table");
   if (!table_bytes) {
     return table_bytes.error();
   }
