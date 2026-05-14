@@ -33,7 +33,7 @@ v1.1 hardens the shipped library rather than broadening it. The milestone follow
 ### 🚧 v1.1 Hardening (In Progress)
 
 - [x] **Phase 13: Host Path Correctness Boundary** - Verification snapshot recorded 2026-05-13, but the current repository still carries uncommitted Phase 13 implementation and summary-repair work. (completed 2026-05-13)
-- [ ] **Phase 14: Verification Lane Truthfulness** - Make the supported Windows debug, Release package-proof, and MSVC AddressSanitizer verification lanes real, runnable, and policy-aligned.
+- [x] **Phase 14: Verification Lane Truthfulness** - Make the supported Windows debug, Release package-proof, and MSVC AddressSanitizer verification lanes real, runnable, and policy-aligned. (completed 2026-05-14)
 - [ ] **Phase 15: Reader Backend Dispatch Cleanup** - Select reader backend once at open time and keep reader behavior stable across operations.
 - [ ] **Phase 16: Parser and Preparer Seam Extraction** - Break the targeted TES4 parser and BA2 DX10 preparer hotspots into smaller, test-backed helpers.
 - [ ] **Phase 17: Writer Hotspot Hardening and Ship Gate** - Harden dedupe and BA2 DX10 temp staging under existing semantics and close the milestone with ship-ready evidence.
@@ -84,7 +84,7 @@ Plans:
 - [x] 14-02-PLAN.md - Reshape GitHub Actions into the supported debug/release matrix plus a separate MSVC AddressSanitizer hardening job.
 
 **Wave 3** *(blocked on Waves 1-2 completion)*
-- [ ] 14-03-PLAN.md - Align README, fixture policy, and planning summaries with the supported matrix and close the truthfulness gate across every named surface.
+- [x] 14-03-PLAN.md - Align README, fixture policy, and planning summaries with the supported matrix and close the truthfulness gate across every named surface.
 
 ### Phase 15: Reader Backend Dispatch Cleanup
 **Goal**: Reader behavior is selected once at open time so consumers see unchanged archive operations while maintainers stop repeating family dispatch logic across the public reader surface.
@@ -122,7 +122,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 13. Host Path Correctness Boundary | v1.1 | 5/5 | Complete    | 2026-05-14 |
-| 14. Verification Lane Truthfulness | v1.1 | 2/3 | In Progress|  |
+| 14. Verification Lane Truthfulness | v1.1 | 3/3 | Complete   | 2026-05-14 |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 0/TBD | Not started | - |
 | 16. Parser and Preparer Seam Extraction | v1.1 | 0/TBD | Not started | - |
 | 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 0/TBD | Not started | - |
