@@ -2,6 +2,8 @@
 
 #include "formats/bsa/tes3_bsa_writer.hpp"
 
+#include <detail/host_file_path.hpp>
+
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -15,6 +17,7 @@ struct tes3_prepared_entry {
   std::string archive_path_original;
   std::vector<std::byte> payload;
   std::string host_path;
+  detail::host_file_path resolved_host_path;
   std::uint64_t hash{0};
   std::uint32_t raw_offset{0};
   std::uint32_t payload_size{0};

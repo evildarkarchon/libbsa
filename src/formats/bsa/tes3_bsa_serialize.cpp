@@ -1,6 +1,7 @@
 #include "formats/bsa/tes3_bsa_serialize.hpp"
 
 #include <detail/binary_io.hpp>
+#include <detail/host_file.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -68,12 +69,18 @@ result<void> write_span_to_stream(std::ofstream& output,
   return {};
 }
 
-result<void> stream_disk_payload_to_output(const std::string& host_path,
-                                           std::uint32_t expected_size,
-                                           std::ofstream& output) {
-  std::ifstream input{host_path, std::ios::binary};
+result<void> stream_disk_payload_to_output(const detail::host_file_path& host_path,
+                                            std::uint32_t expected_size,
+                                            std::ofstream& output) {
+  constexpr detail::host_file_context host_context{
+      .open_error = "TES3 BSA writer failed to open disk source",
+      .inspect_error = "TES3 BSA writer failed to inspect disk source",
+      .read_error = "TES3 BSA writer failed while reading disk source",
+      .changed_error = "TES3 BSA disk source changed during finalization",
+      .allocation_description = "TES3 BSA disk source"};
+  auto input = detail::open_host_file(host_path, host_context);
   if (!input) {
-    return error{error_code::io_error, "TES3 BSA writer failed to open disk source"};
+    return input.error();
   }
 
   std::vector<std::byte> scratch(payload_stream_chunk_size);
@@ -81,8 +88,8 @@ result<void> stream_disk_payload_to_output(const std::string& host_path,
   while (remaining > 0U) {
     const auto requested = static_cast<std::size_t>(
         std::min<std::uint64_t>(remaining, static_cast<std::uint64_t>(scratch.size())));
-    input.read(reinterpret_cast<char*>(scratch.data()), static_cast<std::streamsize>(requested));
-    if (input.gcount() != static_cast<std::streamsize>(requested)) {
+    input.value().read(reinterpret_cast<char*>(scratch.data()), static_cast<std::streamsize>(requested));
+    if (input.value().gcount() != static_cast<std::streamsize>(requested)) {
       return error{error_code::io_error, "TES3 BSA writer failed while streaming disk source"};
     }
     auto written = write_span_to_stream(output, std::span<const std::byte>{scratch.data(), requested},
@@ -95,10 +102,10 @@ result<void> stream_disk_payload_to_output(const std::string& host_path,
 
   // The metadata was sized before reserving a publish path. Fail if a caller mutates the source during finalization.
   char extra = '\0';
-  if (input.get(extra)) {
+  if (input.value().get(extra)) {
     return error{error_code::io_error, "TES3 BSA disk source changed during finalization"};
   }
-  if (input.bad()) {
+  if (input.value().bad()) {
     return error{error_code::io_error, "TES3 BSA writer failed while reading disk source"};
   }
   return {};
@@ -207,7 +214,7 @@ result<void> tes3_write_archive_bytes(std::span<const tes3_prepared_entry> entri
       continue;
     }
 
-    auto payload_written = stream_disk_payload_to_output(entry.host_path, entry.payload_size, output);
+    auto payload_written = stream_disk_payload_to_output(entry.resolved_host_path, entry.payload_size, output);
     if (!payload_written) {
       return payload_written.error();
     }

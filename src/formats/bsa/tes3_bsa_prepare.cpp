@@ -2,9 +2,9 @@
 
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
+#include <detail/host_file.hpp>
 
 #include <algorithm>
-#include <filesystem>
 #include <limits>
 #include <unordered_set>
 #include <utility>
@@ -12,6 +12,13 @@
 namespace libbsa::formats::bsa {
 
 namespace {
+
+constexpr detail::host_file_context tes3_prepare_source_context{
+    .open_error = "TES3 BSA writer failed to open disk source",
+    .inspect_error = "TES3 BSA writer failed to inspect disk source",
+    .read_error = "TES3 BSA writer failed while reading disk source",
+    .changed_error = "TES3 BSA disk source changed during finalization",
+    .allocation_description = "TES3 BSA disk source"};
 
 std::string preserved_archive_path(std::string_view archive_path) {
   std::string preserved{archive_path};
@@ -28,18 +35,17 @@ result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view descript
   return static_cast<std::uint32_t>(value);
 }
 
-result<std::uint32_t> disk_payload_size(const std::string& host_path) {
-  const auto path = std::filesystem::path{host_path};
-  std::error_code fs_error;
-  const bool regular_file = std::filesystem::is_regular_file(path, fs_error);
-  if (fs_error || !regular_file) {
-    return error{error_code::io_error, "TES3 BSA writer failed to inspect disk source"};
+result<detail::host_file_path> resolve_tes3_source_path(std::string_view host_path) {
+  return detail::resolve_host_file_path(host_path);
+}
+
+result<std::uint32_t> disk_payload_size(const detail::host_file_path& host_path) {
+  auto size = detail::inspect_host_file_size(host_path, tes3_prepare_source_context);
+  if (!size) {
+    return size.error();
   }
-  const auto size = std::filesystem::file_size(path, fs_error);
-  if (fs_error) {
-    return error{error_code::io_error, "TES3 BSA writer failed to size disk source"};
-  }
-  return checked_u32(size, "TES3 BSA disk source size");
+
+  return checked_u32(size.value(), "TES3 BSA disk source size");
 }
 
 } // namespace
@@ -102,11 +108,16 @@ result<std::vector<tes3_prepared_entry>> tes3_prepare_entries(std::span<const te
       prepared_entry.payload = entry.memory_bytes;
       prepared_entry.payload_size = payload_size.value();
     } else {
-      auto payload_size = disk_payload_size(entry.host_path);
+      auto source_path = resolve_tes3_source_path(entry.host_path);
+      if (!source_path) {
+        return source_path.error();
+      }
+      auto payload_size = disk_payload_size(source_path.value());
       if (!payload_size) {
         return payload_size.error();
       }
       prepared_entry.host_path = entry.host_path;
+      prepared_entry.resolved_host_path = std::move(source_path).value();
       prepared_entry.payload_size = payload_size.value();
     }
 
