@@ -8,7 +8,7 @@ libbsa is a Windows-only library. Development, review, CI, packaging, and depend
 
 ## Build
 
-Set `VCPKG_ROOT` to your vcpkg checkout, then use one of the supported Windows presets:
+Set `VCPKG_ROOT` to your vcpkg checkout, then use the quick Windows MSVC inner-loop path:
 
 ```powershell
 $env:VCPKG_ROOT = 'C:\vcpkg'
@@ -17,7 +17,19 @@ cmake --build --preset windows-msvc-debug-static
 ctest --preset windows-msvc-debug-static --output-on-failure
 ```
 
-The supported preset set is `windows-msvc-debug-static` and `windows-msvc-debug-shared`.
+Supported Windows-only verification lanes are grouped by role:
+
+- **Debug inner-loop lanes**
+  - `windows-msvc-debug-static` — quick day-to-day path.
+  - `windows-msvc-debug-shared` — shared-library inner-loop coverage.
+- **Release package-proof lanes**
+  - `windows-msvc-release-static`
+  - `windows-msvc-release-shared`
+  - Both Release lanes own the supported install/export proof plus downstream `package_consumer_smoke` coverage inside `ctest`. A package-consumer smoke failure is a Release-lane failure even if the core test binary passed.
+- **MSVC AddressSanitizer hardening lane**
+  - `windows-msvc-asan-static` — the supported MSVC AddressSanitizer hardening lane for risky parser, writer, compression, and validation changes before shipping.
+
+The supported matrix stays Windows-only and runnable from checked-in presets plus repository-controlled automation. Tests tagged `requires-game-fixture` remain opt-in local-corpus checks and are skipped by default when no local fixture path is configured.
 
 ## Reference Boundary
 

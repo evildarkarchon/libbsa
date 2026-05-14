@@ -163,10 +163,21 @@ acceptance must continue to pass without local copyrighted archives.
 
 ## Platform policy
 
-libbsa is Windows-only. Fixture, malformed-input, compression, validation, and
-compatibility checks are maintained through the Windows MSVC static/shared
-presets in `CMakePresets.json`. Linux, macOS, POSIX, and cross-platform
-sanitizer profiles are intentionally not part of the supported test contract.
+libbsa is Windows-only. The supported verification matrix is maintained through
+the Windows MSVC lanes in `CMakePresets.json`:
+
+- Debug inner-loop lanes: `windows-msvc-debug-static` and
+  `windows-msvc-debug-shared`.
+- Release package-proof lanes: `windows-msvc-release-static` and
+  `windows-msvc-release-shared`, both of which own install/export verification
+  plus downstream `package_consumer_smoke` coverage inside `ctest`.
+- MSVC AddressSanitizer hardening lane: `windows-msvc-asan-static`.
+
+The default supported contract still excludes Linux, macOS, POSIX, WSL, and
+extra sanitizer families beyond the checked-in MSVC AddressSanitizer lane.
+Game-derived local corpus checks remain opt-in through
+`requires-game-fixture` and are skipped by default when no local fixture path
+is configured.
 
 ## Provenance requirements
 
