@@ -56,9 +56,9 @@ static_assert(std::is_default_constructible_v<libbsa::tes3_bsa_writer>);
 static_assert(std::is_constructible_v<libbsa::tes3_bsa_writer, libbsa::tes3_bsa_writer_options>);
 
 // BEGIN tes3_bsa_public_contract_assertions
-static_assert(requires(libbsa::tes3_bsa_writer& writer, std::span<const std::byte> bytes) {
+static_assert(requires(libbsa::tes3_bsa_writer &writer, std::span<const std::byte> bytes) {
   libbsa::write_execution_options{}.worker_count;
-  { writer.options() } -> std::same_as<const libbsa::tes3_bsa_writer_options&>;
+  { writer.options() } -> std::same_as<const libbsa::tes3_bsa_writer_options &>;
   { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
   { writer.add_file("Textures/Disk.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.bsa") } -> std::same_as<libbsa::result<void>>;
@@ -66,39 +66,39 @@ static_assert(requires(libbsa::tes3_bsa_writer& writer, std::span<const std::byt
 });
 // END tes3_bsa_public_contract_assertions
 
-static_assert(requires(libbsa::tes4_bsa_writer& writer, std::span<const std::byte> bytes) {
+static_assert(requires(libbsa::tes4_bsa_writer &writer, std::span<const std::byte> bytes) {
   { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
   { writer.add_file("Textures/Disk.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.bsa") } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.bsa", libbsa::write_execution_options{}) } -> std::same_as<libbsa::result<void>>;
 });
 
-static_assert(requires(libbsa::ba2_gnrl_writer& writer,
+static_assert(requires(libbsa::ba2_gnrl_writer &writer,
                        std::span<const std::byte> bytes,
                        libbsa::ba2_gnrl_entry_options entry_options) {
   { libbsa::ba2_gnrl_target::fallout4 } -> std::same_as<libbsa::ba2_gnrl_target>;
   { libbsa::ba2_gnrl_target::starfield_v2 } -> std::same_as<libbsa::ba2_gnrl_target>;
   { libbsa::ba2_gnrl_target::starfield_v3 } -> std::same_as<libbsa::ba2_gnrl_target>;
   { writer.target() } -> std::same_as<libbsa::ba2_gnrl_target>;
-  { writer.options() } -> std::same_as<const libbsa::ba2_gnrl_writer_options&>;
+  { writer.options() } -> std::same_as<const libbsa::ba2_gnrl_writer_options &>;
   { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
   { writer.add_bytes("Meshes/Memory.nif", bytes, libbsa::entry_compression_policy::raw) }
-      -> std::same_as<libbsa::result<void>>;
+    -> std::same_as<libbsa::result<void>>;
   { writer.add_bytes("Meshes/Memory.nif", bytes, entry_options) } -> std::same_as<libbsa::result<void>>;
   { writer.add_file("Meshes/Disk.nif", "source.nif") } -> std::same_as<libbsa::result<void>>;
   { writer.add_file("Meshes/Disk.nif", "source.nif", libbsa::entry_compression_policy::compressed) }
-      -> std::same_as<libbsa::result<void>>;
+    -> std::same_as<libbsa::result<void>>;
   { writer.add_file("Meshes/Disk.nif", "source.nif", entry_options) } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.ba2", libbsa::write_execution_options{}) } -> std::same_as<libbsa::result<void>>;
 });
 
 // BEGIN ba2_dx10_public_contract_assertions
-static_assert(requires(libbsa::ba2_dx10_writer& writer) {
+static_assert(requires(libbsa::ba2_dx10_writer &writer) {
   { libbsa::ba2_dx10_target::fallout4 } -> std::same_as<libbsa::ba2_dx10_target>;
   { libbsa::ba2_dx10_target::starfield_v3 } -> std::same_as<libbsa::ba2_dx10_target>;
   { writer.target() } -> std::same_as<libbsa::ba2_dx10_target>;
-  { writer.options() } -> std::same_as<const libbsa::ba2_dx10_writer_options&>;
+  { writer.options() } -> std::same_as<const libbsa::ba2_dx10_writer_options &>;
   { writer.add_file("Textures/Diffuse.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
   { writer.write_to("out.ba2", libbsa::write_execution_options{}) } -> std::same_as<libbsa::result<void>>;
@@ -106,33 +106,34 @@ static_assert(requires(libbsa::ba2_dx10_writer& writer) {
 // END ba2_dx10_public_contract_assertions
 
 static_assert(requires(libbsa::write_execution_options execution) {
-  { execution.worker_count } -> std::same_as<std::uint32_t&>;
+  { execution.worker_count } -> std::same_as<std::uint32_t &>;
 });
 
 static_assert(requires(libbsa::validation_report report,
                        libbsa::validation_options options,
                        libbsa::validation_diagnostic diagnostic,
                        libbsa::compatibility_warning warning) {
-  { options.expected_type } -> std::same_as<std::optional<libbsa::archive_type>&>;
-  { options.expected_variant } -> std::same_as<std::optional<libbsa::archive_variant>&>;
-  { options.validate_entry_extractability } -> std::same_as<bool&>;
-  { diagnostic.code } -> std::same_as<libbsa::error_code&>;
-  { diagnostic.message } -> std::same_as<std::string&>;
-  { warning.code } -> std::same_as<libbsa::compatibility_warning_code&>;
-  { warning.severity } -> std::same_as<libbsa::compatibility_warning_severity&>;
-  { warning.message } -> std::same_as<std::string&>;
-  { warning.archive_path } -> std::same_as<std::optional<std::string>&>;
-  { report.valid } -> std::same_as<bool&>;
-  { report.metadata } -> std::same_as<std::optional<libbsa::archive_metadata>&>;
-  { report.errors } -> std::same_as<std::vector<libbsa::validation_diagnostic>&>;
-  { report.warnings } -> std::same_as<std::vector<libbsa::compatibility_warning>&>;
+  { options.expected_type } -> std::same_as<std::optional<libbsa::archive_type> &>;
+  { options.expected_variant } -> std::same_as<std::optional<libbsa::archive_variant> &>;
+  { options.validate_entry_extractability } -> std::same_as<bool &>;
+  { diagnostic.code } -> std::same_as<libbsa::error_code &>;
+  { diagnostic.message } -> std::same_as<std::string &>;
+  { warning.code } -> std::same_as<libbsa::compatibility_warning_code &>;
+  { warning.severity } -> std::same_as<libbsa::compatibility_warning_severity &>;
+  { warning.message } -> std::same_as<std::string &>;
+  { warning.archive_path } -> std::same_as<std::optional<std::string> &>;
+  { report.valid } -> std::same_as<bool &>;
+  { report.metadata } -> std::same_as<std::optional<libbsa::archive_metadata> &>;
+  { report.errors } -> std::same_as<std::vector<libbsa::validation_diagnostic> &>;
+  { report.warnings } -> std::same_as<std::vector<libbsa::compatibility_warning> &>;
   { report.is_valid() } -> std::same_as<bool>;
   { libbsa::compatibility_warning_severity::advisory } -> std::same_as<libbsa::compatibility_warning_severity>;
   { libbsa::compatibility_warning_severity::risky } -> std::same_as<libbsa::compatibility_warning_severity>;
   { libbsa::validate_archive("archive.bsa") } -> std::same_as<libbsa::result<libbsa::validation_report>>;
 });
 
-TEST_CASE("public_include_boundary umbrella header exposes public boundary types", "[unit][public-api]") {
+TEST_CASE("public_include_boundary umbrella header exposes public boundary types", "[unit][public-api]")
+{
   [[maybe_unused]] libbsa::result<int> result{1};
   [[maybe_unused]] auto code = libbsa::error_code::unsupported;
   [[maybe_unused]] auto missing = libbsa::error_code::not_found;
@@ -147,11 +148,11 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
   [[maybe_unused]] libbsa::entry_metadata entry{"meshes/example.nif",
                                                 "Meshes/Example.nif",
                                                 10,
-                                               8,
-                                               128,
-                                               0x0102030405060708ULL,
-                                               libbsa::entry_compression::none,
-                                               0,
+                                                8,
+                                                128,
+                                                0x0102030405060708ULL,
+                                                libbsa::entry_compression::none,
+                                                0,
                                                 false,
                                                 0};
   [[maybe_unused]] auto reader = libbsa::archive_reader::open("boundary-smoke.bsa");
@@ -171,12 +172,13 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
   REQUIRE(result.has_value());
 }
 
-TEST_CASE("public_include_boundary DX10 writer contract exposes no raw override surface", "[unit][public-api]") {
+TEST_CASE("public_include_boundary DX10 writer contract exposes no raw override surface", "[unit][public-api]")
+{
   // Phase 9 intentionally corrects the stale SPEC raw/compressed override wording:
   // the public DX10 writer is DDS-host-file-only and compressed-only at archive level.
   const auto test_file_path = std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "unit" /
                               "public_include_boundary_tests.cpp";
-  std::ifstream file{test_file_path};
+  std::ifstream file{test_file_path.string()};
   REQUIRE(file.is_open());
 
   std::ostringstream contents;
@@ -190,16 +192,18 @@ TEST_CASE("public_include_boundary DX10 writer contract exposes no raw override 
 
   const auto dx10_contract = text.substr(begin, end - begin);
   constexpr auto forbidden_dx10_tokens = std::to_array<std::string_view>({"ba2_dx10_entry_options",
-                                                                         "entry_compression_policy",
-                                                                         "add_bytes",
-                                                                         "chunk_compression"});
-  for (const auto token : forbidden_dx10_tokens) {
+                                                                          "entry_compression_policy",
+                                                                          "add_bytes",
+                                                                          "chunk_compression"});
+  for (const auto token : forbidden_dx10_tokens)
+  {
     INFO("DX10 public contract token: " << token);
     REQUIRE(dx10_contract.find(token) == std::string::npos);
   }
 }
 
-TEST_CASE("public_include_boundary excludes private Phase 2 implementation names", "[unit][public-api]") {
+TEST_CASE("public_include_boundary excludes private Phase 2 implementation names", "[unit][public-api]")
+{
   constexpr auto forbidden_tokens = std::to_array<std::string_view>({"libdeflate",
                                                                      "lz4::",
                                                                      "DirectXTex",
@@ -222,21 +226,26 @@ TEST_CASE("public_include_boundary excludes private Phase 2 implementation names
                                                                      "ba2_dx10_writer_entry"});
   const auto include_dir = std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa";
 
-  for (const auto& entry : std::filesystem::directory_iterator{include_dir}) {
-    if (entry.path().extension() != ".hpp") {
+  for (const auto &entry : std::filesystem::directory_iterator{include_dir})
+  {
+    if (entry.path().extension() != ".hpp")
+    {
       continue;
     }
 
-    std::ifstream file{entry.path()};
+    std::ifstream file{entry.path().string()};
     REQUIRE(file.is_open());
 
     std::string line;
-    while (std::getline(file, line)) {
+    while (std::getline(file, line))
+    {
       auto first = line.find_first_not_of(" \t");
-      if (first == std::string::npos || line.compare(first, 2, "//") == 0) {
+      if (first == std::string::npos || line.compare(first, 2, "//") == 0)
+      {
         continue;
       }
-      for (const auto token : forbidden_tokens) {
+      for (const auto token : forbidden_tokens)
+      {
         INFO("public boundary token: " << token << " in " << entry.path().string());
         REQUIRE(line.find(token) == std::string::npos);
       }
@@ -244,9 +253,10 @@ TEST_CASE("public_include_boundary excludes private Phase 2 implementation names
   }
 }
 
-TEST_CASE("public_include_boundary writer execution options stay dependency-light", "[unit][public-api]") {
+TEST_CASE("public_include_boundary writer execution options stay dependency-light", "[unit][public-api]")
+{
   const auto writer_header = std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa" / "writer.hpp";
-  std::ifstream file{writer_header};
+  std::ifstream file{writer_header.string()};
   REQUIRE(file.is_open());
 
   std::ostringstream contents;
@@ -273,7 +283,8 @@ TEST_CASE("public_include_boundary writer execution options stay dependency-ligh
                                                                      "tes4_writer_entry",
                                                                      "ba2_gnrl_writer_entry",
                                                                      "ba2_dx10_writer_entry"});
-  for (const auto token : forbidden_tokens) {
+  for (const auto token : forbidden_tokens)
+  {
     INFO("writer execution option public boundary token: " << token);
     REQUIRE(section.find(token) == std::string::npos);
   }

@@ -7,7 +7,8 @@
 #include <type_traits>
 
 TEST_CASE("ba2_dx10_metadata exposes dependency-light texture metadata fields",
-          "[unit][fixture][ba2_dx10_metadata]") {
+          "[unit][fixture][ba2_dx10_metadata]")
+{
   libbsa::texture_chunk_metadata chunk{};
   chunk.payload_offset = 128U;
   chunk.stored_size = 64U;
@@ -48,7 +49,8 @@ TEST_CASE("ba2_dx10_metadata exposes dependency-light texture metadata fields",
   REQUIRE(texture.chunks.front().compression == libbsa::entry_compression::deflate);
 }
 
-TEST_CASE("ba2_dx10_metadata keeps non-texture entries opt-in", "[unit][fixture][ba2_dx10_metadata]") {
+TEST_CASE("ba2_dx10_metadata keeps non-texture entries opt-in", "[unit][fixture][ba2_dx10_metadata]")
+{
   libbsa::entry_metadata entry{"textures/example.dds",
                                "Textures/Example.dds",
                                148U,

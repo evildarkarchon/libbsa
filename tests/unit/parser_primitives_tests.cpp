@@ -12,50 +12,60 @@
 #include <unordered_set>
 #include <vector>
 
-namespace {
+namespace
+{
 
-std::size_t impossible_string_size() {
-  const auto max_size = std::string{}.max_size();
-  if (max_size == std::numeric_limits<std::size_t>::max()) {
-    SKIP("string max_size cannot be overflowed on this standard library");
-  }
-  return max_size + 1U;
-}
-
-template <typename T>
-std::size_t impossible_vector_capacity() {
-  const auto max_size = std::vector<T>{}.max_size();
-  if (max_size == std::numeric_limits<std::size_t>::max()) {
-    SKIP("vector max_size cannot be overflowed on this standard library");
-  }
-  return max_size + 1U;
-}
-
-template <typename T>
-std::size_t impossible_set_capacity() {
-  const auto max_size = std::unordered_set<T>{}.max_size();
-  if (max_size == std::numeric_limits<std::size_t>::max()) {
-    SKIP("unordered_set max_size cannot be overflowed on this standard library");
-  }
-  return max_size + 1U;
-}
-
-class temp_file_cleanup {
- public:
-  explicit temp_file_cleanup(std::filesystem::path path) : path_(std::move(path)) {}
-
-  ~temp_file_cleanup() {
-    std::error_code ignored;
-    std::filesystem::remove(path_, ignored);
+  std::size_t impossible_string_size()
+  {
+    const auto max_size = std::string{}.max_size();
+    if (max_size == std::numeric_limits<std::size_t>::max())
+    {
+      SKIP("string max_size cannot be overflowed on this standard library");
+    }
+    return max_size + 1U;
   }
 
- private:
-  std::filesystem::path path_;
-};
+  template <typename T>
+  std::size_t impossible_vector_capacity()
+  {
+    const auto max_size = std::vector<T>{}.max_size();
+    if (max_size == std::numeric_limits<std::size_t>::max())
+    {
+      SKIP("vector max_size cannot be overflowed on this standard library");
+    }
+    return max_size + 1U;
+  }
+
+  template <typename T>
+  std::size_t impossible_set_capacity()
+  {
+    const auto max_size = std::unordered_set<T>{}.max_size();
+    if (max_size == std::numeric_limits<std::size_t>::max())
+    {
+      SKIP("unordered_set max_size cannot be overflowed on this standard library");
+    }
+    return max_size + 1U;
+  }
+
+  class temp_file_cleanup
+  {
+  public:
+    explicit temp_file_cleanup(std::filesystem::path path) : path_(std::move(path)) {}
+
+    ~temp_file_cleanup()
+    {
+      std::error_code ignored;
+      std::filesystem::remove(path_, ignored);
+    }
+
+  private:
+    std::filesystem::path path_;
+  };
 
 } // namespace
 
-TEST_CASE("parser_primitives validate checked arithmetic", "[unit][parser_primitives]") {
+TEST_CASE("parser_primitives validate checked arithmetic", "[unit][parser_primitives]")
+{
   std::size_t total = 0;
 
   REQUIRE(libbsa::detail::multiply_fits(4U, 8U, total));
@@ -84,7 +94,8 @@ TEST_CASE("parser_primitives validate checked arithmetic", "[unit][parser_primit
   REQUIRE_FALSE(libbsa::detail::add_fits_u64(std::numeric_limits<std::uint64_t>::max(), 1U, total64));
 }
 
-TEST_CASE("parser_primitives reject spans outside archive bounds", "[unit][parser_primitives][malformed]") {
+TEST_CASE("parser_primitives reject spans outside archive bounds", "[unit][parser_primitives][malformed]")
+{
   REQUIRE(libbsa::detail::span_fits(2U, 3U, 5U));
   REQUIRE(libbsa::detail::span_fits(5U, 0U, 5U));
   REQUIRE_FALSE(libbsa::detail::span_fits(3U, 3U, 5U));
@@ -96,7 +107,8 @@ TEST_CASE("parser_primitives reject spans outside archive bounds", "[unit][parse
   REQUIRE_FALSE(libbsa::detail::span_fits_u64(std::numeric_limits<std::uint64_t>::max(), 1U, 5U));
 }
 
-TEST_CASE("parser_primitives enforce metadata count limits", "[unit][parser_primitives][malformed]") {
+TEST_CASE("parser_primitives enforce metadata count limits", "[unit][parser_primitives][malformed]")
+{
   auto accepted = libbsa::detail::validate_metadata_count(libbsa::detail::metadata_entry_count_limit,
                                                           libbsa::detail::metadata_entry_count_limit,
                                                           "test metadata count");
@@ -109,7 +121,8 @@ TEST_CASE("parser_primitives enforce metadata count limits", "[unit][parser_prim
   REQUIRE(rejected.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("parser_primitives translate typed metadata reserve failures", "[unit][parser_primitives][allocation]") {
+TEST_CASE("parser_primitives translate typed metadata reserve failures", "[unit][parser_primitives][allocation]")
+{
   std::vector<std::uint64_t> values;
   auto vector_reserved = libbsa::detail::reserve_metadata_vector(values, 4U, "test metadata vector");
   REQUIRE(vector_reserved.has_value());
@@ -126,13 +139,14 @@ TEST_CASE("parser_primitives translate typed metadata reserve failures", "[unit]
   REQUIRE(set_reserved.has_value());
 
   auto impossible_set = libbsa::detail::reserve_metadata_set(set,
-                                                            impossible_set_capacity<std::uint64_t>(),
-                                                            "test metadata set");
+                                                             impossible_set_capacity<std::uint64_t>(),
+                                                             "test metadata set");
   REQUIRE_FALSE(impossible_set.has_value());
   REQUIRE(impossible_set.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("parser_primitives read exact bounded file spans", "[unit][parser_primitives]") {
+TEST_CASE("parser_primitives read exact bounded file spans", "[unit][parser_primitives]")
+{
   const auto temp_path = std::filesystem::temp_directory_path() / "libbsa_parser_primitives_exact_read.bin";
   temp_file_cleanup cleanup{temp_path};
 
@@ -158,7 +172,8 @@ TEST_CASE("parser_primitives read exact bounded file spans", "[unit][parser_prim
   REQUIRE(truncated.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("parser_primitives reject stream limits before seeking or allocating", "[unit][parser_primitives][malformed]") {
+TEST_CASE("parser_primitives reject stream limits before seeking or allocating", "[unit][parser_primitives][malformed]")
+{
   std::ifstream input;
 
   auto bad_offset = libbsa::detail::read_file_bytes_at(
@@ -178,7 +193,8 @@ TEST_CASE("parser_primitives reject stream limits before seeking or allocating",
 }
 
 TEST_CASE("parser_primitives materialize archive strings through result errors",
-          "[unit][parser_primitives][allocation]") {
+          "[unit][parser_primitives][allocation]")
+{
   const std::vector<std::byte> bytes{std::byte{'M'}, std::byte{'e'}, std::byte{'s'}, std::byte{'h'}};
 
   auto value = libbsa::detail::archive_string_from_bytes(bytes, "test archive string");
@@ -193,7 +209,8 @@ TEST_CASE("parser_primitives materialize archive strings through result errors",
   REQUIRE(impossible.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("parser_primitives normalize display separators only", "[unit][parser_primitives]") {
+TEST_CASE("parser_primitives normalize display separators only", "[unit][parser_primitives]")
+{
   std::string path = R"(Meshes\Actors/FaceGen\foo.nif)";
 
   libbsa::detail::normalize_display_separators(path);

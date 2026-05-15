@@ -23,160 +23,179 @@
 #include <utility>
 #include <vector>
 
-namespace {
+namespace
+{
 
-std::vector<std::byte> bytes_from_text(std::string_view text) {
-  std::vector<std::byte> bytes;
-  bytes.reserve(text.size());
-  for (const char ch : text) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  std::vector<std::byte> bytes_from_text(std::string_view text)
+  {
+    std::vector<std::byte> bytes;
+    bytes.reserve(text.size());
+    for (const char ch : text)
+    {
+      bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+    }
+    return bytes;
   }
-  return bytes;
-}
 
-std::filesystem::path stage_test_dir() {
-  auto path = std::filesystem::temp_directory_path() / "libbsa_writer_stage_tests";
-  std::filesystem::create_directories(path);
-  return path;
-}
-
-std::filesystem::path stage_output_path(std::string name) { return stage_test_dir() / std::move(name); }
-
-void write_stage_binary_file(const std::filesystem::path& path, std::span<const std::byte> bytes) {
-  std::ofstream output{path, std::ios::binary | std::ios::trunc};
-  REQUIRE(output.good());
-  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-  REQUIRE(output.good());
-}
-
-std::vector<std::byte> read_stage_binary_file(const std::filesystem::path& path) {
-  std::ifstream input{path, std::ios::binary};
-  REQUIRE(input.good());
-
-  std::vector<std::byte> bytes;
-  for (char ch = 0; input.get(ch);) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  std::filesystem::path stage_test_dir()
+  {
+    auto path = std::filesystem::temp_directory_path() / "libbsa_writer_stage_tests";
+    std::filesystem::create_directories(path);
+    return path;
   }
-  REQUIRE_FALSE(input.bad());
-  return bytes;
-}
 
-libbsa::formats::ba2::ba2_gnrl_prepared_entry ba2_gnrl_memory_stage_entry(std::vector<std::byte> bytes,
-                                                                          std::uint64_t hash) {
-  libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
-  entry.archive_path_original = "Meshes/Stage.bin";
-  entry.archive_path_canonical = "meshes/stage.bin";
-  entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
-  entry.raw_size = static_cast<std::uint32_t>(bytes.size());
-  entry.payload_hash = hash;
-  entry.stored_payload = std::move(bytes);
-  return entry;
-}
+  std::filesystem::path stage_output_path(std::string name) { return stage_test_dir() / std::move(name); }
 
-libbsa::formats::ba2::ba2_gnrl_prepared_entry ba2_gnrl_disk_stage_entry(const std::filesystem::path& path,
-                                                                        std::uint32_t raw_size) {
-  libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
-  entry.archive_path_original = "Meshes/Stage.bin";
-  entry.archive_path_canonical = "meshes/stage.bin";
-  entry.source_path = path.string();
-  auto resolved = libbsa::detail::resolve_host_file_path(entry.source_path);
-  REQUIRE(resolved.has_value());
-  entry.resolved_source_path = std::move(resolved).value();
-  entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
-  entry.raw_size = raw_size;
-  entry.stream_from_disk = true;
-  return entry;
-}
-
-libbsa::formats::bsa::tes4_prepared_entry tes4_memory_stage_entry(std::string file_name,
-                                                                  std::vector<std::byte> bytes) {
-  libbsa::formats::bsa::tes4_prepared_entry entry;
-  entry.folder = "Meshes";
-  entry.canonical_folder = "meshes";
-  entry.file_name = std::move(file_name);
-  entry.file_hash = static_cast<std::uint64_t>(entry.file_name.size());
-  entry.stored_size = static_cast<std::uint32_t>(bytes.size());
-  entry.stored_payload = std::move(bytes);
-  return entry;
-}
-
-libbsa::formats::bsa::tes4_prepared_entry tes4_disk_stage_entry(const std::filesystem::path& path,
-                                                                std::uint32_t raw_size) {
-  libbsa::formats::bsa::tes4_prepared_entry entry;
-  entry.folder = "Meshes";
-  entry.canonical_folder = "meshes";
-  entry.file_name = "Disk.nif";
-  entry.file_hash = 0xD15CU;
-  entry.stored_size = raw_size;
-  entry.raw_disk_size = raw_size;
-  entry.raw_disk_host_path = path.string();
-  entry.stream_raw_disk = true;
-  return entry;
-}
-
-std::vector<std::byte> repeated_bytes(std::size_t size, std::uint8_t seed) {
-  std::vector<std::byte> bytes(size);
-  for (std::size_t index = 0; index < bytes.size(); ++index) {
-    bytes[index] = static_cast<std::byte>(seed + static_cast<std::uint8_t>(index % 17U));
+  void write_stage_binary_file(const std::filesystem::path &path, std::span<const std::byte> bytes)
+  {
+    std::ofstream output{path, std::ios::binary | std::ios::trunc};
+    REQUIRE(output.good());
+    output.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(output.good());
   }
-  return bytes;
-}
 
-libbsa::formats::ba2::ba2_dx10_writer_entry ba2_dx10_stage_entry(std::string archive_path,
-                                                                  const libbsa::texture::dds_texture_layout& layout,
-                                                                  std::string snapshot_prefix) {
-  libbsa::formats::ba2::ba2_dx10_writer_entry entry;
-  entry.archive_path_original = archive_path;
-  entry.archive_path_canonical = archive_path;
-  entry.metadata = libbsa::texture_metadata{layout.width,
-                                            layout.height,
-                                            layout.mip_count,
-                                            layout.dxgi_format,
-                                            layout.array_size,
-                                            layout.is_cubemap,
-                                            0U,
-                                            layout.is_cubemap ? 2049U : 2048U,
-                                            {}};
+  std::vector<std::byte> read_stage_binary_file(const std::filesystem::path &path)
+  {
+    std::ifstream input{path, std::ios::binary};
+    REQUIRE(input.good());
 
-  const std::uint32_t face_count = layout.is_cubemap ? 6U : 1U;
-  for (std::uint32_t array_index = 0; array_index < layout.array_size; ++array_index) {
-    for (std::uint32_t face_index = 0; face_index < face_count; ++face_index) {
-      for (std::uint32_t mip = 0; mip < layout.mip_count; ++mip) {
-        auto mip_size = libbsa::texture::mip_size_for_format(layout, mip);
-        REQUIRE(mip_size.has_value());
-        auto bytes = repeated_bytes(static_cast<std::size_t>(mip_size.value()),
-                                    static_cast<std::uint8_t>(array_index + face_index + mip + 1U));
-        const auto snapshot = stage_output_path(snapshot_prefix + "-" + std::to_string(array_index) + "-" +
-                                                std::to_string(face_index) + "-" + std::to_string(mip) + ".bin");
-        write_stage_binary_file(snapshot, bytes);
-        entry.subresources.push_back(libbsa::formats::ba2::ba2_dx10_subresource_snapshot{
-            array_index, face_index, mip, bytes.size(), snapshot});
+    std::vector<std::byte> bytes;
+    for (char ch = 0; input.get(ch);)
+    {
+      bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+    }
+    REQUIRE_FALSE(input.bad());
+    return bytes;
+  }
+
+  libbsa::formats::ba2::ba2_gnrl_prepared_entry ba2_gnrl_memory_stage_entry(std::vector<std::byte> bytes,
+                                                                            std::uint64_t hash)
+  {
+    libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
+    entry.archive_path_original = "Meshes/Stage.bin";
+    entry.archive_path_canonical = "meshes/stage.bin";
+    entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
+    entry.raw_size = static_cast<std::uint32_t>(bytes.size());
+    entry.payload_hash = hash;
+    entry.stored_payload = std::move(bytes);
+    return entry;
+  }
+
+  libbsa::formats::ba2::ba2_gnrl_prepared_entry ba2_gnrl_disk_stage_entry(const std::filesystem::path &path,
+                                                                          std::uint32_t raw_size)
+  {
+    libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
+    entry.archive_path_original = "Meshes/Stage.bin";
+    entry.archive_path_canonical = "meshes/stage.bin";
+    entry.source_path = path.string();
+    auto resolved = libbsa::detail::resolve_host_file_path(entry.source_path);
+    REQUIRE(resolved.has_value());
+    entry.resolved_source_path = std::move(resolved).value();
+    entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
+    entry.raw_size = raw_size;
+    entry.stream_from_disk = true;
+    return entry;
+  }
+
+  libbsa::formats::bsa::tes4_prepared_entry tes4_memory_stage_entry(std::string file_name,
+                                                                    std::vector<std::byte> bytes)
+  {
+    libbsa::formats::bsa::tes4_prepared_entry entry;
+    entry.folder = "Meshes";
+    entry.canonical_folder = "meshes";
+    entry.file_name = std::move(file_name);
+    entry.file_hash = static_cast<std::uint64_t>(entry.file_name.size());
+    entry.stored_size = static_cast<std::uint32_t>(bytes.size());
+    entry.stored_payload = std::move(bytes);
+    return entry;
+  }
+
+  libbsa::formats::bsa::tes4_prepared_entry tes4_disk_stage_entry(const std::filesystem::path &path,
+                                                                  std::uint32_t raw_size)
+  {
+    libbsa::formats::bsa::tes4_prepared_entry entry;
+    entry.folder = "Meshes";
+    entry.canonical_folder = "meshes";
+    entry.file_name = "Disk.nif";
+    entry.file_hash = 0xD15CU;
+    entry.stored_size = raw_size;
+    entry.raw_disk_size = raw_size;
+    entry.raw_disk_host_path = path.string();
+    entry.stream_raw_disk = true;
+    return entry;
+  }
+
+  std::vector<std::byte> repeated_bytes(std::size_t size, std::uint8_t seed)
+  {
+    std::vector<std::byte> bytes(size);
+    for (std::size_t index = 0; index < bytes.size(); ++index)
+    {
+      bytes[index] = static_cast<std::byte>(seed + static_cast<std::uint8_t>(index % 17U));
+    }
+    return bytes;
+  }
+
+  libbsa::formats::ba2::ba2_dx10_writer_entry ba2_dx10_stage_entry(std::string archive_path,
+                                                                   const libbsa::texture::dds_texture_layout &layout,
+                                                                   std::string snapshot_prefix)
+  {
+    libbsa::formats::ba2::ba2_dx10_writer_entry entry;
+    entry.archive_path_original = archive_path;
+    entry.archive_path_canonical = archive_path;
+    entry.metadata = libbsa::texture_metadata{layout.width,
+                                              layout.height,
+                                              layout.mip_count,
+                                              layout.dxgi_format,
+                                              layout.array_size,
+                                              layout.is_cubemap,
+                                              0U,
+                                              layout.is_cubemap ? 2049U : 2048U,
+                                              {}};
+
+    const std::uint32_t face_count = layout.is_cubemap ? 6U : 1U;
+    for (std::uint32_t array_index = 0; array_index < layout.array_size; ++array_index)
+    {
+      for (std::uint32_t face_index = 0; face_index < face_count; ++face_index)
+      {
+        for (std::uint32_t mip = 0; mip < layout.mip_count; ++mip)
+        {
+          auto mip_size = libbsa::texture::mip_size_for_format(layout, mip);
+          REQUIRE(mip_size.has_value());
+          auto bytes = repeated_bytes(static_cast<std::size_t>(mip_size.value()),
+                                      static_cast<std::uint8_t>(array_index + face_index + mip + 1U));
+          const auto snapshot = stage_output_path(snapshot_prefix + "-" + std::to_string(array_index) + "-" +
+                                                  std::to_string(face_index) + "-" + std::to_string(mip) + ".bin");
+          write_stage_binary_file(snapshot, bytes);
+          entry.subresources.push_back(libbsa::formats::ba2::ba2_dx10_subresource_snapshot{
+              array_index, face_index, mip, bytes.size(), snapshot});
+        }
       }
     }
+    return entry;
   }
-  return entry;
-}
 
-libbsa::formats::ba2::ba2_dx10_prepared_entry ba2_dx10_prepared_stage_entry(std::string path,
-                                                                            std::vector<std::byte> payload) {
-  libbsa::formats::ba2::ba2_dx10_prepared_entry entry;
-  entry.archive_path_original = std::move(path);
-  entry.archive_path_canonical = entry.archive_path_original;
-  entry.chunk_count = 2U;
-  auto first = libbsa::formats::ba2::ba2_dx10_prepared_chunk{};
-  first.raw_size = static_cast<std::uint32_t>(payload.size());
-  first.packed_size = static_cast<std::uint32_t>(payload.size());
-  first.compression = libbsa::detail::compression_method::deflate;
-  first.stored_payload = payload;
-  auto second = first;
-  entry.chunks = {std::move(first), std::move(second)};
-  return entry;
-}
+  libbsa::formats::ba2::ba2_dx10_prepared_entry ba2_dx10_prepared_stage_entry(std::string path,
+                                                                              std::vector<std::byte> payload)
+  {
+    libbsa::formats::ba2::ba2_dx10_prepared_entry entry;
+    entry.archive_path_original = std::move(path);
+    entry.archive_path_canonical = entry.archive_path_original;
+    entry.chunk_count = 2U;
+    auto first = libbsa::formats::ba2::ba2_dx10_prepared_chunk{};
+    first.raw_size = static_cast<std::uint32_t>(payload.size());
+    first.packed_size = static_cast<std::uint32_t>(payload.size());
+    first.compression = libbsa::detail::compression_method::deflate;
+    first.stored_payload = payload;
+    auto second = first;
+    entry.chunks = {std::move(first), std::move(second)};
+    return entry;
+  }
 
 } // namespace
 
 TEST_CASE("tes3 writer preparation stage prepares and sorts minimal memory entries",
-          "[unit][writer-stage][tes3_bsa_writer]") {
+          "[unit][writer-stage][tes3_bsa_writer]")
+{
   auto entry = libbsa::formats::bsa::tes3_make_writer_entry("Textures\\Stage\\Probe.dds");
   REQUIRE(entry.has_value());
   entry.value().memory_bytes = bytes_from_text("tes3-stage");
@@ -193,7 +212,8 @@ TEST_CASE("tes3 writer preparation stage prepares and sorts minimal memory entri
 }
 
 TEST_CASE("tes3 writer preparation stage reports malformed disk entries",
-          "[unit][writer-stage][tes3_bsa_writer]") {
+          "[unit][writer-stage][tes3_bsa_writer]")
+{
   auto entry = libbsa::formats::bsa::tes3_make_writer_entry("meshes/stage/missing.nif");
   REQUIRE(entry.has_value());
   entry.value().host_path = "Z:/definitely/missing/libbsa-stage-source.nif";
@@ -207,7 +227,8 @@ TEST_CASE("tes3 writer preparation stage reports malformed disk entries",
 }
 
 TEST_CASE("tes3 writer layout stage assigns raw offsets and rejects oversized spans",
-          "[unit][writer-stage][tes3_bsa_writer]") {
+          "[unit][writer-stage][tes3_bsa_writer]")
+{
   std::vector<libbsa::formats::bsa::tes3_prepared_entry> entries(2U);
   entries[0].payload_size = 4U;
   entries[1].payload_size = 8U;
@@ -227,7 +248,8 @@ TEST_CASE("tes3 writer layout stage assigns raw offsets and rejects oversized sp
 }
 
 TEST_CASE("ba2 gnrl writer preparation stage prepares minimal memory entries",
-          "[unit][writer-stage][ba2_gnrl_writer]") {
+          "[unit][writer-stage][ba2_gnrl_writer]")
+{
   auto entry = libbsa::formats::ba2::ba2_gnrl_make_writer_entry("Meshes\\Stage\\Probe.bin", {});
   REQUIRE(entry.has_value());
   entry.value().memory_bytes = bytes_from_text("ba2-stage");
@@ -250,7 +272,8 @@ TEST_CASE("ba2 gnrl writer preparation stage prepares minimal memory entries",
 }
 
 TEST_CASE("ba2 gnrl writer layout stage toggles duplicate payload reuse",
-          "[unit][writer-stage][ba2_gnrl_writer]") {
+          "[unit][writer-stage][ba2_gnrl_writer]")
+{
   const auto payload = bytes_from_text("shared");
   const auto version = libbsa::formats::ba2::ba2_gnrl_version_for(libbsa::ba2_gnrl_target::fallout4);
 
@@ -279,7 +302,8 @@ TEST_CASE("ba2 gnrl writer layout stage toggles duplicate payload reuse",
 }
 
 TEST_CASE("ba2 gnrl writer layout stage compares prepared payload bytes",
-          "[unit][writer-stage][ba2_gnrl_writer]") {
+          "[unit][writer-stage][ba2_gnrl_writer]")
+{
   const auto payload = bytes_from_text("equal");
   auto memory_equal = libbsa::formats::ba2::ba2_gnrl_payloads_equal(
       ba2_gnrl_memory_stage_entry(payload, 0xBEEFU), ba2_gnrl_memory_stage_entry(payload, 0xBEEFU));
@@ -304,7 +328,8 @@ TEST_CASE("ba2 gnrl writer layout stage compares prepared payload bytes",
 }
 
 TEST_CASE("tes4 writer preparation stage prepares minimal memory folders",
-          "[unit][writer-stage][tes4_bsa_writer]") {
+          "[unit][writer-stage][tes4_bsa_writer]")
+{
   auto entry = libbsa::formats::bsa::tes4_make_writer_entry("Meshes\\Stage\\Probe.nif",
                                                             libbsa::entry_compression_policy::raw);
   REQUIRE(entry.has_value());
@@ -339,7 +364,8 @@ TEST_CASE("tes4 writer preparation stage prepares minimal memory folders",
 }
 
 TEST_CASE("tes4 writer layout stage toggles duplicate payload reuse",
-          "[unit][writer-stage][tes4_bsa_writer]") {
+          "[unit][writer-stage][tes4_bsa_writer]")
+{
   const auto payload = bytes_from_text("shared");
   auto version = libbsa::formats::bsa::tes4_version_for(libbsa::tes4_bsa_target::fallout3);
   REQUIRE(version.has_value());
@@ -373,7 +399,8 @@ TEST_CASE("tes4 writer layout stage toggles duplicate payload reuse",
 }
 
 TEST_CASE("tes4 writer layout stage compares raw disk and memory payloads",
-          "[unit][writer-stage][tes4_bsa_writer]") {
+          "[unit][writer-stage][tes4_bsa_writer]")
+{
   const auto payload = bytes_from_text("disk");
   const auto source = stage_output_path("tes4-payload-equal.bin");
   write_stage_binary_file(source, payload);
@@ -394,12 +421,14 @@ TEST_CASE("tes4 writer layout stage compares raw disk and memory payloads",
 }
 
 TEST_CASE("tes4 writer serialization stage rejects raw disk source size changes",
-          "[unit][writer-stage][tes4_bsa_writer][writer-source-io]") {
+          "[unit][writer-stage][tes4_bsa_writer][writer-source-io]")
+{
   const auto payload = bytes_from_text("tes4 raw streaming payload");
   auto version = libbsa::formats::bsa::tes4_version_for(libbsa::tes4_bsa_target::fallout3);
   REQUIRE(version.has_value());
 
-  SECTION("source grows after layout") {
+  SECTION("source grows after layout")
+  {
     const auto source = stage_output_path("tes4-stream-grew.bin");
     write_stage_binary_file(source, payload);
     std::vector<libbsa::formats::bsa::tes4_prepared_folder> folders{
@@ -423,7 +452,8 @@ TEST_CASE("tes4 writer serialization stage rejects raw disk source size changes"
     CHECK(written.error().code == libbsa::error_code::io_error);
   }
 
-  SECTION("source shrinks after layout") {
+  SECTION("source shrinks after layout")
+  {
     const auto source = stage_output_path("tes4-stream-shrank.bin");
     write_stage_binary_file(source, payload);
     std::vector<libbsa::formats::bsa::tes4_prepared_folder> folders{
@@ -447,7 +477,8 @@ TEST_CASE("tes4 writer serialization stage rejects raw disk source size changes"
 }
 
 TEST_CASE("ba2 dx10 writer preparation stage prepares a single-mip chunk",
-          "[unit][writer-stage][ba2_dx10_writer]") {
+          "[unit][writer-stage][ba2_dx10_writer]")
+{
   const libbsa::texture::dds_texture_layout layout{4U, 4U, 1U, 28U, 1U, false};
   auto source = ba2_dx10_stage_entry("Textures/Stage/Single.dds", layout, "dx10-single");
   auto planned = libbsa::texture::plan_dx10_chunks(layout, 0U);
@@ -467,7 +498,8 @@ TEST_CASE("ba2 dx10 writer preparation stage prepares a single-mip chunk",
 }
 
 TEST_CASE("ba2 dx10 writer preparation stage preserves multi-mip snapshot chunk order",
-          "[unit][writer-stage][ba2_dx10_writer]") {
+          "[unit][writer-stage][ba2_dx10_writer]")
+{
   const libbsa::texture::dds_texture_layout layout{4U, 4U, 3U, 28U, 1U, false};
   auto source = ba2_dx10_stage_entry("Textures/Stage/MultiChunk.dds", layout, "dx10-multi-chunk");
   auto planned = libbsa::texture::plan_dx10_chunks(layout, 0U);
@@ -492,7 +524,8 @@ TEST_CASE("ba2 dx10 writer preparation stage preserves multi-mip snapshot chunk 
   REQUIRE(decoded.has_value());
   std::vector<std::byte> expected;
   expected.reserve(static_cast<std::size_t>(planned.value()[0].raw_size));
-  for (std::uint32_t mip = planned.value()[0].start_mip; mip <= planned.value()[0].end_mip; ++mip) {
+  for (std::uint32_t mip = planned.value()[0].start_mip; mip <= planned.value()[0].end_mip; ++mip)
+  {
     auto mip_size = libbsa::texture::mip_size_for_format(layout, mip);
     REQUIRE(mip_size.has_value());
     auto bytes = repeated_bytes(static_cast<std::size_t>(mip_size.value()), static_cast<std::uint8_t>(mip + 1U));
@@ -502,7 +535,8 @@ TEST_CASE("ba2 dx10 writer preparation stage preserves multi-mip snapshot chunk 
 }
 
 TEST_CASE("ba2 dx10 writer preparation stage rejects truncated snapshots before publishing output",
-          "[unit][writer-stage][ba2_dx10_writer][publish]") {
+          "[unit][writer-stage][ba2_dx10_writer][publish]")
+{
   const libbsa::texture::dds_texture_layout layout{4U, 4U, 2U, 28U, 1U, false};
   auto source = ba2_dx10_stage_entry("Textures/Stage/Truncated.dds", layout, "dx10-truncated");
   REQUIRE_FALSE(source.subresources.empty());
@@ -526,7 +560,8 @@ TEST_CASE("ba2 dx10 writer preparation stage rejects truncated snapshots before 
 }
 
 TEST_CASE("ba2 dx10 writer preparation stage prepares multi-mip and cubemap entries",
-          "[unit][writer-stage][ba2_dx10_writer]") {
+          "[unit][writer-stage][ba2_dx10_writer]")
+{
   const libbsa::texture::dds_texture_layout multi_mip{4U, 4U, 2U, 28U, 1U, false};
   auto multi_entry = ba2_dx10_stage_entry("Textures/Stage/Multi.dds", multi_mip, "dx10-multi");
   auto multi_prepared = libbsa::formats::ba2::ba2_dx10_prepare_entries(libbsa::ba2_dx10_target::fallout4,
@@ -553,7 +588,8 @@ TEST_CASE("ba2 dx10 writer preparation stage prepares multi-mip and cubemap entr
 }
 
 TEST_CASE("ba2 dx10 writer layout stage toggles duplicate chunk reuse",
-          "[unit][writer-stage][ba2_dx10_writer]") {
+          "[unit][writer-stage][ba2_dx10_writer]")
+{
   const auto payload = bytes_from_text("dx10-shared");
   const auto version = libbsa::formats::ba2::ba2_dx10_version_for(libbsa::ba2_dx10_target::fallout4);
 

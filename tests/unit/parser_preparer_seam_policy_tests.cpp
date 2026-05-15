@@ -8,49 +8,57 @@
 #include <string>
 #include <string_view>
 
-namespace {
+namespace
+{
 
-std::filesystem::path source_root() { return std::filesystem::path{LIBBSA_SOURCE_DIR}; }
+  std::filesystem::path source_root() { return std::filesystem::path{LIBBSA_SOURCE_DIR}; }
 
-std::string read_text_file(const std::filesystem::path& path) {
-  std::ifstream input{path};
-  REQUIRE(input.is_open());
+  std::string read_text_file(const std::filesystem::path &path)
+  {
+    std::ifstream input{path};
+    REQUIRE(input.is_open());
 
-  std::ostringstream buffer;
-  buffer << input.rdbuf();
-  return buffer.str();
-}
-
-std::string function_body(std::string_view source, std::string_view signature, std::string_view next_signature) {
-  const auto start = source.find(signature);
-  REQUIRE(start != std::string_view::npos);
-
-  const auto body_start = source.find('{', start);
-  REQUIRE(body_start != std::string_view::npos);
-
-  const auto end = source.find(next_signature, body_start);
-  REQUIRE(end != std::string_view::npos);
-  return std::string{source.substr(body_start, end - body_start)};
-}
-
-void require_all_tokens(std::string_view text, std::span<const std::string_view> tokens) {
-  for (const auto token : tokens) {
-    INFO("missing token: " << token);
-    REQUIRE(text.find(token) != std::string_view::npos);
+    std::ostringstream buffer;
+    buffer << input.rdbuf();
+    return buffer.str();
   }
-}
 
-void require_absent_tokens(std::string_view body, std::span<const std::string_view> forbidden_tokens) {
-  for (const auto token : forbidden_tokens) {
-    INFO("forbidden token: " << token);
-    REQUIRE(body.find(token) == std::string_view::npos);
+  std::string function_body(std::string_view source, std::string_view signature, std::string_view next_signature)
+  {
+    const auto start = source.find(signature);
+    REQUIRE(start != std::string_view::npos);
+
+    const auto body_start = source.find('{', start);
+    REQUIRE(body_start != std::string_view::npos);
+
+    const auto end = source.find(next_signature, body_start);
+    REQUIRE(end != std::string_view::npos);
+    return std::string{source.substr(body_start, end - body_start)};
   }
-}
+
+  void require_all_tokens(std::string_view text, std::span<const std::string_view> tokens)
+  {
+    for (const auto token : tokens)
+    {
+      INFO("missing token: " << token);
+      REQUIRE(text.find(token) != std::string_view::npos);
+    }
+  }
+
+  void require_absent_tokens(std::string_view body, std::span<const std::string_view> forbidden_tokens)
+  {
+    for (const auto token : forbidden_tokens)
+    {
+      INFO("forbidden token: " << token);
+      REQUIRE(body.find(token) == std::string_view::npos);
+    }
+  }
 
 } // namespace
 
 TEST_CASE("parser_preparer_seam_policy requires dedicated TES4 parser seams",
-          "[unit][parser_preparer_seam_policy]") {
+          "[unit][parser_preparer_seam_policy]")
+{
   const auto root = source_root();
   const auto parser = read_text_file(root / "src/formats/bsa/tes4_bsa_parser.cpp");
   const auto table_header = read_text_file(root / "src/formats/bsa/tes4_bsa_table.hpp");
@@ -104,7 +112,8 @@ TEST_CASE("parser_preparer_seam_policy requires dedicated TES4 parser seams",
 }
 
 TEST_CASE("parser_preparer_seam_policy requires dedicated BA2 DX10 preparer seams",
-          "[unit][parser_preparer_seam_policy]") {
+          "[unit][parser_preparer_seam_policy]")
+{
   const auto root = source_root();
   const auto prepare = read_text_file(root / "src/formats/ba2/ba2_dx10_prepare.cpp");
   const auto snapshot_header = read_text_file(root / "src/formats/ba2/ba2_dx10_snapshot_builder.hpp");

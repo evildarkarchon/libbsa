@@ -8,32 +8,38 @@
 #include <string>
 #include <string_view>
 
-namespace {
+namespace
+{
 
-std::filesystem::path source_root() {
-  return std::filesystem::path{LIBBSA_SOURCE_DIR};
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-  std::ifstream stream{path};
-  REQUIRE(stream.is_open());
-
-  std::ostringstream buffer;
-  buffer << stream.rdbuf();
-  return buffer.str();
-}
-
-void require_all_tokens(std::string_view text, std::initializer_list<std::string_view> tokens) {
-  for (const auto token : tokens) {
-    INFO("Missing token: " << token);
-    REQUIRE(text.find(token) != std::string_view::npos);
+  std::filesystem::path source_root()
+  {
+    return std::filesystem::path{LIBBSA_SOURCE_DIR};
   }
-}
+
+  std::string read_text_file(const std::filesystem::path &path)
+  {
+    std::ifstream stream{path};
+    REQUIRE(stream.is_open());
+
+    std::ostringstream buffer;
+    buffer << stream.rdbuf();
+    return buffer.str();
+  }
+
+  void require_all_tokens(std::string_view text, std::initializer_list<std::string_view> tokens)
+  {
+    for (const auto token : tokens)
+    {
+      INFO("Missing token: " << token);
+      REQUIRE(text.find(token) != std::string_view::npos);
+    }
+  }
 
 } // namespace
 
 TEST_CASE("thread_safety_policy public types have canonical documentation sections",
-          "[unit][thread_safety_policy][doc_structure]") {
+          "[unit][thread_safety_policy][doc_structure]")
+{
   const auto root = source_root();
   const auto archive_header = read_text_file(root / "include" / "libbsa" / "archive.hpp");
   const auto writer_header = read_text_file(root / "include" / "libbsa" / "writer.hpp");
@@ -47,7 +53,8 @@ TEST_CASE("thread_safety_policy public types have canonical documentation sectio
       "bulk_extract_options",
       "bulk_extract_entry_result",
   };
-  for (const auto type : archive_types) {
+  for (const auto type : archive_types)
+  {
     INFO("archive public type: " << type);
     REQUIRE(archive_header.find(type) != std::string_view::npos);
     REQUIRE(docs.find(std::string{"## "} + type) != std::string::npos);
@@ -60,7 +67,8 @@ TEST_CASE("thread_safety_policy public types have canonical documentation sectio
       "ba2_dx10_writer",
       "write_execution_options",
   };
-  for (const auto type : writer_types) {
+  for (const auto type : writer_types)
+  {
     INFO("writer public type: " << type);
     REQUIRE(writer_header.find(type) != std::string_view::npos);
     REQUIRE(docs.find(std::string{"## "} + type) != std::string::npos);
@@ -70,7 +78,8 @@ TEST_CASE("thread_safety_policy public types have canonical documentation sectio
       "validation_report",
       "validate_archive",
   };
-  for (const auto type : validation_types) {
+  for (const auto type : validation_types)
+  {
     INFO("validation public type: " << type);
     REQUIRE(validation_header.find(type) != std::string_view::npos);
     REQUIRE(docs.find(std::string{"## "} + type) != std::string::npos);
@@ -80,7 +89,8 @@ TEST_CASE("thread_safety_policy public types have canonical documentation sectio
 }
 
 TEST_CASE("thread_safety_policy documents callback sink writer validation and benchmark rules",
-          "[unit][thread_safety_policy][doc_structure]") {
+          "[unit][thread_safety_policy][doc_structure]")
+{
   const auto root = source_root();
   const auto docs = read_text_file(root / "docs" / "thread-safety.md");
   const auto compatibility_evidence = read_text_file(root / "docs" / "compatibility-evidence.md");
@@ -122,7 +132,8 @@ TEST_CASE("thread_safety_policy documents callback sink writer validation and be
 }
 
 TEST_CASE("thread_safety_policy public headers point to canonical guidance",
-          "[unit][thread_safety_policy][doc_structure]") {
+          "[unit][thread_safety_policy][doc_structure]")
+{
   const auto root = source_root();
   const auto archive_header = read_text_file(root / "include" / "libbsa" / "archive.hpp");
   const auto writer_header = read_text_file(root / "include" / "libbsa" / "writer.hpp");

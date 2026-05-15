@@ -8,38 +8,42 @@
 #include <limits>
 #include <vector>
 
-namespace {
+namespace
+{
 
-constexpr std::uint32_t dds_magic = 0x20534444U;
-constexpr std::uint32_t dds_header_size = 124U;
-constexpr std::uint32_t dds_pixel_format_size = 32U;
-constexpr std::uint32_t dds_fourcc_dx10 = 0x30315844U;
-constexpr std::uint32_t d3d_resource_dimension_texture2d = 3U;
-constexpr std::uint32_t d3d_resource_misc_texturecube = 0x4U;
-constexpr std::size_t dds_dxt10_file_header_size = 148U;
+  constexpr std::uint32_t dds_magic = 0x20534444U;
+  constexpr std::uint32_t dds_header_size = 124U;
+  constexpr std::uint32_t dds_pixel_format_size = 32U;
+  constexpr std::uint32_t dds_fourcc_dx10 = 0x30315844U;
+  constexpr std::uint32_t d3d_resource_dimension_texture2d = 3U;
+  constexpr std::uint32_t d3d_resource_misc_texturecube = 0x4U;
+  constexpr std::size_t dds_dxt10_file_header_size = 148U;
 
-std::uint32_t read_u32_le(const std::vector<std::byte>& bytes, const std::size_t offset) {
-  return static_cast<std::uint32_t>(bytes[offset]) |
-         (static_cast<std::uint32_t>(bytes[offset + 1]) << 8U) |
-         (static_cast<std::uint32_t>(bytes[offset + 2]) << 16U) |
-         (static_cast<std::uint32_t>(bytes[offset + 3]) << 24U);
-}
+  std::uint32_t read_u32_le(const std::vector<std::byte> &bytes, const std::size_t offset)
+  {
+    return static_cast<std::uint32_t>(bytes[offset]) |
+           (static_cast<std::uint32_t>(bytes[offset + 1]) << 8U) |
+           (static_cast<std::uint32_t>(bytes[offset + 2]) << 16U) |
+           (static_cast<std::uint32_t>(bytes[offset + 3]) << 24U);
+  }
 
-libbsa::texture_chunk_metadata chunk(const std::uint16_t start_mip, const std::uint16_t end_mip,
-                                     const std::uint32_t raw_size) {
-  return libbsa::texture_chunk_metadata{
-      .payload_offset = 0,
-      .stored_size = raw_size,
-      .raw_size = raw_size,
-      .start_mip = start_mip,
-      .end_mip = end_mip,
-      .compression = libbsa::entry_compression::none,
-  };
-}
+  libbsa::texture_chunk_metadata chunk(const std::uint16_t start_mip, const std::uint16_t end_mip,
+                                       const std::uint32_t raw_size)
+  {
+    return libbsa::texture_chunk_metadata{
+        .payload_offset = 0,
+        .stored_size = raw_size,
+        .raw_size = raw_size,
+        .start_mip = start_mip,
+        .end_mip = end_mip,
+        .compression = libbsa::entry_compression::none,
+    };
+  }
 
 } // namespace
 
-TEST_CASE("dds_layout builds deterministic DDS DXT10 headers", "[unit][dds_layout]") {
+TEST_CASE("dds_layout builds deterministic DDS DXT10 headers", "[unit][dds_layout]")
+{
   const libbsa::texture::dds_texture_layout layout{
       .width = 4,
       .height = 4,
@@ -65,7 +69,8 @@ TEST_CASE("dds_layout builds deterministic DDS DXT10 headers", "[unit][dds_layou
 }
 
 TEST_CASE("dds_layout computes cubemap DDS face order with source chunk identity",
-          "[unit][dds_layout]") {
+          "[unit][dds_layout]")
+{
   const libbsa::texture::dds_texture_layout layout{
       .width = 4,
       .height = 4,
@@ -75,8 +80,12 @@ TEST_CASE("dds_layout computes cubemap DDS face order with source chunk identity
       .is_cubemap = true,
   };
   const std::array<libbsa::texture_chunk_metadata, 6> chunks{
-      chunk(0, 0, 8), chunk(0, 0, 8), chunk(0, 0, 8),
-      chunk(0, 0, 8), chunk(0, 0, 8), chunk(0, 0, 8),
+      chunk(0, 0, 8),
+      chunk(0, 0, 8),
+      chunk(0, 0, 8),
+      chunk(0, 0, 8),
+      chunk(0, 0, 8),
+      chunk(0, 0, 8),
   };
 
   const auto header = libbsa::texture::build_dds_dxt10_header(layout);
@@ -87,8 +96,9 @@ TEST_CASE("dds_layout computes cubemap DDS face order with source chunk identity
   REQUIRE(segments.has_value());
   REQUIRE(segments.value().size() == chunks.size());
 
-  for (std::size_t i = 0; i < segments.value().size(); ++i) {
-    const auto& segment = segments.value()[i];
+  for (std::size_t i = 0; i < segments.value().size(); ++i)
+  {
+    const auto &segment = segments.value()[i];
     CHECK(segment.array_index == 0U);
     CHECK(segment.face_index == i);
     CHECK(segment.start_mip == 0U);
@@ -98,7 +108,8 @@ TEST_CASE("dds_layout computes cubemap DDS face order with source chunk identity
 }
 
 TEST_CASE("dds_layout allows repeated mip ranges across different array slices",
-          "[unit][dds_layout]") {
+          "[unit][dds_layout]")
+{
   const libbsa::texture::dds_texture_layout layout{
       .width = 4,
       .height = 4,
@@ -124,10 +135,12 @@ TEST_CASE("dds_layout allows repeated mip ranges across different array slices",
   CHECK(segments.value()[1].source_chunk_index == 1U);
 }
 
-TEST_CASE("dds_layout computes locked DX10 mip byte sizes", "[unit][dds_layout]") {
-  struct format_case {
+TEST_CASE("dds_layout computes locked DX10 mip byte sizes", "[unit][dds_layout]")
+{
+  struct format_case
+  {
     std::uint32_t dxgi_format;
-    const char* name;
+    const char *name;
     std::uint32_t width;
     std::uint32_t height;
     std::uint64_t expected_bytes;
@@ -158,7 +171,8 @@ TEST_CASE("dds_layout computes locked DX10 mip byte sizes", "[unit][dds_layout]"
       format_case{61U, "R8_UNORM", 4U, 4U, 16U},
   };
 
-  for (const auto& test_case : cases) {
+  for (const auto &test_case : cases)
+  {
     CAPTURE(test_case.name);
     const libbsa::texture::dds_texture_layout layout{
         .width = test_case.width,
@@ -176,7 +190,8 @@ TEST_CASE("dds_layout computes locked DX10 mip byte sizes", "[unit][dds_layout]"
   }
 }
 
-TEST_CASE("dds_layout fails closed for hostile block-compressed dimensions", "[unit][dds_layout]") {
+TEST_CASE("dds_layout fails closed for hostile block-compressed dimensions", "[unit][dds_layout]")
+{
   const auto hostile_dimension = std::numeric_limits<std::uint32_t>::max();
   const libbsa::texture::dds_texture_layout hostile_bc1{
       .width = hostile_dimension,
@@ -187,14 +202,16 @@ TEST_CASE("dds_layout fails closed for hostile block-compressed dimensions", "[u
       .is_cubemap = false,
   };
 
-  SECTION("BC1 UINT32_MAX dimensions compute the full rounded uint64 byte size") {
+  SECTION("BC1 UINT32_MAX dimensions compute the full rounded uint64 byte size")
+  {
     const auto size = libbsa::texture::mip_size_for_format(hostile_bc1, 0U);
 
     REQUIRE(size.has_value());
     CHECK(size.value() == 9223372036854775808ULL);
   }
 
-  SECTION("wrapped BC1 raw-size metadata is rejected") {
+  SECTION("wrapped BC1 raw-size metadata is rejected")
+  {
     const std::array chunks{chunk(0, 0, 8)};
     const auto result = libbsa::texture::validate_and_order_chunks(hostile_bc1, chunks);
 
@@ -202,7 +219,8 @@ TEST_CASE("dds_layout fails closed for hostile block-compressed dimensions", "[u
     CHECK(result.error().code == libbsa::error_code::format_error);
   }
 
-  SECTION("BC7 UINT32_MAX dimensions fail closed when byte size overflows") {
+  SECTION("BC7 UINT32_MAX dimensions fail closed when byte size overflows")
+  {
     const libbsa::texture::dds_texture_layout hostile_bc7{
         .width = hostile_dimension,
         .height = hostile_dimension,
@@ -219,7 +237,8 @@ TEST_CASE("dds_layout fails closed for hostile block-compressed dimensions", "[u
   }
 }
 
-TEST_CASE("dds_layout plans DX10 chunks from default policy and byte caps", "[unit][dds_layout]") {
+TEST_CASE("dds_layout plans DX10 chunks from default policy and byte caps", "[unit][dds_layout]")
+{
   const libbsa::texture::dds_texture_layout layout{
       .width = 1024,
       .height = 1024,
@@ -229,7 +248,8 @@ TEST_CASE("dds_layout plans DX10 chunks from default policy and byte caps", "[un
       .is_cubemap = false,
   };
 
-  SECTION("reference default max_decoded_chunk_bytes groups contiguous mips") {
+  SECTION("reference default max_decoded_chunk_bytes groups contiguous mips")
+  {
     const auto chunks = libbsa::texture::plan_dx10_chunks(layout, 0U);
 
     REQUIRE(chunks.has_value());
@@ -242,7 +262,8 @@ TEST_CASE("dds_layout plans DX10 chunks from default policy and byte caps", "[un
     CHECK(chunks.value()[2].end_mip == 4U);
   }
 
-  SECTION("explicit max_decoded_chunk_bytes splits only at mip boundaries") {
+  SECTION("explicit max_decoded_chunk_bytes splits only at mip boundaries")
+  {
     const auto chunks = libbsa::texture::plan_dx10_chunks(layout, 1048576U);
 
     REQUIRE(chunks.has_value());
@@ -253,7 +274,8 @@ TEST_CASE("dds_layout plans DX10 chunks from default policy and byte caps", "[un
     CHECK(chunks.value()[1].end_mip == 4U);
   }
 
-  SECTION("impossible max_decoded_chunk_bytes fails closed") {
+  SECTION("impossible max_decoded_chunk_bytes fails closed")
+  {
     const auto chunks = libbsa::texture::plan_dx10_chunks(layout, 1U);
 
     REQUIRE_FALSE(chunks.has_value());
@@ -261,8 +283,10 @@ TEST_CASE("dds_layout plans DX10 chunks from default policy and byte caps", "[un
   }
 }
 
-TEST_CASE("dds_layout repeats DX10 chunk plans for arrays and cubemaps", "[unit][dds_layout]") {
-  SECTION("array slices repeat the same mip split") {
+TEST_CASE("dds_layout repeats DX10 chunk plans for arrays and cubemaps", "[unit][dds_layout]")
+{
+  SECTION("array slices repeat the same mip split")
+  {
     const libbsa::texture::dds_texture_layout layout{
         .width = 4,
         .height = 4,
@@ -286,7 +310,8 @@ TEST_CASE("dds_layout repeats DX10 chunk plans for arrays and cubemaps", "[unit]
     CHECK(chunks.value()[3].start_mip == 1U);
   }
 
-  SECTION("cubemap faces repeat the same mip split") {
+  SECTION("cubemap faces repeat the same mip split")
+  {
     const libbsa::texture::dds_texture_layout layout{
         .width = 4,
         .height = 4,
@@ -300,7 +325,8 @@ TEST_CASE("dds_layout repeats DX10 chunk plans for arrays and cubemaps", "[unit]
 
     REQUIRE(chunks.has_value());
     REQUIRE(chunks.value().size() == 6U);
-    for (std::uint32_t face = 0; face < 6U; ++face) {
+    for (std::uint32_t face = 0; face < 6U; ++face)
+    {
       CHECK(chunks.value()[face].array_index == 0U);
       CHECK(chunks.value()[face].face_index == face);
       CHECK(chunks.value()[face].start_mip == 0U);
@@ -310,7 +336,8 @@ TEST_CASE("dds_layout repeats DX10 chunk plans for arrays and cubemaps", "[unit]
 }
 
 TEST_CASE("dds_layout rejects gaps, duplicate coverage, impossible sizes, and unsupported formats",
-          "[unit][dds_layout]") {
+          "[unit][dds_layout]")
+{
   const libbsa::texture::dds_texture_layout bc1_two_mips{
       .width = 4,
       .height = 4,
@@ -328,42 +355,48 @@ TEST_CASE("dds_layout rejects gaps, duplicate coverage, impossible sizes, and un
       .is_cubemap = false,
   };
 
-  SECTION("zero chunks are rejected") {
+  SECTION("zero chunks are rejected")
+  {
     const std::array<libbsa::texture_chunk_metadata, 0> chunks{};
     const auto result = libbsa::texture::validate_and_order_chunks(bc1_two_mips, chunks);
     REQUIRE_FALSE(result.has_value());
     CHECK(result.error().code == libbsa::error_code::format_error);
   }
 
-  SECTION("mip gaps are rejected") {
+  SECTION("mip gaps are rejected")
+  {
     const std::array chunks{chunk(1, 1, 8)};
     const auto result = libbsa::texture::validate_and_order_chunks(bc1_two_mips, chunks);
     REQUIRE_FALSE(result.has_value());
     CHECK(result.error().code == libbsa::error_code::format_error);
   }
 
-  SECTION("duplicate coverage within the same face or slice is rejected") {
+  SECTION("duplicate coverage within the same face or slice is rejected")
+  {
     const std::array chunks{chunk(0, 0, 8), chunk(0, 0, 8)};
     const auto result = libbsa::texture::validate_and_order_chunks(bc1_two_mips, chunks);
     REQUIRE_FALSE(result.has_value());
     CHECK(result.error().code == libbsa::error_code::format_error);
   }
 
-  SECTION("start mip after end mip is rejected") {
+  SECTION("start mip after end mip is rejected")
+  {
     const std::array chunks{chunk(1, 0, 8)};
     const auto result = libbsa::texture::validate_and_order_chunks(bc1_two_mips, chunks);
     REQUIRE_FALSE(result.has_value());
     CHECK(result.error().code == libbsa::error_code::format_error);
   }
 
-  SECTION("unknown unsupported DXGI fixture formats fail closed") {
+  SECTION("unknown unsupported DXGI fixture formats fail closed")
+  {
     const std::array chunks{chunk(0, 0, 64)};
     const auto result = libbsa::texture::validate_and_order_chunks(unsupported_format, chunks);
     REQUIRE_FALSE(result.has_value());
     CHECK(result.error().code == libbsa::error_code::format_error);
   }
 
-  SECTION("impossible raw byte totals are rejected") {
+  SECTION("impossible raw byte totals are rejected")
+  {
     const libbsa::texture::dds_texture_layout layout{
         .width = 4,
         .height = 4,
@@ -378,7 +411,8 @@ TEST_CASE("dds_layout rejects gaps, duplicate coverage, impossible sizes, and un
     CHECK(result.error().code == libbsa::error_code::format_error);
   }
 
-  SECTION("chunk sequences that contradict researched BA2 order are rejected") {
+  SECTION("chunk sequences that contradict researched BA2 order are rejected")
+  {
     const std::array chunks{chunk(1, 1, 8), chunk(0, 0, 8)};
     const auto result = libbsa::texture::validate_and_order_chunks(bc1_two_mips, chunks);
     REQUIRE_FALSE(result.has_value());

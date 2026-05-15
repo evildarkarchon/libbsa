@@ -9,77 +9,91 @@
 #include <string_view>
 #include <vector>
 
-namespace {
+namespace
+{
 
-std::filesystem::path source_root() { return std::filesystem::path{LIBBSA_SOURCE_DIR}; }
+  std::filesystem::path source_root() { return std::filesystem::path{LIBBSA_SOURCE_DIR}; }
 
-std::string read_text_file(const std::filesystem::path& path) {
-  std::ifstream input{path};
-  REQUIRE(input.is_open());
+  std::string read_text_file(const std::filesystem::path &path)
+  {
+    std::ifstream input{path};
+    REQUIRE(input.is_open());
 
-  std::ostringstream buffer;
-  buffer << input.rdbuf();
-  return buffer.str();
-}
-
-std::string function_body(std::string_view source, std::string_view signature, std::string_view next_signature) {
-  const auto start = source.find(signature);
-  REQUIRE(start != std::string_view::npos);
-
-  const auto body_start = source.find('{', start);
-  REQUIRE(body_start != std::string_view::npos);
-
-  const auto end = source.find(next_signature, body_start);
-  REQUIRE(end != std::string_view::npos);
-  return std::string{source.substr(body_start, end - body_start)};
-}
-
-void require_all_tokens(std::string_view text, std::span<const std::string_view> tokens) {
-  for (const auto token : tokens) {
-    INFO("missing token: " << token);
-    REQUIRE(text.find(token) != std::string_view::npos);
+    std::ostringstream buffer;
+    buffer << input.rdbuf();
+    return buffer.str();
   }
-}
 
-void require_absent_tokens(std::string_view text, std::span<const std::string_view> tokens) {
-  for (const auto token : tokens) {
-    INFO("forbidden token: " << token);
-    REQUIRE(text.find(token) == std::string_view::npos);
+  std::string function_body(std::string_view source, std::string_view signature, std::string_view next_signature)
+  {
+    const auto start = source.find(signature);
+    REQUIRE(start != std::string_view::npos);
+
+    const auto body_start = source.find('{', start);
+    REQUIRE(body_start != std::string_view::npos);
+
+    const auto end = source.find(next_signature, body_start);
+    REQUIRE(end != std::string_view::npos);
+    return std::string{source.substr(body_start, end - body_start)};
   }
-}
 
-std::string declaration_block(std::string_view source, std::string_view start_token, std::string_view end_token) {
-  const auto start = source.find(start_token);
-  REQUIRE(start != std::string_view::npos);
-  const auto end = source.find(end_token, start + start_token.size());
-  REQUIRE(end != std::string_view::npos);
-  return std::string{source.substr(start, end - start)};
-}
-
-std::vector<std::string> public_declaration_lines(std::string_view class_public_block) {
-  std::vector<std::string> declarations;
-  std::istringstream lines{std::string{class_public_block}};
-  std::string line;
-  while (std::getline(lines, line)) {
-    const auto first = line.find_first_not_of(" \t");
-    if (first == std::string::npos) {
-      continue;
-    }
-    line.erase(0U, first);
-    if (line.starts_with("///") || line == "public:" || line == "class ba2_dx10_writer {") {
-      continue;
-    }
-    if (line.find(';') != std::string::npos) {
-      declarations.push_back(std::move(line));
+  void require_all_tokens(std::string_view text, std::span<const std::string_view> tokens)
+  {
+    for (const auto token : tokens)
+    {
+      INFO("missing token: " << token);
+      REQUIRE(text.find(token) != std::string_view::npos);
     }
   }
-  return declarations;
-}
+
+  void require_absent_tokens(std::string_view text, std::span<const std::string_view> tokens)
+  {
+    for (const auto token : tokens)
+    {
+      INFO("forbidden token: " << token);
+      REQUIRE(text.find(token) == std::string_view::npos);
+    }
+  }
+
+  std::string declaration_block(std::string_view source, std::string_view start_token, std::string_view end_token)
+  {
+    const auto start = source.find(start_token);
+    REQUIRE(start != std::string_view::npos);
+    const auto end = source.find(end_token, start + start_token.size());
+    REQUIRE(end != std::string_view::npos);
+    return std::string{source.substr(start, end - start)};
+  }
+
+  std::vector<std::string> public_declaration_lines(std::string_view class_public_block)
+  {
+    std::vector<std::string> declarations;
+    std::istringstream lines{std::string{class_public_block}};
+    std::string line;
+    while (std::getline(lines, line))
+    {
+      const auto first = line.find_first_not_of(" \t");
+      if (first == std::string::npos)
+      {
+        continue;
+      }
+      line.erase(0U, first);
+      if (line.starts_with("///") || line == "public:" || line == "class ba2_dx10_writer {")
+      {
+        continue;
+      }
+      if (line.find(';') != std::string::npos)
+      {
+        declarations.push_back(std::move(line));
+      }
+    }
+    return declarations;
+  }
 
 } // namespace
 
 TEST_CASE("writer_hotspot_policy requires TES4 dedupe candidate narrowing before exact equality",
-          "[unit][writer_hotspot_policy]") {
+          "[unit][writer_hotspot_policy]")
+{
   const auto source = read_text_file(source_root() / "src/formats/bsa/tes4_bsa_layout.cpp");
   const auto assign_offsets_body = function_body(source,
                                                  "result<tes4_layout_result> tes4_assign_offsets(",
@@ -122,7 +136,8 @@ TEST_CASE("writer_hotspot_policy requires TES4 dedupe candidate narrowing before
 }
 
 TEST_CASE("writer_hotspot_policy requires BA2 GNRL staged dedupe identity before exact equality",
-          "[unit][writer_hotspot_policy]") {
+          "[unit][writer_hotspot_policy]")
+{
   const auto root = source_root();
   const auto prepare_header = read_text_file(root / "src/formats/ba2/ba2_gnrl_prepare.hpp");
   const auto prepare_source = read_text_file(root / "src/formats/ba2/ba2_gnrl_prepare.cpp");
@@ -166,7 +181,8 @@ TEST_CASE("writer_hotspot_policy requires BA2 GNRL staged dedupe identity before
 }
 
 TEST_CASE("writer_hotspot_policy requires BA2 GNRL disk-source change diagnostics",
-          "[unit][writer_hotspot_policy]") {
+          "[unit][writer_hotspot_policy]")
+{
   const auto layout_source = read_text_file(source_root() / "src/formats/ba2/ba2_gnrl_layout.cpp");
 
   constexpr auto disk_change_evidence = std::to_array<std::string_view>({
@@ -180,7 +196,8 @@ TEST_CASE("writer_hotspot_policy requires BA2 GNRL disk-source change diagnostic
 }
 
 TEST_CASE("writer_hotspot_policy requires truthful BA2 DX10 lifecycle docs",
-          "[unit][writer_hotspot_policy][doc_structure]") {
+          "[unit][writer_hotspot_policy][doc_structure]")
+{
   const auto root = source_root();
   const auto public_header = read_text_file(root / "include/libbsa/writer.hpp");
   const auto target_guide = read_text_file(root / "docs/target-format-guide.md");
@@ -238,7 +255,8 @@ TEST_CASE("writer_hotspot_policy requires truthful BA2 DX10 lifecycle docs",
 }
 
 TEST_CASE("writer_hotspot_policy keeps public BA2 DX10 writer declaration shape stable",
-          "[unit][writer_hotspot_policy][public-api][doc_structure]") {
+          "[unit][writer_hotspot_policy][public-api][doc_structure]")
+{
   const auto public_header = read_text_file(source_root() / "include/libbsa/writer.hpp");
   const auto options_block = declaration_block(
       public_header, "struct ba2_dx10_writer_options {", "/// Per-entry options for BA2 GNRL payload");

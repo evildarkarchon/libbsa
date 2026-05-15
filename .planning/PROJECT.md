@@ -10,15 +10,35 @@ The library reimplements BSArchPro-compatible behavior using clean, idiomatic Wi
 
 libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
 
-## Current Milestone: v1.1 Hardening
+## Current State
 
-**Goal:** Strengthen libbsa's reliability and maintainability by addressing the highest-risk concerns in correctness, internal architecture, hardening coverage, and writer staging/performance without expanding the public product scope.
+**Shipped version:** v1.1 Hardening, archived 2026-05-15.
 
-**Target features:**
-- Fix non-ASCII Windows host-path handling for archive open and validation paths.
-- Refactor fragile reader/parser/preparer hotspots, including repeated public-reader dispatch and oversized format-specific translation units.
-- Reconcile hardening-policy drift and add stronger verification coverage such as sanitizer and/or Release-mode lanes.
-- Reduce high-cost or fragile staging paths such as payload dedupe hotspots and BA2 DX10 temp-file lifecycle risk.
+libbsa now has a shipped complete library baseline plus a shipped hardening milestone. The live planning surface is intentionally compact: v1.0 and v1.1 roadmap, requirements, audit, and phase artifacts are archived under `.planning/milestones/`, and no active milestone is currently defined.
+
+## Next Milestone Goals
+
+The next milestone should be created with `/gsd-new-milestone`, which will define fresh requirements before new phases are added.
+
+Candidate directions remain uncommitted until promoted:
+- Optional sample CLI demonstrating library APIs without becoming the primary product.
+- Public fuzzing harnesses after the strict parser and validation surfaces have settled.
+- Lenient recovery mode for partially corrupt archives.
+- Stable long-term binary ABI policy if libbsa is distributed as a binary package.
+
+<details>
+<summary>Archived v1.1 Hardening Goal</summary>
+
+Strengthen libbsa's reliability and maintainability by addressing the highest-risk concerns in correctness, internal architecture, hardening coverage, and writer staging/performance without expanding the public product scope.
+
+Delivered targets:
+- Fixed non-ASCII Windows host-path handling for archive open, validation, parser, extraction, and reader-surface paths.
+- Refactored fragile reader/parser/preparer hotspots, including repeated public-reader dispatch and oversized format-specific translation units.
+- Reconciled hardening-policy drift and added real Release package-proof and MSVC AddressSanitizer verification lanes.
+- Reduced high-cost or fragile staging paths such as TES4/BA2 GNRL dedupe hotspots and BA2 DX10 temp-file lifecycle risk.
+- Closed the v1.1 audit follow-up with focused Debug and ASan evidence.
+
+</details>
 
 ## Requirements
 
@@ -142,4 +162,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-05-15 after Phase 17.1 audit follow-up verification*
+*Last updated: 2026-05-15 after v1.1 milestone close*

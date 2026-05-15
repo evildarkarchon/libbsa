@@ -20,72 +20,84 @@
 #include <utility>
 #include <vector>
 
-namespace {
+namespace
+{
 
-std::vector<std::byte> lz4_vector() {
-  constexpr std::string_view text = "libbsa lz4 frame and raw block vector";
-  std::vector<std::byte> bytes;
-  for (int repeat = 0; repeat < 8; ++repeat) {
-    std::transform(text.begin(), text.end(), std::back_inserter(bytes), [](char value) { return static_cast<std::byte>(value); });
-  }
-  return bytes;
-}
-
-std::size_t impossible_byte_vector_size() {
-  const auto max_size = std::vector<std::byte>{}.max_size();
-  if (max_size == std::numeric_limits<std::size_t>::max()) {
-    SKIP("byte vector max_size cannot be overflowed on this standard library");
-  }
-  return max_size + 1U;
-}
-
-class recording_sink final : public libbsa::payload_sink {
- public:
-  /// Records each accepted write so tests can verify exact bytes and chunk bounds.
-  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
-    bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
-    write_sizes_.push_back(bytes.size());
-    return bytes.size();
+  std::vector<std::byte> lz4_vector()
+  {
+    constexpr std::string_view text = "libbsa lz4 frame and raw block vector";
+    std::vector<std::byte> bytes;
+    for (int repeat = 0; repeat < 8; ++repeat)
+    {
+      std::transform(text.begin(), text.end(), std::back_inserter(bytes), [](char value)
+                     { return static_cast<std::byte>(value); });
+    }
+    return bytes;
   }
 
-  [[nodiscard]] const std::vector<std::byte>& bytes() const noexcept { return bytes_; }
-  [[nodiscard]] const std::vector<std::size_t>& write_sizes() const noexcept { return write_sizes_; }
-
- private:
-  std::vector<std::byte> bytes_;
-  std::vector<std::size_t> write_sizes_;
-};
-
-class temporary_payload_file final {
- public:
-  /// Writes `bytes` to a unique temporary file for stream-oriented codec tests.
-  explicit temporary_payload_file(std::span<const std::byte> bytes)
-      : path_{std::filesystem::temp_directory_path() /
-              ("libbsa_lz4_codec_" +
-               std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".bin")} {
-    std::ofstream output{path_, std::ios::binary | std::ios::trunc};
-    REQUIRE(output.good());
-    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-    REQUIRE(output.good());
+  std::size_t impossible_byte_vector_size()
+  {
+    const auto max_size = std::vector<std::byte>{}.max_size();
+    if (max_size == std::numeric_limits<std::size_t>::max())
+    {
+      SKIP("byte vector max_size cannot be overflowed on this standard library");
+    }
+    return max_size + 1U;
   }
 
-  temporary_payload_file(const temporary_payload_file&) = delete;
-  temporary_payload_file& operator=(const temporary_payload_file&) = delete;
+  class recording_sink final : public libbsa::payload_sink
+  {
+  public:
+    /// Records each accepted write so tests can verify exact bytes and chunk bounds.
+    libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override
+    {
+      bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
+      write_sizes_.push_back(bytes.size());
+      return bytes.size();
+    }
 
-  ~temporary_payload_file() {
-    std::error_code ignored;
-    std::filesystem::remove(path_, ignored);
-  }
+    [[nodiscard]] const std::vector<std::byte> &bytes() const noexcept { return bytes_; }
+    [[nodiscard]] const std::vector<std::size_t> &write_sizes() const noexcept { return write_sizes_; }
 
-  [[nodiscard]] const std::filesystem::path& path() const noexcept { return path_; }
+  private:
+    std::vector<std::byte> bytes_;
+    std::vector<std::size_t> write_sizes_;
+  };
 
- private:
-  std::filesystem::path path_;
-};
+  class temporary_payload_file final
+  {
+  public:
+    /// Writes `bytes` to a unique temporary file for stream-oriented codec tests.
+    explicit temporary_payload_file(std::span<const std::byte> bytes)
+        : path_{std::filesystem::temp_directory_path() /
+                ("libbsa_lz4_codec_" +
+                 std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".bin")}
+    {
+      std::ofstream output{path_, std::ios::binary | std::ios::trunc};
+      REQUIRE(output.good());
+      output.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+      REQUIRE(output.good());
+    }
+
+    temporary_payload_file(const temporary_payload_file &) = delete;
+    temporary_payload_file &operator=(const temporary_payload_file &) = delete;
+
+    ~temporary_payload_file()
+    {
+      std::error_code ignored;
+      std::filesystem::remove(path_, ignored);
+    }
+
+    [[nodiscard]] const std::filesystem::path &path() const noexcept { return path_; }
+
+  private:
+    std::filesystem::path path_;
+  };
 
 } // namespace
 
-TEST_CASE("lz4_codec frame and raw block round trip independently", "[unit][compression][lz4]") {
+TEST_CASE("lz4_codec frame and raw block round trip independently", "[unit][compression][lz4]")
+{
   const auto original = lz4_vector();
 
   auto frame = libbsa::detail::compress_lz4_frame(original);
@@ -101,7 +113,8 @@ TEST_CASE("lz4_codec frame and raw block round trip independently", "[unit][comp
   REQUIRE(block_decoded.value() == original);
 }
 
-TEST_CASE("lz4_codec rejects malformed frame and raw block payloads", "[unit][malformed][compression][lz4]") {
+TEST_CASE("lz4_codec rejects malformed frame and raw block payloads", "[unit][malformed][compression][lz4]")
+{
   const auto original = lz4_vector();
   auto frame = libbsa::detail::compress_lz4_frame(original).value();
   auto raw_block = libbsa::detail::compress_lz4_block(original).value();
@@ -118,7 +131,8 @@ TEST_CASE("lz4_codec rejects malformed frame and raw block payloads", "[unit][ma
   REQUIRE(bad_block.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("lz4_codec frame exact-to-sink writes bounded chunks", "[unit][compression][lz4][sink]") {
+TEST_CASE("lz4_codec frame exact-to-sink writes bounded chunks", "[unit][compression][lz4][sink]")
+{
   constexpr std::size_t chunk_size = 17U;
   const auto original = lz4_vector();
   auto frame = libbsa::detail::compress_lz4_frame(original);
@@ -138,16 +152,19 @@ TEST_CASE("lz4_codec frame exact-to-sink writes bounded chunks", "[unit][compres
   REQUIRE(decoded);
   REQUIRE(sink.bytes() == original);
   REQUIRE_FALSE(sink.write_sizes().empty());
-  for (const auto write_size : sink.write_sizes()) {
+  for (const auto write_size : sink.write_sizes())
+  {
     REQUIRE(write_size <= chunk_size);
   }
 }
 
 TEST_CASE("lz4_codec frame exact-to-sink rejects malformed and overproducing frames",
-          "[unit][malformed][compression][lz4][sink]") {
+          "[unit][malformed][compression][lz4][sink]")
+{
   const auto original = lz4_vector();
 
-  SECTION("truncated frame") {
+  SECTION("truncated frame")
+  {
     auto frame = libbsa::detail::compress_lz4_frame(original).value();
     frame.resize(frame.size() / 2U);
     temporary_payload_file file{frame};
@@ -162,7 +179,8 @@ TEST_CASE("lz4_codec frame exact-to-sink rejects malformed and overproducing fra
     REQUIRE(decoded.error().code == libbsa::error_code::format_error);
   }
 
-  SECTION("decoded output exceeds metadata") {
+  SECTION("decoded output exceeds metadata")
+  {
     auto frame = libbsa::detail::compress_lz4_frame(original).value();
     temporary_payload_file file{frame};
     std::ifstream input{file.path(), std::ios::binary};
@@ -178,7 +196,8 @@ TEST_CASE("lz4_codec frame exact-to-sink rejects malformed and overproducing fra
     REQUIRE(sink.bytes().size() <= declared_size);
   }
 
-  SECTION("raw LZ4 block is not a frame") {
+  SECTION("raw LZ4 block is not a frame")
+  {
     auto raw_block = libbsa::detail::compress_lz4_block(original).value();
     temporary_payload_file file{raw_block};
     std::ifstream input{file.path(), std::ios::binary};
@@ -193,7 +212,8 @@ TEST_CASE("lz4_codec frame exact-to-sink rejects malformed and overproducing fra
   }
 }
 
-TEST_CASE("lz4_codec rejects cross-format and exact-size mismatches", "[unit][malformed][compression][lz4]") {
+TEST_CASE("lz4_codec rejects cross-format and exact-size mismatches", "[unit][malformed][compression][lz4]")
+{
   const auto original = lz4_vector();
   auto frame = libbsa::detail::compress_lz4_frame(original).value();
   auto raw_block = libbsa::detail::compress_lz4_block(original).value();
@@ -215,7 +235,8 @@ TEST_CASE("lz4_codec rejects cross-format and exact-size mismatches", "[unit][ma
   REQUIRE(block_wrong_size.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("byte_vector helpers translate impossible byte-buffer growth", "[unit][allocation][byte_vector]") {
+TEST_CASE("byte_vector helpers translate impossible byte-buffer growth", "[unit][allocation][byte_vector]")
+{
   const auto impossible_size = impossible_byte_vector_size();
 
   auto allocated = libbsa::detail::make_byte_vector(impossible_size, "test byte allocation");
@@ -234,7 +255,8 @@ TEST_CASE("byte_vector helpers translate impossible byte-buffer growth", "[unit]
   REQUIRE(appended.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("lz4_codec translates impossible output allocations", "[unit][malformed][compression][lz4][allocation]") {
+TEST_CASE("lz4_codec translates impossible output allocations", "[unit][malformed][compression][lz4][allocation]")
+{
   const auto impossible_size = impossible_byte_vector_size();
 
   auto frame = libbsa::detail::decompress_lz4_frame_exact({}, impossible_size);

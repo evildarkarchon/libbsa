@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: milestone_complete
+status: Awaiting next milestone
 stopped_at: Completed 17.1-03-PLAN.md
-last_updated: "2026-05-15T04:53:54.324Z"
-last_activity: 2026-05-15
+last_updated: "2026-05-15T05:23:56.996Z"
+last_activity: 2026-05-15 — Milestone v1.1 completed and archived
 progress:
   total_phases: 6
-  completed_phases: 7
+  completed_phases: 6
   total_plans: 20
   completed_plans: 20
-  percent: 117
+  percent: 100
 ---
 
 # Project State
@@ -21,18 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-15)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 17.1 — address-tech-debt-in-planning-v1-1-milestone-audit-md
+**Current focus:** Awaiting next milestone planning via /gsd-new-milestone
 
 ## Current Position
 
-Phase: 17.1
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-05-15
-
-Progress: [██████████] 100%
-
-Current note: Inserted urgent Phase 17.1 to address tech debt from .planning/v1.1-MILESTONE-AUDIT.md.
+Phase: Milestone v1.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-15 — Milestone v1.1 completed and archived
 
 ## Performance Metrics
 
@@ -46,6 +42,7 @@ Current note: Inserted urgent Phase 17.1 to address tech debt from .planning/v1.
 ### Roadmap Evolution
 
 - Phase 17.1 inserted after Phase 17: Address tech debt in @.planning/v1.1-MILESTONE-AUDIT.md (URGENT)
+- Milestone v1.1 archived on 2026-05-15 with roadmap, requirements, audit, and phase artifacts under `.planning/milestones/`.
 
 ### Decisions
 
@@ -106,8 +103,27 @@ None.
 | v2 | Public fuzzing harnesses and lenient corrupt-archive recovery | Tracked in REQUIREMENTS.md future scope | v1.0 close |
 | v2 | Stable long-term binary ABI policy | Tracked in REQUIREMENTS.md future scope | v1.0 close |
 
+### Milestone Close Acknowledgements 2026-05-15
+
+Items acknowledged and deferred at v1.1 milestone close:
+
+| Category | Item | Status |
+|----------|------|--------|
+| quick_task | 260510-7if-declare-libbsa-windows-only-and-remove-l | missing |
+| quick_task | 260510-7x3-fix-package-consumer-smoke-cmake-runtime | missing |
+| quick_task | 260510-8aa-research-and-fix-ba2-gnrl-payload-metada | missing |
+| quick_task | 260513-6nl-i-suspect-that-phase-13-was-not-executed | missing |
+| quick_task | 260513-xar-https-github-com-evildarkarchon-libbsa-b | missing |
+| quick_task | 260514-11b-fix-ba2-gnrl-and-tes4-raw-streaming-to-u | missing |
+| quick_task | 260514-5h7-resolve-tes3-disk-source-paths-and-bsa-b | missing |
+| quick_task | 260514-6lb-phase-16-is-complete-but-the-roadmap-is- | missing |
+
 ## Session Continuity
 
 Last session: 2026-05-15T04:53:45.508Z
 Stopped at: Completed 17.1-03-PLAN.md
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

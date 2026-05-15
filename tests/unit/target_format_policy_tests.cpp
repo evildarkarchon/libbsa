@@ -11,90 +11,102 @@
 #include <utility>
 #include <vector>
 
-namespace {
+namespace
+{
 
-std::filesystem::path source_root() {
-  return std::filesystem::path{LIBBSA_SOURCE_DIR};
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-  std::ifstream stream{path};
-  REQUIRE(stream.is_open());
-
-  std::ostringstream buffer;
-  buffer << stream.rdbuf();
-  return buffer.str();
-}
-
-std::string trim_copy(std::string value) {
-  const auto first = std::find_if(value.begin(), value.end(), [](unsigned char ch) {
-    return !std::isspace(ch);
-  });
-  const auto last = std::find_if(value.rbegin(), value.rend(), [](unsigned char ch) {
-                      return !std::isspace(ch);
-                    }).base();
-
-  if (first >= last) {
-    return {};
+  std::filesystem::path source_root()
+  {
+    return std::filesystem::path{LIBBSA_SOURCE_DIR};
   }
-  return std::string{first, last};
-}
 
-std::vector<std::string> compatibility_warning_codes_from_public_header() {
-  const auto header = read_text_file(source_root() / "include/libbsa/validation.hpp");
-  const auto enum_name = std::string{"enum class compatibility_warning_code"};
-  const auto enum_start = header.find(enum_name);
-  REQUIRE(enum_start != std::string::npos);
+  std::string read_text_file(const std::filesystem::path &path)
+  {
+    std::ifstream stream{path};
+    REQUIRE(stream.is_open());
 
-  const auto body_start = header.find('{', enum_start);
-  REQUIRE(body_start != std::string::npos);
-  const auto body_end = header.find("};", body_start);
-  REQUIRE(body_end != std::string::npos);
-
-  std::vector<std::string> codes;
-  std::istringstream lines{header.substr(body_start + 1, body_end - body_start - 1)};
-  std::string line;
-  while (std::getline(lines, line)) {
-    if (const auto comment = line.find("//"); comment != std::string::npos) {
-      line.erase(comment);
-    }
-    if (const auto comma = line.find(','); comma != std::string::npos) {
-      line.erase(comma);
-    }
-
-    auto code = trim_copy(line);
-    if (!code.empty()) {
-      codes.push_back(std::move(code));
-    }
+    std::ostringstream buffer;
+    buffer << stream.rdbuf();
+    return buffer.str();
   }
-  return codes;
-}
 
-bool guide_has_warning_entry(const std::string& guide, const std::string& code) {
-  return guide.find("### `" + code + "`") != std::string::npos ||
-         guide.find("`" + code + "`") != std::string::npos;
-}
+  std::string trim_copy(std::string value)
+  {
+    const auto first = std::find_if(value.begin(), value.end(), [](unsigned char ch)
+                                    { return !std::isspace(ch); });
+    const auto last = std::find_if(value.rbegin(), value.rend(), [](unsigned char ch)
+                                   { return !std::isspace(ch); })
+                          .base();
+
+    if (first >= last)
+    {
+      return {};
+    }
+    return std::string{first, last};
+  }
+
+  std::vector<std::string> compatibility_warning_codes_from_public_header()
+  {
+    const auto header = read_text_file(source_root() / "include/libbsa/validation.hpp");
+    const auto enum_name = std::string{"enum class compatibility_warning_code"};
+    const auto enum_start = header.find(enum_name);
+    REQUIRE(enum_start != std::string::npos);
+
+    const auto body_start = header.find('{', enum_start);
+    REQUIRE(body_start != std::string::npos);
+    const auto body_end = header.find("};", body_start);
+    REQUIRE(body_end != std::string::npos);
+
+    std::vector<std::string> codes;
+    std::istringstream lines{header.substr(body_start + 1, body_end - body_start - 1)};
+    std::string line;
+    while (std::getline(lines, line))
+    {
+      if (const auto comment = line.find("//"); comment != std::string::npos)
+      {
+        line.erase(comment);
+      }
+      if (const auto comma = line.find(','); comma != std::string::npos)
+      {
+        line.erase(comma);
+      }
+
+      auto code = trim_copy(line);
+      if (!code.empty())
+      {
+        codes.push_back(std::move(code));
+      }
+    }
+    return codes;
+  }
+
+  bool guide_has_warning_entry(const std::string &guide, const std::string &code)
+  {
+    return guide.find("### `" + code + "`") != std::string::npos ||
+           guide.find("`" + code + "`") != std::string::npos;
+  }
 
 } // namespace
 
 TEST_CASE("target_format_policy package consumer examples have docs and CTest smoke gates",
-          "[unit][target_format_policy][package_consumer][doc_structure]") {
+          "[unit][target_format_policy][package_consumer][doc_structure]")
+{
   const auto root = source_root();
   const auto docs = read_text_file(root / "docs/integration-examples.md");
   const auto tests_cmake = read_text_file(root / "tests/CMakeLists.txt");
 
   constexpr std::array<std::string_view, 8> examples{
-    "example_open_list_extract",
-    "example_bulk_extract",
-    "example_create_tes3_bsa",
-    "example_create_tes4_bsa",
-    "example_create_ba2_gnrl",
-    "example_create_ba2_dx10",
-    "example_handle_result_errors",
-    "example_validate_archive",
+      "example_open_list_extract",
+      "example_bulk_extract",
+      "example_create_tes3_bsa",
+      "example_create_tes4_bsa",
+      "example_create_ba2_gnrl",
+      "example_create_ba2_dx10",
+      "example_handle_result_errors",
+      "example_validate_archive",
   };
 
-  for (const auto example : examples) {
+  for (const auto example : examples)
+  {
     INFO("Missing integration example: " << example);
     REQUIRE(docs.find("## `" + std::string{example} + "`") != std::string::npos);
   }
@@ -105,26 +117,28 @@ TEST_CASE("target_format_policy package consumer examples have docs and CTest sm
 }
 
 TEST_CASE("target_format_policy guide covers every supported target format and compression route",
-          "[unit][target_format_policy][doc_structure]") {
+          "[unit][target_format_policy][doc_structure]")
+{
   const auto guide = read_text_file(source_root() / "docs/target-format-guide.md");
 
   constexpr std::array<std::string_view, 13> required_headings{
-    "## TES3 BSA",
-    "## TES4-family BSA v103",
-    "## TES4-family BSA v104",
-    "## Skyrim SE/AE BSA v105",
-    "## Fallout 4 BA2 GNRL",
-    "## Fallout 4 BA2 DX10",
-    "## Starfield BA2 v2 GNRL",
-    "## Starfield BA2 v3 GNRL",
-    "## Starfield BA2 v3 DX10",
-    "## deflate",
-    "## LZ4 frame",
-    "## raw LZ4 block",
-    "## writer target policies",
+      "## TES3 BSA",
+      "## TES4-family BSA v103",
+      "## TES4-family BSA v104",
+      "## Skyrim SE/AE BSA v105",
+      "## Fallout 4 BA2 GNRL",
+      "## Fallout 4 BA2 DX10",
+      "## Starfield BA2 v2 GNRL",
+      "## Starfield BA2 v3 GNRL",
+      "## Starfield BA2 v3 DX10",
+      "## deflate",
+      "## LZ4 frame",
+      "## raw LZ4 block",
+      "## writer target policies",
   };
 
-  for (const auto heading : required_headings) {
+  for (const auto heading : required_headings)
+  {
     INFO("Missing target-format guide heading: " << heading);
     REQUIRE(guide.find(std::string{heading}) != std::string::npos);
   }
@@ -139,7 +153,8 @@ TEST_CASE("target_format_policy guide covers every supported target format and c
 }
 
 TEST_CASE("target_format_policy guide documents public compatibility_warning_code values",
-          "[unit][target_format_policy][validation_policy][doc_structure]") {
+          "[unit][target_format_policy][validation_policy][doc_structure]")
+{
   const auto guide = read_text_file(source_root() / "docs/target-format-guide.md");
   const auto warning_codes = compatibility_warning_codes_from_public_header();
   REQUIRE_FALSE(warning_codes.empty());
@@ -147,37 +162,41 @@ TEST_CASE("target_format_policy guide documents public compatibility_warning_cod
   REQUIRE(guide.find("docs/compatibility-evidence.md") != std::string::npos);
   REQUIRE(guide.find("## compatibility warnings") != std::string::npos);
 
-  for (const auto& code : warning_codes) {
+  for (const auto &code : warning_codes)
+  {
     INFO("Missing target-format warning entry: " << code);
     REQUIRE(guide_has_warning_entry(guide, code));
   }
 }
 
 TEST_CASE("target_format_policy guide documents writer output publication safety",
-          "[unit][target_format_policy][doc_structure][publish]") {
+          "[unit][target_format_policy][doc_structure][publish]")
+{
   const auto guide = read_text_file(source_root() / "docs/target-format-guide.md");
 
   constexpr std::array<std::string_view, 10> required_fragments{
-    "## writer output publication safety",
-    "same-directory temporary output",
-    "writer-owned temporary directory",
-    "overwrite_existing",
-    "regular file",
-    "no-overwrite",
-    "reparse point",
-    "network filesystem",
-    "io_error",
-    "partial archive",
+      "## writer output publication safety",
+      "same-directory temporary output",
+      "writer-owned temporary directory",
+      "overwrite_existing",
+      "regular file",
+      "no-overwrite",
+      "reparse point",
+      "network filesystem",
+      "io_error",
+      "partial archive",
   };
 
-  for (const auto fragment : required_fragments) {
+  for (const auto fragment : required_fragments)
+  {
     INFO("Missing writer publication safety guidance: " << fragment);
     REQUIRE(guide.find(std::string{fragment}) != std::string::npos);
   }
 }
 
 TEST_CASE("target_format_policy guide preserves legal evidence and reference boundaries",
-          "[unit][target_format_policy][fixture][static_boundary][doc_structure]") {
+          "[unit][target_format_policy][fixture][static_boundary][doc_structure]")
+{
   const auto guide = read_text_file(source_root() / "docs/target-format-guide.md");
   const auto fixture_policy = read_text_file(source_root() / "tests/fixtures/README.md");
 

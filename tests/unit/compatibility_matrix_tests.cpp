@@ -11,50 +11,59 @@
 
 #include <nlohmann/json.hpp>
 
-namespace {
+namespace
+{
 
-std::filesystem::path source_root() {
-  return std::filesystem::path{LIBBSA_SOURCE_DIR};
-}
-
-std::filesystem::path generated_archive_dir() {
-  return source_root() / "tests" / "fixtures" / "generated" / "archives";
-}
-
-std::filesystem::path compatibility_matrix_path() {
-  return source_root() / "tests" / "fixtures" / "generated" / "compatibility_matrix.json";
-}
-
-nlohmann::json read_json_file(const std::filesystem::path& path) {
-  std::ifstream stream{path};
-  REQUIRE(stream.is_open());
-  return nlohmann::json::parse(stream);
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-  std::ifstream stream{path};
-  REQUIRE(stream.is_open());
-  return std::string{std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{}};
-}
-
-bool manifest_has_case_id(const nlohmann::json& manifest, std::string_view case_id) {
-  const auto& cases = manifest.at("cases");
-  return std::any_of(cases.begin(), cases.end(), [case_id](const nlohmann::json& test_case) {
-    return test_case.at("id").get<std::string>() == case_id;
-  });
-}
-
-void require_required_matrix_keys(const nlohmann::json& row) {
-  for (const auto key : {"id", "family", "category", "evidence_type", "phase", "expected_error"}) {
-    INFO("matrix row is missing key: " << key);
-    REQUIRE(row.contains(key));
+  std::filesystem::path source_root()
+  {
+    return std::filesystem::path{LIBBSA_SOURCE_DIR};
   }
-}
+
+  std::filesystem::path generated_archive_dir()
+  {
+    return source_root() / "tests" / "fixtures" / "generated" / "archives";
+  }
+
+  std::filesystem::path compatibility_matrix_path()
+  {
+    return source_root() / "tests" / "fixtures" / "generated" / "compatibility_matrix.json";
+  }
+
+  nlohmann::json read_json_file(const std::filesystem::path &path)
+  {
+    std::ifstream stream{path};
+    REQUIRE(stream.is_open());
+    return nlohmann::json::parse(stream);
+  }
+
+  std::string read_text_file(const std::filesystem::path &path)
+  {
+    std::ifstream stream{path};
+    REQUIRE(stream.is_open());
+    return std::string{std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{}};
+  }
+
+  bool manifest_has_case_id(const nlohmann::json &manifest, std::string_view case_id)
+  {
+    const auto &cases = manifest.at("cases");
+    return std::any_of(cases.begin(), cases.end(), [case_id](const nlohmann::json &test_case)
+                       { return test_case.at("id").get<std::string>() == case_id; });
+  }
+
+  void require_required_matrix_keys(const nlohmann::json &row)
+  {
+    for (const auto key : {"id", "family", "category", "evidence_type", "phase", "expected_error"})
+    {
+      INFO("matrix row is missing key: " << key);
+      REQUIRE(row.contains(key));
+    }
+  }
 
 } // namespace
 
 TEST_CASE("compatibility_matrix schema spans malformed families and risk categories",
-          "[unit][fixture][malformed][compatibility_matrix]") {
+          "[unit][fixture][malformed][compatibility_matrix]")
+{
   REQUIRE(std::filesystem::is_regular_file(compatibility_matrix_path()));
   const auto matrix = read_json_file(compatibility_matrix_path());
 
@@ -74,7 +83,8 @@ TEST_CASE("compatibility_matrix schema spans malformed families and risk categor
   std::set<std::string> observed_families;
   std::set<std::string> observed_categories;
 
-  for (const auto& row : matrix.at("rows")) {
+  for (const auto &row : matrix.at("rows"))
+  {
     require_required_matrix_keys(row);
 
     const auto family = row.at("family").get<std::string>();
@@ -92,33 +102,39 @@ TEST_CASE("compatibility_matrix schema spans malformed families and risk categor
     observed_categories.insert(category);
   }
 
-  for (const auto& family : required_families) {
+  for (const auto &family : required_families)
+  {
     INFO("missing compatibility_matrix family: " << family);
     CHECK(observed_families.contains(family));
   }
-  for (const auto& category : required_categories) {
+  for (const auto &category : required_categories)
+  {
     INFO("missing compatibility_matrix category: " << category);
     CHECK(observed_categories.contains(category));
   }
 }
 
 TEST_CASE("compatibility_matrix evidence references resolve to manifests or test tokens",
-          "[unit][fixture][malformed][compatibility_matrix]") {
+          "[unit][fixture][malformed][compatibility_matrix]")
+{
   REQUIRE(std::filesystem::is_regular_file(compatibility_matrix_path()));
   const auto matrix = read_json_file(compatibility_matrix_path());
 
   bool observed_manifest_evidence = false;
   bool observed_test_evidence = false;
 
-  for (const auto& row : matrix.at("rows")) {
+  for (const auto &row : matrix.at("rows"))
+  {
     require_required_matrix_keys(row);
     const auto row_id = row.at("id").get<std::string>();
     const auto evidence_type = row.at("evidence_type").get<std::string>();
     INFO("compatibility_matrix evidence row: " << row_id);
 
-    if (evidence_type == "manifest") {
+    if (evidence_type == "manifest")
+    {
       observed_manifest_evidence = true;
-      for (const auto key : {"archive", "manifest", "case_id"}) {
+      for (const auto key : {"archive", "manifest", "case_id"})
+      {
         INFO("manifest-backed row is missing key: " << key);
         REQUIRE(row.contains(key));
       }
@@ -137,7 +153,8 @@ TEST_CASE("compatibility_matrix evidence references resolve to manifests or test
 
     REQUIRE(evidence_type == "test");
     observed_test_evidence = true;
-    for (const auto key : {"test_file", "test_name"}) {
+    for (const auto key : {"test_file", "test_name"})
+    {
       INFO("test-backed row is missing key: " << key);
       REQUIRE(row.contains(key));
     }

@@ -9,39 +9,47 @@
 #include <string>
 #include <string_view>
 
-namespace {
+namespace
+{
 
-std::filesystem::path source_root() {
-  return std::filesystem::path{LIBBSA_SOURCE_DIR};
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-  std::ifstream stream{path};
-  REQUIRE(stream.is_open());
-
-  std::ostringstream buffer;
-  buffer << stream.rdbuf();
-  return buffer.str();
-}
-
-void require_all_tokens(std::string_view text, std::initializer_list<std::string_view> tokens) {
-  for (const auto token : tokens) {
-    INFO("Missing token: " << token);
-    REQUIRE(text.find(token) != std::string_view::npos);
+  std::filesystem::path source_root()
+  {
+    return std::filesystem::path{LIBBSA_SOURCE_DIR};
   }
-}
 
-void require_no_tokens(std::string_view text, std::initializer_list<std::string_view> tokens) {
-  for (const auto token : tokens) {
-    INFO("Forbidden token: " << token);
-    REQUIRE(text.find(token) == std::string_view::npos);
+  std::string read_text_file(const std::filesystem::path &path)
+  {
+    std::ifstream stream{path};
+    REQUIRE(stream.is_open());
+
+    std::ostringstream buffer;
+    buffer << stream.rdbuf();
+    return buffer.str();
   }
-}
+
+  void require_all_tokens(std::string_view text, std::initializer_list<std::string_view> tokens)
+  {
+    for (const auto token : tokens)
+    {
+      INFO("Missing token: " << token);
+      REQUIRE(text.find(token) != std::string_view::npos);
+    }
+  }
+
+  void require_no_tokens(std::string_view text, std::initializer_list<std::string_view> tokens)
+  {
+    for (const auto token : tokens)
+    {
+      INFO("Forbidden token: " << token);
+      REQUIRE(text.find(token) == std::string_view::npos);
+    }
+  }
 
 } // namespace
 
 TEST_CASE("benchmark_policy static boundary exposes explicit opt-in benchmark report tooling",
-          "[unit][benchmark_policy][static_boundary]") {
+          "[unit][benchmark_policy][static_boundary]")
+{
   const auto root = source_root();
   const auto cmake = read_text_file(root / "CMakeLists.txt");
   const auto tests_cmake = read_text_file(root / "tests" / "CMakeLists.txt");
@@ -57,7 +65,8 @@ TEST_CASE("benchmark_policy static boundary exposes explicit opt-in benchmark re
 }
 
 TEST_CASE("build_policy static boundary lets BUILD_TESTING disable test dependency discovery",
-          "[unit][build_policy][static_boundary]") {
+          "[unit][build_policy][static_boundary]")
+{
   const auto cmake = read_text_file(source_root() / "CMakeLists.txt");
 
   require_all_tokens(cmake,
@@ -70,7 +79,8 @@ TEST_CASE("build_policy static boundary lets BUILD_TESTING disable test dependen
 }
 
 TEST_CASE("benchmark_policy runner preserves required report scenario structure",
-          "[unit][benchmark_policy][doc_structure]") {
+          "[unit][benchmark_policy][doc_structure]")
+{
   const auto benchmark_source = read_text_file(source_root() / "benchmarks" / "libbsa_benchmarks.cpp");
 
   require_all_tokens(benchmark_source,
@@ -92,7 +102,8 @@ TEST_CASE("benchmark_policy runner preserves required report scenario structure"
 }
 
 TEST_CASE("benchmark_policy README documents commands schema and data policy",
-          "[unit][benchmark_policy][doc_structure]") {
+          "[unit][benchmark_policy][doc_structure]")
+{
   const auto readme = read_text_file(source_root() / "benchmarks" / "README.md");
 
   require_all_tokens(readme,
@@ -112,7 +123,8 @@ TEST_CASE("benchmark_policy README documents commands schema and data policy",
 }
 
 TEST_CASE("benchmark_policy static boundary keeps report generation out of default CTest timing gates",
-          "[unit][benchmark_policy][static_boundary]") {
+          "[unit][benchmark_policy][static_boundary]")
+{
   const auto root = source_root();
   const auto cmake = read_text_file(root / "CMakeLists.txt");
   const auto tests_cmake = read_text_file(root / "tests" / "CMakeLists.txt");
@@ -128,7 +140,8 @@ TEST_CASE("benchmark_policy static boundary keeps report generation out of defau
 }
 
 TEST_CASE("benchmark_policy static boundary rejects fixed speedup threshold gates",
-          "[unit][benchmark_policy][static_boundary]") {
+          "[unit][benchmark_policy][static_boundary]")
+{
   const auto root = source_root();
   const std::array files{
       root / "CMakeLists.txt",
@@ -137,16 +150,24 @@ TEST_CASE("benchmark_policy static boundary rejects fixed speedup threshold gate
       root / "tests" / "unit" / "benchmark_policy_tests.cpp",
   };
 
-  for (const auto& file : files) {
+  for (const auto &file : files)
+  {
     const auto text = read_text_file(file);
     INFO("file: " << file.string());
     require_no_tokens(text,
-                      {"REQUIRE(" "speedup",
-                       "CHECK(" "speedup",
-                       "REQUIRE(.*" "speedup",
-                       "CHECK(.*" "speedup",
-                       "speedup " ">=",
-                       "speedup" "_threshold",
-                       "Google " "Benchmark"});
+                      {"REQUIRE("
+                       "speedup",
+                       "CHECK("
+                       "speedup",
+                       "REQUIRE(.*"
+                       "speedup",
+                       "CHECK(.*"
+                       "speedup",
+                       "speedup "
+                       ">=",
+                       "speedup"
+                       "_threshold",
+                       "Google "
+                       "Benchmark"});
   }
 }

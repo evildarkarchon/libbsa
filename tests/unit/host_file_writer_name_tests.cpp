@@ -7,78 +7,82 @@
 #include <string>
 #include <string_view>
 
-namespace {
+namespace
+{
 
-std::filesystem::path source_root() { return std::filesystem::path{LIBBSA_SOURCE_DIR}; }
+  std::filesystem::path source_root() { return std::filesystem::path{LIBBSA_SOURCE_DIR}; }
 
-std::string read_text_file(const std::filesystem::path& path) {
-  std::ifstream input{path};
-  REQUIRE(input.is_open());
+  std::string read_text_file(const std::filesystem::path &path)
+  {
+    std::ifstream input{path};
+    REQUIRE(input.is_open());
 
-  std::ostringstream buffer;
-  buffer << input.rdbuf();
-  return buffer.str();
-}
+    std::ostringstream buffer;
+    buffer << input.rdbuf();
+    return buffer.str();
+  }
 
-struct writer_host_path_inventory_case {
-  std::string_view family;
-  std::string_view source_file;
-  std::string_view source_token;
-  std::string_view output_file;
-  std::string_view output_token;
-  std::string_view finalization_file;
-  std::string_view finalization_token;
-  std::string_view dedupe_file;
-  std::string_view dedupe_token;
-  std::string_view dedupe_absent_token;
-};
+  struct writer_host_path_inventory_case
+  {
+    std::string_view family;
+    std::string_view source_file;
+    std::string_view source_token;
+    std::string_view output_file;
+    std::string_view output_token;
+    std::string_view finalization_file;
+    std::string_view finalization_token;
+    std::string_view dedupe_file;
+    std::string_view dedupe_token;
+    std::string_view dedupe_absent_token;
+  };
 
-constexpr auto writer_host_path_inventory_cases = std::to_array<writer_host_path_inventory_case>({
-    {"tes3_bsa",
-     "src/formats/bsa/tes3_bsa_prepare.cpp",
-     "resolve_tes3_source_path(entry.host_path)",
-     "src/formats/bsa/tes3_bsa_writer.cpp",
-     "output_path.value().resolved",
-     "src/formats/bsa/tes3_bsa_serialize.cpp",
-     "open_host_file(host_path",
-     "src/formats/bsa/tes3_bsa_writer.cpp",
-     "",
-     "deduplicate_payloads"},
-    {"tes4_bsa",
-     "src/formats/bsa/tes4_bsa_prepare.cpp",
-     "resolve_tes4_source_path(entry.host_path)",
-     "src/formats/bsa/tes4_bsa_writer.cpp",
-     "output_path.value().resolved",
-     "src/formats/bsa/tes4_bsa_serialize.cpp",
-     "open_host_file(host_path",
-     "src/formats/bsa/tes4_bsa_layout.cpp",
-     "resolve_tes4_dedupe_source_path(entry.raw_disk_host_path)",
-     ""},
-    {"ba2_gnrl",
-     "src/formats/ba2/ba2_gnrl_prepare.cpp",
-     "resolve_ba2_gnrl_source_path(entry.host_path)",
-     "src/formats/ba2/ba2_gnrl_writer.cpp",
-     "output_path.value().resolved",
-     "src/formats/ba2/ba2_gnrl_serialize.cpp",
-     "open_host_file(host_path",
-     "src/formats/ba2/ba2_gnrl_layout.cpp",
-     "compare_disk_payloads(lhs.resolved_source_path, rhs.resolved_source_path",
-     ""},
-    {"ba2_dx10",
-     "src/formats/ba2/ba2_dx10_snapshot_builder.cpp",
-     "resolve_host_file_path(dds_host_path)",
-     "src/formats/ba2/ba2_dx10_writer.cpp",
-     "output_path.value().resolved",
-     "src/formats/ba2/ba2_dx10_serialize.cpp",
-     "chunk.stored_payload",
-     "src/formats/ba2/ba2_dx10_serialize.cpp",
-     "chunk.stored_payload",
-     "dds_host_path"},
-});
+  constexpr auto writer_host_path_inventory_cases = std::to_array<writer_host_path_inventory_case>({
+      {"tes3_bsa",
+       "src/formats/bsa/tes3_bsa_prepare.cpp",
+       "resolve_tes3_source_path(entry.host_path)",
+       "src/formats/bsa/tes3_bsa_writer.cpp",
+       "output_path.value().resolved",
+       "src/formats/bsa/tes3_bsa_serialize.cpp",
+       "open_host_file(host_path",
+       "src/formats/bsa/tes3_bsa_writer.cpp",
+       "",
+       "deduplicate_payloads"},
+      {"tes4_bsa",
+       "src/formats/bsa/tes4_bsa_prepare.cpp",
+       "resolve_tes4_source_path(entry.host_path)",
+       "src/formats/bsa/tes4_bsa_writer.cpp",
+       "output_path.value().resolved",
+       "src/formats/bsa/tes4_bsa_serialize.cpp",
+       "open_host_file(host_path",
+       "src/formats/bsa/tes4_bsa_layout.cpp",
+       "resolve_tes4_dedupe_source_path(entry.raw_disk_host_path)",
+       ""},
+      {"ba2_gnrl",
+       "src/formats/ba2/ba2_gnrl_prepare.cpp",
+       "resolve_ba2_gnrl_source_path(entry.host_path)",
+       "src/formats/ba2/ba2_gnrl_writer.cpp",
+       "output_path.value().resolved",
+       "src/formats/ba2/ba2_gnrl_serialize.cpp",
+       "open_host_file(host_path",
+       "src/formats/ba2/ba2_gnrl_layout.cpp",
+       "compare_disk_payloads(lhs.resolved_source_path, rhs.resolved_source_path",
+       ""},
+      {"ba2_dx10",
+       "src/formats/ba2/ba2_dx10_snapshot_builder.cpp",
+       "resolve_host_file_path(dds_host_path)",
+       "src/formats/ba2/ba2_dx10_writer.cpp",
+       "output_path.value().resolved",
+       "src/formats/ba2/ba2_dx10_serialize.cpp",
+       "chunk.stored_payload",
+       "src/formats/ba2/ba2_dx10_serialize.cpp",
+       "chunk.stored_payload",
+       "dds_host_path"},
+  });
 
 } // namespace
 
-TEST_CASE("writer call sites use the neutral host_file helper seam", "[unit][host_file]") {
+TEST_CASE("writer call sites use the neutral host_file helper seam", "[unit][host_file]")
+{
   const auto root = source_root();
   const auto legacy_include = std::string{"writer_"} + "disk_source";
   const auto legacy_exact = std::string{"read_"} + "disk_source_";
@@ -92,7 +96,8 @@ TEST_CASE("writer call sites use the neutral host_file helper seam", "[unit][hos
       {"src/formats/ba2/ba2_dx10_snapshot_builder.cpp", "ba2_dx10_dds_source_context"},
   });
 
-  for (const auto& [relative_path, context_name] : cases) {
+  for (const auto &[relative_path, context_name] : cases)
+  {
     const auto text = read_text_file(root / relative_path);
     INFO("Source file: " << relative_path);
     REQUIRE(text.find("#include <detail/host_file.hpp>") != std::string::npos);
@@ -105,7 +110,8 @@ TEST_CASE("writer call sites use the neutral host_file helper seam", "[unit][hos
   }
 }
 
-TEST_CASE("host_file helper surface exposes the shared host_file_path contract", "[unit][host_file]") {
+TEST_CASE("host_file helper surface exposes the shared host_file_path contract", "[unit][host_file]")
+{
   const auto root = source_root();
   constexpr auto contract_files = std::to_array<std::string_view>({
       "src/detail/host_file.hpp",
@@ -113,7 +119,8 @@ TEST_CASE("host_file helper surface exposes the shared host_file_path contract",
       "src/detail/host_file_path.hpp",
   });
 
-  for (const auto relative_path : contract_files) {
+  for (const auto relative_path : contract_files)
+  {
     const auto text = read_text_file(root / relative_path);
     INFO("Source file: " << relative_path);
     REQUIRE(text.find("host_file_path") != std::string::npos);
@@ -123,7 +130,8 @@ TEST_CASE("host_file helper surface exposes the shared host_file_path contract",
   REQUIRE(path_header.find("resolve_host_file_path(") != std::string::npos);
 }
 
-TEST_CASE("migrated writer call sites build host_file_path contracts before shared helper reads", "[unit][host_file]") {
+TEST_CASE("migrated writer call sites build host_file_path contracts before shared helper reads", "[unit][host_file]")
+{
   const auto root = source_root();
   constexpr auto resolved_contract_cases = std::to_array<std::pair<std::string_view, std::string_view>>({
       {"src/formats/bsa/tes3_bsa_prepare.cpp", "resolve_tes3_source_path(entry.host_path)"},
@@ -133,7 +141,8 @@ TEST_CASE("migrated writer call sites build host_file_path contracts before shar
       {"src/formats/ba2/ba2_dx10_snapshot_builder.cpp", "resolve_host_file_path(dds_host_path)"},
   });
 
-  for (const auto& [relative_path, expected_text] : resolved_contract_cases) {
+  for (const auto &[relative_path, expected_text] : resolved_contract_cases)
+  {
     const auto text = read_text_file(root / relative_path);
     INFO("Source file: " << relative_path);
     REQUIRE(text.find("host_file_path") != std::string::npos);
@@ -141,13 +150,15 @@ TEST_CASE("migrated writer call sites build host_file_path contracts before shar
   }
 }
 
-TEST_CASE("raw writer serializers reopen disk sources through the shared host_file seam", "[unit][host_file]") {
+TEST_CASE("raw writer serializers reopen disk sources through the shared host_file seam", "[unit][host_file]")
+{
   const auto root = source_root();
   constexpr auto serializer_sources = std::to_array<std::string_view>({"src/formats/ba2/ba2_gnrl_serialize.cpp",
                                                                        "src/formats/bsa/tes3_bsa_serialize.cpp",
                                                                        "src/formats/bsa/tes4_bsa_serialize.cpp"});
 
-  for (const auto relative_path : serializer_sources) {
+  for (const auto relative_path : serializer_sources)
+  {
     const auto text = read_text_file(root / relative_path);
     INFO("Source file: " << relative_path);
     REQUIRE(text.find("open_host_file(") != std::string::npos);
@@ -155,14 +166,16 @@ TEST_CASE("raw writer serializers reopen disk sources through the shared host_fi
   }
 }
 
-TEST_CASE("public writer output paths resolve UTF-8 text before native publish", "[unit][host_file]") {
+TEST_CASE("public writer output paths resolve UTF-8 text before native publish", "[unit][host_file]")
+{
   const auto root = source_root();
   constexpr auto writer_sources = std::to_array<std::string_view>({"src/formats/bsa/tes3_bsa_writer.cpp",
                                                                    "src/formats/bsa/tes4_bsa_writer.cpp",
                                                                    "src/formats/ba2/ba2_gnrl_writer.cpp",
                                                                    "src/formats/ba2/ba2_dx10_writer.cpp"});
 
-  for (const auto relative_path : writer_sources) {
+  for (const auto relative_path : writer_sources)
+  {
     const auto text = read_text_file(root / relative_path);
     INFO("Source file: " << relative_path);
     REQUIRE(text.find("resolve_host_file_path(output_host_path)") != std::string::npos);
@@ -171,7 +184,8 @@ TEST_CASE("public writer output paths resolve UTF-8 text before native publish",
 }
 
 TEST_CASE("host_file writer host-path inventory covers source output finalization and dedupe dispositions",
-          "[unit][host_file]") {
+          "[unit][host_file]")
+{
   const auto root = source_root();
   const auto publish_text = read_text_file(root / "src/detail/writer_publish.cpp");
   const auto publish_header_text = read_text_file(root / "src/detail/writer_publish.hpp");
@@ -179,7 +193,8 @@ TEST_CASE("host_file writer host-path inventory covers source output finalizatio
   REQUIRE(publish_text.find("publish_completed_writer_output") != std::string::npos);
   REQUIRE(publish_text.find("refuses to replace reparse-point output host path") != std::string::npos);
 
-  for (const auto& inventory : writer_host_path_inventory_cases) {
+  for (const auto &inventory : writer_host_path_inventory_cases)
+  {
     INFO("Writer family: " << inventory.family);
 
     const auto source_text = read_text_file(root / inventory.source_file);
@@ -200,17 +215,20 @@ TEST_CASE("host_file writer host-path inventory covers source output finalizatio
 
     const auto dedupe_text = read_text_file(root / inventory.dedupe_file);
     INFO("Dedupe path file: " << inventory.dedupe_file);
-    if (!inventory.dedupe_token.empty()) {
+    if (!inventory.dedupe_token.empty())
+    {
       REQUIRE(dedupe_text.find(inventory.dedupe_token) != std::string::npos);
     }
-    if (!inventory.dedupe_absent_token.empty()) {
+    if (!inventory.dedupe_absent_token.empty())
+    {
       REQUIRE(dedupe_text.find(inventory.dedupe_absent_token) == std::string::npos);
     }
   }
 }
 
 TEST_CASE("host_file removed host-path diagnostic state stays absent from live source and test contracts",
-          "[unit][host_file]") {
+          "[unit][host_file]")
+{
   const auto root = source_root();
   constexpr auto live_contract_files = std::to_array<std::string_view>({
       "src/detail/host_file_path.hpp",
@@ -224,21 +242,24 @@ TEST_CASE("host_file removed host-path diagnostic state stays absent from live s
   });
   const auto removed_member = std::string{"original_"} + "utf8";
 
-  for (const auto relative_path : live_contract_files) {
+  for (const auto relative_path : live_contract_files)
+  {
     const auto text = read_text_file(root / relative_path);
     INFO("Source file: " << relative_path);
     REQUIRE(text.find(removed_member) == std::string::npos);
   }
 }
 
-TEST_CASE("archive_reader open stores the shared host_file_path contract", "[unit][host_file]") {
+TEST_CASE("archive_reader open stores the shared host_file_path contract", "[unit][host_file]")
+{
   const auto archive_text = read_text_file(source_root() / "src/archive.cpp");
 
   REQUIRE(archive_text.find("detail::host_file_path host_path;") != std::string::npos);
   REQUIRE(archive_text.find("resolve_host_file_path(host_path)") != std::string::npos);
 }
 
-TEST_CASE("archive_reader open routes detection and size probes through host_file helpers", "[unit][host_file]") {
+TEST_CASE("archive_reader open routes detection and size probes through host_file helpers", "[unit][host_file]")
+{
   const auto archive_text = read_text_file(source_root() / "src/archive.cpp");
 
   REQUIRE(archive_text.find("read_host_file_prefix(") != std::string::npos);
@@ -248,14 +269,16 @@ TEST_CASE("archive_reader open routes detection and size probes through host_fil
           std::string::npos);
 }
 
-TEST_CASE("parser entry declarations consume the shared host-file path contract", "[unit][host_file]") {
+TEST_CASE("parser entry declarations consume the shared host-file path contract", "[unit][host_file]")
+{
   const auto root = source_root();
   constexpr auto parser_headers = std::to_array<std::string_view>({"src/formats/bsa/tes3_bsa_parser.hpp",
                                                                    "src/formats/bsa/tes4_bsa_parser.hpp",
                                                                    "src/formats/ba2/ba2_gnrl_parser.hpp",
                                                                    "src/formats/ba2/ba2_dx10_parser.hpp"});
 
-  for (const auto relative_path : parser_headers) {
+  for (const auto relative_path : parser_headers)
+  {
     const auto text = read_text_file(root / relative_path);
     INFO("Source file: " << relative_path);
     REQUIRE(text.find("host_file_path") != std::string::npos);
@@ -263,14 +286,16 @@ TEST_CASE("parser entry declarations consume the shared host-file path contract"
   }
 }
 
-TEST_CASE("parser archive-file opens use the shared host_file seam", "[unit][host_file]") {
+TEST_CASE("parser archive-file opens use the shared host_file seam", "[unit][host_file]")
+{
   const auto root = source_root();
   constexpr auto parser_sources = std::to_array<std::string_view>({"src/formats/bsa/tes3_bsa_parser.cpp",
                                                                    "src/formats/bsa/tes4_bsa_parser.cpp",
                                                                    "src/formats/ba2/ba2_gnrl_parser.cpp",
                                                                    "src/formats/ba2/ba2_dx10_parser.cpp"});
 
-  for (const auto relative_path : parser_sources) {
+  for (const auto relative_path : parser_sources)
+  {
     const auto text = read_text_file(root / relative_path);
     INFO("Source file: " << relative_path);
     REQUIRE(text.find("open_host_file(") != std::string::npos);
@@ -278,14 +303,16 @@ TEST_CASE("parser archive-file opens use the shared host_file seam", "[unit][hos
   }
 }
 
-TEST_CASE("reader reopen declarations consume the shared host_file_path contract", "[unit][host_file]") {
+TEST_CASE("reader reopen declarations consume the shared host_file_path contract", "[unit][host_file]")
+{
   const auto root = source_root();
   constexpr auto reader_headers = std::to_array<std::string_view>({"src/formats/bsa/tes3_bsa_reader.hpp",
                                                                    "src/formats/bsa/tes4_bsa_reader.hpp",
                                                                    "src/formats/ba2/ba2_gnrl_reader.hpp",
                                                                    "src/formats/ba2/ba2_dx10_reader.hpp"});
 
-  for (const auto relative_path : reader_headers) {
+  for (const auto relative_path : reader_headers)
+  {
     const auto text = read_text_file(root / relative_path);
     INFO("Source file: " << relative_path);
     REQUIRE(text.find("host_file_path") != std::string::npos);
@@ -293,14 +320,16 @@ TEST_CASE("reader reopen declarations consume the shared host_file_path contract
   }
 }
 
-TEST_CASE("reader reopen implementations use open_host_file instead of raw caller text", "[unit][host_file]") {
+TEST_CASE("reader reopen implementations use open_host_file instead of raw caller text", "[unit][host_file]")
+{
   const auto root = source_root();
   constexpr auto reader_sources = std::to_array<std::string_view>({"src/formats/bsa/tes3_bsa_reader.cpp",
                                                                    "src/formats/bsa/tes4_bsa_reader.cpp",
                                                                    "src/formats/ba2/ba2_gnrl_reader.cpp",
                                                                    "src/formats/ba2/ba2_dx10_reader.cpp"});
 
-  for (const auto relative_path : reader_sources) {
+  for (const auto relative_path : reader_sources)
+  {
     const auto text = read_text_file(root / relative_path);
     INFO("Source file: " << relative_path);
     REQUIRE(text.find("open_host_file(") != std::string::npos);
@@ -308,7 +337,8 @@ TEST_CASE("reader reopen implementations use open_host_file instead of raw calle
   }
 }
 
-TEST_CASE("archive_reader extraction dispatch reuses the stored resolved host path", "[unit][host_file]") {
+TEST_CASE("archive_reader extraction dispatch reuses the stored resolved host path", "[unit][host_file]")
+{
   const auto archive_text = read_text_file(source_root() / "src/archive.cpp");
 
   REQUIRE(archive_text.find("detail::host_file_path") != std::string::npos);
@@ -317,7 +347,8 @@ TEST_CASE("archive_reader extraction dispatch reuses the stored resolved host pa
   REQUIRE(archive_text.find(removed_member_access) == std::string::npos);
 }
 
-TEST_CASE("validation setup relies on archive_reader open instead of a duplicate readability preflight", "[unit][host_file]") {
+TEST_CASE("validation setup relies on archive_reader open instead of a duplicate readability preflight", "[unit][host_file]")
+{
   const auto validation_text = read_text_file(source_root() / "src/validation.cpp");
 
   REQUIRE(validation_text.find("archive_reader::open(host_path)") != std::string::npos);
@@ -325,7 +356,8 @@ TEST_CASE("validation setup relies on archive_reader open instead of a duplicate
   REQUIRE(validation_text.find("std::ifstream input{std::string{host_path}, std::ios::binary}") == std::string::npos);
 }
 
-TEST_CASE("host_file writer host-path inventory policy is represented by an explicit matrix", "[unit][host_file]") {
+TEST_CASE("host_file writer host-path inventory policy is represented by an explicit matrix", "[unit][host_file]")
+{
   const auto policy_text = read_text_file(source_root() / "tests/unit/host_file_writer_name_tests.cpp");
   const auto matrix_token = std::string{"writer_host_path_"} + "inventory_cases";
 

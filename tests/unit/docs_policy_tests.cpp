@@ -9,57 +9,68 @@
 #include <string>
 #include <string_view>
 
-namespace {
+namespace
+{
 
-std::filesystem::path source_root() {
-  return std::filesystem::path{LIBBSA_SOURCE_DIR};
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-  std::ifstream stream{path};
-  REQUIRE(stream.is_open());
-
-  std::ostringstream buffer;
-  buffer << stream.rdbuf();
-  return buffer.str();
-}
-
-void require_all_tokens(std::string_view text, std::initializer_list<std::string_view> tokens) {
-  for (const auto token : tokens) {
-    INFO("Missing token: " << token);
-    REQUIRE(text.find(token) != std::string_view::npos);
+  std::filesystem::path source_root()
+  {
+    return std::filesystem::path{LIBBSA_SOURCE_DIR};
   }
-}
 
-void require_no_tokens(std::string_view text, std::initializer_list<std::string_view> tokens) {
-  for (const auto token : tokens) {
-    INFO("Forbidden token: " << token);
-    REQUIRE(text.find(token) == std::string_view::npos);
+  std::string read_text_file(const std::filesystem::path &path)
+  {
+    std::ifstream stream{path};
+    REQUIRE(stream.is_open());
+
+    std::ostringstream buffer;
+    buffer << stream.rdbuf();
+    return buffer.str();
   }
-}
 
-void require_no_planning_identifier_patterns(std::string_view relative_path, const std::string& text) {
-  struct ForbiddenPattern {
-    std::string_view family;
-    std::regex pattern;
-  };
-
-  const auto patterns = std::array{
-      ForbiddenPattern{"phase label", std::regex{R"(\bphase\s+\d+\b)", std::regex_constants::icase}},
-      ForbiddenPattern{"milestone label", std::regex{R"(\bmilestone\s+\d+\b)", std::regex_constants::icase}},
-      ForbiddenPattern{"decision ID", std::regex{R"(\bD-\d+\b)", std::regex_constants::icase}},
-  };
-
-  for (const auto& forbidden : patterns) {
-    INFO("Public documentation file: " << relative_path);
-    INFO("Forbidden planning token family: " << forbidden.family);
-    REQUIRE_FALSE(std::regex_search(text, forbidden.pattern));
+  void require_all_tokens(std::string_view text, std::initializer_list<std::string_view> tokens)
+  {
+    for (const auto token : tokens)
+    {
+      INFO("Missing token: " << token);
+      REQUIRE(text.find(token) != std::string_view::npos);
+    }
   }
-}
+
+  void require_no_tokens(std::string_view text, std::initializer_list<std::string_view> tokens)
+  {
+    for (const auto token : tokens)
+    {
+      INFO("Forbidden token: " << token);
+      REQUIRE(text.find(token) == std::string_view::npos);
+    }
+  }
+
+  void require_no_planning_identifier_patterns(std::string_view relative_path, const std::string &text)
+  {
+    struct ForbiddenPattern
+    {
+      std::string_view family;
+      std::regex pattern;
+    };
+
+    const auto patterns = std::array{
+        ForbiddenPattern{"phase label", std::regex{R"(\bphase\s+\d+\b)", std::regex_constants::icase}},
+        ForbiddenPattern{"milestone label", std::regex{R"(\bmilestone\s+\d+\b)", std::regex_constants::icase}},
+        ForbiddenPattern{"decision ID", std::regex{R"(\bD-\d+\b)", std::regex_constants::icase}},
+    };
+
+    for (const auto &forbidden : patterns)
+    {
+      INFO("Public documentation file: " << relative_path);
+      INFO("Forbidden planning token family: " << forbidden.family);
+      REQUIRE_FALSE(std::regex_search(text, forbidden.pattern));
+    }
+  }
 
 } // namespace
 
-TEST_CASE("docs_policy static boundary keeps public API documentation optional", "[unit][docs_policy][static_boundary]") {
+TEST_CASE("docs_policy static boundary keeps public API documentation optional", "[unit][docs_policy][static_boundary]")
+{
   const auto cmake = read_text_file(source_root() / "CMakeLists.txt");
 
   require_all_tokens(cmake,
@@ -74,7 +85,8 @@ TEST_CASE("docs_policy static boundary keeps public API documentation optional",
 }
 
 TEST_CASE("docs_policy Doxyfile boundary documents public headers and excludes private inputs",
-          "[unit][docs_policy][static_boundary]") {
+          "[unit][docs_policy][static_boundary]")
+{
   const auto doxyfile = read_text_file(source_root() / "docs" / "Doxyfile.in");
 
   require_all_tokens(doxyfile,
@@ -99,7 +111,8 @@ TEST_CASE("docs_policy Doxyfile boundary documents public headers and excludes p
                      "WARN_AS_ERROR = YES"});
 }
 
-TEST_CASE("docs_policy API mainpage preserves public operation structure", "[unit][docs_policy][doc_structure]") {
+TEST_CASE("docs_policy API mainpage preserves public operation structure", "[unit][docs_policy][doc_structure]")
+{
   const auto mainpage = read_text_file(source_root() / "docs" / "api-mainpage.md");
 
   require_all_tokens(mainpage,
@@ -122,7 +135,8 @@ TEST_CASE("docs_policy API mainpage preserves public operation structure", "[uni
 }
 
 TEST_CASE("docs_policy public documentation surfaces hide planning identifiers",
-          "[unit][docs_policy][doc_structure]") {
+          "[unit][docs_policy][doc_structure]")
+{
   const auto root = source_root();
   constexpr auto public_documentation_files = std::array{
       "include/libbsa/archive.hpp",
@@ -132,7 +146,8 @@ TEST_CASE("docs_policy public documentation surfaces hide planning identifiers",
       "tests/fixtures/README.md",
   };
 
-  for (const auto relative_path : public_documentation_files) {
+  for (const auto relative_path : public_documentation_files)
+  {
     const auto text = read_text_file(root / relative_path);
     require_no_planning_identifier_patterns(relative_path, text);
   }

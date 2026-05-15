@@ -10,247 +10,287 @@
 #include <utility>
 #include <vector>
 
-namespace {
+namespace
+{
 
-class byte_vector_sink final : public libbsa::payload_sink {
- public:
-  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
-    bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
-    return bytes.size();
+  class byte_vector_sink final : public libbsa::payload_sink
+  {
+  public:
+    libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override
+    {
+      bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
+      return bytes.size();
+    }
+
+    const std::vector<std::byte> &bytes() const noexcept { return bytes_; }
+
+  private:
+    std::vector<std::byte> bytes_;
+  };
+
+  class byte_vector_sink_factory final : public libbsa::bulk_extract_sink_factory
+  {
+  public:
+    libbsa::result<std::unique_ptr<libbsa::payload_sink>> create(std::string_view path,
+                                                                 const libbsa::entry_metadata &entry) override
+    {
+      // Bulk extraction may call the factory concurrently, so even example bookkeeping is protected.
+      const std::lock_guard lock{mutex_};
+      requested_paths_.push_back(std::string{path});
+      observed_entries_.push_back(entry.path);
+      std::unique_ptr<libbsa::payload_sink> sink = std::make_unique<byte_vector_sink>();
+      return sink;
+    }
+
+    const std::vector<std::string> &requested_paths() const noexcept { return requested_paths_; }
+
+    const std::vector<std::string> &observed_entries() const noexcept { return observed_entries_; }
+
+  private:
+    std::mutex mutex_;
+    std::vector<std::string> requested_paths_;
+    std::vector<std::string> observed_entries_;
+  };
+
+  libbsa::result<void> example_open_list_extract(std::string_view archive_host_path,
+                                                 std::string_view archive_virtual_path,
+                                                 libbsa::payload_sink &sink)
+  {
+    auto opened = libbsa::archive_reader::open(archive_host_path);
+    if (!opened)
+    {
+      return opened.error();
+    }
+
+    auto reader = std::move(opened).value();
+    auto metadata = reader.metadata();
+    if (!metadata)
+    {
+      return metadata.error();
+    }
+
+    auto entries = reader.entries();
+    if (!entries)
+    {
+      return entries.error();
+    }
+
+    auto found = reader.find(archive_virtual_path);
+    if (!found)
+    {
+      return found.error();
+    }
+    if (!found.value())
+    {
+      return libbsa::error{libbsa::error_code::not_found, "archive path is not present"};
+    }
+
+    return reader.extract(archive_virtual_path, sink);
   }
 
-  const std::vector<std::byte>& bytes() const noexcept { return bytes_; }
+  libbsa::result<std::vector<libbsa::bulk_extract_entry_result>> example_bulk_extract(
+      std::string_view archive_host_path,
+      std::span<const std::string> archive_virtual_paths,
+      libbsa::bulk_extract_sink_factory &sink_factory)
+  {
+    auto opened = libbsa::archive_reader::open(archive_host_path);
+    if (!opened)
+    {
+      return opened.error();
+    }
 
- private:
-  std::vector<std::byte> bytes_;
-};
+    std::vector<libbsa::bulk_extract_request> requests;
+    requests.reserve(archive_virtual_paths.size());
+    for (const auto &archive_virtual_path : archive_virtual_paths)
+    {
+      requests.push_back(libbsa::bulk_extract_request{archive_virtual_path});
+    }
 
-class byte_vector_sink_factory final : public libbsa::bulk_extract_sink_factory {
- public:
-  libbsa::result<std::unique_ptr<libbsa::payload_sink>> create(std::string_view path,
-                                                               const libbsa::entry_metadata& entry) override {
-    // Bulk extraction may call the factory concurrently, so even example bookkeeping is protected.
-    const std::lock_guard lock{mutex_};
-    requested_paths_.push_back(std::string{path});
-    observed_entries_.push_back(entry.path);
-    std::unique_ptr<libbsa::payload_sink> sink = std::make_unique<byte_vector_sink>();
-    return sink;
+    libbsa::bulk_extract_options options;
+    options.worker_count = 2U;
+
+    auto reader = std::move(opened).value();
+    return reader.extract_entries(requests, sink_factory, options);
   }
 
-  const std::vector<std::string>& requested_paths() const noexcept { return requested_paths_; }
+  libbsa::result<void> example_create_tes3_bsa(std::string_view source_host_path, std::string_view output_host_path)
+  {
+    libbsa::tes3_bsa_writer_options options;
+    options.overwrite_existing = true;
 
-  const std::vector<std::string>& observed_entries() const noexcept { return observed_entries_; }
+    libbsa::tes3_bsa_writer writer{options};
+    if (auto added = writer.add_file("book/readme.txt", source_host_path); !added)
+    {
+      return added.error();
+    }
 
- private:
-  std::mutex mutex_;
-  std::vector<std::string> requested_paths_;
-  std::vector<std::string> observed_entries_;
-};
-
-libbsa::result<void> example_open_list_extract(std::string_view archive_host_path,
-                                               std::string_view archive_virtual_path,
-                                               libbsa::payload_sink& sink) {
-  auto opened = libbsa::archive_reader::open(archive_host_path);
-  if (!opened) {
-    return opened.error();
+    libbsa::write_execution_options execution;
+    execution.worker_count = 1U;
+    return writer.write_to(output_host_path, execution);
   }
 
-  auto reader = std::move(opened).value();
-  auto metadata = reader.metadata();
-  if (!metadata) {
-    return metadata.error();
+  libbsa::result<void> example_create_tes4_bsa(std::string_view source_host_path, std::string_view output_host_path)
+  {
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::target_default;
+    options.overwrite_existing = true;
+
+    libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::skyrim_se, options};
+    if (auto added = writer.add_file("meshes/example/example.nif",
+                                     source_host_path,
+                                     libbsa::entry_compression_policy::inherit);
+        !added)
+    {
+      return added.error();
+    }
+
+    libbsa::write_execution_options execution;
+    execution.worker_count = 2U;
+    return writer.write_to(output_host_path, execution);
   }
 
-  auto entries = reader.entries();
-  if (!entries) {
-    return entries.error();
+  libbsa::result<void> example_create_ba2_gnrl(std::string_view source_host_path, std::string_view output_host_path)
+  {
+    libbsa::ba2_gnrl_writer_options options;
+    options.compression = libbsa::archive_compression_policy::target_default;
+    options.overwrite_existing = true;
+    options.starfield_compression_method = 3U;
+
+    libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::starfield_v3, options};
+    if (auto added = writer.add_file("scripts/example/example.pex",
+                                     source_host_path,
+                                     libbsa::entry_compression_policy::compressed);
+        !added)
+    {
+      return added.error();
+    }
+
+    libbsa::write_execution_options execution;
+    execution.worker_count = 2U;
+    return writer.write_to(output_host_path, execution);
   }
 
-  auto found = reader.find(archive_virtual_path);
-  if (!found) {
-    return found.error();
-  }
-  if (!found.value()) {
-    return libbsa::error{libbsa::error_code::not_found, "archive path is not present"};
-  }
+  libbsa::result<void> example_create_ba2_dx10(std::string_view dds_host_path, std::string_view output_host_path)
+  {
+    libbsa::ba2_dx10_writer_options options;
+    options.overwrite_existing = true;
+    options.starfield_compression_method = 3U;
 
-  return reader.extract(archive_virtual_path, sink);
-}
+    libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::starfield_v3, options};
+    if (auto added = writer.add_file("textures/example/example_d.dds", dds_host_path); !added)
+    {
+      return added.error();
+    }
 
-libbsa::result<std::vector<libbsa::bulk_extract_entry_result>> example_bulk_extract(
-    std::string_view archive_host_path,
-    std::span<const std::string> archive_virtual_paths,
-    libbsa::bulk_extract_sink_factory& sink_factory) {
-  auto opened = libbsa::archive_reader::open(archive_host_path);
-  if (!opened) {
-    return opened.error();
+    libbsa::write_execution_options execution;
+    execution.worker_count = 2U;
+    return writer.write_to(output_host_path, execution);
   }
 
-  std::vector<libbsa::bulk_extract_request> requests;
-  requests.reserve(archive_virtual_paths.size());
-  for (const auto& archive_virtual_path : archive_virtual_paths) {
-    requests.push_back(libbsa::bulk_extract_request{archive_virtual_path});
+  int example_handle_result_errors(std::string_view archive_host_path)
+  {
+    auto opened = libbsa::archive_reader::open(archive_host_path);
+    if (opened)
+    {
+      return 0;
+    }
+
+    const auto code = opened.error().code;
+    if (code == libbsa::error_code::io_error)
+    {
+      return 10;
+    }
+    if (code == libbsa::error_code::format_error)
+    {
+      return 20;
+    }
+    if (code == libbsa::error_code::unsupported)
+    {
+      return 30;
+    }
+    return 1;
   }
 
-  libbsa::bulk_extract_options options;
-  options.worker_count = 2U;
+  libbsa::result<libbsa::validation_report> example_validate_archive(std::string_view archive_host_path)
+  {
+    libbsa::validation_options options;
+    options.expected_type = libbsa::archive_type::bsa;
+    options.validate_entry_extractability = true;
 
-  auto reader = std::move(opened).value();
-  return reader.extract_entries(requests, sink_factory, options);
-}
+    auto report = libbsa::validate_archive(archive_host_path, options);
+    if (!report)
+    {
+      return report.error();
+    }
 
-libbsa::result<void> example_create_tes3_bsa(std::string_view source_host_path, std::string_view output_host_path) {
-  libbsa::tes3_bsa_writer_options options;
-  options.overwrite_existing = true;
+    for (const auto &warning : report.value().warnings)
+    {
+      if (warning.code == libbsa::compatibility_warning_code::compressed_sound_payload)
+      {
+        break;
+      }
+    }
 
-  libbsa::tes3_bsa_writer writer{options};
-  if (auto added = writer.add_file("book/readme.txt", source_host_path); !added) {
-    return added.error();
+    return report;
   }
 
-  libbsa::write_execution_options execution;
-  execution.worker_count = 1U;
-  return writer.write_to(output_host_path, execution);
-}
+  int example_link_representative_public_api()
+  {
+    std::vector<std::byte> bytes{std::byte{0x41}};
 
-libbsa::result<void> example_create_tes4_bsa(std::string_view source_host_path, std::string_view output_host_path) {
-  libbsa::tes4_bsa_writer_options options;
-  options.compression_policy = libbsa::archive_compression_policy::target_default;
-  options.overwrite_existing = true;
+    auto opened = libbsa::archive_reader::open("consumer-smoke-missing.bsa");
+    if (opened)
+    {
+      return 1;
+    }
 
-  libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::skyrim_se, options};
-  if (auto added = writer.add_file("meshes/example/example.nif",
-                                   source_host_path,
-                                   libbsa::entry_compression_policy::inherit);
-      !added) {
-    return added.error();
-  }
+    auto validated = libbsa::validate_archive("consumer-smoke-missing.bsa");
+    if (validated)
+    {
+      return 1;
+    }
 
-  libbsa::write_execution_options execution;
-  execution.worker_count = 2U;
-  return writer.write_to(output_host_path, execution);
-}
+    libbsa::tes3_bsa_writer tes3_writer;
+    if (!tes3_writer.add_bytes("meshes/consumer/link.nif", bytes))
+    {
+      return 1;
+    }
+    [[maybe_unused]] const auto &tes3_options = tes3_writer.options();
 
-libbsa::result<void> example_create_ba2_gnrl(std::string_view source_host_path, std::string_view output_host_path) {
-  libbsa::ba2_gnrl_writer_options options;
-  options.compression = libbsa::archive_compression_policy::target_default;
-  options.overwrite_existing = true;
-  options.starfield_compression_method = 3U;
+    libbsa::tes4_bsa_writer tes4_writer{libbsa::tes4_bsa_target::fallout3};
+    if (!tes4_writer.add_bytes("meshes/consumer/link.nif", bytes))
+    {
+      return 1;
+    }
+    [[maybe_unused]] const auto tes4_target = tes4_writer.target();
 
-  libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::starfield_v3, options};
-  if (auto added = writer.add_file("scripts/example/example.pex",
-                                   source_host_path,
-                                   libbsa::entry_compression_policy::compressed);
-      !added) {
-    return added.error();
-  }
+    libbsa::ba2_gnrl_writer ba2_gnrl_writer{libbsa::ba2_gnrl_target::fallout4};
+    if (!ba2_gnrl_writer.add_bytes("meshes/consumer/link.nif", bytes))
+    {
+      return 1;
+    }
+    [[maybe_unused]] const auto ba2_gnrl_target = ba2_gnrl_writer.target();
 
-  libbsa::write_execution_options execution;
-  execution.worker_count = 2U;
-  return writer.write_to(output_host_path, execution);
-}
+    libbsa::ba2_dx10_writer ba2_dx10_writer{libbsa::ba2_dx10_target::fallout4};
+    [[maybe_unused]] const auto &ba2_dx10_options = ba2_dx10_writer.options();
 
-libbsa::result<void> example_create_ba2_dx10(std::string_view dds_host_path, std::string_view output_host_path) {
-  libbsa::ba2_dx10_writer_options options;
-  options.overwrite_existing = true;
-  options.starfield_compression_method = 3U;
-
-  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::starfield_v3, options};
-  if (auto added = writer.add_file("textures/example/example_d.dds", dds_host_path); !added) {
-    return added.error();
-  }
-
-  libbsa::write_execution_options execution;
-  execution.worker_count = 2U;
-  return writer.write_to(output_host_path, execution);
-}
-
-int example_handle_result_errors(std::string_view archive_host_path) {
-  auto opened = libbsa::archive_reader::open(archive_host_path);
-  if (opened) {
+    byte_vector_sink_factory factory;
+    [[maybe_unused]] const auto &requested = factory.requested_paths();
     return 0;
   }
 
-  const auto code = opened.error().code;
-  if (code == libbsa::error_code::io_error) {
-    return 10;
-  }
-  if (code == libbsa::error_code::format_error) {
-    return 20;
-  }
-  if (code == libbsa::error_code::unsupported) {
-    return 30;
-  }
-  return 1;
-}
-
-libbsa::result<libbsa::validation_report> example_validate_archive(std::string_view archive_host_path) {
-  libbsa::validation_options options;
-  options.expected_type = libbsa::archive_type::bsa;
-  options.validate_entry_extractability = true;
-
-  auto report = libbsa::validate_archive(archive_host_path, options);
-  if (!report) {
-    return report.error();
-  }
-
-  for (const auto& warning : report.value().warnings) {
-    if (warning.code == libbsa::compatibility_warning_code::compressed_sound_payload) {
-      break;
-    }
-  }
-
-  return report;
-}
-
-int example_link_representative_public_api() {
-  std::vector<std::byte> bytes{std::byte{0x41}};
-
-  auto opened = libbsa::archive_reader::open("consumer-smoke-missing.bsa");
-  if (opened) {
-    return 1;
-  }
-
-  auto validated = libbsa::validate_archive("consumer-smoke-missing.bsa");
-  if (validated) {
-    return 1;
-  }
-
-  libbsa::tes3_bsa_writer tes3_writer;
-  if (!tes3_writer.add_bytes("meshes/consumer/link.nif", bytes)) {
-    return 1;
-  }
-  [[maybe_unused]] const auto& tes3_options = tes3_writer.options();
-
-  libbsa::tes4_bsa_writer tes4_writer{libbsa::tes4_bsa_target::fallout3};
-  if (!tes4_writer.add_bytes("meshes/consumer/link.nif", bytes)) {
-    return 1;
-  }
-  [[maybe_unused]] const auto tes4_target = tes4_writer.target();
-
-  libbsa::ba2_gnrl_writer ba2_gnrl_writer{libbsa::ba2_gnrl_target::fallout4};
-  if (!ba2_gnrl_writer.add_bytes("meshes/consumer/link.nif", bytes)) {
-    return 1;
-  }
-  [[maybe_unused]] const auto ba2_gnrl_target = ba2_gnrl_writer.target();
-
-  libbsa::ba2_dx10_writer ba2_dx10_writer{libbsa::ba2_dx10_target::fallout4};
-  [[maybe_unused]] const auto& ba2_dx10_options = ba2_dx10_writer.options();
-
-  byte_vector_sink_factory factory;
-  [[maybe_unused]] const auto& requested = factory.requested_paths();
-  return 0;
-}
-
 } // namespace
 
-int main() {
-  if (example_link_representative_public_api() != 0) {
+int main()
+{
+  if (example_link_representative_public_api() != 0)
+  {
     return 1;
   }
 
   auto result = libbsa::validate_archive("consumer-smoke.bsa");
-  if (result) {
+  if (result)
+  {
     return 1;
   }
 

@@ -24,196 +24,237 @@
 
 #include <nlohmann/json.hpp>
 
-namespace {
+namespace
+{
 
-std::filesystem::path generated_archive_dir() {
-  return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" / "archives";
-}
-
-std::filesystem::path generated_archive_path(std::string_view filename) {
-  return generated_archive_dir() / std::string{filename};
-}
-
-nlohmann::json read_json_file(const std::filesystem::path& path) {
-  std::ifstream stream{path};
-  return nlohmann::json::parse(stream);
-}
-
-libbsa::entry_compression expected_default_compression(const nlohmann::json& manifest) {
-  const auto version = manifest.at("version").get<std::uint32_t>();
-  if (version == 3U && manifest.at("compression_method").get<std::uint32_t>() == 3U) {
-    return libbsa::entry_compression::lz4_block;
+  std::filesystem::path generated_archive_dir()
+  {
+    return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" / "archives";
   }
-  return libbsa::entry_compression::deflate;
-}
 
-libbsa::error_code error_code_from_manifest(std::string_view value) {
-  if (value == "format_error") {
-    return libbsa::error_code::format_error;
+  std::filesystem::path generated_archive_path(std::string_view filename)
+  {
+    return generated_archive_dir() / std::string{filename};
   }
-  if (value == "unsupported") {
-    return libbsa::error_code::unsupported;
-  }
-  FAIL("unknown BA2 GNRL malformed expected_error: " << value);
-  return libbsa::error_code::format_error;
-}
 
-std::uint64_t hex_u64_from_manifest(const nlohmann::json& value) {
-  return std::stoull(value.get<std::string>(), nullptr, 16);
-}
-
-libbsa::entry_compression entry_compression_from_manifest(std::string_view value) {
-  if (value == "raw") {
-    return libbsa::entry_compression::none;
+  nlohmann::json read_json_file(const std::filesystem::path &path)
+  {
+    std::ifstream stream{path};
+    return nlohmann::json::parse(stream);
   }
-  if (value == "deflate") {
+
+  libbsa::entry_compression expected_default_compression(const nlohmann::json &manifest)
+  {
+    const auto version = manifest.at("version").get<std::uint32_t>();
+    if (version == 3U && manifest.at("compression_method").get<std::uint32_t>() == 3U)
+    {
+      return libbsa::entry_compression::lz4_block;
+    }
     return libbsa::entry_compression::deflate;
   }
-  if (value == "lz4_frame") {
-    return libbsa::entry_compression::lz4_frame;
-  }
-  return libbsa::entry_compression::lz4_block;
-}
 
-std::string archive_original_path_from_manifest(std::string value) {
-  std::replace(value.begin(), value.end(), '\\', '/');
-  return value;
-}
-
-std::vector<std::byte> bytes_from_hex(std::string_view hex) {
-  REQUIRE(hex.size() % 2U == 0U);
-  std::vector<std::byte> bytes;
-  bytes.reserve(hex.size() / 2U);
-  for (std::size_t offset = 0; offset < hex.size(); offset += 2U) {
-    const auto pair = std::string{hex.substr(offset, 2U)};
-    bytes.push_back(static_cast<std::byte>(std::stoul(pair, nullptr, 16)));
-  }
-  return bytes;
-}
-
-/// Reads a complete binary fixture into memory so tests can corrupt selected record fields.
-std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
-  std::ifstream input{path, std::ios::binary};
-  std::vector<std::byte> bytes;
-  for (char ch = 0; input.get(ch);) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
-  }
-  return bytes;
-}
-
-/// Writes a mutated binary fixture to a temporary host path.
-void write_binary_file(const std::filesystem::path& path, const std::vector<std::byte>& bytes) {
-  std::ofstream output{path, std::ios::binary | std::ios::trunc};
-  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-}
-
-/// Overwrites a little-endian UInt32 field inside a mutable binary fixture.
-void overwrite_u32_le(std::vector<std::byte>& bytes, std::size_t offset, std::uint32_t value) {
-  for (std::uint32_t index = 0; index < 4U; ++index) {
-    bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
-  }
-}
-
-/// Reads a little-endian UInt32 field from a binary fixture.
-std::uint32_t read_u32_le(const std::vector<std::byte>& bytes, std::size_t offset) {
-  std::uint32_t value = 0;
-  for (std::uint32_t index = 0; index < 4U; ++index) {
-    value |= static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.at(offset + index))) << (index * 8U);
-  }
-  return value;
-}
-
-class collecting_sink final : public libbsa::payload_sink {
- public:
-  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
-    bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
-    return bytes.size();
+  libbsa::error_code error_code_from_manifest(std::string_view value)
+  {
+    if (value == "format_error")
+    {
+      return libbsa::error_code::format_error;
+    }
+    if (value == "unsupported")
+    {
+      return libbsa::error_code::unsupported;
+    }
+    FAIL("unknown BA2 GNRL malformed expected_error: " << value);
+    return libbsa::error_code::format_error;
   }
 
-  [[nodiscard]] const std::vector<std::byte>& bytes() const noexcept { return bytes_; }
-
- private:
-  std::vector<std::byte> bytes_;
-};
-
-class partial_sink final : public libbsa::payload_sink {
- public:
-  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
-    return bytes.empty() ? 0U : bytes.size() - 1U;
+  std::uint64_t hex_u64_from_manifest(const nlohmann::json &value)
+  {
+    return std::stoull(value.get<std::string>(), nullptr, 16);
   }
-};
 
-struct ba2_success_fixture {
-  std::string archive;
-  std::string manifest;
-};
+  libbsa::entry_compression entry_compression_from_manifest(std::string_view value)
+  {
+    if (value == "raw")
+    {
+      return libbsa::entry_compression::none;
+    }
+    if (value == "deflate")
+    {
+      return libbsa::entry_compression::deflate;
+    }
+    if (value == "lz4_frame")
+    {
+      return libbsa::entry_compression::lz4_frame;
+    }
+    return libbsa::entry_compression::lz4_block;
+  }
 
-std::vector<ba2_success_fixture> ba2_success_fixtures() {
-  return {
-      {"ba2_gnrl_fo4.ba2", "ba2_gnrl_fo4_manifest.json"},
-      {"ba2_gnrl_sfv2.ba2", "ba2_gnrl_sfv2_manifest.json"},
-      {"ba2_gnrl_sfv3.ba2", "ba2_gnrl_sfv3_manifest.json"},
+  std::string archive_original_path_from_manifest(std::string value)
+  {
+    std::replace(value.begin(), value.end(), '\\', '/');
+    return value;
+  }
+
+  std::vector<std::byte> bytes_from_hex(std::string_view hex)
+  {
+    REQUIRE(hex.size() % 2U == 0U);
+    std::vector<std::byte> bytes;
+    bytes.reserve(hex.size() / 2U);
+    for (std::size_t offset = 0; offset < hex.size(); offset += 2U)
+    {
+      const auto pair = std::string{hex.substr(offset, 2U)};
+      bytes.push_back(static_cast<std::byte>(std::stoul(pair, nullptr, 16)));
+    }
+    return bytes;
+  }
+
+  /// Reads a complete binary fixture into memory so tests can corrupt selected record fields.
+  std::vector<std::byte> read_binary_file(const std::filesystem::path &path)
+  {
+    std::ifstream input{path, std::ios::binary};
+    std::vector<std::byte> bytes;
+    for (char ch = 0; input.get(ch);)
+    {
+      bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+    }
+    return bytes;
+  }
+
+  /// Writes a mutated binary fixture to a temporary host path.
+  void write_binary_file(const std::filesystem::path &path, const std::vector<std::byte> &bytes)
+  {
+    std::ofstream output{path, std::ios::binary | std::ios::trunc};
+    output.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  }
+
+  /// Overwrites a little-endian UInt32 field inside a mutable binary fixture.
+  void overwrite_u32_le(std::vector<std::byte> &bytes, std::size_t offset, std::uint32_t value)
+  {
+    for (std::uint32_t index = 0; index < 4U; ++index)
+    {
+      bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
+    }
+  }
+
+  /// Reads a little-endian UInt32 field from a binary fixture.
+  std::uint32_t read_u32_le(const std::vector<std::byte> &bytes, std::size_t offset)
+  {
+    std::uint32_t value = 0;
+    for (std::uint32_t index = 0; index < 4U; ++index)
+    {
+      value |= static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.at(offset + index))) << (index * 8U);
+    }
+    return value;
+  }
+
+  class collecting_sink final : public libbsa::payload_sink
+  {
+  public:
+    libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override
+    {
+      bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
+      return bytes.size();
+    }
+
+    [[nodiscard]] const std::vector<std::byte> &bytes() const noexcept { return bytes_; }
+
+  private:
+    std::vector<std::byte> bytes_;
   };
-}
 
-/// Appends a little-endian UInt16 value to a synthetic binary fixture buffer.
-void append_u16_le(std::vector<std::byte>& bytes, std::uint16_t value) {
-  bytes.push_back(static_cast<std::byte>(value & 0xFFU));
-  bytes.push_back(static_cast<std::byte>((value >> 8U) & 0xFFU));
-}
+  class partial_sink final : public libbsa::payload_sink
+  {
+  public:
+    libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override
+    {
+      return bytes.empty() ? 0U : bytes.size() - 1U;
+    }
+  };
 
-/// Appends a little-endian UInt32 value to a synthetic binary fixture buffer.
-void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
-  for (unsigned shift = 0; shift < 32U; shift += 8U) {
-    bytes.push_back(static_cast<std::byte>((value >> shift) & 0xFFU));
-  }
-}
+  struct ba2_success_fixture
+  {
+    std::string archive;
+    std::string manifest;
+  };
 
-/// Appends a little-endian UInt64 value to a synthetic binary fixture buffer.
-void append_u64_le(std::vector<std::byte>& bytes, std::uint64_t value) {
-  for (unsigned shift = 0; shift < 64U; shift += 8U) {
-    bytes.push_back(static_cast<std::byte>((value >> shift) & 0xFFU));
-  }
-}
-
-/// Appends raw ASCII bytes, including embedded NULs when present in the view.
-void append_ascii(std::vector<std::byte>& bytes, std::string_view value) {
-  for (const char ch : value) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
-  }
-}
-
-class temp_file_cleanup final {
- public:
-  /// Owns cleanup for a temporary fixture path created by a test case.
-  explicit temp_file_cleanup(std::filesystem::path path) : path_{std::move(path)} {}
-
-  /// Best-effort removal keeps failed assertions from leaving sparse files behind.
-  ~temp_file_cleanup() {
-    std::error_code ignored;
-    std::filesystem::remove(path_, ignored);
+  std::vector<ba2_success_fixture> ba2_success_fixtures()
+  {
+    return {
+        {"ba2_gnrl_fo4.ba2", "ba2_gnrl_fo4_manifest.json"},
+        {"ba2_gnrl_sfv2.ba2", "ba2_gnrl_sfv2_manifest.json"},
+        {"ba2_gnrl_sfv3.ba2", "ba2_gnrl_sfv3_manifest.json"},
+    };
   }
 
- private:
-  std::filesystem::path path_;
-};
+  /// Appends a little-endian UInt16 value to a synthetic binary fixture buffer.
+  void append_u16_le(std::vector<std::byte> &bytes, std::uint16_t value)
+  {
+    bytes.push_back(static_cast<std::byte>(value & 0xFFU));
+    bytes.push_back(static_cast<std::byte>((value >> 8U) & 0xFFU));
+  }
 
-void require_common_ba2_metadata(const nlohmann::json& manifest,
-                                 const libbsa::archive_metadata& metadata,
-                                 libbsa::archive_variant expected_variant) {
-  REQUIRE(metadata.type == libbsa::archive_type::ba2);
-  REQUIRE(metadata.variant == expected_variant);
-  REQUIRE(metadata.version == manifest.at("version").get<std::uint32_t>());
-  REQUIRE(metadata.archive_flags == 0U);
-  REQUIRE(metadata.file_count == manifest.at("file_count").get<std::uint32_t>());
-  REQUIRE(metadata.default_compression == expected_default_compression(manifest));
-  REQUIRE(metadata.ba2.has_value());
-}
+  /// Appends a little-endian UInt32 value to a synthetic binary fixture buffer.
+  void append_u32_le(std::vector<std::byte> &bytes, std::uint32_t value)
+  {
+    for (unsigned shift = 0; shift < 32U; shift += 8U)
+    {
+      bytes.push_back(static_cast<std::byte>((value >> shift) & 0xFFU));
+    }
+  }
+
+  /// Appends a little-endian UInt64 value to a synthetic binary fixture buffer.
+  void append_u64_le(std::vector<std::byte> &bytes, std::uint64_t value)
+  {
+    for (unsigned shift = 0; shift < 64U; shift += 8U)
+    {
+      bytes.push_back(static_cast<std::byte>((value >> shift) & 0xFFU));
+    }
+  }
+
+  /// Appends raw ASCII bytes, including embedded NULs when present in the view.
+  void append_ascii(std::vector<std::byte> &bytes, std::string_view value)
+  {
+    for (const char ch : value)
+    {
+      bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+    }
+  }
+
+  class temp_file_cleanup final
+  {
+  public:
+    /// Owns cleanup for a temporary fixture path created by a test case.
+    explicit temp_file_cleanup(std::filesystem::path path) : path_{std::move(path)} {}
+
+    /// Best-effort removal keeps failed assertions from leaving sparse files behind.
+    ~temp_file_cleanup()
+    {
+      std::error_code ignored;
+      std::filesystem::remove(path_, ignored);
+    }
+
+  private:
+    std::filesystem::path path_;
+  };
+
+  void require_common_ba2_metadata(const nlohmann::json &manifest,
+                                   const libbsa::archive_metadata &metadata,
+                                   libbsa::archive_variant expected_variant)
+  {
+    REQUIRE(metadata.type == libbsa::archive_type::ba2);
+    REQUIRE(metadata.variant == expected_variant);
+    REQUIRE(metadata.version == manifest.at("version").get<std::uint32_t>());
+    REQUIRE(metadata.archive_flags == 0U);
+    REQUIRE(metadata.file_count == manifest.at("file_count").get<std::uint32_t>());
+    REQUIRE(metadata.default_compression == expected_default_compression(manifest));
+    REQUIRE(metadata.ba2.has_value());
+  }
 
 } // namespace
 
 TEST_CASE("ba2_gnrl_detector opens Fallout 4 GNRL metadata without Starfield fields",
-          "[unit][fixture][ba2_gnrl_detector]") {
+          "[unit][fixture][ba2_gnrl_detector]")
+{
   const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_fo4_manifest.json"));
 
   auto opened = libbsa::archive_reader::open(generated_archive_path("ba2_gnrl_fo4.ba2").string());
@@ -228,7 +269,8 @@ TEST_CASE("ba2_gnrl_detector opens Fallout 4 GNRL metadata without Starfield fie
 }
 
 TEST_CASE("ba2_gnrl_detector opens Starfield v2 GNRL metadata with version-gated unknowns",
-          "[unit][fixture][ba2_gnrl_detector]") {
+          "[unit][fixture][ba2_gnrl_detector]")
+{
   const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_sfv2_manifest.json"));
 
   auto opened = libbsa::archive_reader::open(generated_archive_path("ba2_gnrl_sfv2.ba2").string());
@@ -243,7 +285,8 @@ TEST_CASE("ba2_gnrl_detector opens Starfield v2 GNRL metadata with version-gated
 }
 
 TEST_CASE("ba2_gnrl_detector opens Starfield v3 GNRL metadata with compression method",
-          "[unit][fixture][ba2_gnrl_detector]") {
+          "[unit][fixture][ba2_gnrl_detector]")
+{
   const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_sfv3_manifest.json"));
 
   auto opened = libbsa::archive_reader::open(generated_archive_path("ba2_gnrl_sfv3.ba2").string());
@@ -258,12 +301,15 @@ TEST_CASE("ba2_gnrl_detector opens Starfield v3 GNRL metadata with compression m
 }
 
 TEST_CASE("ba2_gnrl_detector rejects Phase 5 unsupported BA2 profiles with stable errors",
-          "[unit][fixture][ba2_gnrl_detector]") {
+          "[unit][fixture][ba2_gnrl_detector]")
+{
   const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_malformed_manifest.json"));
 
-  for (const auto& test_case : manifest.at("cases")) {
+  for (const auto &test_case : manifest.at("cases"))
+  {
     const auto id = test_case.at("id").get<std::string>();
-    if (id != "ba2_unsupported_v3_compression_method") {
+    if (id != "ba2_unsupported_v3_compression_method")
+    {
       continue;
     }
 
@@ -275,7 +321,8 @@ TEST_CASE("ba2_gnrl_detector rejects Phase 5 unsupported BA2 profiles with stabl
 }
 
 TEST_CASE("ba2_gnrl_bounded_open opens sparse large-payload archives without reading payload bytes",
-          "[unit][fixture][bounded_memory_policy][ba2_gnrl_bounded_open]") {
+          "[unit][fixture][bounded_memory_policy][ba2_gnrl_bounded_open]")
+{
   const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-bounded-open.ba2";
   temp_file_cleanup cleanup{temp_path};
   std::error_code remove_error;
@@ -307,13 +354,14 @@ TEST_CASE("ba2_gnrl_bounded_open opens sparse large-payload archives without rea
   {
     std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
     REQUIRE(output.good());
-    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    output.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
     REQUIRE(output.good());
   }
 
   std::error_code resize_error;
   std::filesystem::resize_file(temp_path, archive_size, resize_error);
-  if (resize_error) {
+  if (resize_error)
+  {
     SKIP("filesystem does not support sparse BA2 bounded-open fixture");
   }
 
@@ -324,7 +372,7 @@ TEST_CASE("ba2_gnrl_bounded_open opens sparse large-payload archives without rea
   REQUIRE(entries.has_value());
   REQUIRE(entries.value().size() == 1U);
 
-  const auto& entry = entries.value().front();
+  const auto &entry = entries.value().front();
   REQUIRE(entry.path == archive_path);
   REQUIRE(entry.original_path == archive_path);
   REQUIRE(entry.payload_offset == payload_offset);
@@ -334,7 +382,8 @@ TEST_CASE("ba2_gnrl_bounded_open opens sparse large-payload archives without rea
 }
 
 TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename table",
-          "[unit][fixture][ba2_gnrl_reader][ba2_gnrl_end_table]") {
+          "[unit][fixture][ba2_gnrl_reader][ba2_gnrl_end_table]")
+{
   const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-end-table.ba2";
   temp_file_cleanup cleanup{temp_path};
   std::error_code remove_error;
@@ -370,7 +419,7 @@ TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename t
   {
     std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
     REQUIRE(output.good());
-    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    output.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
     REQUIRE(output.good());
   }
 
@@ -402,7 +451,8 @@ TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename t
 }
 
 TEST_CASE("ba2_gnrl_detector rejects unrepresentable high filename table ranges before materialization",
-          "[unit][malformed][ba2_gnrl_detector]") {
+          "[unit][malformed][ba2_gnrl_detector]")
+{
   const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-name-table-overflow.ba2";
   temp_file_cleanup cleanup{temp_path};
   std::error_code remove_error;
@@ -432,7 +482,7 @@ TEST_CASE("ba2_gnrl_detector rejects unrepresentable high filename table ranges 
   {
     std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
     REQUIRE(output.good());
-    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    output.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
     REQUIRE(output.good());
   }
 
@@ -445,15 +495,16 @@ TEST_CASE("ba2_gnrl_detector rejects unrepresentable high filename table ranges 
   auto resolved = libbsa::detail::resolve_host_file_path(temp_path.string());
   REQUIRE(resolved.has_value());
   auto parsed = libbsa::formats::ba2::parse_ba2_gnrl_archive_file(resolved.value(),
-                                                                   std::numeric_limits<std::uint64_t>::max(),
-                                                                   detected.value());
+                                                                  std::numeric_limits<std::uint64_t>::max(),
+                                                                  detected.value());
 
   REQUIRE_FALSE(parsed.has_value());
   REQUIRE(parsed.error().code == libbsa::error_code::format_error);
 }
 
 TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
-          "[unit][malformed][ba2_gnrl_detector]") {
+          "[unit][malformed][ba2_gnrl_detector]")
+{
   const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-payload-in-metadata.ba2";
   temp_file_cleanup cleanup{temp_path};
   std::error_code remove_error;
@@ -485,7 +536,7 @@ TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
   {
     std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
     REQUIRE(output.good());
-    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    output.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
     REQUIRE(output.good());
   }
 
@@ -496,12 +547,14 @@ TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
 }
 
 TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
-          "[unit][fixture][malformed][ba2_gnrl_detector][ba2_gnrl_hash_lookup]") {
+          "[unit][fixture][malformed][ba2_gnrl_detector][ba2_gnrl_hash_lookup]")
+{
   constexpr std::size_t first_record_name_hash_offset = 24U;
   constexpr std::size_t first_record_extension_offset = 28U;
   constexpr std::size_t first_record_directory_hash_offset = 32U;
 
-  SECTION("NameHash") {
+  SECTION("NameHash")
+  {
     auto bytes = read_binary_file(generated_archive_path("ba2_gnrl_fo4.ba2"));
     overwrite_u32_le(bytes, first_record_name_hash_offset,
                      read_u32_le(bytes, first_record_name_hash_offset) ^ 0x1000U);
@@ -521,7 +574,8 @@ TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
     CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
   }
 
-  SECTION("record extension") {
+  SECTION("record extension")
+  {
     auto bytes = read_binary_file(generated_archive_path("ba2_gnrl_fo4.ba2"));
     const std::array<std::byte, 4U> mismatched_extension{std::byte{'d'}, std::byte{'d'}, std::byte{'s'}, std::byte{0}};
     std::copy(mismatched_extension.begin(), mismatched_extension.end(), bytes.begin() + first_record_extension_offset);
@@ -541,7 +595,8 @@ TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
     CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
   }
 
-  SECTION("DirectoryHash") {
+  SECTION("DirectoryHash")
+  {
     auto bytes = read_binary_file(generated_archive_path("ba2_gnrl_fo4.ba2"));
     overwrite_u32_le(bytes, first_record_directory_hash_offset,
                      read_u32_le(bytes, first_record_directory_hash_offset) ^ 0x1000U);
@@ -563,7 +618,8 @@ TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
 }
 
 TEST_CASE("ba2_gnrl_detector returns format_error for oversized declared record tables",
-          "[unit][malformed][ba2_gnrl_detector][allocation]") {
+          "[unit][malformed][ba2_gnrl_detector][allocation]")
+{
   const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-oversized-records.ba2";
   temp_file_cleanup cleanup{temp_path};
   std::error_code remove_error;
@@ -579,7 +635,7 @@ TEST_CASE("ba2_gnrl_detector returns format_error for oversized declared record 
   {
     std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
     REQUIRE(output.good());
-    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    output.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
     REQUIRE(output.good());
   }
 
@@ -590,7 +646,8 @@ TEST_CASE("ba2_gnrl_detector returns format_error for oversized declared record 
 }
 
 TEST_CASE("ba2_gnrl_detector rejects declared file counts above the metadata limit",
-          "[unit][malformed][ba2_gnrl_detector]") {
+          "[unit][malformed][ba2_gnrl_detector]")
+{
   const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-excessive-file-count.ba2";
   temp_file_cleanup cleanup{temp_path};
   std::error_code remove_error;
@@ -624,12 +681,14 @@ TEST_CASE("ba2_gnrl_detector rejects declared file counts above the metadata lim
 }
 
 TEST_CASE("ba2_gnrl_metadata lists manifest-backed records from filename tables",
-          "[unit][fixture][ba2_gnrl_metadata]") {
+          "[unit][fixture][ba2_gnrl_metadata]")
+{
   bool saw_raw = false;
   bool saw_deflate = false;
   bool saw_lz4_block = false;
 
-  for (const auto& fixture : ba2_success_fixtures()) {
+  for (const auto &fixture : ba2_success_fixtures())
+  {
     const auto manifest = read_json_file(generated_archive_path(fixture.manifest));
     auto opened = libbsa::archive_reader::open(generated_archive_path(fixture.archive).string());
     REQUIRE(opened.has_value());
@@ -639,16 +698,17 @@ TEST_CASE("ba2_gnrl_metadata lists manifest-backed records from filename tables"
     REQUIRE(entries.value().size() == manifest.at("entries").size());
 
     std::vector<std::string> sorted_paths;
-    for (const auto& expected : manifest.at("entries")) {
+    for (const auto &expected : manifest.at("entries"))
+    {
       sorted_paths.push_back(expected.at("path").get<std::string>());
     }
     std::sort(sorted_paths.begin(), sorted_paths.end());
 
-    for (std::size_t index = 0; index < entries.value().size(); ++index) {
-      const auto& actual = entries.value().at(index);
-      const auto& expected = *std::find_if(manifest.at("entries").begin(), manifest.at("entries").end(), [&](const auto& candidate) {
-        return candidate.at("path").get<std::string>() == sorted_paths.at(index);
-      });
+    for (std::size_t index = 0; index < entries.value().size(); ++index)
+    {
+      const auto &actual = entries.value().at(index);
+      const auto &expected = *std::find_if(manifest.at("entries").begin(), manifest.at("entries").end(), [&](const auto &candidate)
+                                           { return candidate.at("path").get<std::string>() == sorted_paths.at(index); });
 
       const auto compression = expected.at("compression").get<std::string>();
       saw_raw = saw_raw || compression == "raw";
@@ -674,14 +734,18 @@ TEST_CASE("ba2_gnrl_metadata lists manifest-backed records from filename tables"
 }
 
 TEST_CASE("ba2_gnrl_lookup normalizes variants and reports stable missing-path behavior",
-          "[unit][fixture][ba2_gnrl_lookup]") {
-  for (const auto& fixture : ba2_success_fixtures()) {
+          "[unit][fixture][ba2_gnrl_lookup]")
+{
+  for (const auto &fixture : ba2_success_fixtures())
+  {
     const auto manifest = read_json_file(generated_archive_path(fixture.manifest));
     auto opened = libbsa::archive_reader::open(generated_archive_path(fixture.archive).string());
     REQUIRE(opened.has_value());
 
-    for (const auto& expected : manifest.at("entries")) {
-      for (const auto& variant : expected.at("lookup_variants")) {
+    for (const auto &expected : manifest.at("entries"))
+    {
+      for (const auto &variant : expected.at("lookup_variants"))
+      {
         auto found = opened.value().find(variant.get<std::string>());
         REQUIRE(found.has_value());
         REQUIRE(found.value().has_value());
@@ -704,7 +768,8 @@ TEST_CASE("ba2_gnrl_lookup normalizes variants and reports stable missing-path b
     REQUIRE(missing_contains.has_value());
     REQUIRE_FALSE(missing_contains.value());
 
-    for (const std::string invalid : {"", "/rooted/file.txt", "..\\escape.txt", "folder//file.txt"}) {
+    for (const std::string invalid : {"", "/rooted/file.txt", "..\\escape.txt", "folder//file.txt"})
+    {
       auto invalid_find = opened.value().find(invalid);
       REQUIRE_FALSE(invalid_find.has_value());
       REQUIRE(invalid_find.error().code == libbsa::error_code::invalid_argument);
@@ -716,18 +781,21 @@ TEST_CASE("ba2_gnrl_lookup normalizes variants and reports stable missing-path b
   }
 }
 
-TEST_CASE("ba2_gnrl_extract streams manifest bytes and extract_bytes matches", "[unit][fixture][ba2_gnrl_extract]") {
+TEST_CASE("ba2_gnrl_extract streams manifest bytes and extract_bytes matches", "[unit][fixture][ba2_gnrl_extract]")
+{
   bool saw_raw = false;
   bool saw_zero_byte_raw = false;
   bool saw_deflate = false;
   bool saw_lz4_block = false;
 
-  for (const auto& fixture : ba2_success_fixtures()) {
+  for (const auto &fixture : ba2_success_fixtures())
+  {
     const auto manifest = read_json_file(generated_archive_path(fixture.manifest));
     auto opened = libbsa::archive_reader::open(generated_archive_path(fixture.archive).string());
     REQUIRE(opened.has_value());
 
-    for (const auto& expected : manifest.at("entries")) {
+    for (const auto &expected : manifest.at("entries"))
+    {
       const auto compression = expected.at("compression").get<std::string>();
       saw_raw = saw_raw || compression == "raw";
       saw_zero_byte_raw = saw_zero_byte_raw || (compression == "raw" && expected.at("raw_size").get<std::uint64_t>() == 0U);
@@ -755,18 +823,22 @@ TEST_CASE("ba2_gnrl_extract streams manifest bytes and extract_bytes matches", "
 }
 
 TEST_CASE("ba2_gnrl_compressed_fallbacks preserve fixture bytes",
-          "[unit][fixture][ba2_gnrl_extract][bounded_memory_policy]") {
+          "[unit][fixture][ba2_gnrl_extract][bounded_memory_policy]")
+{
   bool saw_deflate = false;
   bool saw_lz4_block = false;
 
-  for (const auto& fixture : ba2_success_fixtures()) {
+  for (const auto &fixture : ba2_success_fixtures())
+  {
     const auto manifest = read_json_file(generated_archive_path(fixture.manifest));
     auto opened = libbsa::archive_reader::open(generated_archive_path(fixture.archive).string());
     REQUIRE(opened.has_value());
 
-    for (const auto& expected : manifest.at("entries")) {
+    for (const auto &expected : manifest.at("entries"))
+    {
       const auto compression = expected.at("compression").get<std::string>();
-      if (compression != "deflate" && compression != "lz4_block") {
+      if (compression != "deflate" && compression != "lz4_block")
+      {
         continue;
       }
       saw_deflate = saw_deflate || compression == "deflate";
@@ -785,7 +857,8 @@ TEST_CASE("ba2_gnrl_compressed_fallbacks preserve fixture bytes",
 }
 
 TEST_CASE("ba2_gnrl_extract helper routes by metadata and detects partial_sink writes",
-          "[unit][fixture][ba2_gnrl_extract]") {
+          "[unit][fixture][ba2_gnrl_extract]")
+{
   auto fo4 = libbsa::archive_reader::open(generated_archive_path("ba2_gnrl_fo4.ba2").string());
   REQUIRE(fo4.has_value());
   auto raw_entry = fo4.value().find("meshes/mixedcase/probe.nif");
@@ -819,24 +892,26 @@ TEST_CASE("ba2_gnrl_extract helper routes by metadata and detects partial_sink w
       libbsa::formats::ba2::extract_ba2_gnrl_payload(resolved_sfv3_path.value(), *lz4_entry.value(), lz4_sink);
 
   REQUIRE(lz4_result.has_value());
-  const auto& expected_lz4 = *std::find_if(sfv3_manifest.at("entries").begin(), sfv3_manifest.at("entries").end(), [](const auto& entry) {
-    return entry.at("compression").get<std::string>() == "lz4_block";
-  });
+  const auto &expected_lz4 = *std::find_if(sfv3_manifest.at("entries").begin(), sfv3_manifest.at("entries").end(), [](const auto &entry)
+                                           { return entry.at("compression").get<std::string>() == "lz4_block"; });
   REQUIRE(lz4_sink.bytes() == bytes_from_hex(expected_lz4.at("expected").at("bytes_hex").get<std::string>()));
 }
 
 TEST_CASE("ba2_gnrl_malformed manifest cases fail with stable error codes",
-          "[unit][fixture][malformed][ba2_gnrl_malformed]") {
+          "[unit][fixture][malformed][ba2_gnrl_malformed]")
+{
   const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_malformed_manifest.json"));
   constexpr auto required_cases = std::to_array<std::string_view>({"ba2_unsupported_v3_compression_method",
-                                                                  "ba2_duplicate_canonical_path",
-                                                                  "ba2_corrupt_compressed_payload",
-                                                                  "ba2_exact_size_mismatch"});
+                                                                   "ba2_duplicate_canonical_path",
+                                                                   "ba2_corrupt_compressed_payload",
+                                                                   "ba2_exact_size_mismatch"});
   std::vector<std::string> observed_cases;
 
-  for (const auto& test_case : manifest.at("cases")) {
+  for (const auto &test_case : manifest.at("cases"))
+  {
     const auto id = test_case.at("id").get<std::string>();
-    if (id == "ba2_dx10_unsupported") {
+    if (id == "ba2_dx10_unsupported")
+    {
       continue;
     }
     observed_cases.push_back(id);
@@ -844,7 +919,8 @@ TEST_CASE("ba2_gnrl_malformed manifest cases fail with stable error codes",
     const auto expected_error = error_code_from_manifest(test_case.at("expected_error").get<std::string>());
     const auto phase = test_case.at("phase").get<std::string>();
 
-    if (phase == "open") {
+    if (phase == "open")
+    {
       auto opened = libbsa::archive_reader::open(archive);
 
       REQUIRE_FALSE(opened.has_value());
@@ -863,7 +939,8 @@ TEST_CASE("ba2_gnrl_malformed manifest cases fail with stable error codes",
     REQUIRE(extracted.error().code == expected_error);
   }
 
-  for (const auto required : required_cases) {
+  for (const auto required : required_cases)
+  {
     INFO("required malformed BA2 case: " << required);
     REQUIRE(std::find(observed_cases.begin(), observed_cases.end(), required) != observed_cases.end());
   }

@@ -12,43 +12,50 @@
 #include <string_view>
 #include <vector>
 
-namespace {
+namespace
+{
 
-libbsa::detail::host_file_context test_context() noexcept {
-  return {"test failed to open source",
-          "test failed to inspect source",
-          "test failed while reading source",
-          "test source changed",
-          "test source allocation"};
-}
-
-std::filesystem::path source_test_dir() {
-  auto path = std::filesystem::temp_directory_path() / "libbsa_host_file_tests";
-  std::filesystem::create_directories(path);
-  return path;
-}
-
-std::filesystem::path source_path(std::string_view name) { return source_test_dir() / std::string{name}; }
-
-std::vector<std::byte> bytes_from_text(std::string_view text) {
-  std::vector<std::byte> bytes;
-  bytes.reserve(text.size());
-  for (const char ch : text) {
-    bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+  libbsa::detail::host_file_context test_context() noexcept
+  {
+    return {"test failed to open source",
+            "test failed to inspect source",
+            "test failed while reading source",
+            "test source changed",
+            "test source allocation"};
   }
-  return bytes;
-}
 
-void write_binary_file(const std::filesystem::path& path, std::span<const std::byte> bytes) {
-  std::ofstream output{path, std::ios::binary | std::ios::trunc};
-  REQUIRE(output.good());
-  output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-  REQUIRE(output.good());
-}
+  std::filesystem::path source_test_dir()
+  {
+    auto path = std::filesystem::temp_directory_path() / "libbsa_host_file_tests";
+    std::filesystem::create_directories(path);
+    return path;
+  }
+
+  std::filesystem::path source_path(std::string_view name) { return source_test_dir() / std::string{name}; }
+
+  std::vector<std::byte> bytes_from_text(std::string_view text)
+  {
+    std::vector<std::byte> bytes;
+    bytes.reserve(text.size());
+    for (const char ch : text)
+    {
+      bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+    }
+    return bytes;
+  }
+
+  void write_binary_file(const std::filesystem::path &path, std::span<const std::byte> bytes)
+  {
+    std::ofstream output{path, std::ios::binary | std::ios::trunc};
+    REQUIRE(output.good());
+    output.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(output.good());
+  }
 
 } // namespace
 
-TEST_CASE("host_file reads exact whole-file payloads", "[unit][host_file]") {
+TEST_CASE("host_file reads exact whole-file payloads", "[unit][host_file]")
+{
   const auto path = source_path("exact.bin");
   const auto expected = bytes_from_text("exact source bytes");
   write_binary_file(path, expected);
@@ -65,7 +72,8 @@ TEST_CASE("host_file reads exact whole-file payloads", "[unit][host_file]") {
   CHECK(bytes.value() == expected);
 }
 
-TEST_CASE("host_file reads bounded short prefixes", "[unit][host_file]") {
+TEST_CASE("host_file reads bounded short prefixes", "[unit][host_file]")
+{
   const auto path = source_path("prefix.bin");
   const auto expected = bytes_from_text("abc");
   write_binary_file(path, expected);
@@ -83,7 +91,8 @@ TEST_CASE("host_file reads bounded short prefixes", "[unit][host_file]") {
   CHECK(bounded_prefix.value() == std::vector<std::byte>{expected.begin(), expected.begin() + 2});
 }
 
-TEST_CASE("host_file iterates bounded chunks", "[unit][host_file]") {
+TEST_CASE("host_file iterates bounded chunks", "[unit][host_file]")
+{
   const auto path = source_path("chunks.bin");
   const auto expected = bytes_from_text("chunked source bytes");
   write_binary_file(path, expected);
@@ -98,7 +107,8 @@ TEST_CASE("host_file iterates bounded chunks", "[unit][host_file]") {
       resolved.value(),
       static_cast<std::uint64_t>(expected.size()),
       test_context(),
-      [&](std::span<const std::byte> chunk) -> libbsa::result<void> {
+      [&](std::span<const std::byte> chunk) -> libbsa::result<void>
+      {
         ++callback_count;
         visited.insert(visited.end(), chunk.begin(), chunk.end());
         CHECK(chunk.size() <= 5U);
@@ -111,7 +121,8 @@ TEST_CASE("host_file iterates bounded chunks", "[unit][host_file]") {
   CHECK(visited == expected);
 }
 
-TEST_CASE("host_file reports missing sources with caller diagnostics", "[unit][host_file]") {
+TEST_CASE("host_file reports missing sources with caller diagnostics", "[unit][host_file]")
+{
   const auto missing = source_path("missing.bin");
   std::filesystem::remove(missing);
 
@@ -126,7 +137,8 @@ TEST_CASE("host_file reports missing sources with caller diagnostics", "[unit][h
   CHECK(bytes.error().message == "test failed to inspect source");
 }
 
-TEST_CASE("host_file rejects sources that shrink or grow", "[unit][host_file]") {
+TEST_CASE("host_file rejects sources that shrink or grow", "[unit][host_file]")
+{
   const auto path = source_path("changed.bin");
   const auto expected = bytes_from_text("stable");
 
@@ -134,7 +146,8 @@ TEST_CASE("host_file rejects sources that shrink or grow", "[unit][host_file]") 
 
   REQUIRE(resolved.has_value());
 
-  SECTION("shrunk before exact read") {
+  SECTION("shrunk before exact read")
+  {
     write_binary_file(path, std::span<const std::byte>{expected.data(), expected.size() - 1U});
 
     auto bytes = libbsa::detail::read_host_file_exact(resolved.value(), static_cast<std::uint64_t>(expected.size()),
@@ -145,7 +158,8 @@ TEST_CASE("host_file rejects sources that shrink or grow", "[unit][host_file]") 
     CHECK(bytes.error().message == "test source changed");
   }
 
-  SECTION("grown before exact read") {
+  SECTION("grown before exact read")
+  {
     auto grown = expected;
     grown.push_back(std::byte{0x21});
     write_binary_file(path, grown);
@@ -159,7 +173,8 @@ TEST_CASE("host_file rejects sources that shrink or grow", "[unit][host_file]") 
   }
 }
 
-TEST_CASE("host_file reports allocation limits through results", "[unit][host_file]") {
+TEST_CASE("host_file reports allocation limits through results", "[unit][host_file]")
+{
   const auto path = source_path("allocation.bin");
   write_binary_file(path, bytes_from_text("small"));
 

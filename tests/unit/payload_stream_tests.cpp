@@ -17,101 +17,117 @@
 #include <utility>
 #include <vector>
 
-namespace {
+namespace
+{
 
-class memory_source final : public libbsa::detail::payload_source {
- public:
-  explicit memory_source(std::vector<std::byte> bytes) : bytes_(std::move(bytes)) {}
+  class memory_source final : public libbsa::detail::payload_source
+  {
+  public:
+    explicit memory_source(std::vector<std::byte> bytes) : bytes_(std::move(bytes)) {}
 
-  libbsa::result<std::size_t> read(std::span<std::byte> destination) override {
-    const auto count = std::min(destination.size(), remaining());
-    std::copy_n(bytes_.begin() + static_cast<std::ptrdiff_t>(position_),
-                static_cast<std::ptrdiff_t>(count), destination.begin());
-    position_ += count;
-    return count;
+    libbsa::result<std::size_t> read(std::span<std::byte> destination) override
+    {
+      const auto count = std::min(destination.size(), remaining());
+      std::copy_n(bytes_.begin() + static_cast<std::ptrdiff_t>(position_),
+                  static_cast<std::ptrdiff_t>(count), destination.begin());
+      position_ += count;
+      return count;
+    }
+
+    [[nodiscard]] std::size_t remaining() const noexcept override { return bytes_.size() - position_; }
+
+  private:
+    std::vector<std::byte> bytes_;
+    std::size_t position_{0};
+  };
+
+  class failing_source final : public libbsa::detail::payload_source
+  {
+  public:
+    libbsa::result<std::size_t> read(std::span<std::byte>) override
+    {
+      return libbsa::error{libbsa::error_code::format_error, "source failed"};
+    }
+
+    [[nodiscard]] std::size_t remaining() const noexcept override { return 1; }
+  };
+
+  class memory_sink final : public libbsa::detail::payload_sink, public libbsa::payload_sink
+  {
+  public:
+    libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override
+    {
+      bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
+      write_sizes_.push_back(bytes.size());
+      return bytes.size();
+    }
+
+    [[nodiscard]] const std::vector<std::byte> &bytes() const noexcept { return bytes_; }
+    [[nodiscard]] const std::vector<std::size_t> &write_sizes() const noexcept { return write_sizes_; }
+
+  private:
+    std::vector<std::byte> bytes_;
+    std::vector<std::size_t> write_sizes_;
+  };
+
+  class failing_sink final : public libbsa::detail::payload_sink, public libbsa::payload_sink
+  {
+  public:
+    libbsa::result<std::size_t> write(std::span<const std::byte>) override
+    {
+      return libbsa::error{libbsa::error_code::format_error, "sink failed"};
+    }
+  };
+
+  class partial_sink final : public libbsa::detail::payload_sink, public libbsa::payload_sink
+  {
+  public:
+    libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override { return bytes.empty() ? 0U : bytes.size() - 1U; }
+  };
+
+  class temporary_payload_file final
+  {
+  public:
+    explicit temporary_payload_file(std::span<const std::byte> bytes)
+        : path_{std::filesystem::temp_directory_path() /
+                ("libbsa_payload_stream_" +
+                 std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".bin")}
+    {
+      std::ofstream output{path_, std::ios::binary};
+      REQUIRE(output);
+      output.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+      REQUIRE(output);
+    }
+
+    temporary_payload_file(const temporary_payload_file &) = delete;
+    temporary_payload_file &operator=(const temporary_payload_file &) = delete;
+
+    ~temporary_payload_file()
+    {
+      std::error_code ignored;
+      std::filesystem::remove(path_, ignored);
+    }
+
+    [[nodiscard]] const std::filesystem::path &path() const noexcept { return path_; }
+
+  private:
+    std::filesystem::path path_;
+  };
+
+  std::vector<std::byte> payload_bytes()
+  {
+    std::vector<std::byte> bytes(256);
+    for (std::size_t index = 0; index < bytes.size(); ++index)
+    {
+      bytes[index] = static_cast<std::byte>(static_cast<std::uint8_t>(index));
+    }
+    return bytes;
   }
-
-  [[nodiscard]] std::size_t remaining() const noexcept override { return bytes_.size() - position_; }
-
- private:
-  std::vector<std::byte> bytes_;
-  std::size_t position_{0};
-};
-
-class failing_source final : public libbsa::detail::payload_source {
- public:
-  libbsa::result<std::size_t> read(std::span<std::byte>) override {
-    return libbsa::error{libbsa::error_code::format_error, "source failed"};
-  }
-
-  [[nodiscard]] std::size_t remaining() const noexcept override { return 1; }
-};
-
-class memory_sink final : public libbsa::detail::payload_sink, public libbsa::payload_sink {
- public:
-  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
-    bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
-    write_sizes_.push_back(bytes.size());
-    return bytes.size();
-  }
-
-  [[nodiscard]] const std::vector<std::byte>& bytes() const noexcept { return bytes_; }
-  [[nodiscard]] const std::vector<std::size_t>& write_sizes() const noexcept { return write_sizes_; }
-
- private:
-  std::vector<std::byte> bytes_;
-  std::vector<std::size_t> write_sizes_;
-};
-
-class failing_sink final : public libbsa::detail::payload_sink, public libbsa::payload_sink {
- public:
-  libbsa::result<std::size_t> write(std::span<const std::byte>) override {
-    return libbsa::error{libbsa::error_code::format_error, "sink failed"};
-  }
-};
-
-class partial_sink final : public libbsa::detail::payload_sink, public libbsa::payload_sink {
- public:
-  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override { return bytes.empty() ? 0U : bytes.size() - 1U; }
-};
-
-class temporary_payload_file final {
- public:
-  explicit temporary_payload_file(std::span<const std::byte> bytes)
-      : path_{std::filesystem::temp_directory_path() /
-              ("libbsa_payload_stream_" +
-               std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".bin")} {
-    std::ofstream output{path_, std::ios::binary};
-    REQUIRE(output);
-    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-    REQUIRE(output);
-  }
-
-  temporary_payload_file(const temporary_payload_file&) = delete;
-  temporary_payload_file& operator=(const temporary_payload_file&) = delete;
-
-  ~temporary_payload_file() {
-    std::error_code ignored;
-    std::filesystem::remove(path_, ignored);
-  }
-
-  [[nodiscard]] const std::filesystem::path& path() const noexcept { return path_; }
-
- private:
-  std::filesystem::path path_;
-};
-
-std::vector<std::byte> payload_bytes() {
-  std::vector<std::byte> bytes(256);
-  for (std::size_t index = 0; index < bytes.size(); ++index) {
-    bytes[index] = static_cast<std::byte>(static_cast<std::uint8_t>(index));
-  }
-  return bytes;
-}
 
 } // namespace
 
-TEST_CASE("payload_stream transfers exact bytes across chunk size 17", "[unit][payload-stream]") {
+TEST_CASE("payload_stream transfers exact bytes across chunk size 17", "[unit][payload-stream]")
+{
   auto expected = payload_bytes();
   memory_source source{expected};
   memory_sink sink;
@@ -123,7 +139,8 @@ TEST_CASE("payload_stream transfers exact bytes across chunk size 17", "[unit][p
   REQUIRE(sink.bytes() == expected);
 }
 
-TEST_CASE("payload_stream propagates source and sink failures", "[unit][malformed][payload-stream]") {
+TEST_CASE("payload_stream propagates source and sink failures", "[unit][malformed][payload-stream]")
+{
   failing_source source;
   memory_sink sink;
   auto source_result = libbsa::detail::transfer_payload(source, sink, 17);
@@ -138,7 +155,8 @@ TEST_CASE("payload_stream propagates source and sink failures", "[unit][malforme
   REQUIRE(sink_result.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("payload_stream rejects partial sink writes and zero chunk size", "[unit][malformed][payload-stream]") {
+TEST_CASE("payload_stream rejects partial sink writes and zero chunk size", "[unit][malformed][payload-stream]")
+{
   auto bytes = payload_bytes();
   memory_source source{bytes};
   partial_sink sink;
@@ -153,12 +171,14 @@ TEST_CASE("payload_stream rejects partial sink writes and zero chunk size", "[un
   REQUIRE(zero_chunk.error().code == libbsa::error_code::invalid_argument);
 }
 
-TEST_CASE("payload_stream validates archive size and stream ranges", "[unit][malformed][payload-stream]") {
+TEST_CASE("payload_stream validates archive size and stream ranges", "[unit][malformed][payload-stream]")
+{
   auto checked = libbsa::detail::checked_payload_size(42U, "test payload");
   REQUIRE(checked);
   REQUIRE(checked.value() == 42U);
 
-  if constexpr (sizeof(std::size_t) < sizeof(std::uint64_t)) {
+  if constexpr (sizeof(std::size_t) < sizeof(std::uint64_t))
+  {
     const auto too_large = static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()) + 1U;
     auto rejected = libbsa::detail::checked_payload_size(too_large, "test payload");
     REQUIRE_FALSE(rejected);
@@ -181,13 +201,15 @@ TEST_CASE("payload_stream validates archive size and stream ranges", "[unit][mal
   REQUIRE(span_limit.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("payload_stream validates single-vector materialization limits", "[unit][malformed][payload-stream][allocation]") {
+TEST_CASE("payload_stream validates single-vector materialization limits", "[unit][malformed][payload-stream][allocation]")
+{
   auto checked = libbsa::detail::checked_materialized_payload_size(42U, "test materialized payload");
   REQUIRE(checked);
   REQUIRE(checked.value() == 42U);
 
   const auto max_size = std::vector<std::byte>{}.max_size();
-  if (max_size == std::numeric_limits<std::uint64_t>::max()) {
+  if (max_size == std::numeric_limits<std::uint64_t>::max())
+  {
     SKIP("byte vector max_size cannot be overflowed on this standard library");
   }
 
@@ -197,7 +219,8 @@ TEST_CASE("payload_stream validates single-vector materialization limits", "[uni
   REQUIRE(rejected.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("payload_stream reads exact archive ranges", "[unit][payload-stream]") {
+TEST_CASE("payload_stream reads exact archive ranges", "[unit][payload-stream]")
+{
   auto bytes = payload_bytes();
   temporary_payload_file file{bytes};
   std::ifstream input{file.path(), std::ios::binary};
@@ -211,7 +234,8 @@ TEST_CASE("payload_stream reads exact archive ranges", "[unit][payload-stream]")
   REQUIRE(read.value() == expected);
 }
 
-TEST_CASE("payload_stream rejects truncated exact archive reads", "[unit][malformed][payload-stream]") {
+TEST_CASE("payload_stream rejects truncated exact archive reads", "[unit][malformed][payload-stream]")
+{
   auto bytes = payload_bytes();
   temporary_payload_file file{bytes};
   std::ifstream input{file.path(), std::ios::binary};
@@ -223,7 +247,8 @@ TEST_CASE("payload_stream rejects truncated exact archive reads", "[unit][malfor
   REQUIRE(read.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("payload_stream streams raw ranges with bounded chunks", "[unit][payload-stream]") {
+TEST_CASE("payload_stream streams raw ranges with bounded chunks", "[unit][payload-stream]")
+{
   auto bytes = payload_bytes();
   temporary_payload_file file{bytes};
   std::ifstream input{file.path(), std::ios::binary};
@@ -238,7 +263,8 @@ TEST_CASE("payload_stream streams raw ranges with bounded chunks", "[unit][paylo
   REQUIRE(sink.write_sizes() == std::vector<std::size_t>{7U, 7U, 5U});
 }
 
-TEST_CASE("payload_stream writes decoded spans in chunks", "[unit][payload-stream]") {
+TEST_CASE("payload_stream writes decoded spans in chunks", "[unit][payload-stream]")
+{
   auto bytes = payload_bytes();
   memory_sink sink;
 
@@ -249,7 +275,8 @@ TEST_CASE("payload_stream writes decoded spans in chunks", "[unit][payload-strea
   REQUIRE(sink.write_sizes() == std::vector<std::size_t>{100U, 100U, 56U});
 }
 
-TEST_CASE("payload_stream rejects partial sink writes through shared helpers", "[unit][malformed][payload-stream]") {
+TEST_CASE("payload_stream rejects partial sink writes through shared helpers", "[unit][malformed][payload-stream]")
+{
   auto bytes = payload_bytes();
   partial_sink exact_sink;
   auto exact = libbsa::detail::write_payload_exact(exact_sink, std::span<const std::byte>{bytes.data(), 8U},
