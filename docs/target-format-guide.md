@@ -81,7 +81,7 @@ For ordinary result-returning failure unwinding, including validation, snapshot-
 
 Destructor safety-net cleanup remains for BA2 DX10 writers that are abandoned before `write_to`, moved over, or fail before ordinary finalization cleanup can run. The destructor path is best-effort and is intended to release writer-owned snapshot data during normal C++ object teardown.
 
-Residual abnormal-termination risk remains: a process crash, forced termination, hard termination, OS shutdown, or external temp-directory interference can leave residual BA2 DX10 snapshot artifacts behind. libbsa does not claim crash-proof, forced-termination-proof, hard-termination-proof, or OS-shutdown-proof cleanup.
+Residual abnormal-termination risk remains: a process crash, forced termination, hard termination, OS shutdown, or external temp-directory interference can leave residual BA2 DX10 snapshot artifacts behind. libbsa makes no cleanup guarantee for those abnormal conditions.
 
 ## compatibility warnings
 
