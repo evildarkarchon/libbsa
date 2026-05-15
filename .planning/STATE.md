@@ -4,8 +4,8 @@ milestone: v1.1
 milestone_name: Hardening
 status: Awaiting next milestone
 stopped_at: Completed 17.1-03-PLAN.md
-last_updated: "2026-05-15T05:23:56.996Z"
-last_activity: 2026-05-15 — Milestone v1.1 completed and archived
+last_updated: "2026-05-15T11:37:22Z"
+last_activity: 2026-05-15 — Completed quick task 260515-62d: Reject partially overlapping BA2 GNRL payloads
 progress:
   total_phases: 6
   completed_phases: 6
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-15)
 Phase: Milestone v1.1 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-05-15 — Milestone v1.1 completed and archived
+Last activity: 2026-05-15 — Completed quick task 260515-62d: Reject partially overlapping BA2 GNRL payloads
 
 ## Performance Metrics
 
@@ -94,6 +94,7 @@ None.
 | Phase 17.1 P01 | Combined non-ASCII reader-surface regression | 2026-05-15 | 3bee64b | Verified | .planning/phases/17.1-address-tech-debt-in-planning-v1-1-milestone-audit-md/ |
 | Phase 17.1 P02 | Dead internal state removal | 2026-05-15 | c0efdc0 | Verified | .planning/phases/17.1-address-tech-debt-in-planning-v1-1-milestone-audit-md/ |
 | Phase 17.1 P03 | Writer host-path audit closure | 2026-05-15 | 47f17c5 | Verified | .planning/phases/17.1-address-tech-debt-in-planning-v1-1-milestone-audit-md/ |
+| 260515-62d | Reject partially overlapping BA2 GNRL payloads | 2026-05-15 | 8931efc | Verified | .planning/quick/260515-62d-codex-review-https-github-com-evildarkar/ |
 
 ## Deferred Items
 
