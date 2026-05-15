@@ -2,118 +2,89 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: executing
-stopped_at: Completed 17-04-PLAN.md
-last_updated: "2026-05-15T01:37:48.304Z"
+status: complete
+stopped_at: Completed 17-05-PLAN.md
+last_updated: "2026-05-15T01:50:00Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 17
-  completed_plans: 16
-  percent: 80
+  completed_plans: 17
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-14)
+See: .planning/PROJECT.md (updated 2026-05-15)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 17 — writer-hotspot-hardening-and-ship-gate
+**Current focus:** v1.1 Hardening milestone complete; ready for milestone verification or next-scope planning.
 
 ## Current Position
 
-Phase: 17 (writer-hotspot-hardening-and-ship-gate) — EXECUTING
+Phase: 17 (writer-hotspot-hardening-and-ship-gate) — COMPLETE
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase 17 and v1.1 ship gate complete
 Last activity: 2026-05-15
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
-Current note: Phase 17 Plan 02 completed BA2 GNRL staged final-stored dedupe identity hardening for DEDU-02.
+Current note: Phase 17 Plan 05 recorded focused Debug, MSVC AddressSanitizer, Release package proof, public writer API stability, TES5Edit boundary, and dependency-surface evidence in 17-VERIFICATION.md.
 
 ## Performance Metrics
 
-- Total plans completed: 95
-- Current milestone plans completed: 12
+- Total plans completed: 96
+- Current milestone plans completed: 17
 - Historical baseline: v1.0 shipped across 12 phases and 75 plans
-- Latest execution: 17-02 completed in 5 min across 4 files
+- Latest execution: 17-05 completed in 10 min across 6 planning/evidence files
 
 ## Accumulated Context
 
 ### Decisions
 
-- v1.1 remains a hardening-only milestone with no public API expansion.
-- Work order is correctness boundary → verification boundary → structural cleanup → hotspot hardening → ship gate.
-- Reader, parser, preparer, dedupe, and DX10 staging changes must stay incremental, semantics-preserving, and test-backed.
-- Land the neutral `host_file` seam before introducing `host_file_path` so later Phase 13 work does not carry helper-rename debt.
-- Preserve caller-owned writer diagnostics while migrating active prepare/layout code to neutral host-file helper names.
-- [Phase 13]: host_file helpers now accept host_file_path or resolved std::filesystem::path inputs so raw UTF-8 text stays diagnostics-only once resolved.
-- [Phase 13]: Migrated writer call sites resolve disk-source paths once per operation and keep caller-owned diagnostic strings unchanged.
-- [Phase 13]: archive_reader::open now resolves caller UTF-8 text once and stores detail::host_file_path in reader state — Detection and size probes now reuse the resolved host-file boundary instead of repeated raw-text conversion.
-- [Phase 13]: Parser entry seams now accept detail::host_file_path — TES3, TES4, BA2 GNRL, and BA2 DX10 metadata opens now stay on the shared host_file boundary.
-- [Phase 13]: Original UTF-8 host-path text is diagnostics-only across the open/parser seam — Source comments now lock the rule that resolved paths, not caller text, drive later open-time I/O.
-- [Phase 13]: [Phase 13]: Reader reopen helpers now consume detail::host_file_path so follow-on extraction stays on the stored resolved host path. — Task 1 moved archive dispatch and concrete reader reopens onto detail::host_file_path and shared host_file helpers.
-- [Phase 13]: [Phase 13]: validate_archive now delegates host-path setup to archive_reader::open and preserves direct setup failures vs report-based malformed-archive diagnostics. — Task 2 removed the duplicate readability preflight and kept extractability validation on the public reader path.
-- [Phase 13]: [Phase 13]: Source-policy tests now lock reader reopen and validation seams against raw host-path reopen drift. — Task 1 and Task 2 added source-policy assertions so future seam changes cannot silently reintroduce narrow-string host-path opens.
-- [Phase 13]: The dedicated host-path regression suite creates non-ASCII filesystem paths natively, then converts them back to explicit UTF-8 before calling the unchanged public reader and validation APIs.
-- [Phase 13]: BA2 DX10 canonical extraction expectations are reconstructed from manifest-backed DDS layout metadata plus committed payload bytes, keeping the non-ASCII proof black-box and deterministic.
-- [Phase 13]: A smoke policy gate now locks the host-path proof suite to public open, validate, and extract APIs so Phase 13 coverage does not drift into TES3 or writer-side scope.
-- [Phase 14]: Release package proof stays inside the existing CTest-owned package_consumer_smoke and package_consumer_runtime_dll_copy path.
-- [Phase 14]: The supported MSVC ASan lane keeps real /fsanitize=address instrumentation while disabling STL annotation ODR mismatches against prebuilt dependencies.
+- v1.1 remained a hardening-only milestone with no public API expansion.
+- Work order was correctness boundary → verification boundary → structural cleanup → hotspot hardening → ship gate.
+- Reader, parser, preparer, dedupe, and DX10 staging changes stayed incremental, semantics-preserving, and test-backed.
+- [Phase 13]: Host-file helpers resolve UTF-8 host paths once into `detail::host_file_path`; original UTF-8 text is diagnostics-only after resolution.
+- [Phase 13]: Reader reopen helpers and `validate_archive` now reuse the stored resolved host path instead of repeating raw host-path opens.
+- [Phase 14]: The supported Windows verification matrix is role-based: debug inner-loop lanes, Release package-proof lanes, and a separate MSVC AddressSanitizer hardening lane.
 - [Phase 14]: Runtime DLL propagation is part of the supported verification lane contract so Catch2 discovery and package-consumer smoke run from checked-in outputs without caller PATH assumptions.
-- [Phase 14]: The main Windows CI matrix now uses role-aware matrix.include rows so workflow output names both lane role and concrete preset without changing the preset commands.
-- [Phase 14]: The MSVC AddressSanitizer lane stays a separate top-level job that runs the exact windows-msvc-asan-static preset triad instead of becoming a fifth matrix row.
-- [Phase 14-verification-lane-truthfulness]: README keeps windows-msvc-debug-static as the quick path, then groups the remaining supported lanes by debug, Release package-proof, and MSVC AddressSanitizer roles. — Plan 14-03 needed one concrete maintainer entry point while still making the supported matrix truthful across docs and tests.
-- [Phase 14-verification-lane-truthfulness]: PROJECT.md, ROADMAP.md, and STATE.md stay summary-scoped while 14-CONTEXT.md remains the detailed lane contract. — Phase 14 explicitly locked planning layering so project-wide summaries do not duplicate command-level matrix prose.
-- [Phase 14-verification-lane-truthfulness]: validation_policy_tests.cpp must validate README, fixture policy, workflow, presets, and planning summaries independently against the same contract. — Independent repo-surface assertions keep one stale file from validating another and complete the truthfulness loop for VER-03.
-- [Phase 15-reader-backend-dispatch-cleanup]: archive_reader now selects a file-local backend table once during open and reuses it for entries, find, and payload extraction.
-- [Phase 15-reader-backend-dispatch-cleanup]: contains stays implemented as find plus has_value so invalid archive-path input preserves invalid_argument behavior instead of collapsing into false.
-- [Phase 15-reader-backend-dispatch-cleanup]: extract_entries keeps duplicate exact-request coalescing and result mirroring in facade code while backend callbacks stay limited to lookup and payload extraction primitives.
-- [Phase 16-parser-and-preparer-seam-extraction]: BA2 DX10 snapshot staging now lives in a private snapshot-builder seam while ba2_dx10_make_writer_entry remains the stable coordinator entrypoint. — This keeps source DDS load, target validation, and writer-owned subresource snapshot creation independently reviewable without changing the existing internal preparer surface.
-- [Phase 16-parser-and-preparer-seam-extraction]: BA2 DX10 planned chunk assembly, streamed snapshot reads, size validation, indexed work placement, and compression routing now live in a private chunk-assembler seam. — This separates chunk plan/assembly/compression rules from add-time snapshot creation while preserving detail::run_indexed_work result ordering and post-preparation canonical sorting.
-- [Phase 16-parser-and-preparer-seam-extraction]: Parser/preparer seam guardrails live in a dedicated source-policy Catch2 suite instead of expanding unrelated validation-policy tests. — Phase 16 Plan 03 implemented D-13/D-14 with role-based source assertions for TES4 parser and BA2 DX10 preparer seams while preserving public API boundaries.
-- [Phase 17]: TES4-family BSA dedupe candidate identity uses stored size plus deterministic final stored-payload fingerprint only as a narrowing filter; tes4_stored_payloads_equal remains the sharing authority.
-- [Phase 17]: Writer hotspot policy coverage is a dedicated Catch2 source-policy suite registered in libbsa_tests for DEDU-01 guardrails.
-- [Phase 17]: BA2 DX10 write_to is consuming after ordinary attempts because writer-owned snapshot files are cleaned immediately instead of retained for retry.
+- [Phase 15]: `archive_reader` selects a file-local backend table once during open and reuses it for entries, find, extraction, and bulk extraction.
+- [Phase 15]: `contains` stays implemented as `find` plus `has_value` so invalid archive-path input preserves invalid_argument behavior instead of collapsing into false.
+- [Phase 16]: TES4 parser raw table/payload seams and BA2 DX10 snapshot/chunk seams are private, policy-guarded, and behavior-preserving.
+- [Phase 16]: Parser/preparer seam guardrails live in dedicated source-policy Catch2 tests instead of expanding unrelated validation-policy tests.
+- [Phase 17]: TES4-family BSA dedupe candidate identity uses stored size plus deterministic final stored-payload fingerprint only as a narrowing filter; `tes4_stored_payloads_equal` remains the sharing authority.
+- [Phase 17]: BA2 GNRL prepared entries expose `final_stored_dedupe_hash` as explicit final-stored candidate evidence; it is a filter only, not a correctness authority.
+- [Phase 17]: BA2 GNRL layout buckets dedupe candidates by stored size plus `final_stored_dedupe_hash`, then still calls `ba2_gnrl_payloads_equal` before sharing offsets.
+- [Phase 17]: BA2 DX10 `write_to` is consuming after ordinary attempts because writer-owned snapshot files are cleaned promptly instead of retained for retry.
 - [Phase 17]: BA2 DX10 snapshot cleanup is best-effort and preserves the primary validation, write, or publish result error.
-- [Phase 17]: BA2 GNRL prepared entries expose final_stored_dedupe_hash as explicit final-stored candidate evidence; it is a filter only, not a correctness authority.
-- [Phase 17]: BA2 GNRL layout buckets dedupe candidates by stored size plus final_stored_dedupe_hash, then still calls ba2_gnrl_payloads_equal before sharing offsets.
-- [Phase 17]: BA2 DX10 lifecycle documentation states write_to is consuming after ordinary attempts and cleanup is best-effort, while preserving invalid_argument result behavior for later add_file/write_to calls. — Plan 17-04 documented DX10-02 lifecycle behavior and added policy tests without public API expansion.
+- [Phase 17]: BA2 DX10 lifecycle documentation states successful completion, ordinary result-returning failure unwinding, destructor safety-net cleanup, and residual abnormal-termination risk.
+- [Phase 17]: Official v1.1 ship-gate evidence is committed in `17-VERIFICATION.md`; optional local game-corpus and BSArchPro comparison tests remain advisory.
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-- BA2 DX10 temp-data cleanup must be honest about any residual abnormal-termination risk.
-- Dedupe optimizations must preserve exact stored-byte equality semantics.
+None.
 
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
-| 260513-6nl | Repair Phase 13 execution artifacts so the per-plan SUMMARY.md files are GSD-compliant and truthful | 2026-05-13 | Unavailable | Verified | [260513-6nl-i-suspect-that-phase-13-was-not-executed](./quick/260513-6nl-i-suspect-that-phase-13-was-not-executed/) |
-| Phase 13 P02 | 5 min | 3 tasks | 11 files |
-| Phase 13 P03 | 6 min | 3 tasks | 11 files |
-| Phase 13 P04 | 3 min | 3 tasks | 14 files |
-| Phase 14 P01 | 65m | 3 tasks | 7 files |
-| Phase 14 P02 | 2 min | 2 tasks | 2 files |
-| Phase 14-verification-lane-truthfulness P03 | 9m | 3 tasks | 6 files |
-| 260513-xar | Decode public host paths as UTF-8 on Windows | 2026-05-14 | cb1caeb | Verified | [260513-xar-https-github-com-evildarkarchon-libbsa-b](./quick/260513-xar-https-github-com-evildarkarchon-libbsa-b/) |
-| 260514-11b | Fix BA2 GNRL and TES4 raw streaming to use resolved host paths for non-ASCII Windows paths | 2026-05-14 | 553a687 | Verified | [260514-11b-fix-ba2-gnrl-and-tes4-raw-streaming-to-u](./quick/260514-11b-fix-ba2-gnrl-and-tes4-raw-streaming-to-u/) |
-| 260514-5h7 | Resolve TES3 disk source paths and BSA/BA2 writer output paths through shared UTF-8 host path helpers | 2026-05-14 | 152306a | Verified | [260514-5h7-resolve-tes3-disk-source-paths-and-bsa-b](./quick/260514-5h7-resolve-tes3-disk-source-paths-and-bsa-b/) |
-| 260514-6lb | Audited Phase 16 completion evidence and corrected ROADMAP.md only if supported by artifacts; completion was not proven, so ROADMAP.md was left unchanged | 2026-05-14 | Unavailable | Verified | [260514-6lb-phase-16-is-complete-but-the-roadmap-is-](./quick/260514-6lb-phase-16-is-complete-but-the-roadmap-is-/) |
-| Phase 16-parser-and-preparer-seam-extraction P01 | 8m | 3 tasks | 9 files |
-| Phase 16 P02 | 8m | 3 tasks | 9 files |
-| Phase 16 P03 | 5m | 3 tasks | 2 files |
-| Phase 17 P01 | 5 min | 3 tasks | 3 files |
-| Phase 17 P03 | 5 min | 3 tasks | 2 files |
-| Phase 17 P02 | 5 min | 3 tasks | 4 files |
-| Phase 17 P04 | 4 min | 3 tasks | 4 files |
+| Phase 13 | Host Path Correctness Boundary complete | 2026-05-14 | Multiple | Verified | .planning/phases/13-host-path-correctness-boundary/ |
+| Phase 14 | Verification Lane Truthfulness complete | 2026-05-14 | Multiple | Verified | .planning/phases/14-verification-lane-truthfulness/ |
+| Phase 15 | Reader Backend Dispatch Cleanup complete | 2026-05-14 | Multiple | Verified | .planning/phases/15-reader-backend-dispatch-cleanup/ |
+| Phase 16 | Parser and Preparer Seam Extraction complete | 2026-05-14 | Multiple | Verified | .planning/phases/16-parser-and-preparer-seam-extraction/ |
+| Phase 17 P01 | TES4 dedupe candidate narrowing | 2026-05-15 | c0564b4 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
+| Phase 17 P02 | BA2 GNRL staged dedupe identity hardening | 2026-05-15 | 20ca31c | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
+| Phase 17 P03 | BA2 DX10 snapshot cleanup lifecycle | 2026-05-15 | f9646e9 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
+| Phase 17 P04 | BA2 DX10 temporary lifecycle documentation | 2026-05-15 | edb3eb0 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
+| Phase 17 P05 | Debug/ASan/Release ship gate and planning closure | 2026-05-15 | pending | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
 
 ## Deferred Items
 
@@ -125,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-15T01:37:32.381Z
-Stopped at: Completed 17-04-PLAN.md
+Last session: 2026-05-15T01:50:00Z
+Stopped at: Completed 17-05-PLAN.md
 Resume file: None

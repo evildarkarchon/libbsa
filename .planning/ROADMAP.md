@@ -4,7 +4,7 @@
 
 - [x] **v1.0 Complete Library** - Phases 1-12 shipped 2026-05-10.
   Archives: [roadmap](milestones/v1.0-ROADMAP.md), [requirements](milestones/v1.0-REQUIREMENTS.md), [audit](milestones/v1.0-MILESTONE-AUDIT.md), [phase artifacts](milestones/v1.0-phases/).
-- [ ] **v1.1 Hardening** - Phases 13-17 planned for correctness, verification, targeted seam cleanup, and hotspot hardening without public API expansion.
+- [x] **v1.1 Hardening** - Phases 13-17 completed for correctness, verification, targeted seam cleanup, and hotspot hardening without public API expansion. Shipped 2026-05-15.
 
 ## Overview
 
@@ -30,13 +30,13 @@ v1.1 hardens the shipped library rather than broadening it. The milestone follow
 
 </details>
 
-### 🚧 v1.1 Hardening (In Progress)
+### ✅ v1.1 Hardening (Complete)
 
 - [x] **Phase 13: Host Path Correctness Boundary** - Verification snapshot recorded 2026-05-13, but the current repository still carries uncommitted Phase 13 implementation and summary-repair work. (completed 2026-05-13)
 - [x] **Phase 14: Verification Lane Truthfulness** - Make the supported Windows debug, Release package-proof, and MSVC AddressSanitizer verification lanes real, runnable, and policy-aligned. (completed 2026-05-14)
 - [x] **Phase 15: Reader Backend Dispatch Cleanup** - Select reader backend once at open time and keep reader behavior stable across operations. (completed 2026-05-14)
 - [x] **Phase 16: Parser and Preparer Seam Extraction** - Break the targeted TES4 parser and BA2 DX10 preparer hotspots into smaller, test-backed helpers. (completed 2026-05-14)
-- [ ] **Phase 17: Writer Hotspot Hardening and Ship Gate** - Harden dedupe and BA2 DX10 temp staging under existing semantics and close the milestone with ship-ready evidence.
+- [x] **Phase 17: Writer Hotspot Hardening and Ship Gate** - Harden dedupe and BA2 DX10 temp staging under existing semantics and close the milestone with ship-ready evidence. (completed 2026-05-15)
 
 ## Phase Details
 
@@ -143,7 +143,7 @@ Plans:
 - [x] 17-04-PLAN.md - Document and policy-test BA2 DX10 temporary-data lifecycle guarantees and residual risk.
 
 **Wave 4** *(blocked on all implementation and documentation plans)*
-- [ ] 17-05-PLAN.md - Run focused Debug, ASan, and Release package ship gates and update planning state after verified evidence.
+- [x] 17-05-PLAN.md - Run focused Debug, ASan, and Release package ship gates and update planning state after verified evidence.
 
 ## Progress
 
@@ -153,7 +153,7 @@ Plans:
 | 14. Verification Lane Truthfulness | v1.1 | 3/3 | Complete    | 2026-05-14 |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 1/1 | Complete    | 2026-05-14 |
 | 16. Parser and Preparer Seam Extraction | v1.1 | 3/3 | Complete    | 2026-05-14 |
-| 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 4/5 | In Progress|  |
+| 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 5/5 | Complete    | 2026-05-15 |
 
 ## Next Scope Candidates
 
