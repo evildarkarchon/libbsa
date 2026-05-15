@@ -207,3 +207,10 @@ TEST_CASE("validation setup relies on archive_reader open instead of a duplicate
   REQUIRE(validation_text.find("host_path_can_be_opened") == std::string::npos);
   REQUIRE(validation_text.find("std::ifstream input{std::string{host_path}, std::ios::binary}") == std::string::npos);
 }
+
+TEST_CASE("writer host-path inventory policy is represented by an explicit matrix", "[unit][host_file]") {
+  const auto policy_text = read_text_file(source_root() / "tests/unit/host_file_writer_name_tests.cpp");
+  const auto matrix_token = std::string{"writer_host_path_"} + "inventory_cases";
+
+  REQUIRE(policy_text.find(matrix_token) != std::string::npos);
+}
