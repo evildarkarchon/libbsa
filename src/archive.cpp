@@ -81,9 +81,8 @@ const reader_backend& reader_backend_table(reader_backend_identity identity) {
 struct archive_reader::state {
   archive_metadata metadata;
   std::vector<entry_metadata> entries;
-  /// Keeps caller UTF-8 text for diagnostics only; post-open payload reads must stay on the resolved host-file path.
+  /// Reuses the resolved host-file path for post-open payload reads.
   detail::host_file_path host_path;
-  reader_backend_identity backend_identity;
   const reader_backend* backend_table;
 };
 
@@ -180,10 +179,9 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
     // resolved host path for payload reopens.
     archive_reader reader{metadata};
     reader.state_ = std::make_shared<state>(state{std::move(metadata),
-                                                  std::move(entries),
-                                                  std::move(resolved_host_path).value(),
-                                                  backend_identity,
-                                                  &reader_backend_table(backend_identity)});
+                                                   std::move(entries),
+                                                   std::move(resolved_host_path).value(),
+                                                   &reader_backend_table(backend_identity)});
     return reader;
   };
 
