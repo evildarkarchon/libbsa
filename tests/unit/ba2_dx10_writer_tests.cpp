@@ -134,6 +134,42 @@ std::set<std::filesystem::path> snapshot_directories() {
   return paths;
 }
 
+/// Returns only the writer-owned snapshot directories created after a baseline scan.
+std::set<std::filesystem::path> new_snapshot_directories_since(const std::set<std::filesystem::path>& before) {
+  std::set<std::filesystem::path> created;
+  const auto after = snapshot_directories();
+  for (const auto& path : after) {
+    if (!before.contains(path)) {
+      created.insert(path);
+    }
+  }
+  return created;
+}
+
+void require_snapshot_directories_removed(const std::set<std::filesystem::path>& paths) {
+  REQUIRE_FALSE(paths.empty());
+  for (const auto& path : paths) {
+    INFO("writer-owned BA2 DX10 snapshot directory: " << path.string());
+    CHECK_FALSE(std::filesystem::exists(path));
+    std::error_code fs_error;
+    // If the behavior under test regresses, keep later test runs isolated by removing our own directory.
+    std::filesystem::remove_all(path, fs_error);
+  }
+}
+
+std::filesystem::path first_snapshot_file(const std::set<std::filesystem::path>& snapshot_dirs) {
+  REQUIRE_FALSE(snapshot_dirs.empty());
+  for (const auto& dir : snapshot_dirs) {
+    for (const auto& entry : std::filesystem::recursive_directory_iterator{dir}) {
+      std::error_code fs_error;
+      if (entry.is_regular_file(fs_error)) {
+        return entry.path();
+      }
+    }
+  }
+  FAIL("expected a BA2 DX10 snapshot file in the writer-owned snapshot directory");
+}
+
 void write_binary_file(const std::filesystem::path& path, std::span<const std::byte> bytes) {
   std::ofstream output{path, std::ios::binary | std::ios::trunc};
   REQUIRE(output.is_open());
@@ -784,6 +820,154 @@ TEST_CASE("BA2 DX10 writer state removes snapshot temp directory on teardown",
     // If this check fails, still remove the test-created snapshot so later runs start cleanly.
     std::filesystem::remove_all(path, fs_error);
   }
+}
+
+TEST_CASE("BA2 DX10 writer removes snapshot temp directories after successful write while alive",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup]") {
+  const auto before = snapshot_directories();
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto source_path = generated_source_dir() / source_case.at("file").get<std::string>();
+  const auto output_path = unique_output_path("dx10-success-cleans-snapshot");
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(), source_path.string()).has_value());
+  const auto created = new_snapshot_directories_since(before);
+  REQUIRE_FALSE(created.empty());
+  REQUIRE(writer.write_to(output_path.string()).has_value());
+
+  auto opened = libbsa::archive_reader::open(output_path.string());
+  REQUIRE(opened.has_value());
+  require_reader_backed_entry(opened.value(), source_case, libbsa::entry_compression::deflate);
+  require_snapshot_directories_removed(created);
+}
+
+TEST_CASE("BA2 DX10 writer cleans snapshot directories on validation failure and consumes writer",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup]") {
+  const auto before = snapshot_directories();
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto source_path = (generated_source_dir() / source_case.at("file").get<std::string>()).string();
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  REQUIRE(writer.add_file("Textures/Duplicate.dds", source_path).has_value());
+  REQUIRE(writer.add_file("textures/duplicate.dds", source_path).has_value());
+  const auto created = new_snapshot_directories_since(before);
+  REQUIRE_FALSE(created.empty());
+
+  auto written = writer.write_to(unique_output_path("dx10-validation-failure-cleans").string());
+
+  REQUIRE_FALSE(written.has_value());
+  CHECK(written.error().code == libbsa::error_code::format_error);
+  require_snapshot_directories_removed(created);
+  auto later_add = writer.add_file("textures/after-failed-write.dds", source_path);
+  REQUIRE_FALSE(later_add.has_value());
+  CHECK(later_add.error().code == libbsa::error_code::invalid_argument);
+  auto later_write = writer.write_to(unique_output_path("dx10-validation-consumed").string());
+  REQUIRE_FALSE(later_write.has_value());
+  CHECK(later_write.error().code == libbsa::error_code::invalid_argument);
+}
+
+TEST_CASE("BA2 DX10 writer cleans snapshot directories on missing snapshot failure",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup]") {
+  const auto before = snapshot_directories();
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto source_path = (generated_source_dir() / source_case.at("file").get<std::string>()).string();
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(), source_path).has_value());
+  const auto created = new_snapshot_directories_since(before);
+  const auto snapshot = first_snapshot_file(created);
+  std::filesystem::remove(snapshot);
+
+  auto written = writer.write_to(unique_output_path("dx10-missing-snapshot-cleans").string());
+
+  REQUIRE_FALSE(written.has_value());
+  CHECK(written.error().code == libbsa::error_code::io_error);
+  require_snapshot_directories_removed(created);
+}
+
+TEST_CASE("BA2 DX10 writer cleans snapshot directories on truncated snapshot failure and preserves destination bytes",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup][publish]") {
+  const auto before = snapshot_directories();
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto source_path = (generated_source_dir() / source_case.at("file").get<std::string>()).string();
+  const auto output = unique_output_path("dx10-truncated-snapshot-cleans");
+  const std::vector<std::byte> sentinel{std::byte{0x53}, std::byte{0x4E}, std::byte{0x41}, std::byte{0x50}};
+  write_binary_file(output, sentinel);
+  libbsa::ba2_dx10_writer_options options;
+  options.overwrite_existing = true;
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4, options};
+
+  REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(), source_path).has_value());
+  const auto created = new_snapshot_directories_since(before);
+  write_binary_file(first_snapshot_file(created), std::span<const std::byte>{sentinel}.first(1U));
+
+  auto written = writer.write_to(output.string());
+
+  REQUIRE_FALSE(written.has_value());
+  CHECK(written.error().code == libbsa::error_code::io_error);
+  CHECK(read_binary_file(output) == sentinel);
+  require_snapshot_directories_removed(created);
+}
+
+TEST_CASE("BA2 DX10 writer cleans snapshot directories on output failure and preserves primary error",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup][publish]") {
+  const auto before = snapshot_directories();
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto output = writer_test_dir() / "dx10-output-failure-cleans.ba2";
+  const std::vector<std::byte> sentinel{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
+  write_binary_file(output, sentinel);
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(),
+                          (generated_source_dir() / source_case.at("file").get<std::string>()).string())
+              .has_value());
+  const auto created = new_snapshot_directories_since(before);
+
+  auto written = writer.write_to(output.string());
+
+  REQUIRE_FALSE(written.has_value());
+  CHECK(written.error().code == libbsa::error_code::io_error);
+  CHECK(written.error().message.find("BA2 DX10 writer") != std::string::npos);
+  CHECK(read_binary_file(output) == sentinel);
+  require_snapshot_directories_removed(created);
+}
+
+TEST_CASE("BA2 DX10 writer cleans newly reserved snapshot directory when add_file fails",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup][add]") {
+  const auto before = snapshot_directories();
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = invalid_source_case(manifest, "malformed_truncated_dds");
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  auto added = writer.add_file("textures/malformed-cleanup.dds",
+                               (generated_source_dir() / source_case.at("file").get<std::string>()).string());
+
+  REQUIRE_FALSE(added.has_value());
+  CHECK(added.error().code == libbsa::error_code::format_error);
+  CHECK(new_snapshot_directories_since(before).empty());
+}
+
+TEST_CASE("BA2 DX10 writer is consumed after successful write attempts",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup]") {
+  const auto manifest = read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+  const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+  const auto source_path = (generated_source_dir() / source_case.at("file").get<std::string>()).string();
+  libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+  REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(), source_path).has_value());
+  REQUIRE(writer.write_to(unique_output_path("dx10-success-consumed").string()).has_value());
+
+  auto later_add = writer.add_file("textures/after-success.dds", source_path);
+  REQUIRE_FALSE(later_add.has_value());
+  CHECK(later_add.error().code == libbsa::error_code::invalid_argument);
+  auto later_write = writer.write_to(unique_output_path("dx10-success-consumed-again").string());
+  REQUIRE_FALSE(later_write.has_value());
+  CHECK(later_write.error().code == libbsa::error_code::invalid_argument);
 }
 
 TEST_CASE("ba2_dx10_writer::add_file accepts duplicate canonical archive paths for write-time validation",
