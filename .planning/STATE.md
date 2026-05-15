@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: complete
+status: milestone_complete
 stopped_at: Completed 17-05-PLAN.md
 last_updated: "2026-05-15T01:50:00Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 5
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 17
   completed_plans: 17
-  percent: 100
+  percent: 120
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-05-15)
 
 ## Current Position
 
-Phase: 17 (writer-hotspot-hardening-and-ship-gate) — COMPLETE
-Plan: 5 of 5
-Status: Phase 17 and v1.1 ship gate complete
+Phase: 17
+Plan: Not started
+Status: Milestone complete
 Last activity: 2026-05-15
 
 Progress: [██████████] 100%
@@ -36,7 +36,7 @@ Current note: Phase 17 recorded clean post-review ship-gate evidence: focused De
 
 ## Performance Metrics
 
-- Total plans completed: 96
+- Total plans completed: 101
 - Current milestone plans completed: 17
 - Historical baseline: v1.0 shipped across 12 phases and 75 plans
 - Latest execution: 17-05 completed in 10 min across 6 planning/evidence files
