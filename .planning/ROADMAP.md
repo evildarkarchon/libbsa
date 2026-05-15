@@ -163,3 +163,13 @@ These are not committed roadmap items yet; they remain deferred until a later mi
 - Public fuzzing harnesses after the strict parser and validation surfaces have settled.
 - Lenient recovery mode for partially corrupt archives.
 - Stable long-term binary ABI policy if libbsa is distributed as a binary package.
+
+### Phase 17.1: Address tech debt in @.planning/v1.1-MILESTONE-AUDIT.md (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 17
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 17.1 to break down)
