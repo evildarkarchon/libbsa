@@ -91,3 +91,61 @@ TEST_CASE("writer_hotspot_policy requires TES4 dedupe candidate narrowing before
   });
   require_absent_tokens(assign_offsets_body, all_prior_scan_tokens);
 }
+
+TEST_CASE("writer_hotspot_policy requires BA2 GNRL staged dedupe identity before exact equality",
+          "[unit][writer_hotspot_policy]") {
+  const auto root = source_root();
+  const auto prepare_header = read_text_file(root / "src/formats/ba2/ba2_gnrl_prepare.hpp");
+  const auto prepare_source = read_text_file(root / "src/formats/ba2/ba2_gnrl_prepare.cpp");
+  const auto layout_source = read_text_file(root / "src/formats/ba2/ba2_gnrl_layout.cpp");
+  const auto assign_offsets_body = function_body(layout_source,
+                                                 "result<void> ba2_gnrl_assign_payload_offsets(",
+                                                 "namespace {");
+
+  constexpr auto staged_identity_contract = std::to_array<std::string_view>({
+      "final_stored_dedupe_hash",
+      "payload_hash",
+      "stored_payload",
+  });
+  require_all_tokens(prepare_header, staged_identity_contract);
+
+  constexpr auto prepare_evidence = std::to_array<std::string_view>({
+      "final_stored_dedupe_hash",
+      "ba2_gnrl_final_stored_dedupe_hash",
+      "payload_hash =",
+      "hash_disk_payload",
+  });
+  require_all_tokens(prepare_source, prepare_evidence);
+
+  constexpr auto layout_evidence = std::to_array<std::string_view>({
+      "make_ba2_gnrl_final_stored_dedupe_key",
+      "final_stored_dedupe_hash",
+      "deduplicated_payloads.find",
+      "deduplicated_payloads[",
+      "ba2_gnrl_payloads_equal",
+  });
+  require_all_tokens(assign_offsets_body, layout_evidence);
+
+  constexpr auto exact_equality_share_gate = std::to_array<std::string_view>({
+      "auto equal = ba2_gnrl_payloads_equal(entry, entries[candidate.entry_index]);",
+      "if (!equal)",
+      "if (equal.value())",
+      "entry.payload_offset = candidate.offset;",
+      "entry.owns_payload_bytes = false;",
+  });
+  require_all_tokens(assign_offsets_body, exact_equality_share_gate);
+}
+
+TEST_CASE("writer_hotspot_policy requires BA2 GNRL disk-source change diagnostics",
+          "[unit][writer_hotspot_policy]") {
+  const auto layout_source = read_text_file(source_root() / "src/formats/ba2/ba2_gnrl_layout.cpp");
+
+  constexpr auto disk_change_evidence = std::to_array<std::string_view>({
+      "compare_disk_payload_to_bytes",
+      "compare_disk_payloads",
+      "BA2 GNRL disk source changed during dedupe preparation",
+      "A file that grew after preparation can otherwise compare equal for the prepared prefix and corrupt offsets.",
+      "error_code::io_error",
+  });
+  require_all_tokens(layout_source, disk_change_evidence);
+}
