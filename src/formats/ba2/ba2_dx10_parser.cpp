@@ -47,6 +47,12 @@ namespace libbsa::formats::ba2
       std::uint16_t end_mip;
     };
 
+    struct stored_chunk_span
+    {
+      std::uint64_t offset;
+      std::uint64_t size;
+    };
+
     struct dx10_record
     {
       std::uint32_t name_hash;
@@ -70,6 +76,16 @@ namespace libbsa::formats::ba2
     using detail::normalize_display_separators;
     using detail::read_file_bytes_at;
     using detail::span_fits_u64;
+
+    bool spans_overlap_u64(std::uint64_t first_start, std::uint64_t first_length, std::uint64_t second_start,
+                           std::uint64_t second_length) noexcept
+    {
+      if (first_length == 0U || second_length == 0U)
+      {
+        return false;
+      }
+      return first_start < second_start + second_length && second_start < first_start + first_length;
+    }
 
     std::size_t header_size_for(std::uint32_t version) noexcept
     {
@@ -406,6 +422,25 @@ namespace libbsa::formats::ba2
     result<std::uint64_t> first_payload_offset_for(std::span<const dx10_record> records, std::uint64_t archive_size)
     {
       std::uint64_t first_payload_offset = archive_size;
+      std::size_t expected_chunk_count = 0;
+      for (const auto &record : records)
+      {
+        std::size_t next_chunk_count = 0;
+        if (!add_fits(expected_chunk_count, record.chunks.size(), next_chunk_count))
+        {
+          return error{error_code::format_error, "BA2 DX10 aggregate texture chunk count exceeds platform limits"};
+        }
+        expected_chunk_count = next_chunk_count;
+      }
+
+      std::vector<stored_chunk_span> accepted_payload_spans;
+      auto reserved_payload_spans = detail::reserve_metadata_vector(accepted_payload_spans, expected_chunk_count,
+                                                                    "BA2 DX10 stored chunk spans");
+      if (!reserved_payload_spans)
+      {
+        return reserved_payload_spans.error();
+      }
+
       for (const auto &record : records)
       {
         for (const auto &chunk : record.chunks)
@@ -419,6 +454,17 @@ namespace libbsa::formats::ba2
           {
             return error{error_code::format_error, "BA2 DX10 chunk payload span is outside the archive"};
           }
+          for (const auto &prior : accepted_payload_spans)
+          {
+            const auto exact_duplicate = prior.offset == chunk.offset && prior.size == stored_size;
+            if (!exact_duplicate && spans_overlap_u64(prior.offset, prior.size, chunk.offset, stored_size))
+            {
+              return error{error_code::format_error, "BA2 DX10 chunk payload spans partially overlap"};
+            }
+          }
+          // Writer dedupe can intentionally publish exact duplicate chunks; partial sharing would make texture
+          // chunk extraction ambiguous because logical DDS segments would read bytes from each other's ranges.
+          accepted_payload_spans.push_back(stored_chunk_span{chunk.offset, stored_size});
           first_payload_offset = std::min(first_payload_offset, chunk.offset);
         }
       }
