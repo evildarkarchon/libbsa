@@ -21,17 +21,23 @@ struct payload_assignment {
   std::size_t entry_index{};
 };
 
-struct dedupe_identity {
+struct ba2_gnrl_final_stored_dedupe_key {
   std::uint32_t stored_size{};
-  std::uint64_t hash{};
+  std::uint64_t final_stored_dedupe_hash{};
 
-  bool operator<(const dedupe_identity& other) const noexcept {
+  bool operator<(const ba2_gnrl_final_stored_dedupe_key& other) const noexcept {
     if (stored_size != other.stored_size) {
       return stored_size < other.stored_size;
     }
-    return hash < other.hash;
+    return final_stored_dedupe_hash < other.final_stored_dedupe_hash;
   }
 };
+
+ba2_gnrl_final_stored_dedupe_key make_ba2_gnrl_final_stored_dedupe_key(
+    std::uint64_t final_stored_dedupe_hash,
+    std::uint32_t stored_size) noexcept {
+  return ba2_gnrl_final_stored_dedupe_key{stored_size, final_stored_dedupe_hash};
+}
 
 bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept {
   if (lhs > std::numeric_limits<std::uint64_t>::max() - rhs) {
@@ -107,7 +113,7 @@ result<void> ba2_gnrl_assign_payload_offsets(std::span<ba2_gnrl_prepared_entry> 
   }
   const auto first_payload_offset = cursor;
 
-  std::map<dedupe_identity, std::vector<payload_assignment>> deduplicated_payloads;
+  std::map<ba2_gnrl_final_stored_dedupe_key, std::vector<payload_assignment>> deduplicated_payloads;
   for (std::size_t index = 0; index < entries.size(); ++index) {
     auto& entry = entries[index];
     auto stored_size = checked_u32(entry.stream_from_disk ? entry.raw_size : entry.stored_payload.size(),
@@ -118,7 +124,8 @@ result<void> ba2_gnrl_assign_payload_offsets(std::span<ba2_gnrl_prepared_entry> 
     if (deduplicate_payloads) {
       // D-23 requires dedupe after raw-vs-compressed routing, so this key is the exact byte span
       // the writer would store in the BA2 payload area rather than the caller's source bytes.
-      const dedupe_identity identity{stored_size.value(), entry.payload_hash};
+      const auto final_stored_dedupe_hash = entry.final_stored_dedupe_hash;
+      const auto identity = make_ba2_gnrl_final_stored_dedupe_key(final_stored_dedupe_hash, stored_size.value());
       auto duplicate = deduplicated_payloads.find(identity);
       bool reused_payload = false;
       if (duplicate != deduplicated_payloads.end()) {
@@ -145,7 +152,8 @@ result<void> ba2_gnrl_assign_payload_offsets(std::span<ba2_gnrl_prepared_entry> 
     entry.payload_offset = stored_size.value() == 0U ? first_payload_offset : cursor;
     entry.owns_payload_bytes = true;
     if (deduplicate_payloads) {
-      deduplicated_payloads[dedupe_identity{stored_size.value(), entry.payload_hash}].push_back(
+      const auto identity = make_ba2_gnrl_final_stored_dedupe_key(entry.final_stored_dedupe_hash, stored_size.value());
+      deduplicated_payloads[identity].push_back(
           payload_assignment{entry.payload_offset, stored_size.value(), index});
     }
     if (!add_fits_u64(cursor, stored_size.value(), cursor)) {

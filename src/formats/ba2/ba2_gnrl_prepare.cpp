@@ -108,6 +108,8 @@ result<std::uint64_t> hash_disk_payload(const std::string& host_path, std::uint6
   return hash;
 }
 
+std::uint64_t ba2_gnrl_final_stored_dedupe_hash(std::uint64_t payload_hash) noexcept { return payload_hash; }
+
 bool archive_default_compressed(archive_compression_policy policy) noexcept {
   switch (policy) {
   case archive_compression_policy::target_default:
@@ -199,6 +201,7 @@ result<ba2_gnrl_prepared_entry> prepare_entry(ba2_gnrl_target target,
   std::uint32_t packed_size = ba2_packed_size_raw;
   bool stream_from_disk = !entry.from_memory && !entry_compressed;
   std::uint64_t payload_hash = 0U;
+  std::uint64_t final_stored_dedupe_hash = 0U;
   if (entry_compressed || entry.from_memory) {
     auto payload = read_source_bytes(entry, source_size);
     if (!payload) {
@@ -231,6 +234,8 @@ result<ba2_gnrl_prepared_entry> prepare_entry(ba2_gnrl_target target,
     payload_hash = hash.value();
   }
 
+  final_stored_dedupe_hash = ba2_gnrl_final_stored_dedupe_hash(payload_hash);
+
   auto extension = extension_fourcc_for(entry.archive_path_original);
   if (!extension) {
     return extension.error();
@@ -262,6 +267,7 @@ result<ba2_gnrl_prepared_entry> prepare_entry(ba2_gnrl_target target,
                                  packed_size,
                                  raw_size.value(),
                                  payload_hash,
+                                 final_stored_dedupe_hash,
                                  stream_from_disk,
                                  true,
                                  std::move(stored_payload)};

@@ -28,6 +28,9 @@ struct ba2_gnrl_prepared_entry {
   std::uint32_t packed_size{};
   std::uint32_t raw_size{};
   std::uint64_t payload_hash{};
+  // Dedupe narrowing uses a deliberately named final-stored fingerprint so policy checks can distinguish it
+  // from caller-source hashes; exact equality in layout remains the authority for shared offsets.
+  std::uint64_t final_stored_dedupe_hash{};
   bool stream_from_disk{false};
   bool owns_payload_bytes{true};
   std::vector<std::byte> stored_payload;
