@@ -41,6 +41,18 @@ void require_absent_tokens(std::string_view body, std::span<const std::string_vi
   }
 }
 
+std::string archive_reader_state_body(std::string_view source) {
+  const auto start = source.find("struct archive_reader::state");
+  REQUIRE(start != std::string::npos);
+
+  const auto body_start = source.find('{', start);
+  REQUIRE(body_start != std::string::npos);
+
+  const auto end = source.find("};", body_start);
+  REQUIRE(end != std::string::npos);
+  return std::string{source.substr(body_start, end - body_start)};
+}
+
 } // namespace
 
 TEST_CASE("archive_reader_dispatch_policy forbids repeated family dispatch in public reader methods",
@@ -100,4 +112,12 @@ TEST_CASE("archive_reader_dispatch_policy forbids repeated family dispatch in pu
   require_absent_tokens(extract_body, forbidden_dispatch_tokens);
   require_absent_tokens(extract_bytes_body, forbidden_dispatch_tokens);
   require_absent_tokens(extract_entries_body, forbidden_dispatch_tokens);
+}
+
+TEST_CASE("archive_reader_dispatch_policy forbids stored backend identity in reader state",
+          "[unit][archive_reader_dispatch_policy]") {
+  const auto archive_text = read_text_file(source_root() / "src/archive.cpp");
+  const auto state_body = archive_reader_state_body(archive_text);
+
+  CHECK(state_body.find("backend_identity") == std::string::npos);
 }
