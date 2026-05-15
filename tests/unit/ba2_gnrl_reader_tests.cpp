@@ -596,6 +596,12 @@ TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
 
   REQUIRE_FALSE(opened.has_value());
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+  auto validated = libbsa::validate_archive(temp_path.string());
+  REQUIRE(validated.has_value());
+  CHECK_FALSE(validated.value().is_valid());
+  REQUIRE(validated.value().errors.size() == 1U);
+  CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
 }
 
 TEST_CASE("ba2_gnrl_detector rejects partially overlapping payload spans",
@@ -621,6 +627,12 @@ TEST_CASE("ba2_gnrl_detector rejects partially overlapping payload spans",
 
   REQUIRE_FALSE(opened.has_value());
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+  auto validated = libbsa::validate_archive(temp_path.string());
+  REQUIRE(validated.has_value());
+  CHECK_FALSE(validated.value().is_valid());
+  REQUIRE(validated.value().errors.size() == 1U);
+  CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
 }
 
 TEST_CASE("ba2_gnrl_detector accepts exact duplicate non-empty payload spans",

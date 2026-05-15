@@ -44,6 +44,12 @@ namespace libbsa::formats::ba2
       std::uint32_t size;
     };
 
+    struct stored_payload_span
+    {
+      std::uint64_t offset;
+      std::uint64_t size;
+    };
+
     using detail::add_fits;
     using detail::add_fits_u64;
     using detail::archive_string_from_bytes;
@@ -342,6 +348,13 @@ namespace libbsa::formats::ba2
         {
           return reserved_paths.error();
         }
+        std::vector<stored_payload_span> accepted_payload_spans;
+        auto reserved_payload_spans = detail::reserve_metadata_vector(accepted_payload_spans, records.size(),
+                                                                      "BA2 GNRL stored payload spans");
+        if (!reserved_payload_spans)
+        {
+          return reserved_payload_spans.error();
+        }
 
         for (std::size_t index = 0; index < records.size(); ++index)
         {
@@ -393,6 +406,20 @@ namespace libbsa::formats::ba2
           if (spans_overlap_u64(records[index].offset, stored_size, name_table_offset, name_table_end - name_table_offset))
           {
             return error{error_code::format_error, "BA2 GNRL filename table intersects payload data"};
+          }
+          if (stored_size != 0U)
+          {
+            for (const auto &prior : accepted_payload_spans)
+            {
+              const auto exact_duplicate = prior.offset == records[index].offset && prior.size == stored_size;
+              if (!exact_duplicate && spans_overlap_u64(prior.offset, prior.size, records[index].offset, stored_size))
+              {
+                return error{error_code::format_error, "BA2 GNRL entry payload spans partially overlap"};
+              }
+            }
+            // Writer dedupe can intentionally publish exact duplicate stored spans; partial sharing would make two
+            // entries read ambiguous bytes from each other's payload ranges.
+            accepted_payload_spans.push_back(stored_payload_span{records[index].offset, stored_size});
           }
 
           entries.push_back(entry_metadata{canonical.value().value,
