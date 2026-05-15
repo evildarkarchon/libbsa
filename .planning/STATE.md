@@ -4,8 +4,8 @@ milestone: v1.1
 milestone_name: Hardening
 status: Awaiting next milestone
 stopped_at: Completed 17.1-03-PLAN.md
-last_updated: "2026-05-15T12:50:56Z"
-last_activity: 2026-05-15 — Completed quick task 260515-7u9: Reject partially overlapping BA2 DX10 payload spans
+last_updated: "2026-05-15T13:49:00Z"
+last_activity: 2026-05-15 — Completed quick task 260515-95h: Reject overlapping TES4 payload spans and embedded NUL host paths
 progress:
   total_phases: 6
   completed_phases: 6
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-15)
 Phase: Milestone v1.1 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-05-15 — Completed quick task 260515-7u9: Reject partially overlapping BA2 DX10 payload spans
+Last activity: 2026-05-15 — Completed quick task 260515-95h: Reject overlapping TES4 payload spans and embedded NUL host paths
 
 ## Performance Metrics
 
@@ -96,6 +96,7 @@ None.
 | Phase 17.1 P03 | Writer host-path audit closure | 2026-05-15 | 47f17c5 | Verified | .planning/phases/17.1-address-tech-debt-in-planning-v1-1-milestone-audit-md/ |
 | 260515-62d | Reject partially overlapping BA2 GNRL payloads | 2026-05-15 | 8931efc | Verified | .planning/quick/260515-62d-codex-review-https-github-com-evildarkar/ |
 | 260515-7u9 | Reject partially overlapping BA2 DX10 payload spans | 2026-05-15 | 55c534f | Verified | .planning/quick/260515-7u9-codex-review-reject-partially-overlappin/ |
+| 260515-95h | Reject overlapping TES4 payload spans and embedded NUL host paths | 2026-05-15 | de7bccc | Verified | .planning/quick/260515-95h-codex-review-reject-overlapping-tes4-pay/ |
 
 ## Deferred Items
 
