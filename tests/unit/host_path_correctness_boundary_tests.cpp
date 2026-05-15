@@ -4,11 +4,15 @@
 
 #include <texture/dds_layout.hpp>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <map>
+#include <memory>
+#include <mutex>
 #include <span>
 #include <string>
 #include <string_view>
@@ -90,6 +94,62 @@ class collecting_sink final : public libbsa::payload_sink {
   std::vector<std::byte> bytes_;
 };
 
+struct sink_capture {
+  std::vector<std::byte> bytes;
+};
+
+class capturing_sink final : public libbsa::payload_sink {
+ public:
+  explicit capturing_sink(std::shared_ptr<sink_capture> capture) : capture_{std::move(capture)} {}
+
+  libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override {
+    capture_->bytes.insert(capture_->bytes.end(), bytes.begin(), bytes.end());
+    return bytes.size();
+  }
+
+ private:
+  std::shared_ptr<sink_capture> capture_;
+};
+
+struct capture_report {
+  std::map<std::string, std::size_t> create_count_by_path;
+  std::map<std::string, std::vector<std::vector<std::byte>>> sink_bytes_by_path;
+};
+
+class recording_sink_factory final : public libbsa::bulk_extract_sink_factory {
+ public:
+  libbsa::result<std::unique_ptr<libbsa::payload_sink>> create(std::string_view path,
+                                                               const libbsa::entry_metadata&) override {
+    auto capture = std::make_shared<sink_capture>();
+    const auto key = std::string{path};
+    {
+      std::lock_guard lock{mutex_};
+      ++create_count_by_path_[key];
+      captures_[key].push_back(capture);
+    }
+    return std::unique_ptr<libbsa::payload_sink>{new capturing_sink{std::move(capture)}};
+  }
+
+  [[nodiscard]] capture_report report() const {
+    std::lock_guard lock{mutex_};
+    capture_report report;
+    report.create_count_by_path = create_count_by_path_;
+    for (const auto& [path, captures] : captures_) {
+      auto& sink_bytes = report.sink_bytes_by_path[path];
+      sink_bytes.reserve(captures.size());
+      for (const auto& capture : captures) {
+        sink_bytes.push_back(capture->bytes);
+      }
+    }
+    return report;
+  }
+
+ private:
+  mutable std::mutex mutex_;
+  std::map<std::string, std::size_t> create_count_by_path_;
+  std::map<std::string, std::vector<std::shared_ptr<sink_capture>>> captures_;
+};
+
 struct representative_archive_case {
   std::string_view archive_file;
   std::string_view manifest_file;
@@ -99,6 +159,8 @@ struct representative_archive_case {
 
 const auto& representative_archive_cases() {
   static const std::array cases{
+      representative_archive_case{"tes3_success.bsa", "tes3_success_manifest.json", libbsa::archive_type::bsa,
+                                  libbsa::archive_variant::tes3},
       representative_archive_case{"tes4_v103.bsa", "tes4_v103_manifest.json", libbsa::archive_type::bsa,
                                   libbsa::archive_variant::tes4},
       representative_archive_case{"tes4_v104.bsa", "tes4_v104_manifest.json", libbsa::archive_type::bsa,
@@ -172,6 +234,15 @@ std::vector<std::byte> expected_bytes_from_manifest_entry(const nlohmann::json& 
   return bytes_from_hex(entry.at("expected").at("bytes_hex").get<std::string>());
 }
 
+std::vector<std::string> sorted_manifest_paths(const nlohmann::json& manifest) {
+  std::vector<std::string> paths;
+  for (const auto& entry : manifest.at("entries")) {
+    paths.push_back(entry.at("path").get<std::string>());
+  }
+  std::sort(paths.begin(), paths.end());
+  return paths;
+}
+
 void require_canonical_extraction_matches_manifest(const representative_archive_case& archive_case) {
   const auto manifest_path = generated_archive_dir() / std::string{archive_case.manifest_file};
   const auto manifest = read_json_file(manifest_path);
@@ -227,7 +298,7 @@ TEST_CASE("host_path_correctness_boundary suite source carries the locked non-AS
 
 TEST_CASE("host_path_correctness_boundary smoke setup uses the locked non-ASCII directory and filename without copying manifests",
           "[unit][fixture][host_path_correctness_boundary][host_path_correctness_boundary_smoke]") {
-  const auto& archive_case = representative_archive_cases().front();
+  const auto& archive_case = representative_archive_cases().at(1);
   const auto manifest_path = generated_archive_dir() / std::string{archive_case.manifest_file};
   const auto manifest = read_json_file(manifest_path);
   const auto& canonical_entry = canonical_entry_from_manifest(manifest);
@@ -246,11 +317,61 @@ TEST_CASE("host_path_correctness_boundary smoke setup uses the locked non-ASCII 
 
 TEST_CASE("host_path_correctness_boundary representative archives open validate and extract from non-ASCII paths",
           "[unit][fixture][host_path_correctness_boundary]") {
-  REQUIRE(representative_archive_cases().size() == 6U);
+  REQUIRE(representative_archive_cases().size() == 7U);
 
   for (const auto& archive_case : representative_archive_cases()) {
     INFO(archive_case.archive_file);
     require_canonical_extraction_matches_manifest(archive_case);
+  }
+}
+
+TEST_CASE("host_path_correctness_boundary non-ASCII host path exercises reader dispatch surface",
+          "[unit][fixture][host_path_correctness_boundary][reader_backend_dispatch]") {
+  for (const auto& archive_case : representative_archive_cases()) {
+    INFO(archive_case.archive_file);
+    const auto manifest = read_json_file(generated_archive_dir() / std::string{archive_case.manifest_file});
+    const auto& canonical_entry = canonical_entry_from_manifest(manifest);
+    const auto canonical_path = canonical_entry.at("path").get<std::string>();
+    const auto expected_bytes = expected_bytes_from_manifest_entry(canonical_entry);
+    const auto root = unique_non_ascii_root();
+    temporary_directory_cleanup cleanup{root};
+    const auto copied_archive = copy_archive_under_test(archive_case, root);
+
+    auto opened = libbsa::archive_reader::open(utf8_string_from_path(copied_archive));
+    REQUIRE(opened.has_value());
+    const auto& reader = opened.value();
+
+    auto entries = reader.entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == manifest.at("entries").size());
+    const auto expected_paths = sorted_manifest_paths(manifest);
+    for (std::size_t index = 0; index < entries.value().size(); ++index) {
+      CHECK(entries.value().at(index).path == expected_paths.at(index));
+    }
+
+    auto found = reader.find(canonical_path);
+    REQUIRE(found.has_value());
+    REQUIRE(found.value().has_value());
+    CHECK(found.value()->path == canonical_path);
+
+    auto contains = reader.contains(canonical_path);
+    REQUIRE(contains.has_value());
+    CHECK(contains.value());
+
+    recording_sink_factory sink_factory;
+    std::vector requests{libbsa::bulk_extract_request{.path = canonical_path}};
+    auto extracted_entries = reader.extract_entries(requests, sink_factory);
+    REQUIRE(extracted_entries.has_value());
+    REQUIRE(extracted_entries.value().size() == requests.size());
+    REQUIRE(extracted_entries.value().front().succeeded());
+    REQUIRE(extracted_entries.value().front().entry.has_value());
+    CHECK(extracted_entries.value().front().entry->path == canonical_path);
+
+    const auto report = sink_factory.report();
+    REQUIRE(report.create_count_by_path.at(canonical_path) == 1U);
+    const auto& sink_bytes = report.sink_bytes_by_path.at(canonical_path);
+    REQUIRE(sink_bytes.size() == 1U);
+    CHECK(sink_bytes.front() == expected_bytes);
   }
 }
 
@@ -262,7 +383,6 @@ TEST_CASE("host_path_correctness_boundary stays public-API-only and phase-scoped
   const auto extract_bytes_call = std::string{"extract_" "bytes(canonical_path)"};
   const auto writer_publish_call = std::string{"write_" "to("};
   const auto writer_add_file_call = std::string{"add_" "file("};
-  const auto tes3_fixture_name = std::string{"tes3_" "success.bsa"};
 
   REQUIRE(contains_text(suite_source, open_call));
   REQUIRE(contains_text(suite_source, validate_call));
@@ -270,5 +390,4 @@ TEST_CASE("host_path_correctness_boundary stays public-API-only and phase-scoped
 
   REQUIRE_FALSE(contains_text(suite_source, writer_publish_call));
   REQUIRE_FALSE(contains_text(suite_source, writer_add_file_call));
-  REQUIRE_FALSE(contains_text(suite_source, tes3_fixture_name));
 }
