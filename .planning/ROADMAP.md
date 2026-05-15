@@ -126,7 +126,7 @@ Plans:
 **Requirements**: DEDU-01, DEDU-02, DX10-01, DX10-02
 **Success Criteria** (what must be TRUE):
   1. Consumer can write TES4-family archives with dedupe enabled using faster candidate narrowing while exact stored-byte equality behavior stays unchanged.
-  2. Consumer can write BA2 GNRL archives with dedupe enabled using stronger staged identity or digest narrowing while exact stored-byte equality fallback behavior stays unchanged.
+  2. Consumer can write BA2 GNRL archives with dedupe enabled using stronger staged identity or digest narrowing while exact stored-byte equality fallback behavior and resolved Windows host-path handling stay unchanged.
   3. Consumer can write BA2 DX10 archives with temporary staging data cleaned up during normal completion and ordinary failure unwinding.
   4. Maintainer can verify and document the remaining BA2 DX10 temporary-data lifecycle behavior, including any residual abnormal-termination risk, before shipping the milestone.
 **Plans**: 5 plans
@@ -143,7 +143,7 @@ Plans:
 - [x] 17-04-PLAN.md - Document and policy-test BA2 DX10 temporary-data lifecycle guarantees and residual risk.
 
 **Wave 4** *(blocked on all implementation and documentation plans)*
-- [x] 17-05-PLAN.md - Run focused Debug, ASan, and Release package ship gates and update planning state after verified evidence.
+- [x] 17-05-PLAN.md - Run focused Debug, ASan, full Debug regression, clean review, and Release package ship gates and update planning state after verified evidence.
 
 ## Progress
 

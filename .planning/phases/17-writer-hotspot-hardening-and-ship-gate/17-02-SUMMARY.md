@@ -108,6 +108,14 @@ Each task was committed atomically where file changes were made:
 - **Refactor gate:** Same focused command passed again: 32/32 tests.
 - **Wave gate:** `cmake --build --preset windows-msvc-debug-static && ctest --preset windows-msvc-debug-static --output-on-failure` passed: 400/400 CTest tests passed, with 2 opt-in local-fixture tests skipped.
 
+## Post-Review Remediation
+
+- **Commit:** `f1d59c9` — `fix(17-02): resolve BA2 GNRL dedupe disk paths`
+- **Issue fixed:** The advisory Phase 17 review found that BA2 GNRL disk-backed exact dedupe comparisons still opened raw caller path text instead of prepare-time resolved host paths.
+- **Resolution:** Disk-backed exact dedupe comparisons now use `resolved_source_path` with the shared host-file seam, preserving exact stored-byte equality while keeping Windows UTF-8/non-ASCII host paths reliable.
+- **Regression:** `BA2 GNRL writer dedupes raw disk sources under non-ASCII host paths` covers duplicate raw disk-backed sources with `deduplicate_payloads = true` under a non-ASCII directory.
+- **Verification:** Focused Debug and ASan ship gates now pass 112/112 selected writer-hotspot tests, and the final full Debug gate passes 403/403 tests.
+
 ## Deviations from Plan
 
 None - plan executed exactly as written.

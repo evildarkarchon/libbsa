@@ -9,12 +9,16 @@ created: 2026-05-15
 
 This artifact records the committed-assets ship-gate evidence for Phase 17 and v1.1 closure. Optional local game-corpus or BSArchPro comparison tests remain advisory and are not required for official sign-off.
 
+## Post-Review Fix Evidence
+
+The advisory Phase 17 code review initially found one critical BA2 GNRL disk-source dedupe path issue. Commit `f1d59c9` fixed the issue by routing BA2 GNRL disk-backed exact dedupe comparisons through prepare-time `resolved_source_path` values and shared host-file helpers, then added a non-ASCII raw disk-source dedupe regression. The rerun review artifact `17-REVIEW.md` is `status: clean` with zero findings.
+
 ## Requirement Coverage
 
 | Requirement | Evidence | Status |
 |-------------|----------|--------|
 | DEDU-01 | TES4-family writer runtime tests plus writer_hotspot_policy source-policy guardrails in focused Debug and ASan gates. | PASS |
-| DEDU-02 | BA2 GNRL writer runtime tests plus writer_hotspot_policy source-policy guardrails in focused Debug and ASan gates. | PASS |
+| DEDU-02 | BA2 GNRL writer runtime tests plus writer_hotspot_policy source-policy guardrails in focused Debug and ASan gates, including post-review non-ASCII disk-source dedupe coverage. | PASS |
 | DX10-01 | BA2 DX10 writer cleanup/consumed-state runtime tests in focused Debug and ASan gates. | PASS |
 | DX10-02 | BA2 DX10 lifecycle documentation and public declaration-shape policy tests in focused Debug and ASan gates. | PASS |
 
@@ -24,17 +28,31 @@ This artifact records the committed-assets ship-gate evidence for Phase 17 and v
 
 - **Command:** `cmake --build --preset windows-msvc-debug-static && ctest --preset windows-msvc-debug-static --output-on-failure -L "tes4_bsa_writer|ba2_gnrl_writer|ba2_dx10_writer|writer_hotspot_policy"`
 - **Status:** PASS
-- **Result:** 111/111 selected CTest tests passed.
+- **Result:** 112/112 selected CTest tests passed.
 - **Coverage:** DEDU-01, DEDU-02, DX10-01, and DX10-02.
-- **Notes:** The selected label set included TES4-family writer behavior, BA2 GNRL writer behavior, BA2 DX10 writer lifecycle behavior, and five writer_hotspot_policy tests.
+- **Notes:** The selected label set included TES4-family writer behavior, BA2 GNRL writer behavior, BA2 DX10 writer lifecycle behavior, the post-review BA2 GNRL non-ASCII disk-source dedupe regression, and five writer_hotspot_policy tests.
 
 ### MSVC AddressSanitizer focused writer-hotspot gate
 
 - **Command:** `cmake --build --preset windows-msvc-asan-static && ctest --preset windows-msvc-asan-static --output-on-failure -L "tes4_bsa_writer|ba2_gnrl_writer|ba2_dx10_writer|writer_hotspot_policy"`
 - **Status:** PASS
-- **Result:** 111/111 selected CTest tests passed.
+- **Result:** 112/112 selected CTest tests passed.
 - **Coverage:** DEDU-01, DEDU-02, DX10-01, and DX10-02 under the supported MSVC AddressSanitizer hardening lane.
 - **Notes:** The build emitted expected MSVC ASan linker warnings (`LNK4300`/`LNK4075`) about incremental linking being ignored for ASan-instrumented binaries; tests passed.
+
+### Full Debug regression gate after review fix
+
+- **Command:** `cmake --build --preset windows-msvc-debug-static && ctest --preset windows-msvc-debug-static --output-on-failure`
+- **Status:** PASS
+- **Result:** 403/403 CTest tests passed, with 2 opt-in local-fixture tests skipped.
+- **Coverage:** Confirms the post-review BA2 GNRL dedupe fix composes with the complete Debug suite, package-consumer smoke tests, and existing malformed/fixture/policy coverage.
+
+### Advisory code review gate
+
+- **Command:** `/gsd-code-review 17` after fix commit `f1d59c9`
+- **Status:** PASS
+- **Result:** `17-REVIEW.md` status is `clean`; findings are 0 critical, 0 warning, 0 info.
+- **Coverage:** Confirms CR-01 was resolved and no new advisory findings remained after the fix.
 
 ## Official Sign-Off Boundary
 

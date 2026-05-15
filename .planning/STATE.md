@@ -32,7 +32,7 @@ Last activity: 2026-05-15
 
 Progress: [██████████] 100%
 
-Current note: Phase 17 Plan 05 recorded focused Debug, MSVC AddressSanitizer, Release package proof, public writer API stability, TES5Edit boundary, and dependency-surface evidence in 17-VERIFICATION.md.
+Current note: Phase 17 recorded clean post-review ship-gate evidence: focused Debug and MSVC AddressSanitizer writer-hotspot gates, full Debug regression, Release package proof, public writer API stability, TES5Edit boundary, and dependency-surface evidence in 17-VERIFICATION.md.
 
 ## Performance Metrics
 
@@ -58,7 +58,7 @@ Current note: Phase 17 Plan 05 recorded focused Debug, MSVC AddressSanitizer, Re
 - [Phase 16]: Parser/preparer seam guardrails live in dedicated source-policy Catch2 tests instead of expanding unrelated validation-policy tests.
 - [Phase 17]: TES4-family BSA dedupe candidate identity uses stored size plus deterministic final stored-payload fingerprint only as a narrowing filter; `tes4_stored_payloads_equal` remains the sharing authority.
 - [Phase 17]: BA2 GNRL prepared entries expose `final_stored_dedupe_hash` as explicit final-stored candidate evidence; it is a filter only, not a correctness authority.
-- [Phase 17]: BA2 GNRL layout buckets dedupe candidates by stored size plus `final_stored_dedupe_hash`, then still calls `ba2_gnrl_payloads_equal` before sharing offsets.
+- [Phase 17]: BA2 GNRL layout buckets dedupe candidates by stored size plus `final_stored_dedupe_hash`, then still calls `ba2_gnrl_payloads_equal` before sharing offsets; disk-backed comparisons use resolved host paths so non-ASCII Windows paths stay on the shared host-file seam.
 - [Phase 17]: BA2 DX10 `write_to` is consuming after ordinary attempts because writer-owned snapshot files are cleaned promptly instead of retained for retry.
 - [Phase 17]: BA2 DX10 snapshot cleanup is best-effort and preserves the primary validation, write, or publish result error.
 - [Phase 17]: BA2 DX10 lifecycle documentation states successful completion, ordinary result-returning failure unwinding, destructor safety-net cleanup, and residual abnormal-termination risk.
@@ -81,10 +81,10 @@ None.
 | Phase 15 | Reader Backend Dispatch Cleanup complete | 2026-05-14 | Multiple | Verified | .planning/phases/15-reader-backend-dispatch-cleanup/ |
 | Phase 16 | Parser and Preparer Seam Extraction complete | 2026-05-14 | Multiple | Verified | .planning/phases/16-parser-and-preparer-seam-extraction/ |
 | Phase 17 P01 | TES4 dedupe candidate narrowing | 2026-05-15 | c0564b4 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
-| Phase 17 P02 | BA2 GNRL staged dedupe identity hardening | 2026-05-15 | 20ca31c | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
+| Phase 17 P02 | BA2 GNRL staged dedupe identity hardening | 2026-05-15 | f1d59c9 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
 | Phase 17 P03 | BA2 DX10 snapshot cleanup lifecycle | 2026-05-15 | f9646e9 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
 | Phase 17 P04 | BA2 DX10 temporary lifecycle documentation | 2026-05-15 | edb3eb0 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
-| Phase 17 P05 | Debug/ASan/Release ship gate and planning closure | 2026-05-15 | pending | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
+| Phase 17 P05 | Debug/ASan/Release ship gate and planning closure | 2026-05-15 | 3db00f7 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
 
 ## Deferred Items
 

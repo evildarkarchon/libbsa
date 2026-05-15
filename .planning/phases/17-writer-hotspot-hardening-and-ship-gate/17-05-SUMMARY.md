@@ -78,12 +78,20 @@ Each task was committed atomically:
 
 ## Verification Evidence
 
-- **Focused Debug gate:** `cmake --build --preset windows-msvc-debug-static && ctest --preset windows-msvc-debug-static --output-on-failure -L "tes4_bsa_writer|ba2_gnrl_writer|ba2_dx10_writer|writer_hotspot_policy"` — PASS, 111/111 selected tests passed.
-- **Focused MSVC AddressSanitizer gate:** `cmake --build --preset windows-msvc-asan-static && ctest --preset windows-msvc-asan-static --output-on-failure -L "tes4_bsa_writer|ba2_gnrl_writer|ba2_dx10_writer|writer_hotspot_policy"` — PASS, 111/111 selected tests passed.
+- **Focused Debug gate:** `cmake --build --preset windows-msvc-debug-static && ctest --preset windows-msvc-debug-static --output-on-failure -L "tes4_bsa_writer|ba2_gnrl_writer|ba2_dx10_writer|writer_hotspot_policy"` — PASS, 112/112 selected tests passed after post-review remediation.
+- **Focused MSVC AddressSanitizer gate:** `cmake --build --preset windows-msvc-asan-static && ctest --preset windows-msvc-asan-static --output-on-failure -L "tes4_bsa_writer|ba2_gnrl_writer|ba2_dx10_writer|writer_hotspot_policy"` — PASS, 112/112 selected tests passed after post-review remediation.
+- **Full Debug regression gate:** `cmake --build --preset windows-msvc-debug-static && ctest --preset windows-msvc-debug-static --output-on-failure` — PASS, 403/403 CTest tests passed, with 2 opt-in local-fixture tests skipped.
 - **Release package proof:** `cmake --build --preset windows-msvc-release-static && ctest --preset windows-msvc-release-static --output-on-failure -R "package_consumer_smoke|package_consumer_runtime_dll_copy"` — PASS, 2/2 selected tests passed.
+- **Advisory code review:** `17-REVIEW.md` — PASS, `status: clean` after fix commit `f1d59c9` resolved the BA2 GNRL disk-source dedupe path finding.
 - **Public writer API stability:** `git diff -- include/libbsa/writer.hpp` — PASS, no output for Plan 17-05; public BA2 DX10 writer signatures were not expanded.
 - **Writer hotspot policy after planning updates:** `ctest --preset windows-msvc-debug-static --output-on-failure -L writer_hotspot_policy` — PASS, 5/5 policy tests passed.
 - **Boundary evidence:** `git status --short -- TES5Edit vcpkg.json include/libbsa/writer.hpp` — PASS, no output; no TES5Edit changes, no new dependencies, and no Plan 17-05 public writer header modifications.
+
+## Post-Review Remediation
+
+- **Finding fixed:** `17-REVIEW.md` initially identified BA2 GNRL disk-backed exact dedupe comparisons using raw caller path text. Commit `f1d59c9` routes those comparisons through `resolved_source_path` and the shared host-file seam.
+- **Regression added:** `BA2 GNRL writer dedupes raw disk sources under non-ASCII host paths` proves duplicate raw disk-backed sources under UTF-8/non-ASCII host paths dedupe successfully.
+- **Review status:** Rerun advisory review is clean and committed in `3db00f7`.
 
 ## Files Created/Modified
 

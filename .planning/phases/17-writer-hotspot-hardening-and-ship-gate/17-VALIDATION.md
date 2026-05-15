@@ -21,7 +21,7 @@ created: 2026-05-14
 | **Config file** | `tests/CMakeLists.txt`; presets in `CMakePresets.json` |
 | **Quick run command** | `cmake --build --preset windows-msvc-debug-static && ctest --preset windows-msvc-debug-static --output-on-failure -L "tes4_bsa_writer|ba2_gnrl_writer|ba2_dx10_writer|writer_hotspot_policy"` |
 | **Full suite command** | `cmake --build --preset windows-msvc-debug-static && ctest --preset windows-msvc-debug-static --output-on-failure` |
-| **Estimated runtime** | Existing Debug build/test suite runtime |
+| **Estimated runtime** | Existing Debug build/test suite runtime; final post-review Debug gate passed 403/403 tests |
 
 ---
 
@@ -69,6 +69,7 @@ created: 2026-05-14
 - [x] Wave 0 covers all missing test and policy references.
 - [x] No watch-mode flags.
 - [x] Focused gates are used before full Debug, ASan, and Release package proof gates.
+- [x] Post-review remediation gate clean: `17-REVIEW.md` is `status: clean` after fix commit `f1d59c9`, with the BA2 GNRL non-ASCII disk-source dedupe regression included in the final Debug and ASan gates.
 - [x] `nyquist_compliant: true` set in frontmatter.
 
 **Approval:** passed — Phase 17 ship-gate evidence is recorded in `17-VERIFICATION.md`.
