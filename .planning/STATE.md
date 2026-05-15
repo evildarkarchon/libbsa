@@ -54,7 +54,7 @@ Current note: Inserted urgent Phase 17.1 to address tech debt from .planning/v1.
 - Reader, parser, preparer, dedupe, and DX10 staging changes stayed incremental, semantics-preserving, and test-backed.
 - [Phase 13]: Host-file helpers resolve UTF-8 host paths once into `detail::host_file_path`; original UTF-8 text is diagnostics-only after resolution.
 - [Phase 13]: Reader reopen helpers and `validate_archive` now reuse the stored resolved host path instead of repeating raw host-path opens.
-- [Phase 14]: The supported Windows verification matrix is role-based: debug inner-loop lanes, Release package-proof lanes, and a separate MSVC AddressSanitizer hardening lane.
+- [Phase 14]: The supported Windows verification matrix is role-based: debug inner-loop lanes, Release package proof lanes, and a separate MSVC AddressSanitizer hardening lane.
 - [Phase 14]: Runtime DLL propagation is part of the supported verification lane contract so Catch2 discovery and package-consumer smoke run from checked-in outputs without caller PATH assumptions.
 - [Phase 15]: `archive_reader` selects a file-local backend table once during open and reuses it for entries, find, extraction, and bulk extraction.
 - [Phase 15]: `contains` stays implemented as `find` plus `has_value` so invalid archive-path input preserves invalid_argument behavior instead of collapsing into false.
