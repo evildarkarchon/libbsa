@@ -4,8 +4,8 @@ milestone: v1.1
 milestone_name: Hardening
 status: executing
 stopped_at: Phase 17 context gathered
-last_updated: "2026-05-15T00:55:07.843Z"
-last_activity: 2026-05-15 -- Phase 17 planning complete
+last_updated: "2026-05-15T01:02:54.555Z"
+last_activity: 2026-05-15 -- Phase 17 execution started
 progress:
   total_phases: 5
   completed_phases: 4
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-14)
 
 ## Current Position
 
-Phase: 17
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-05-15 -- Phase 17 planning complete
+Phase: 17 (writer-hotspot-hardening-and-ship-gate) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 17
+Last activity: 2026-05-15 -- Phase 17 execution started
 
 Progress: [████████░░] 80%
 
