@@ -57,12 +57,22 @@ TEST_CASE("writer_hotspot_policy requires TES4 dedupe candidate narrowing before
                                                  "} // namespace libbsa::formats::bsa");
 
   constexpr auto narrowing_evidence = std::to_array<std::string_view>({
-      "std::map<tes4_dedupe_identity",
-      "deduplicated_payloads.find(identity)",
-      "deduplicated_payloads[identity].push_back",
+      "std::map<",
+      "stored_size",
+      "fingerprint",
+      "make_tes4_dedupe_identity",
+      "deduplicated_payloads.find",
+      "deduplicated_payloads[",
       "tes4_stored_payloads_equal",
   });
-  require_all_tokens(assign_offsets_body, narrowing_evidence);
+  require_all_tokens(source, narrowing_evidence);
+
+  constexpr auto assignment_path_evidence = std::to_array<std::string_view>({
+      "deduplicated_payloads.find",
+      "deduplicated_payloads[",
+      "tes4_stored_payloads_equal",
+  });
+  require_all_tokens(assign_offsets_body, assignment_path_evidence);
 
   constexpr auto exact_equality_share_gate = std::to_array<std::string_view>({
       "auto duplicate = tes4_stored_payloads_equal(entry, *candidate.entry);",
