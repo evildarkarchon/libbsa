@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: Passed
-stopped_at: Completed 17-01-PLAN.md
-last_updated: "2026-05-15T01:09:52.869Z"
+status: executing
+stopped_at: Completed 17-03-PLAN.md
+last_updated: "2026-05-15T01:18:13.514Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 17
-  completed_plans: 13
-  percent: 76
+  completed_plans: 14
+  percent: 82
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-14)
 ## Current Position
 
 Phase: 17 (writer-hotspot-hardening-and-ship-gate) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-05-15
 
-Progress: [████████░░] 76%
+Progress: [████████░░] 82%
 
 Current note: Phase 16 completed parser/preparer seam extraction with TES4 table/payload seams, BA2 DX10 snapshot/chunk seams, dedicated policy guardrails, and verification evidence.
 
@@ -77,6 +77,8 @@ Current note: Phase 16 completed parser/preparer seam extraction with TES4 table
 - [Phase 16-parser-and-preparer-seam-extraction]: Parser/preparer seam guardrails live in a dedicated source-policy Catch2 suite instead of expanding unrelated validation-policy tests. — Phase 16 Plan 03 implemented D-13/D-14 with role-based source assertions for TES4 parser and BA2 DX10 preparer seams while preserving public API boundaries.
 - [Phase 17]: TES4-family BSA dedupe candidate identity uses stored size plus deterministic final stored-payload fingerprint only as a narrowing filter; tes4_stored_payloads_equal remains the sharing authority.
 - [Phase 17]: Writer hotspot policy coverage is a dedicated Catch2 source-policy suite registered in libbsa_tests for DEDU-01 guardrails.
+- [Phase 17]: BA2 DX10 write_to is consuming after ordinary attempts because writer-owned snapshot files are cleaned immediately instead of retained for retry.
+- [Phase 17]: BA2 DX10 snapshot cleanup is best-effort and preserves the primary validation, write, or publish result error.
 
 ### Pending Todos
 
@@ -106,6 +108,7 @@ None yet.
 | Phase 16 P02 | 8m | 3 tasks | 9 files |
 | Phase 16 P03 | 5m | 3 tasks | 2 files |
 | Phase 17 P01 | 5 min | 3 tasks | 3 files |
+| Phase 17 P03 | 5 min | 3 tasks | 2 files |
 
 ## Deferred Items
 
@@ -117,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-15T01:09:44.426Z
-Stopped at: Completed 17-01-PLAN.md
+Last session: 2026-05-15T01:18:13.505Z
+Stopped at: Completed 17-03-PLAN.md
 Resume file: None

@@ -134,7 +134,7 @@ Plans:
 Plans:
 **Wave 1**
 - [x] 17-01-PLAN.md - Add TES4-family BSA dedupe candidate narrowing with exact stored-byte equality preserved.
-- [ ] 17-03-PLAN.md - Make BA2 DX10 snapshot cleanup and consumed-writer lifecycle explicit under ordinary completion and failure.
+- [x] 17-03-PLAN.md - Make BA2 DX10 snapshot cleanup and consumed-writer lifecycle explicit under ordinary completion and failure.
 
 **Wave 2** *(blocked on Wave 1 Plan 17-01 completion)*
 - [ ] 17-02-PLAN.md - Add BA2 GNRL staged identity or digest dedupe hardening with exact fallback preserved.
@@ -153,7 +153,7 @@ Plans:
 | 14. Verification Lane Truthfulness | v1.1 | 3/3 | Complete    | 2026-05-14 |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 1/1 | Complete    | 2026-05-14 |
 | 16. Parser and Preparer Seam Extraction | v1.1 | 3/3 | Complete    | 2026-05-14 |
-| 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 1/5 | In Progress|  |
+| 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 2/5 | In Progress|  |
 
 ## Next Scope Candidates
 

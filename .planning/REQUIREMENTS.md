@@ -36,7 +36,7 @@ Requirements for the v1.1 Hardening milestone. Each maps to exactly one roadmap 
 
 ### DX10 Temp-Staging Cleanup
 
-- [ ] **DX10-01**: Consumer can write BA2 DX10 archives with temporary staging data cleaned up during normal write completion and ordinary failure unwinding.
+- [x] **DX10-01**: Consumer can write BA2 DX10 archives with temporary staging data cleaned up during normal write completion and ordinary failure unwinding.
 - [ ] **DX10-02**: Maintainer can verify and document the remaining BA2 DX10 temporary-data lifecycle behavior, including any residual abnormal-termination risk.
 
 ## Future Requirements
@@ -83,7 +83,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REFA-02 | Phase 16 | Complete |
 | DEDU-01 | Phase 17 | Complete |
 | DEDU-02 | Phase 17 | Pending |
-| DX10-01 | Phase 17 | Pending |
+| DX10-01 | Phase 17 | Complete |
 | DX10-02 | Phase 17 | Pending |
 
 **Coverage:**
