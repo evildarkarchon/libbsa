@@ -24,7 +24,7 @@ namespace
     return buffer.str();
   }
 
-  std::string function_body(std::string_view source, std::string_view signature, std::string_view next_signature)
+  std::string function_body(std::string_view source, std::string_view signature)
   {
     const auto start = source.find(signature);
     REQUIRE(start != std::string_view::npos);
@@ -32,9 +32,26 @@ namespace
     const auto body_start = source.find('{', start);
     REQUIRE(body_start != std::string_view::npos);
 
-    const auto end = source.find(next_signature, body_start);
-    REQUIRE(end != std::string_view::npos);
-    return std::string{source.substr(body_start, end - body_start)};
+    std::size_t depth = 0;
+    for (std::size_t cursor = body_start; cursor < source.size(); ++cursor)
+    {
+      if (source[cursor] == '{')
+      {
+        ++depth;
+      }
+      if (source[cursor] == '}')
+      {
+        REQUIRE(depth > 0U);
+        --depth;
+        if (depth == 0U)
+        {
+          return std::string{source.substr(body_start, cursor - body_start + 1U)};
+        }
+      }
+    }
+
+    FAIL("function body was not closed");
+    return {};
   }
 
   void require_all_tokens(std::string_view text, std::span<const std::string_view> tokens)
@@ -96,8 +113,7 @@ TEST_CASE("writer_hotspot_policy requires TES4 dedupe candidate narrowing before
 {
   const auto source = read_text_file(source_root() / "src/formats/bsa/tes4_bsa_layout.cpp");
   const auto assign_offsets_body = function_body(source,
-                                                 "result<tes4_layout_result> tes4_assign_offsets(",
-                                                 "} // namespace libbsa::formats::bsa");
+                                                 "result<tes4_layout_result> tes4_assign_offsets(");
 
   constexpr auto narrowing_evidence = std::to_array<std::string_view>({
       "std::map<",
@@ -143,8 +159,7 @@ TEST_CASE("writer_hotspot_policy requires BA2 GNRL staged dedupe identity before
   const auto prepare_source = read_text_file(root / "src/formats/ba2/ba2_gnrl_prepare.cpp");
   const auto layout_source = read_text_file(root / "src/formats/ba2/ba2_gnrl_layout.cpp");
   const auto assign_offsets_body = function_body(layout_source,
-                                                 "result<void> ba2_gnrl_assign_payload_offsets(",
-                                                 "namespace {");
+                                                 "result<void> ba2_gnrl_assign_payload_offsets(");
 
   constexpr auto staged_identity_contract = std::to_array<std::string_view>({
       "final_stored_dedupe_hash",
@@ -259,8 +274,8 @@ TEST_CASE("writer_hotspot_policy keeps public BA2 DX10 writer declaration shape 
 {
   const auto public_header = read_text_file(source_root() / "include/libbsa/writer.hpp");
   const auto options_block = declaration_block(
-      public_header, "struct ba2_dx10_writer_options {", "/// Per-entry options for BA2 GNRL payload");
-  const auto writer_public_block = declaration_block(public_header, "class ba2_dx10_writer {", " private:");
+      public_header, "struct ba2_dx10_writer_options", "/// Per-entry options for BA2 GNRL payload");
+  const auto writer_public_block = declaration_block(public_header, "class ba2_dx10_writer", " private:");
 
   constexpr auto option_fields = std::to_array<std::string_view>({
       "bool overwrite_existing = false;",
@@ -280,12 +295,12 @@ TEST_CASE("writer_hotspot_policy keeps public BA2 DX10 writer declaration shape 
       "LIBBSA_API explicit ba2_dx10_writer(ba2_dx10_target target);",
       "LIBBSA_API explicit ba2_dx10_writer(ba2_dx10_target target, ba2_dx10_writer_options options);",
       "LIBBSA_API ~ba2_dx10_writer();",
-      "ba2_dx10_writer(const ba2_dx10_writer&) = delete;",
-      "ba2_dx10_writer& operator=(const ba2_dx10_writer&) = delete;",
-      "LIBBSA_API ba2_dx10_writer(ba2_dx10_writer&& other) noexcept;",
-      "LIBBSA_API ba2_dx10_writer& operator=(ba2_dx10_writer&& other) noexcept;",
+      "ba2_dx10_writer(const ba2_dx10_writer &) = delete;",
+      "ba2_dx10_writer &operator=(const ba2_dx10_writer &) = delete;",
+      "LIBBSA_API ba2_dx10_writer(ba2_dx10_writer &&other) noexcept;",
+      "LIBBSA_API ba2_dx10_writer &operator=(ba2_dx10_writer &&other) noexcept;",
       "[[nodiscard]] LIBBSA_API ba2_dx10_target target() const noexcept;",
-      "[[nodiscard]] LIBBSA_API const ba2_dx10_writer_options& options() const noexcept;",
+      "[[nodiscard]] LIBBSA_API const ba2_dx10_writer_options &options() const noexcept;",
       "LIBBSA_API result<void> add_file(std::string_view archive_path, std::string_view dds_host_path);",
       "LIBBSA_API result<void> write_to(std::string_view host_path) const;",
       "LIBBSA_API result<void> write_to(std::string_view host_path, write_execution_options execution) const;",

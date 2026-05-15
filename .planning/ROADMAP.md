@@ -9,6 +9,10 @@
 
 No active milestone is defined. Start the next milestone with `/gsd-new-milestone`, which will create fresh requirements and a new roadmap section.
 
+## Verification Matrix Summary
+
+The archived v1.1 verification contract remains the supported Windows validation baseline: debug inner-loop lanes, Release package-proof lanes, and the MSVC AddressSanitizer hardening lane.
+
 ## Next Scope Candidates
 
 These are not committed roadmap items yet; they remain deferred until a later milestone promotes them.
