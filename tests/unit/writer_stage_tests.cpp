@@ -142,6 +142,7 @@ namespace
     libbsa::formats::ba2::ba2_dx10_writer_entry entry;
     entry.archive_path_original = archive_path;
     entry.archive_path_canonical = archive_path;
+    const auto cube_maps_raw = static_cast<std::uint16_t>(layout.is_cubemap ? 2049U : 2048U);
     entry.metadata = libbsa::texture_metadata{layout.width,
                                               layout.height,
                                               layout.mip_count,
@@ -149,7 +150,7 @@ namespace
                                               layout.array_size,
                                               layout.is_cubemap,
                                               0U,
-                                              layout.is_cubemap ? 2049U : 2048U,
+                                              cube_maps_raw,
                                               {}};
 
     const std::uint32_t face_count = layout.is_cubemap ? 6U : 1U;
