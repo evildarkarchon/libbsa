@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: ready_to_plan
-stopped_at: Phase 16 complete; ready for Phase 17 planning
-last_updated: "2026-05-14T23:43:30Z"
+status: planning
+stopped_at: Phase 17 context gathered
+last_updated: "2026-05-15T00:16:26.374Z"
 last_activity: 2026-05-14
 progress:
   total_phases: 5
@@ -114,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-14T23:43:30Z
-Stopped at: Phase 16 complete; ready for Phase 17 planning
-Resume file: None
+Last session: 2026-05-15T00:16:26.365Z
+Stopped at: Phase 17 context gathered
+Resume file: .planning/phases/17-writer-hotspot-hardening-and-ship-gate/17-CONTEXT.md
