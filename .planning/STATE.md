@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
 status: executing
-stopped_at: Completed 17.1-01-PLAN.md
-last_updated: "2026-05-15T04:37:00.545Z"
+stopped_at: Completed 17.1-02-PLAN.md
+last_updated: "2026-05-15T04:42:20.068Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 20
-  completed_plans: 18
-  percent: 83
+  completed_plans: 19
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-15)
 ## Current Position
 
 Phase: 17.1 (address-tech-debt-in-planning-v1-1-milestone-audit-md) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-05-15
 
-Progress: [█████████░] 90%
+Progress: [██████████] 95%
 
 Current note: Inserted urgent Phase 17.1 to address tech debt from .planning/v1.1-MILESTONE-AUDIT.md.
 
@@ -68,6 +68,8 @@ Current note: Inserted urgent Phase 17.1 to address tech debt from .planning/v1.
 - [Phase 17]: BA2 DX10 lifecycle documentation states successful completion, ordinary result-returning failure unwinding, destructor safety-net cleanup, and residual abnormal-termination risk.
 - [Phase 17]: Official v1.1 ship-gate evidence is committed in `17-VERIFICATION.md`; optional local game-corpus and BSArchPro comparison tests remain advisory.
 - [Phase 17.1]: Combined non-ASCII host-path reader regression stays in the existing host-path suite and covers entries/find/contains/extract_entries across a TES3-inclusive representative matrix. — This keeps Phase 13 host-path helpers and Phase 15 reader-surface coverage joined without a new test suite or public API change.
+- [Phase 17.1]: `detail::host_file_path` now stores only the resolved native path; diagnostics-only `original_utf8` state was removed rather than consumed by a new diagnostics surface.
+- [Phase 17.1]: `archive_reader::state` no longer stores backend identity beside the selected backend table; backend identity remains only as file-local open-time table-selection plumbing.
 
 ### Pending Todos
 
@@ -91,6 +93,7 @@ None.
 | Phase 17 P04 | BA2 DX10 temporary lifecycle documentation | 2026-05-15 | edb3eb0 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
 | Phase 17 P05 | Debug/ASan/Release ship gate and planning closure | 2026-05-15 | 3db00f7 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
 | Phase 17.1 P01 | 18 min | 1 tasks | 2 files |
+| Phase 17.1 P02 | 35min | 2 tasks | 8 files |
 
 ## Deferred Items
 
@@ -102,6 +105,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-15T04:37:00.537Z
-Stopped at: Completed 17.1-01-PLAN.md
+Last session: 2026-05-15T04:42:20.060Z
+Stopped at: Completed 17.1-02-PLAN.md
 Resume file: None
