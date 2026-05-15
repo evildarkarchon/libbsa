@@ -129,7 +129,21 @@ Plans:
   2. Consumer can write BA2 GNRL archives with dedupe enabled using stronger staged identity or digest narrowing while exact stored-byte equality fallback behavior stays unchanged.
   3. Consumer can write BA2 DX10 archives with temporary staging data cleaned up during normal completion and ordinary failure unwinding.
   4. Maintainer can verify and document the remaining BA2 DX10 temporary-data lifecycle behavior, including any residual abnormal-termination risk, before shipping the milestone.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+**Wave 1**
+- [ ] 17-01-PLAN.md - Add TES4-family BSA dedupe candidate narrowing with exact stored-byte equality preserved.
+- [ ] 17-03-PLAN.md - Make BA2 DX10 snapshot cleanup and consumed-writer lifecycle explicit under ordinary completion and failure.
+
+**Wave 2** *(blocked on Wave 1 Plan 17-01 completion)*
+- [ ] 17-02-PLAN.md - Add BA2 GNRL staged identity or digest dedupe hardening with exact fallback preserved.
+
+**Wave 3** *(blocked on Wave 2 and Plan 17-03 completion)*
+- [ ] 17-04-PLAN.md - Document and policy-test BA2 DX10 temporary-data lifecycle guarantees and residual risk.
+
+**Wave 4** *(blocked on all implementation and documentation plans)*
+- [ ] 17-05-PLAN.md - Run focused Debug, ASan, and Release package ship gates and update planning state after verified evidence.
 
 ## Progress
 
