@@ -23,16 +23,24 @@ struct ba2_dx10_writer::state {
   ba2_dx10_writer_options options;
   std::vector<formats::ba2::ba2_dx10_writer_entry> entries;
   std::filesystem::path snapshot_dir;
+  bool consumed{false};
 
   state(ba2_dx10_target selected_target, ba2_dx10_writer_options selected_options)
       : target(selected_target), options(selected_options) {}
 
-  ~state() {
+  /// Removes the writer-owned snapshot directory without changing the primary result that triggered cleanup.
+  void cleanup_snapshot_dir() noexcept {
     std::error_code fs_error;
-    // Snapshot cleanup is best-effort; write_to returns the primary result before state teardown runs.
+    // D-10 keeps cleanup best-effort so validation, write, or publish failures remain visible to callers.
     if (!snapshot_dir.empty()) {
       std::filesystem::remove_all(snapshot_dir, fs_error);
+      snapshot_dir.clear();
     }
+  }
+
+  ~state() {
+    // Destruction remains a safety net for abandoned writers that never reached write_to cleanup.
+    cleanup_snapshot_dir();
   }
 };
 
@@ -52,10 +60,14 @@ ba2_dx10_target ba2_dx10_writer::target() const noexcept { return state_->target
 const ba2_dx10_writer_options& ba2_dx10_writer::options() const noexcept { return state_->options; }
 
 result<void> ba2_dx10_writer::add_file(std::string_view archive_path, std::string_view dds_host_path) {
+  if (state_->consumed) {
+    return error{error_code::invalid_argument, "BA2 DX10 writer has already been consumed"};
+  }
   if (dds_host_path.empty()) {
     return error{error_code::invalid_argument, "BA2 DX10 DDS source host path must not be empty"};
   }
 
+  const bool snapshot_dir_was_empty = state_->snapshot_dir.empty();
   auto snapshot_dir = formats::ba2::ba2_dx10_ensure_snapshot_directory(state_->snapshot_dir);
   if (!snapshot_dir) {
     return snapshot_dir.error();
@@ -64,6 +76,9 @@ result<void> ba2_dx10_writer::add_file(std::string_view archive_path, std::strin
   auto entry = formats::ba2::ba2_dx10_make_writer_entry(
       archive_path, dds_host_path, state_->target, state_->snapshot_dir, state_->entries.size());
   if (!entry) {
+    if (snapshot_dir_was_empty) {
+      state_->cleanup_snapshot_dir();
+    }
     return entry.error();
   }
 
@@ -77,11 +92,21 @@ result<void> ba2_dx10_writer::write_to(std::string_view host_path) const {
 }
 
 result<void> ba2_dx10_writer::write_to(std::string_view host_path, write_execution_options execution) const {
+  if (state_->consumed) {
+    return error{error_code::invalid_argument, "BA2 DX10 writer has already been consumed"};
+  }
   if (execution.worker_count == 0U) {
     return error{error_code::invalid_argument, "BA2 DX10 writer worker_count must be positive"};
   }
-  return formats::ba2::write_ba2_dx10_archive(
+  // D-03 keeps one-shot semantics local to BA2 DX10 because snapshot files are discarded after an attempt.
+  state_->consumed = true;
+  auto written = formats::ba2::write_ba2_dx10_archive(
       state_->target, state_->options, state_->entries, host_path, execution.worker_count);
+  state_->cleanup_snapshot_dir();
+  if (!written) {
+    return written.error();
+  }
+  return {};
 }
 
 } // namespace libbsa
