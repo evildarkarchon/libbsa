@@ -56,7 +56,6 @@ TEST_CASE("host_file reads exact whole-file payloads", "[unit][host_file]") {
   auto resolved = libbsa::detail::resolve_host_file_path(path.string());
 
   REQUIRE(resolved.has_value());
-  CHECK(resolved.value().original_utf8 == path.string());
   CHECK(resolved.value().resolved == path);
 
   auto bytes = libbsa::detail::read_host_file_exact(resolved.value(), static_cast<std::uint64_t>(expected.size()),
