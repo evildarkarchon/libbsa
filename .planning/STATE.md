@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
 status: executing
-stopped_at: Completed 17-03-PLAN.md
-last_updated: "2026-05-15T01:18:13.514Z"
+stopped_at: Completed 17-02-PLAN.md
+last_updated: "2026-05-15T01:28:03.662Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 17
-  completed_plans: 14
-  percent: 82
+  completed_plans: 15
+  percent: 88
 ---
 
 # Project State
@@ -26,20 +26,20 @@ See: .planning/PROJECT.md (updated 2026-05-14)
 ## Current Position
 
 Phase: 17 (writer-hotspot-hardening-and-ship-gate) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-05-15
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 88%
 
-Current note: Phase 16 completed parser/preparer seam extraction with TES4 table/payload seams, BA2 DX10 snapshot/chunk seams, dedicated policy guardrails, and verification evidence.
+Current note: Phase 17 Plan 02 completed BA2 GNRL staged final-stored dedupe identity hardening for DEDU-02.
 
 ## Performance Metrics
 
-- Total plans completed: 94
-- Current milestone plans completed: 11
+- Total plans completed: 95
+- Current milestone plans completed: 12
 - Historical baseline: v1.0 shipped across 12 phases and 75 plans
-- Latest execution: 15-01 completed in 10 min across 4 files
+- Latest execution: 17-02 completed in 5 min across 4 files
 
 ## Accumulated Context
 
@@ -79,6 +79,8 @@ Current note: Phase 16 completed parser/preparer seam extraction with TES4 table
 - [Phase 17]: Writer hotspot policy coverage is a dedicated Catch2 source-policy suite registered in libbsa_tests for DEDU-01 guardrails.
 - [Phase 17]: BA2 DX10 write_to is consuming after ordinary attempts because writer-owned snapshot files are cleaned immediately instead of retained for retry.
 - [Phase 17]: BA2 DX10 snapshot cleanup is best-effort and preserves the primary validation, write, or publish result error.
+- [Phase 17]: BA2 GNRL prepared entries expose final_stored_dedupe_hash as explicit final-stored candidate evidence; it is a filter only, not a correctness authority.
+- [Phase 17]: BA2 GNRL layout buckets dedupe candidates by stored size plus final_stored_dedupe_hash, then still calls ba2_gnrl_payloads_equal before sharing offsets.
 
 ### Pending Todos
 
@@ -109,6 +111,7 @@ None yet.
 | Phase 16 P03 | 5m | 3 tasks | 2 files |
 | Phase 17 P01 | 5 min | 3 tasks | 3 files |
 | Phase 17 P03 | 5 min | 3 tasks | 2 files |
+| Phase 17 P02 | 5 min | 3 tasks | 4 files |
 
 ## Deferred Items
 
@@ -120,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-15T01:18:13.505Z
-Stopped at: Completed 17-03-PLAN.md
+Last session: 2026-05-15T01:28:03.662Z
+Stopped at: Completed 17-02-PLAN.md
 Resume file: None

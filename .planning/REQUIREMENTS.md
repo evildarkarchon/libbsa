@@ -32,7 +32,7 @@ Requirements for the v1.1 Hardening milestone. Each maps to exactly one roadmap 
 ### Dedupe Hotspot Cleanup
 
 - [x] **DEDU-01**: Consumer can write TES4-family archives with dedupe enabled using faster candidate narrowing while preserving exact stored-byte equality behavior.
-- [ ] **DEDU-02**: Consumer can write BA2 GNRL archives with dedupe enabled using stronger staged identity or digest narrowing while preserving exact stored-byte equality fallback behavior.
+- [x] **DEDU-02**: Consumer can write BA2 GNRL archives with dedupe enabled using stronger staged identity or digest narrowing while preserving exact stored-byte equality fallback behavior.
 
 ### DX10 Temp-Staging Cleanup
 
@@ -82,7 +82,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REFA-01 | Phase 16 | Complete |
 | REFA-02 | Phase 16 | Complete |
 | DEDU-01 | Phase 17 | Complete |
-| DEDU-02 | Phase 17 | Pending |
+| DEDU-02 | Phase 17 | Complete |
 | DX10-01 | Phase 17 | Complete |
 | DX10-02 | Phase 17 | Pending |
 
