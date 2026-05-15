@@ -140,7 +140,7 @@ Plans:
 - [x] 17-02-PLAN.md - Add BA2 GNRL staged identity or digest dedupe hardening with exact fallback preserved.
 
 **Wave 3** *(blocked on Wave 2 and Plan 17-03 completion)*
-- [ ] 17-04-PLAN.md - Document and policy-test BA2 DX10 temporary-data lifecycle guarantees and residual risk.
+- [x] 17-04-PLAN.md - Document and policy-test BA2 DX10 temporary-data lifecycle guarantees and residual risk.
 
 **Wave 4** *(blocked on all implementation and documentation plans)*
 - [ ] 17-05-PLAN.md - Run focused Debug, ASan, and Release package ship gates and update planning state after verified evidence.
@@ -153,7 +153,7 @@ Plans:
 | 14. Verification Lane Truthfulness | v1.1 | 3/3 | Complete    | 2026-05-14 |
 | 15. Reader Backend Dispatch Cleanup | v1.1 | 1/1 | Complete    | 2026-05-14 |
 | 16. Parser and Preparer Seam Extraction | v1.1 | 3/3 | Complete    | 2026-05-14 |
-| 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 3/5 | In Progress|  |
+| 17. Writer Hotspot Hardening and Ship Gate | v1.1 | 4/5 | In Progress|  |
 
 ## Next Scope Candidates
 

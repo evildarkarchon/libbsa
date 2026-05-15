@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
 status: executing
-stopped_at: Completed 17-02-PLAN.md
-last_updated: "2026-05-15T01:28:03.662Z"
+stopped_at: Completed 17-04-PLAN.md
+last_updated: "2026-05-15T01:37:48.304Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 17
-  completed_plans: 15
-  percent: 88
+  completed_plans: 16
+  percent: 80
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-14)
 ## Current Position
 
 Phase: 17 (writer-hotspot-hardening-and-ship-gate) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-05-15
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 94%
 
 Current note: Phase 17 Plan 02 completed BA2 GNRL staged final-stored dedupe identity hardening for DEDU-02.
 
@@ -81,6 +81,7 @@ Current note: Phase 17 Plan 02 completed BA2 GNRL staged final-stored dedupe ide
 - [Phase 17]: BA2 DX10 snapshot cleanup is best-effort and preserves the primary validation, write, or publish result error.
 - [Phase 17]: BA2 GNRL prepared entries expose final_stored_dedupe_hash as explicit final-stored candidate evidence; it is a filter only, not a correctness authority.
 - [Phase 17]: BA2 GNRL layout buckets dedupe candidates by stored size plus final_stored_dedupe_hash, then still calls ba2_gnrl_payloads_equal before sharing offsets.
+- [Phase 17]: BA2 DX10 lifecycle documentation states write_to is consuming after ordinary attempts and cleanup is best-effort, while preserving invalid_argument result behavior for later add_file/write_to calls. — Plan 17-04 documented DX10-02 lifecycle behavior and added policy tests without public API expansion.
 
 ### Pending Todos
 
@@ -112,6 +113,7 @@ None yet.
 | Phase 17 P01 | 5 min | 3 tasks | 3 files |
 | Phase 17 P03 | 5 min | 3 tasks | 2 files |
 | Phase 17 P02 | 5 min | 3 tasks | 4 files |
+| Phase 17 P04 | 4 min | 3 tasks | 4 files |
 
 ## Deferred Items
 
@@ -123,6 +125,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-15T01:28:03.662Z
-Stopped at: Completed 17-02-PLAN.md
+Last session: 2026-05-15T01:37:32.381Z
+Stopped at: Completed 17-04-PLAN.md
 Resume file: None
