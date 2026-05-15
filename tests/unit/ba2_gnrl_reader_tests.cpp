@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <limits>
+#include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -177,6 +178,13 @@ namespace
     std::string manifest;
   };
 
+  struct synthetic_gnrl_record
+  {
+    std::string path;
+    std::uint64_t offset;
+    std::uint32_t size;
+  };
+
   std::vector<ba2_success_fixture> ba2_success_fixtures()
   {
     return {
@@ -218,6 +226,50 @@ namespace
     {
       bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
     }
+  }
+
+  /// Builds a minimal BA2 GNRL archive with caller-controlled raw payload spans.
+  std::vector<std::byte> make_synthetic_gnrl_archive(std::span<const synthetic_gnrl_record> records,
+                                                     std::span<const std::byte> payload)
+  {
+    constexpr std::uint32_t version = 1U;
+    constexpr std::uint64_t fixed_header_size = 24U;
+    constexpr std::uint64_t gnrl_record_size = 36U;
+
+    const auto file_count = static_cast<std::uint32_t>(records.size());
+    const auto file_table_offset = fixed_header_size + (gnrl_record_size * file_count);
+
+    std::vector<std::byte> bytes;
+    append_ascii(bytes, "BTDX");
+    append_u32_le(bytes, version);
+    append_ascii(bytes, "GNRL");
+    append_u32_le(bytes, file_count);
+    append_u64_le(bytes, file_table_offset);
+
+    for (const auto &record : records)
+    {
+      const auto slash = record.path.find_last_of('/');
+      const auto directory = slash == std::string::npos ? std::string_view{} : std::string_view{record.path}.substr(0U, slash);
+      const auto file_name = slash == std::string::npos ? std::string_view{record.path} : std::string_view{record.path}.substr(slash + 1U);
+
+      append_u32_le(bytes, libbsa::detail::hash_fo4(file_name));
+      append_ascii(bytes, std::string_view{"BIN\0", 4U});
+      append_u32_le(bytes, libbsa::detail::hash_fo4(directory));
+      append_u32_le(bytes, 0U);
+      append_u64_le(bytes, record.offset);
+      append_u32_le(bytes, 0U);
+      append_u32_le(bytes, record.size);
+      append_u32_le(bytes, 0xBAADF00DU);
+    }
+
+    for (const auto &record : records)
+    {
+      append_u16_le(bytes, static_cast<std::uint16_t>(record.path.size()));
+      append_ascii(bytes, record.path);
+    }
+
+    bytes.insert(bytes.end(), payload.begin(), payload.end());
+    return bytes;
   }
 
   class temp_file_cleanup final
@@ -544,6 +596,70 @@ TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
 
   REQUIRE_FALSE(opened.has_value());
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("ba2_gnrl_detector rejects partially overlapping payload spans",
+          "[unit][malformed][ba2_gnrl_detector][ba2_gnrl_overlap]")
+{
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-partial-overlap.ba2";
+  temp_file_cleanup cleanup{temp_path};
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  const std::string first_path = "meshes/overlap/first.bin";
+  const std::string second_path = "meshes/overlap/second.bin";
+  const auto payload_base = static_cast<std::uint64_t>(24U + (36U * 2U) + (2U + first_path.size()) + (2U + second_path.size()));
+  const std::vector<std::byte> payload{std::byte{0x10}, std::byte{0x11}, std::byte{0x12}, std::byte{0x13},
+                                       std::byte{0x14}, std::byte{0x15}, std::byte{0x16}, std::byte{0x17},
+                                       std::byte{0x18}, std::byte{0x19}, std::byte{0x1A}, std::byte{0x1B}};
+  const std::array records{synthetic_gnrl_record{first_path, payload_base, 8U},
+                           synthetic_gnrl_record{second_path, payload_base + 4U, 8U}};
+  const auto bytes = make_synthetic_gnrl_archive(records, payload);
+  write_binary_file(temp_path, bytes);
+
+  auto opened = libbsa::archive_reader::open(temp_path.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("ba2_gnrl_detector accepts exact duplicate non-empty payload spans",
+          "[unit][ba2_gnrl_detector][ba2_gnrl_overlap]")
+{
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-duplicate-span.ba2";
+  temp_file_cleanup cleanup{temp_path};
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  const std::string first_path = "meshes/overlap/duplicate_a.bin";
+  const std::string second_path = "meshes/overlap/duplicate_b.bin";
+  const auto payload_base = static_cast<std::uint64_t>(24U + (36U * 2U) + (2U + first_path.size()) + (2U + second_path.size()));
+  const std::vector<std::byte> payload{std::byte{0x20}, std::byte{0x21}, std::byte{0x22}, std::byte{0x23},
+                                       std::byte{0x24}, std::byte{0x25}, std::byte{0x26}, std::byte{0x27}};
+  const std::array records{synthetic_gnrl_record{first_path, payload_base, static_cast<std::uint32_t>(payload.size())},
+                           synthetic_gnrl_record{second_path, payload_base, static_cast<std::uint32_t>(payload.size())}};
+  const auto bytes = make_synthetic_gnrl_archive(records, payload);
+  write_binary_file(temp_path, bytes);
+
+  auto opened = libbsa::archive_reader::open(temp_path.string());
+
+  REQUIRE(opened.has_value());
+  auto entries = opened.value().entries();
+  REQUIRE(entries.has_value());
+  REQUIRE(entries.value().size() == 2U);
+
+  for (const auto &path : {first_path, second_path})
+  {
+    auto found = opened.value().find(path);
+    REQUIRE(found.has_value());
+    REQUIRE(found.value().has_value());
+    CHECK(found.value()->payload_offset == payload_base);
+    CHECK(found.value()->stored_size == payload.size());
+
+    auto extracted = opened.value().extract_bytes(path);
+    REQUIRE(extracted.has_value());
+    CHECK(extracted.value() == payload);
+  }
 }
 
 TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
