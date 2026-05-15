@@ -6,6 +6,8 @@
 #include "formats/ba2/ba2_gnrl_serialize.hpp"
 #include "formats/ba2/ba2_gnrl_writer.hpp"
 
+#include <detail/host_file_path.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -67,7 +69,10 @@ libbsa::formats::ba2::ba2_gnrl_prepared_entry disk_stage_entry(const std::filesy
   libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
   entry.archive_path_original = "Meshes/Payload.bin";
   entry.archive_path_canonical = "meshes/payload.bin";
-  entry.source_path = source.string();
+  entry.source_path = utf8_string_from_path(source);
+  auto resolved = libbsa::detail::resolve_host_file_path(entry.source_path);
+  REQUIRE(resolved.has_value());
+  entry.resolved_source_path = std::move(resolved).value();
   entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
   entry.raw_size = prepared_size;
   entry.stream_from_disk = true;
@@ -845,6 +850,36 @@ TEST_CASE("BA2 GNRL writer shares offsets for byte-identical stored payloads whe
   CHECK(first.value()->stored_size == second.value()->stored_size);
   CHECK(opened.value().extract_bytes("Meshes/SharedA.nif").value() == bytes);
   CHECK(opened.value().extract_bytes("Meshes/SharedB.nif").value() == bytes);
+}
+
+TEST_CASE("BA2 GNRL writer dedupes raw disk sources under non-ASCII host paths",
+          "[unit][ba2_gnrl_writer][dedupe][writer-source-io]") {
+  auto options = overwriting_raw_options();
+  options.deduplicate_payloads = true;
+  libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, options};
+  const std::vector<std::byte> bytes{std::byte{0xE2}, std::byte{0x98}, std::byte{0x83}, std::byte{0x21}};
+  const auto source_dir = non_ascii_source_dir("raw-dedupe-sources");
+  const auto first_source = source_dir / "shared-a.bin";
+  const auto second_source = source_dir / "shared-b.bin";
+  write_binary_file(first_source, bytes);
+  write_binary_file(second_source, bytes);
+
+  REQUIRE(writer.add_file("Meshes/SharedDiskA.bin", utf8_string_from_path(first_source)).has_value());
+  REQUIRE(writer.add_file("Meshes/SharedDiskB.bin", utf8_string_from_path(second_source)).has_value());
+  const auto output = output_path("dedupe-non-ascii-disk-sources.ba2");
+  REQUIRE(writer.write_to(output.string()).has_value());
+
+  auto opened = libbsa::archive_reader::open(output.string());
+  REQUIRE(opened.has_value());
+  auto first = opened.value().find("Meshes/SharedDiskA.bin");
+  auto second = opened.value().find("Meshes/SharedDiskB.bin");
+  REQUIRE(first.has_value());
+  REQUIRE(second.has_value());
+  REQUIRE(first.value().has_value());
+  REQUIRE(second.value().has_value());
+  CHECK(first.value()->payload_offset == second.value()->payload_offset);
+  CHECK(opened.value().extract_bytes("Meshes/SharedDiskA.bin").value() == bytes);
+  CHECK(opened.value().extract_bytes("Meshes/SharedDiskB.bin").value() == bytes);
 }
 
 TEST_CASE("BA2 GNRL writer dedupes compressed stored bytes but not raw and compressed source twins",

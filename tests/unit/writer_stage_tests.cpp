@@ -9,6 +9,8 @@
 #include "formats/bsa/tes4_bsa_serialize.hpp"
 #include "texture/dds_layout.hpp"
 
+#include <detail/host_file_path.hpp>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
@@ -77,6 +79,9 @@ libbsa::formats::ba2::ba2_gnrl_prepared_entry ba2_gnrl_disk_stage_entry(const st
   entry.archive_path_original = "Meshes/Stage.bin";
   entry.archive_path_canonical = "meshes/stage.bin";
   entry.source_path = path.string();
+  auto resolved = libbsa::detail::resolve_host_file_path(entry.source_path);
+  REQUIRE(resolved.has_value());
+  entry.resolved_source_path = std::move(resolved).value();
   entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
   entry.raw_size = raw_size;
   entry.stream_from_disk = true;

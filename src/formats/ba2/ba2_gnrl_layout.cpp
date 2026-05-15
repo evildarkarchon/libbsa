@@ -2,9 +2,10 @@
 
 #include "formats/ba2/ba2_constants.hpp"
 
+#include <detail/host_file.hpp>
+
 #include <algorithm>
 #include <array>
-#include <fstream>
 #include <limits>
 #include <map>
 #include <string>
@@ -54,10 +55,18 @@ result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view descript
   return static_cast<std::uint32_t>(value);
 }
 
-result<bool> compare_disk_payload_to_bytes(const std::string& host_path, std::span<const std::byte> expected);
+constexpr detail::host_file_context ba2_gnrl_dedupe_source_context{
+    "BA2 GNRL writer failed to open disk source",
+    "BA2 GNRL writer failed to inspect disk source size",
+    "BA2 GNRL writer failed while comparing disk source",
+    "BA2 GNRL disk source changed during dedupe preparation",
+    "BA2 GNRL disk source"};
 
-result<bool> compare_disk_payloads(const std::string& lhs_path,
-                                   const std::string& rhs_path,
+result<bool> compare_disk_payload_to_bytes(const detail::host_file_path& host_path,
+                                           std::span<const std::byte> expected);
+
+result<bool> compare_disk_payloads(const detail::host_file_path& lhs_path,
+                                   const detail::host_file_path& rhs_path,
                                    std::uint32_t expected_size);
 
 } // namespace
@@ -86,13 +95,13 @@ std::size_t ba2_gnrl_header_size_for(std::uint32_t version) noexcept {
 
 result<bool> ba2_gnrl_payloads_equal(const ba2_gnrl_prepared_entry& lhs, const ba2_gnrl_prepared_entry& rhs) {
   if (lhs.stream_from_disk && rhs.stream_from_disk) {
-    return compare_disk_payloads(lhs.source_path, rhs.source_path, lhs.raw_size);
+    return compare_disk_payloads(lhs.resolved_source_path, rhs.resolved_source_path, lhs.raw_size);
   }
   if (lhs.stream_from_disk) {
-    return compare_disk_payload_to_bytes(lhs.source_path, rhs.stored_payload);
+    return compare_disk_payload_to_bytes(lhs.resolved_source_path, rhs.stored_payload);
   }
   if (rhs.stream_from_disk) {
-    return compare_disk_payload_to_bytes(rhs.source_path, lhs.stored_payload);
+    return compare_disk_payload_to_bytes(rhs.resolved_source_path, lhs.stored_payload);
   }
   return lhs.stored_payload == rhs.stored_payload;
 }
@@ -167,46 +176,49 @@ result<void> ba2_gnrl_assign_payload_offsets(std::span<ba2_gnrl_prepared_entry> 
 
 namespace {
 
-result<bool> compare_disk_payload_to_bytes(const std::string& host_path, std::span<const std::byte> expected) {
-  std::ifstream input{host_path, std::ios::binary};
-  if (!input) {
-    return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
-  }
-
-  std::array<char, 64U * 1024U> scratch{};
+result<bool> compare_disk_payload_to_bytes(const detail::host_file_path& host_path,
+                                           std::span<const std::byte> expected) {
+  bool equal = true;
   std::size_t offset = 0;
-  while (offset < expected.size()) {
-    const auto requested = std::min<std::size_t>(scratch.size(), expected.size() - offset);
-    input.read(scratch.data(), static_cast<std::streamsize>(requested));
-    if (input.gcount() != static_cast<std::streamsize>(requested)) {
-      return error{error_code::io_error, "BA2 GNRL disk source changed during dedupe preparation"};
-    }
-    for (std::size_t index = 0; index < requested; ++index) {
-      if (static_cast<std::byte>(static_cast<unsigned char>(scratch[index])) != expected[offset + index]) {
-        return false;
-      }
-    }
-    offset += requested;
+  auto compared = detail::for_each_host_file_chunk(
+      host_path,
+      expected.size(),
+      ba2_gnrl_dedupe_source_context,
+      [&](std::span<const std::byte> chunk) -> result<void> {
+        if (equal && !std::equal(chunk.begin(), chunk.end(), expected.begin() + static_cast<std::ptrdiff_t>(offset))) {
+          equal = false;
+        }
+        offset += chunk.size();
+        return {};
+      });
+  if (!compared) {
+    return compared.error();
   }
-
-  // Dedupe decisions reuse earlier size/hash metadata; reject any source that no longer ends at that boundary.
-  char extra = '\0';
-  if (input.get(extra)) {
-    return error{error_code::io_error, "BA2 GNRL disk source changed during dedupe preparation"};
-  }
-  if (input.bad()) {
-    return error{error_code::io_error, "BA2 GNRL writer failed while comparing disk source"};
-  }
-  return true;
+  return equal;
 }
 
-result<bool> compare_disk_payloads(const std::string& lhs_path,
-                                   const std::string& rhs_path,
+result<bool> compare_disk_payloads(const detail::host_file_path& lhs_path,
+                                   const detail::host_file_path& rhs_path,
                                    std::uint32_t expected_size) {
-  std::ifstream lhs{lhs_path, std::ios::binary};
-  std::ifstream rhs{rhs_path, std::ios::binary};
-  if (!lhs || !rhs) {
-    return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
+  auto lhs_size = detail::inspect_host_file_size(lhs_path, ba2_gnrl_dedupe_source_context);
+  if (!lhs_size) {
+    return lhs_size.error();
+  }
+  auto rhs_size = detail::inspect_host_file_size(rhs_path, ba2_gnrl_dedupe_source_context);
+  if (!rhs_size) {
+    return rhs_size.error();
+  }
+  if (lhs_size.value() != expected_size || rhs_size.value() != expected_size) {
+    return error{error_code::io_error, "BA2 GNRL disk source changed during dedupe preparation"};
+  }
+
+  auto lhs = detail::open_host_file(lhs_path, ba2_gnrl_dedupe_source_context);
+  if (!lhs) {
+    return lhs.error();
+  }
+  auto rhs = detail::open_host_file(rhs_path, ba2_gnrl_dedupe_source_context);
+  if (!rhs) {
+    return rhs.error();
   }
 
   std::array<char, 64U * 1024U> lhs_scratch{};
@@ -215,10 +227,10 @@ result<bool> compare_disk_payloads(const std::string& lhs_path,
   while (remaining > 0U) {
     const auto requested = static_cast<std::size_t>(
         std::min<std::uint64_t>(remaining, static_cast<std::uint64_t>(lhs_scratch.size())));
-    lhs.read(lhs_scratch.data(), static_cast<std::streamsize>(requested));
-    rhs.read(rhs_scratch.data(), static_cast<std::streamsize>(requested));
-    if (lhs.gcount() != static_cast<std::streamsize>(requested) ||
-        rhs.gcount() != static_cast<std::streamsize>(requested)) {
+    lhs.value().read(lhs_scratch.data(), static_cast<std::streamsize>(requested));
+    rhs.value().read(rhs_scratch.data(), static_cast<std::streamsize>(requested));
+    if (lhs.value().gcount() != static_cast<std::streamsize>(requested) ||
+        rhs.value().gcount() != static_cast<std::streamsize>(requested)) {
       return error{error_code::io_error, "BA2 GNRL disk source changed during dedupe preparation"};
     }
     if (!std::equal(lhs_scratch.begin(), lhs_scratch.begin() + static_cast<std::ptrdiff_t>(requested), rhs_scratch.begin())) {
@@ -230,10 +242,10 @@ result<bool> compare_disk_payloads(const std::string& lhs_path,
   // A file that grew after preparation can otherwise compare equal for the prepared prefix and corrupt offsets.
   char lhs_extra = '\0';
   char rhs_extra = '\0';
-  if (lhs.get(lhs_extra) || rhs.get(rhs_extra)) {
+  if (lhs.value().get(lhs_extra) || rhs.value().get(rhs_extra)) {
     return error{error_code::io_error, "BA2 GNRL disk source changed during dedupe preparation"};
   }
-  if (lhs.bad() || rhs.bad()) {
+  if (lhs.value().bad() || rhs.value().bad()) {
     return error{error_code::io_error, "BA2 GNRL writer failed while comparing disk sources"};
   }
   return true;
