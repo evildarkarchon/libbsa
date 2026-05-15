@@ -16,6 +16,7 @@
 #include <fstream>
 #include <iterator>
 #include <limits>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -241,6 +242,111 @@ namespace
     append_u32_le(bytes, 0xBAADF00DU);
   }
 
+  struct synthetic_dx10_record
+  {
+    std::string path;
+    std::uint64_t offset;
+    std::uint32_t size;
+  };
+
+  class temp_file_cleanup final
+  {
+  public:
+    /// Owns cleanup for a temporary fixture path created by a test case.
+    explicit temp_file_cleanup(std::filesystem::path path) : path_{std::move(path)} {}
+
+    temp_file_cleanup(const temp_file_cleanup &) = delete;
+    temp_file_cleanup &operator=(const temp_file_cleanup &) = delete;
+
+    /// Removes the temporary fixture without failing the test during stack unwinding.
+    ~temp_file_cleanup()
+    {
+      std::error_code ignored;
+      std::filesystem::remove(path_, ignored);
+    }
+
+  private:
+    std::filesystem::path path_;
+  };
+
+  std::pair<std::string_view, std::string_view> split_directory_file(std::string_view archive_path) noexcept
+  {
+    const auto slash = archive_path.find_last_of('/');
+    if (slash == std::string_view::npos)
+    {
+      return {{}, archive_path};
+    }
+    return {archive_path.substr(0U, slash), archive_path.substr(slash + 1U)};
+  }
+
+  std::pair<std::string_view, std::string_view> split_stem_extension(std::string_view file_name) noexcept
+  {
+    const auto dot = file_name.find_last_of('.');
+    REQUIRE(dot != std::string_view::npos);
+    REQUIRE(dot != 0U);
+    REQUIRE(dot + 1U < file_name.size());
+    return {file_name.substr(0U, dot), file_name.substr(dot + 1U)};
+  }
+
+  void append_dx10_record_for_path(std::vector<std::byte> &bytes, const synthetic_dx10_record &record)
+  {
+    const auto [directory, file_name] = split_directory_file(record.path);
+    const auto [stem, extension] = split_stem_extension(file_name);
+    REQUIRE(extension == "dds");
+
+    append_u32_le(bytes, libbsa::detail::hash_fo4(stem));
+    append_ascii(bytes, std::string_view{"dds\0", 4U});
+    append_u32_le(bytes, libbsa::detail::hash_fo4(directory));
+    append_u8(bytes, 0U);
+    append_u8(bytes, 1U);
+    append_u16_le(bytes, 24U);
+    append_u16_le(bytes, 1U);
+    append_u16_le(bytes, 1U);
+    append_u8(bytes, 1U);
+    append_u8(bytes, 28U);
+    append_u16_le(bytes, 0U);
+    append_u64_le(bytes, record.offset);
+    append_u32_le(bytes, 0U);
+    append_u32_le(bytes, record.size);
+    append_u16_le(bytes, 0U);
+    append_u16_le(bytes, 0U);
+    append_u32_le(bytes, 0xBAADF00DU);
+  }
+
+  /// Builds a minimal BA2 DX10 archive with one raw 1x1 RGBA chunk per texture entry.
+  std::vector<std::byte> make_synthetic_dx10_archive(std::span<const synthetic_dx10_record> records,
+                                                     std::span<const std::byte> payload)
+  {
+    constexpr std::uint32_t version = 1U;
+    constexpr std::uint64_t fixed_header_size = 24U;
+    constexpr std::uint64_t dx10_record_header_size = 24U;
+    constexpr std::uint64_t dx10_chunk_record_size = 24U;
+
+    const auto file_count = static_cast<std::uint32_t>(records.size());
+    const auto file_table_offset = fixed_header_size + ((dx10_record_header_size + dx10_chunk_record_size) * file_count);
+
+    std::vector<std::byte> bytes;
+    append_ascii(bytes, "BTDX");
+    append_u32_le(bytes, version);
+    append_ascii(bytes, "DX10");
+    append_u32_le(bytes, file_count);
+    append_u64_le(bytes, file_table_offset);
+
+    for (const auto &record : records)
+    {
+      append_dx10_record_for_path(bytes, record);
+    }
+
+    for (const auto &record : records)
+    {
+      append_u16_le(bytes, static_cast<std::uint16_t>(record.path.size()));
+      append_ascii(bytes, record.path);
+    }
+
+    bytes.insert(bytes.end(), payload.begin(), payload.end());
+    return bytes;
+  }
+
   void write_sparse_dx10_archive(const std::filesystem::path &path)
   {
     constexpr std::uint64_t sparse_payload_offset = 4ULL * 1024ULL * 1024ULL * 1024ULL;
@@ -458,6 +564,85 @@ TEST_CASE("ba2_dx10_detector opens sparse archive without reading the payload ga
   auto contains = opened.value().contains("textures/generated/sparse.dds");
   REQUIRE(contains.has_value());
   REQUIRE(contains.value());
+}
+
+TEST_CASE("ba2_dx10_detector rejects partially overlapping chunk payload spans",
+          "[unit][malformed][ba2_dx10_detector][ba2_dx10_overlap]")
+{
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-partial-overlap.ba2";
+  temp_file_cleanup cleanup{temp_path};
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  const std::string first_path = "textures/overlap/first.dds";
+  const std::string second_path = "textures/overlap/second.dds";
+  const auto payload_base = static_cast<std::uint64_t>(24U + (48U * 2U) + (2U + first_path.size()) + (2U + second_path.size()));
+  const std::vector<std::byte> payload{std::byte{0x10}, std::byte{0x11}, std::byte{0x12},
+                                       std::byte{0x13}, std::byte{0x14}, std::byte{0x15}};
+  const std::array records{synthetic_dx10_record{first_path, payload_base, 4U},
+                           synthetic_dx10_record{second_path, payload_base + 2U, 4U}};
+  const auto bytes = make_synthetic_dx10_archive(records, payload);
+  write_binary_file(temp_path, bytes);
+
+  auto opened = libbsa::archive_reader::open(temp_path.string());
+
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+  auto validated = libbsa::validate_archive(temp_path.string());
+  REQUIRE(validated.has_value());
+  CHECK_FALSE(validated.value().is_valid());
+  REQUIRE(validated.value().errors.size() == 1U);
+  CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("ba2_dx10_detector accepts exact duplicate non-empty chunk payload spans",
+          "[unit][ba2_dx10_detector][ba2_dx10_overlap]")
+{
+  const auto temp_path = std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-duplicate-span.ba2";
+  temp_file_cleanup cleanup{temp_path};
+  std::error_code remove_error;
+  std::filesystem::remove(temp_path, remove_error);
+
+  const std::string first_path = "textures/overlap/duplicate_a.dds";
+  const std::string second_path = "textures/overlap/duplicate_b.dds";
+  const auto payload_base = static_cast<std::uint64_t>(24U + (48U * 2U) + (2U + first_path.size()) + (2U + second_path.size()));
+  const std::vector<std::byte> payload{std::byte{0x20}, std::byte{0x21}, std::byte{0x22}, std::byte{0x23}};
+  const std::array records{synthetic_dx10_record{first_path, payload_base, static_cast<std::uint32_t>(payload.size())},
+                           synthetic_dx10_record{second_path, payload_base, static_cast<std::uint32_t>(payload.size())}};
+  const auto bytes = make_synthetic_dx10_archive(records, payload);
+  write_binary_file(temp_path, bytes);
+
+  auto opened = libbsa::archive_reader::open(temp_path.string());
+
+  REQUIRE(opened.has_value());
+  auto entries = opened.value().entries();
+  REQUIRE(entries.has_value());
+  REQUIRE(entries.value().size() == 2U);
+
+  std::vector<std::byte> first_extracted;
+  for (const auto &path : {first_path, second_path})
+  {
+    auto found = opened.value().find(path);
+    REQUIRE(found.has_value());
+    REQUIRE(found.value().has_value());
+    REQUIRE(found.value()->texture.has_value());
+    REQUIRE(found.value()->texture->chunks.size() == 1U);
+    CHECK(found.value()->texture->chunks.front().payload_offset == payload_base);
+    CHECK(found.value()->texture->chunks.front().stored_size == payload.size());
+
+    auto extracted = opened.value().extract_bytes(path);
+    REQUIRE(extracted.has_value());
+    REQUIRE(extracted.value().size() > payload.size());
+    if (first_extracted.empty())
+    {
+      first_extracted = extracted.value();
+    }
+    else
+    {
+      CHECK(extracted.value() == first_extracted);
+    }
+  }
 }
 
 TEST_CASE("ba2_dx10_detector returns format_error for oversized declared filename table offsets",
