@@ -92,12 +92,12 @@ namespace libbsa::formats::ba2
     {
       for (auto &chunk : entry.chunks)
       {
-        // D-20 requires DX10 dedupe to prove both byte identity and chunk metadata identity. Two
-        // chunks only share storage when the final stored bytes, raw size, packed size, and explicit
-        // compression route all match; texture dimensions and mip identity remain separate records.
-        dedupe_key key{chunk.stored_payload, chunk.raw_size, chunk.packed_size, chunk.compression};
         if (deduplicate_payloads)
         {
+          // D-20 requires DX10 dedupe to prove both byte identity and chunk metadata identity. Two
+          // chunks only share storage when the final stored bytes, raw size, packed size, and explicit
+          // compression route all match; texture dimensions and mip identity remain separate records.
+          dedupe_key key{chunk.stored_payload, chunk.raw_size, chunk.packed_size, chunk.compression};
           const auto duplicate = deduplicated_payloads.find(key);
           if (duplicate != deduplicated_payloads.end())
           {
@@ -105,13 +105,10 @@ namespace libbsa::formats::ba2
             chunk.owns_payload_bytes = false;
             continue;
           }
+          deduplicated_payloads.emplace(std::move(key), payload_assignment{cursor});
         }
         chunk.payload_offset = cursor;
         chunk.owns_payload_bytes = true;
-        if (deduplicate_payloads)
-        {
-          deduplicated_payloads.emplace(std::move(key), payload_assignment{chunk.payload_offset});
-        }
         if (!add_fits_u64(cursor, chunk.stored_payload.size(), cursor))
         {
           return error{error_code::format_error, "BA2 DX10 payload span overflows"};
