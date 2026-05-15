@@ -21,6 +21,10 @@ std::filesystem::path host_file_path_source_path() {
   return project_root() / "src" / "detail" / "host_file_path.cpp";
 }
 
+std::filesystem::path host_file_path_header_path() {
+  return project_root() / "src" / "detail" / "host_file_path.hpp";
+}
+
 std::string read_text_file(const std::filesystem::path& path) {
   std::ifstream input{path, std::ios::binary};
   REQUIRE(input.is_open());
@@ -69,14 +73,13 @@ TEST_CASE("host_file_path source uses strict UTF-8 conversion instead of narrow 
   CHECK(source.find("std::filesystem::path{std::string{host_path}}") == std::string::npos);
 }
 
-TEST_CASE("host_file_path preserves caller UTF-8 bytes for diagnostics", "[unit][host_file_path]") {
-  const auto native_path = unique_non_ascii_host_path();
-  const auto utf8_host_path = utf8_string_from_path(native_path);
+TEST_CASE("host_file_path contract does not preserve caller UTF-8 text as dead diagnostics state",
+          "[unit][host_file_path]") {
+  const auto header = read_text_file(host_file_path_header_path());
+  const auto source = read_text_file(host_file_path_source_path());
 
-  auto resolved = libbsa::detail::resolve_host_file_path(utf8_host_path);
-
-  REQUIRE(resolved.has_value());
-  CHECK(resolved.value().original_utf8 == utf8_host_path);
+  CHECK(header.find("original_utf8") == std::string::npos);
+  CHECK(source.find("original_utf8") == std::string::npos);
 }
 
 TEST_CASE("host_file_path rejects malformed UTF-8 before filesystem I/O", "[unit][host_file_path]") {
