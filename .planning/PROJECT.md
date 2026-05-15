@@ -36,12 +36,13 @@ libbsa must read, write, and extract every supported Bethesda archive format wit
 - [x] v1.1 collapsed public reader backend dispatch to one open-time seam while preserving cross-family reader behavior under focused runtime and policy coverage. Validated in Phase 15.
 - [x] v1.1 reduced fragility in the targeted TES4 parser and BA2 DX10 preparer hotspots through private table/payload and snapshot/chunk seams with focused runtime and source-policy regression coverage. Validated in Phase 16.
 - [x] v1.1 reduced writer hotspot risk by adding exact-equality-preserving TES4 and BA2 GNRL dedupe narrowing, resolved-host-path BA2 GNRL disk dedupe comparisons, BA2 DX10 ordinary-path snapshot cleanup, lifecycle documentation, and focused Debug/ASan/Release package ship-gate evidence. Validated in Phase 17.
+- [x] v1.1 audit follow-up closed remaining tech debt by joining non-ASCII host-path reader coverage with public reader dispatch, removing unused private host-path/reader state, and recording writer host-path disposition evidence without editing the milestone audit source. Validated in Phase 17.1.
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
 
-None — v1.1 hardening requirements are complete as of the Phase 17 ship gate.
+None — v1.1 hardening and audit follow-up requirements are complete as of Phase 17.1.
 
 ### Out of Scope
 
@@ -59,13 +60,13 @@ None — v1.1 hardening requirements are complete as of the Phase 17 ship gate.
 
 ### Current State
 
-v1.0 shipped on 2026-05-10 after 12 phases, 75 plans, and 81 completed v1 requirements. v1.1 shipped on 2026-05-15 after Phases 13-17 hardened host-path correctness, verification lanes, reader dispatch, parser/preparer seams, and writer hotspots. The live planning surface is now compact: the full v1 roadmap, requirements, milestone audit, and phase execution artifacts are archived under `.planning/milestones/`.
+v1.0 shipped on 2026-05-10 after 12 phases, 75 plans, and 81 completed v1 requirements. v1.1 shipped on 2026-05-15 after Phases 13-17 hardened host-path correctness, verification lanes, reader dispatch, parser/preparer seams, and writer hotspots; Phase 17.1 closed the follow-up audit tech debt. The live planning surface is now compact: the full v1 roadmap, requirements, milestone audit, and phase execution artifacts are archived under `.planning/milestones/`.
 
-v1.1 shifted focus from feature completeness to hardening work driven by the codebase concerns audit. Phase 13 is complete and verified: archive open, validation, parser entry, and post-open extraction now route through a shared Windows-correct host-file boundary with committed non-ASCII regression proof. Phase 14 is complete and verified: the supported debug inner-loop lanes, Release package-proof lanes, and the MSVC AddressSanitizer hardening lane agree across presets, CI, docs, and planning without rewriting v1.0 history. Phase 15 is complete and verified: `archive_reader::open` now selects one file-local backend table once, then reuses it across listing, lookup, extract, extract_bytes, and bulk extraction while focused runtime and policy suites lock the seam against behavior drift. Phase 16 is complete and verified: the targeted TES4 parser hotspot now routes through private raw-table and payload-descriptor seams, the BA2 DX10 preparer now routes through private snapshot-builder and chunk-assembler seams, and dedicated policy guardrails lock those responsibilities against coordinator collapse. Phase 17 is complete and verified: TES4-family BSA and BA2 GNRL dedupe now use non-authoritative candidate filters before exact stored-byte equality, BA2 GNRL disk-backed dedupe comparisons stay on resolved Windows host paths, BA2 DX10 snapshot cleanup runs on ordinary success/failure paths as best-effort cleanup, residual abnormal-termination risk is documented, and the final ship gate passed focused Debug, MSVC AddressSanitizer, full Debug regression, clean code review, and Release package-consumer proof lanes.
+v1.1 shifted focus from feature completeness to hardening work driven by the codebase concerns audit. Phase 13 is complete and verified: archive open, validation, parser entry, and post-open extraction now route through a shared Windows-correct host-file boundary with committed non-ASCII regression proof. Phase 14 is complete and verified: the supported debug inner-loop lanes, Release package-proof lanes, and the MSVC AddressSanitizer hardening lane agree across presets, CI, docs, and planning without rewriting v1.0 history. Phase 15 is complete and verified: `archive_reader::open` now selects one file-local backend table once, then reuses it across listing, lookup, extract, extract_bytes, and bulk extraction while focused runtime and policy suites lock the seam against behavior drift. Phase 16 is complete and verified: the targeted TES4 parser hotspot now routes through private raw-table and payload-descriptor seams, the BA2 DX10 preparer now routes through private snapshot-builder and chunk-assembler seams, and dedicated policy guardrails lock those responsibilities against coordinator collapse. Phase 17 is complete and verified: TES4-family BSA and BA2 GNRL dedupe now use non-authoritative candidate filters before exact stored-byte equality, BA2 GNRL disk-backed dedupe comparisons stay on resolved Windows host paths, BA2 DX10 snapshot cleanup runs on ordinary success/failure paths as best-effort cleanup, residual abnormal-termination risk is documented, and the final ship gate passed focused Debug, MSVC AddressSanitizer, full Debug regression, clean code review, and Release package-consumer proof lanes. Phase 17.1 is complete and verified: the non-ASCII host-path reader regression now covers public reader dispatch, unused private host-path/reader state is removed, writer host-path disposition is source-policy tested, and focused Debug plus MSVC AddressSanitizer evidence passed without touching `TES5Edit/` or `.planning/v1.1-MILESTONE-AUDIT.md`.
 
 The current codebase exposes public reader, writer, validation, result, metadata, and execution-option APIs from `include/libbsa/`. Public headers remain dependency-light and C++20-compatible. Implementation code owns format parsing, archive writing, compression routing, DDS metadata analysis, validation reports, compatibility warnings, bounded-memory streaming, and optional worker-count execution.
 
-The latest audit accepted the milestone with no requirement gaps, no integration gaps, no E2E flow gaps, and no milestone-blocking tech debt. The latest Phase 13 verification snapshot passed the Windows MSVC static build and 362 runnable CTest tests with 2 expected opt-in skips, including the cross-family non-ASCII host-path proof suite. Advisory review still found writer finalize/dedupe host-path migration work, but verification confirmed that gap is outside Phase 13's locked read/open/validate boundary.
+The latest audit accepted the milestone with no requirement gaps, no integration gaps, no E2E flow gaps, and no milestone-blocking tech debt. Phase 17.1 closed the remaining advisory tech-debt items called out after that audit: the combined non-ASCII reader surface, unused private state removal, and writer host-path disposition are all covered by committed source/tests and verification evidence.
 
 ### Reference Boundary
 
@@ -119,6 +120,7 @@ Supported archive families include TES3 BSA, TES4 BSA v103, FO3/FNV/Skyrim LE BS
 | Keep parser/preparer hotspot extractions private and policy-guarded | Phase 16 needed safer internal change seams without public API expansion or freezing exact helper names | Implemented in Phase 16 |
 | Keep dedupe candidate filters non-authoritative | Phase 17 required faster TES4 and BA2 GNRL candidate narrowing without allowing hashes, staged identities, or sizes to replace exact final stored-byte equality; disk-backed BA2 GNRL comparisons still use resolved host paths for Windows non-ASCII correctness | Implemented in Phase 17 |
 | Treat BA2 DX10 snapshot cleanup as best-effort ordinary-path cleanup with residual abnormal-termination risk | Phase 17 prioritized prompt cleanup after normal result-returning write attempts while avoiding unsupported crash-proof guarantees or public API expansion | Implemented in Phase 17 |
+| Close audit follow-up with evidence rather than audit-source mutation | Phase 17.1 needed to close v1.1 audit tech debt while preserving `.planning/v1.1-MILESTONE-AUDIT.md` as the immutable source record | Implemented in Phase 17.1 |
 
 ## Evolution
 
@@ -140,4 +142,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-05-15 after Phase 17 verification and v1.1 ship-gate closure*
+*Last updated: 2026-05-15 after Phase 17.1 audit follow-up verification*
