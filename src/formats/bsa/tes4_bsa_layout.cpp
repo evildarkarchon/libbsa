@@ -6,7 +6,9 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <limits>
+#include <map>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -23,6 +25,18 @@ struct payload_assignment {
 struct assigned_payload {
   const tes4_prepared_entry* entry{nullptr};
   payload_assignment assignment;
+};
+
+struct tes4_dedupe_identity {
+  std::uint32_t stored_size{0};
+  std::uint64_t fingerprint{0};
+
+  bool operator<(const tes4_dedupe_identity& other) const noexcept {
+    if (stored_size != other.stored_size) {
+      return stored_size < other.stored_size;
+    }
+    return fingerprint < other.fingerprint;
+  }
 };
 
 bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept {
@@ -152,6 +166,36 @@ result<bool> disk_stored_payloads_equal(const tes4_prepared_entry& lhs, const te
   return disk_payload_equals_bytes(lhs, rhs_payload.value());
 }
 
+void hash_payload_bytes(std::uint64_t& hash, std::span<const std::byte> bytes) noexcept {
+  for (const auto byte : bytes) {
+    hash ^= std::to_integer<std::uint8_t>(byte);
+    hash *= 1099511628211ULL;
+  }
+}
+
+result<tes4_dedupe_identity> make_tes4_dedupe_identity(const tes4_prepared_entry& entry) {
+  std::uint64_t hash = 14695981039346656037ULL;
+  hash_payload_bytes(hash, entry.stored_payload);
+  if (entry.stream_raw_disk) {
+    auto source_path = resolve_tes4_dedupe_source_path(entry.raw_disk_host_path);
+    if (!source_path) {
+      return source_path.error();
+    }
+    auto hashed = detail::for_each_host_file_chunk(
+        source_path.value(),
+        entry.raw_disk_size,
+        tes4_dedupe_source_context,
+        [&](std::span<const std::byte> chunk) -> result<void> {
+          hash_payload_bytes(hash, chunk);
+          return {};
+        });
+    if (!hashed) {
+      return hashed.error();
+    }
+  }
+  return tes4_dedupe_identity{entry.stored_size, hash};
+}
+
 } // namespace
 
 result<bool> tes4_stored_payloads_equal(const tes4_prepared_entry& lhs, const tes4_prepared_entry& rhs) {
@@ -215,22 +259,30 @@ result<tes4_layout_result> tes4_assign_offsets(std::span<tes4_prepared_folder> f
     return error{error_code::format_error, "TES4 BSA metadata size overflows"};
   }
 
-  std::vector<assigned_payload> deduplicated_payloads;
+  std::map<tes4_dedupe_identity, std::vector<assigned_payload>> deduplicated_payloads;
   for (auto& folder : folders) {
     for (auto& entry : folder.entries) {
+      tes4_dedupe_identity identity{};
       if (deduplicate_payloads) {
-        // Dedupe compares the complete final stored byte stream. Raw disk sources
-        // are compared on demand so the publish path can still stream unique files.
-        for (const auto& candidate : deduplicated_payloads) {
-          auto duplicate = tes4_stored_payloads_equal(entry, *candidate.entry);
-          if (!duplicate) {
-            return duplicate.error();
-          }
-          if (duplicate.value()) {
-            entry.payload_offset = candidate.assignment.offset;
-            entry.stored_size = candidate.assignment.stored_size;
-            entry.owns_payload_bytes = false;
-            break;
+        auto entry_identity = make_tes4_dedupe_identity(entry);
+        if (!entry_identity) {
+          return entry_identity.error();
+        }
+        identity = entry_identity.value();
+        auto duplicate_bucket = deduplicated_payloads.find(identity);
+        if (duplicate_bucket != deduplicated_payloads.end()) {
+          // Dedupe keys narrow expensive comparisons only; D-08 still requires exact final stored-byte equality.
+          for (const auto& candidate : duplicate_bucket->second) {
+            auto duplicate = tes4_stored_payloads_equal(entry, *candidate.entry);
+            if (!duplicate) {
+              return duplicate.error();
+            }
+            if (duplicate.value()) {
+              entry.payload_offset = candidate.assignment.offset;
+              entry.stored_size = candidate.assignment.stored_size;
+              entry.owns_payload_bytes = false;
+              break;
+            }
           }
         }
         if (!entry.owns_payload_bytes) {
@@ -245,7 +297,8 @@ result<tes4_layout_result> tes4_assign_offsets(std::span<tes4_prepared_folder> f
       entry.payload_offset = offset.value();
       entry.owns_payload_bytes = true;
       if (deduplicate_payloads) {
-        deduplicated_payloads.push_back(assigned_payload{&entry, payload_assignment{entry.payload_offset, entry.stored_size}});
+        deduplicated_payloads[identity].push_back(
+            assigned_payload{&entry, payload_assignment{entry.payload_offset, entry.stored_size}});
       }
       if (!add_fits_u64(payload_cursor, entry.stored_size, payload_cursor)) {
         return error{error_code::format_error, "TES4 BSA payload span overflows"};
