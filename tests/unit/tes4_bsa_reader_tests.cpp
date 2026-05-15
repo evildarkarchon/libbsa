@@ -442,6 +442,63 @@ TEST_CASE("tes4_bsa_malformed_open rejects payload spans inside metadata",
   REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
 
+TEST_CASE("tes4_bsa_malformed_open rejects partially overlapping payload spans",
+          "[unit][fixture][malformed][tes4_bsa_malformed_open]")
+{
+  auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+  const auto folder_count = read_u32_le(bytes, 16U);
+  const auto folder_name_bytes = read_u32_le(bytes, 24U);
+  const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes;
+  const auto second_file_record = first_file_record + 16U;
+  const auto first_payload_offset = read_u32_le(bytes, first_file_record + 12U);
+  overwrite_u32_le(bytes, second_file_record + 12U, first_payload_offset + 10U);
+
+  const auto mutated = std::filesystem::temp_directory_path() / "libbsa_tes4_partial_payload_overlap.bsa";
+  write_binary_file(mutated, bytes);
+
+  auto opened = libbsa::archive_reader::open(mutated.string());
+  REQUIRE_FALSE(opened.has_value());
+  REQUIRE(opened.error().code == libbsa::error_code::format_error);
+
+  auto validated = libbsa::validate_archive(mutated.string());
+  REQUIRE(validated.has_value());
+  CHECK_FALSE(validated.value().is_valid());
+  REQUIRE(validated.value().errors.size() == 1U);
+  CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("tes4_bsa_entry_metadata accepts exact duplicate payload spans for writer dedupe",
+          "[unit][fixture][tes4_bsa_entry_metadata]")
+{
+  auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+  const auto folder_count = read_u32_le(bytes, 16U);
+  const auto folder_name_bytes = read_u32_le(bytes, 24U);
+  const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes;
+  const auto second_file_record = first_file_record + 16U;
+  const auto first_size_flags = read_u32_le(bytes, first_file_record + 8U);
+  const auto second_size_flags = read_u32_le(bytes, second_file_record + 8U);
+  const auto first_payload_offset = read_u32_le(bytes, first_file_record + 12U);
+  overwrite_u32_le(bytes, second_file_record + 8U, (second_size_flags & 0x4000'0000U) | first_size_flags);
+  overwrite_u32_le(bytes, second_file_record + 12U, first_payload_offset);
+
+  const auto mutated = std::filesystem::temp_directory_path() / "libbsa_tes4_exact_duplicate_payload_span.bsa";
+  write_binary_file(mutated, bytes);
+
+  auto opened = libbsa::archive_reader::open(mutated.string());
+  REQUIRE(opened.has_value());
+  auto entries = opened.value().entries();
+  REQUIRE(entries.has_value());
+
+  const auto raw = std::find_if(entries.value().begin(), entries.value().end(), [](const libbsa::entry_metadata &entry)
+                                { return entry.path == "meshes/tiny/rawmesh.nif"; });
+  const auto packed = std::find_if(entries.value().begin(), entries.value().end(), [](const libbsa::entry_metadata &entry)
+                                   { return entry.path == "meshes/tiny/packedmesh.nif"; });
+  REQUIRE(raw != entries.value().end());
+  REQUIRE(packed != entries.value().end());
+  CHECK(packed->payload_offset == raw->payload_offset);
+  CHECK(packed->stored_size == raw->stored_size);
+}
+
 TEST_CASE("tes4_bsa_malformed_open rejects file record hash mismatches",
           "[unit][fixture][malformed][tes4_bsa_malformed_open][tes4_bsa_hash_lookup]")
 {

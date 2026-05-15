@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <string_view>
 
 namespace
 {
@@ -94,6 +95,15 @@ TEST_CASE("host_file_path contract does not preserve caller UTF-8 text as dead d
 TEST_CASE("host_file_path rejects malformed UTF-8 before filesystem I/O", "[unit][host_file_path]")
 {
   auto resolved = libbsa::detail::resolve_host_file_path(malformed_utf8_host_path());
+
+  REQUIRE_FALSE(resolved.has_value());
+  CHECK(resolved.error().code == libbsa::error_code::invalid_argument);
+}
+
+TEST_CASE("host_file_path rejects embedded NUL bytes before filesystem I/O", "[unit][host_file_path]")
+{
+  constexpr char path_with_nul[] = "prefix\0suffix";
+  auto resolved = libbsa::detail::resolve_host_file_path(std::string_view{path_with_nul, 13U});
 
   REQUIRE_FALSE(resolved.has_value());
   CHECK(resolved.error().code == libbsa::error_code::invalid_argument);
