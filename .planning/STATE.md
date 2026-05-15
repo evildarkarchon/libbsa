@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: milestone_complete
-stopped_at: Completed 17-05-PLAN.md
-last_updated: "2026-05-15T01:50:00Z"
+status: Not planned
+stopped_at: Phase 17.1 context gathered
+last_updated: "2026-05-15T03:03:28.072Z"
 last_activity: 2026-05-15
 progress:
-  total_phases: 5
-  completed_phases: 6
+  total_phases: 6
+  completed_phases: 5
   total_plans: 17
   completed_plans: 17
-  percent: 120
+  percent: 83
 ---
 
 # Project State
@@ -21,18 +21,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-15)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** v1.1 Hardening milestone complete; ready for milestone verification or next-scope planning.
+**Current focus:** Phase 17.1 inserted to address v1.1 audit tech debt; planning needed.
 
 ## Current Position
 
-Phase: 17
+Phase: 17.1
 Plan: Not started
-Status: Milestone complete
+Status: Not planned
 Last activity: 2026-05-15
 
-Progress: [██████████] 100%
+Progress: [████████--] 83%
 
-Current note: Phase 17 recorded clean post-review ship-gate evidence: focused Debug and MSVC AddressSanitizer writer-hotspot gates, full Debug regression, Release package proof, public writer API stability, TES5Edit boundary, and dependency-surface evidence in 17-VERIFICATION.md.
+Current note: Inserted urgent Phase 17.1 to address tech debt from .planning/v1.1-MILESTONE-AUDIT.md.
 
 ## Performance Metrics
 
@@ -42,6 +42,10 @@ Current note: Phase 17 recorded clean post-review ship-gate evidence: focused De
 - Latest execution: 17-05 completed in 10 min across 6 planning/evidence files
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 17.1 inserted after Phase 17: Address tech debt in @.planning/v1.1-MILESTONE-AUDIT.md (URGENT)
 
 ### Decisions
 
@@ -96,6 +100,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-15T01:50:00Z
-Stopped at: Completed 17-05-PLAN.md
-Resume file: None
+Last session: 2026-05-15T03:03:28.064Z
+Stopped at: Phase 17.1 context gathered
+Resume file: .planning/phases/17.1-address-tech-debt-in-planning-v1-1-milestone-audit-md/17.1-CONTEXT.md
