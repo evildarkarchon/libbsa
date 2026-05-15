@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: executing
-stopped_at: Completed 17.1-02-PLAN.md
-last_updated: "2026-05-15T04:42:20.068Z"
+status: passed
+stopped_at: Completed 17.1-03-PLAN.md
+last_updated: "2026-05-15T04:53:54.324Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 20
-  completed_plans: 19
-  percent: 95
+  completed_plans: 20
+  percent: 100
 ---
 
 # Project State
@@ -25,21 +25,21 @@ See: .planning/PROJECT.md (updated 2026-05-15)
 
 ## Current Position
 
-Phase: 17.1 (address-tech-debt-in-planning-v1-1-milestone-audit-md) — EXECUTING
+Phase: 17.1 (address-tech-debt-in-planning-v1-1-milestone-audit-md) — COMPLETE
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-15
 
-Progress: [██████████] 95%
+Progress: [██████████] 100%
 
 Current note: Inserted urgent Phase 17.1 to address tech debt from .planning/v1.1-MILESTONE-AUDIT.md.
 
 ## Performance Metrics
 
 - Total plans completed: 101
-- Current milestone plans completed: 17
+- Current milestone plans completed: 20
 - Historical baseline: v1.0 shipped across 12 phases and 75 plans
-- Latest execution: 17-05 completed in 10 min across 6 planning/evidence files
+- Latest execution: 17.1-03 completed in 25min across 2 tasks and 4 files
 
 ## Accumulated Context
 
@@ -67,9 +67,11 @@ Current note: Inserted urgent Phase 17.1 to address tech debt from .planning/v1.
 - [Phase 17]: BA2 DX10 snapshot cleanup is best-effort and preserves the primary validation, write, or publish result error.
 - [Phase 17]: BA2 DX10 lifecycle documentation states successful completion, ordinary result-returning failure unwinding, destructor safety-net cleanup, and residual abnormal-termination risk.
 - [Phase 17]: Official v1.1 ship-gate evidence is committed in `17-VERIFICATION.md`; optional local game-corpus and BSArchPro comparison tests remain advisory.
-- [Phase 17.1]: Combined non-ASCII host-path reader regression stays in the existing host-path suite and covers entries/find/contains/extract_entries across a TES3-inclusive representative matrix. — This keeps Phase 13 host-path helpers and Phase 15 reader-surface coverage joined without a new test suite or public API change.
+- [Phase 17.1]: Combined non-ASCII host-path reader regression stays in the existing host-path suite and covers entries/find/contains/extract_entries across a TES3-inclusive representative matrix.
 - [Phase 17.1]: `detail::host_file_path` now stores only the resolved native path; diagnostics-only `original_utf8` state was removed rather than consumed by a new diagnostics surface.
 - [Phase 17.1]: `archive_reader::state` no longer stores backend identity beside the selected backend table; backend identity remains only as file-local open-time table-selection plumbing.
+- [Phase 17.1]: Writer host-path audit debt is closed by a source-policy inventory matrix covering TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 source/output/finalization/dedupe dispositions.
+- [Phase 17.1]: BA2 DX10 abnormal-termination cleanup remains accepted residual risk and out of Phase 17.1 scope; `.planning/v1.1-MILESTONE-AUDIT.md` was not edited by this phase.
 
 ### Pending Todos
 
@@ -92,8 +94,9 @@ None.
 | Phase 17 P03 | BA2 DX10 snapshot cleanup lifecycle | 2026-05-15 | f9646e9 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
 | Phase 17 P04 | BA2 DX10 temporary lifecycle documentation | 2026-05-15 | edb3eb0 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
 | Phase 17 P05 | Debug/ASan/Release ship gate and planning closure | 2026-05-15 | 3db00f7 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
-| Phase 17.1 P01 | 18 min | 1 tasks | 2 files |
-| Phase 17.1 P02 | 35min | 2 tasks | 8 files |
+| Phase 17.1 P01 | Combined non-ASCII reader-surface regression | 2026-05-15 | 3bee64b | Verified | .planning/phases/17.1-address-tech-debt-in-planning-v1-1-milestone-audit-md/ |
+| Phase 17.1 P02 | Dead internal state removal | 2026-05-15 | c0efdc0 | Verified | .planning/phases/17.1-address-tech-debt-in-planning-v1-1-milestone-audit-md/ |
+| Phase 17.1 P03 | Writer host-path audit closure | 2026-05-15 | 47f17c5 | Verified | .planning/phases/17.1-address-tech-debt-in-planning-v1-1-milestone-audit-md/ |
 
 ## Deferred Items
 
@@ -105,6 +108,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-15T04:42:20.060Z
-Stopped at: Completed 17.1-02-PLAN.md
+Last session: 2026-05-15T04:53:45.508Z
+Stopped at: Completed 17.1-03-PLAN.md
 Resume file: None
