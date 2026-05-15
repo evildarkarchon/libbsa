@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
 status: executing
-stopped_at: Phase 17.1 context gathered
-last_updated: "2026-05-15T04:28:30.528Z"
-last_activity: 2026-05-15 -- Phase 17.1 planning complete
+stopped_at: Completed 17.1-01-PLAN.md
+last_updated: "2026-05-15T04:37:00.545Z"
+last_activity: 2026-05-15
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 20
-  completed_plans: 17
+  completed_plans: 18
   percent: 83
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-15)
 
 **Core value:** libbsa must read, write, and extract every supported Bethesda archive format with byte-level compatibility against official tools and BSArchPro.
-**Current focus:** Phase 17.1 inserted to address v1.1 audit tech debt; planning needed.
+**Current focus:** Phase 17.1 — address-tech-debt-in-planning-v1-1-milestone-audit-md
 
 ## Current Position
 
-Phase: 17.1
-Plan: Not started
+Phase: 17.1 (address-tech-debt-in-planning-v1-1-milestone-audit-md) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-05-15 -- Phase 17.1 planning complete
+Last activity: 2026-05-15
 
-Progress: [████████--] 83%
+Progress: [█████████░] 90%
 
 Current note: Inserted urgent Phase 17.1 to address tech debt from .planning/v1.1-MILESTONE-AUDIT.md.
 
@@ -67,6 +67,7 @@ Current note: Inserted urgent Phase 17.1 to address tech debt from .planning/v1.
 - [Phase 17]: BA2 DX10 snapshot cleanup is best-effort and preserves the primary validation, write, or publish result error.
 - [Phase 17]: BA2 DX10 lifecycle documentation states successful completion, ordinary result-returning failure unwinding, destructor safety-net cleanup, and residual abnormal-termination risk.
 - [Phase 17]: Official v1.1 ship-gate evidence is committed in `17-VERIFICATION.md`; optional local game-corpus and BSArchPro comparison tests remain advisory.
+- [Phase 17.1]: Combined non-ASCII host-path reader regression stays in the existing host-path suite and covers entries/find/contains/extract_entries across a TES3-inclusive representative matrix. — This keeps Phase 13 host-path helpers and Phase 15 reader-surface coverage joined without a new test suite or public API change.
 
 ### Pending Todos
 
@@ -89,6 +90,7 @@ None.
 | Phase 17 P03 | BA2 DX10 snapshot cleanup lifecycle | 2026-05-15 | f9646e9 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
 | Phase 17 P04 | BA2 DX10 temporary lifecycle documentation | 2026-05-15 | edb3eb0 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
 | Phase 17 P05 | Debug/ASan/Release ship gate and planning closure | 2026-05-15 | 3db00f7 | Verified | .planning/phases/17-writer-hotspot-hardening-and-ship-gate/ |
+| Phase 17.1 P01 | 18 min | 1 tasks | 2 files |
 
 ## Deferred Items
 
@@ -100,6 +102,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-15T03:03:28.064Z
-Stopped at: Phase 17.1 context gathered
-Resume file: .planning/phases/17.1-address-tech-debt-in-planning-v1-1-milestone-audit-md/17.1-CONTEXT.md
+Last session: 2026-05-15T04:37:00.537Z
+Stopped at: Completed 17.1-01-PLAN.md
+Resume file: None
