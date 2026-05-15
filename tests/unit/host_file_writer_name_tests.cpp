@@ -20,6 +20,62 @@ std::string read_text_file(const std::filesystem::path& path) {
   return buffer.str();
 }
 
+struct writer_host_path_inventory_case {
+  std::string_view family;
+  std::string_view source_file;
+  std::string_view source_token;
+  std::string_view output_file;
+  std::string_view output_token;
+  std::string_view finalization_file;
+  std::string_view finalization_token;
+  std::string_view dedupe_file;
+  std::string_view dedupe_token;
+  std::string_view dedupe_absent_token;
+};
+
+constexpr auto writer_host_path_inventory_cases = std::to_array<writer_host_path_inventory_case>({
+    {"tes3_bsa",
+     "src/formats/bsa/tes3_bsa_prepare.cpp",
+     "resolve_tes3_source_path(entry.host_path)",
+     "src/formats/bsa/tes3_bsa_writer.cpp",
+     "output_path.value().resolved",
+     "src/formats/bsa/tes3_bsa_serialize.cpp",
+     "open_host_file(host_path",
+     "src/formats/bsa/tes3_bsa_writer.cpp",
+     "",
+     "deduplicate_payloads"},
+    {"tes4_bsa",
+     "src/formats/bsa/tes4_bsa_prepare.cpp",
+     "resolve_tes4_source_path(entry.host_path)",
+     "src/formats/bsa/tes4_bsa_writer.cpp",
+     "output_path.value().resolved",
+     "src/formats/bsa/tes4_bsa_serialize.cpp",
+     "open_host_file(host_path",
+     "src/formats/bsa/tes4_bsa_layout.cpp",
+     "resolve_tes4_dedupe_source_path(entry.raw_disk_host_path)",
+     ""},
+    {"ba2_gnrl",
+     "src/formats/ba2/ba2_gnrl_prepare.cpp",
+     "resolve_ba2_gnrl_source_path(entry.host_path)",
+     "src/formats/ba2/ba2_gnrl_writer.cpp",
+     "output_path.value().resolved",
+     "src/formats/ba2/ba2_gnrl_serialize.cpp",
+     "open_host_file(host_path",
+     "src/formats/ba2/ba2_gnrl_layout.cpp",
+     "compare_disk_payloads(lhs.resolved_source_path, rhs.resolved_source_path",
+     ""},
+    {"ba2_dx10",
+     "src/formats/ba2/ba2_dx10_snapshot_builder.cpp",
+     "resolve_host_file_path(dds_host_path)",
+     "src/formats/ba2/ba2_dx10_writer.cpp",
+     "output_path.value().resolved",
+     "src/formats/ba2/ba2_dx10_serialize.cpp",
+     "chunk.stored_payload",
+     "src/formats/ba2/ba2_dx10_serialize.cpp",
+     "chunk.stored_payload",
+     "dds_host_path"},
+});
+
 } // namespace
 
 TEST_CASE("writer call sites use the neutral host_file helper seam", "[unit][host_file]") {
@@ -111,6 +167,67 @@ TEST_CASE("public writer output paths resolve UTF-8 text before native publish",
     INFO("Source file: " << relative_path);
     REQUIRE(text.find("resolve_host_file_path(output_host_path)") != std::string::npos);
     REQUIRE(text.find("std::filesystem::path{output_host_path}") == std::string::npos);
+  }
+}
+
+TEST_CASE("host_file writer host-path inventory covers source output finalization and dedupe dispositions",
+          "[unit][host_file]") {
+  const auto root = source_root();
+  const auto publish_text = read_text_file(root / "src/detail/writer_publish.cpp");
+  const auto publish_header_text = read_text_file(root / "src/detail/writer_publish.hpp");
+  REQUIRE(publish_header_text.find("publish_writer_output") != std::string::npos);
+  REQUIRE(publish_text.find("publish_completed_writer_output") != std::string::npos);
+  REQUIRE(publish_text.find("refuses to replace reparse-point output host path") != std::string::npos);
+
+  for (const auto& inventory : writer_host_path_inventory_cases) {
+    INFO("Writer family: " << inventory.family);
+
+    const auto source_text = read_text_file(root / inventory.source_file);
+    INFO("Source path file: " << inventory.source_file);
+    REQUIRE(source_text.find(inventory.source_token) != std::string::npos);
+    REQUIRE(source_text.find("host_file_path") != std::string::npos);
+
+    const auto output_text = read_text_file(root / inventory.output_file);
+    INFO("Output path file: " << inventory.output_file);
+    REQUIRE(output_text.find("resolve_host_file_path(output_host_path)") != std::string::npos);
+    REQUIRE(output_text.find("publish_writer_output") != std::string::npos);
+    REQUIRE(output_text.find(inventory.output_token) != std::string::npos);
+    REQUIRE(output_text.find("std::filesystem::path{output_host_path}") == std::string::npos);
+
+    const auto finalization_text = read_text_file(root / inventory.finalization_file);
+    INFO("Finalization path file: " << inventory.finalization_file);
+    REQUIRE(finalization_text.find(inventory.finalization_token) != std::string::npos);
+
+    const auto dedupe_text = read_text_file(root / inventory.dedupe_file);
+    INFO("Dedupe path file: " << inventory.dedupe_file);
+    if (!inventory.dedupe_token.empty()) {
+      REQUIRE(dedupe_text.find(inventory.dedupe_token) != std::string::npos);
+    }
+    if (!inventory.dedupe_absent_token.empty()) {
+      REQUIRE(dedupe_text.find(inventory.dedupe_absent_token) == std::string::npos);
+    }
+  }
+}
+
+TEST_CASE("host_file removed host-path diagnostic state stays absent from live source and test contracts",
+          "[unit][host_file]") {
+  const auto root = source_root();
+  constexpr auto live_contract_files = std::to_array<std::string_view>({
+      "src/detail/host_file_path.hpp",
+      "src/detail/host_file_path.cpp",
+      "src/detail/host_file.hpp",
+      "src/detail/host_file.cpp",
+      "src/archive.cpp",
+      "tests/unit/host_file_path_tests.cpp",
+      "tests/unit/host_file_tests.cpp",
+      "tests/unit/archive_reader_dispatch_policy_tests.cpp",
+  });
+  const auto removed_member = std::string{"original_"} + "utf8";
+
+  for (const auto relative_path : live_contract_files) {
+    const auto text = read_text_file(root / relative_path);
+    INFO("Source file: " << relative_path);
+    REQUIRE(text.find(removed_member) == std::string::npos);
   }
 }
 
@@ -208,7 +325,7 @@ TEST_CASE("validation setup relies on archive_reader open instead of a duplicate
   REQUIRE(validation_text.find("std::ifstream input{std::string{host_path}, std::ios::binary}") == std::string::npos);
 }
 
-TEST_CASE("writer host-path inventory policy is represented by an explicit matrix", "[unit][host_file]") {
+TEST_CASE("host_file writer host-path inventory policy is represented by an explicit matrix", "[unit][host_file]") {
   const auto policy_text = read_text_file(source_root() / "tests/unit/host_file_writer_name_tests.cpp");
   const auto matrix_token = std::string{"writer_host_path_"} + "inventory_cases";
 
