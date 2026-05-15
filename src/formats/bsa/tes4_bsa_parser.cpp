@@ -26,6 +26,22 @@ namespace libbsa::formats::bsa
     using detail::read_file_bytes_at;
     using detail::span_fits;
 
+    struct stored_payload_span
+    {
+      std::uint64_t offset;
+      std::uint64_t size;
+    };
+
+    bool spans_overlap_u64(std::uint64_t first_start, std::uint64_t first_length, std::uint64_t second_start,
+                           std::uint64_t second_length) noexcept
+    {
+      if (first_length == 0U || second_length == 0U)
+      {
+        return false;
+      }
+      return first_start < second_start + second_length && second_start < first_start + first_length;
+    }
+
     template <typename PayloadReader>
     result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size,
                                                             const tes4_bsa_raw_table &table,
@@ -44,6 +60,13 @@ namespace libbsa::formats::bsa
         if (!reserved_paths)
         {
           return reserved_paths.error();
+        }
+        std::vector<stored_payload_span> accepted_payload_spans;
+        auto reserved_payload_spans = detail::reserve_metadata_vector(accepted_payload_spans, table.header.file_count,
+                                                                      "TES4 BSA stored payload spans");
+        if (!reserved_payload_spans)
+        {
+          return reserved_payload_spans.error();
         }
         std::size_t name_index = 0;
 
@@ -81,6 +104,23 @@ namespace libbsa::formats::bsa
             if (!payload)
             {
               return payload.error();
+            }
+            if (payload.value().stored_size != 0U)
+            {
+              for (const auto &prior : accepted_payload_spans)
+              {
+                const auto exact_duplicate = prior.offset == payload.value().payload_offset &&
+                                             prior.size == payload.value().stored_size;
+                if (!exact_duplicate && spans_overlap_u64(prior.offset, prior.size, payload.value().payload_offset,
+                                                          payload.value().stored_size))
+                {
+                  return error{error_code::format_error, "TES4 BSA entry payload spans partially overlap"};
+                }
+              }
+              // Writer dedupe can intentionally publish exact duplicate stored spans; partial sharing would make two
+              // entries read ambiguous bytes from each other's payload ranges.
+              accepted_payload_spans.push_back(stored_payload_span{payload.value().payload_offset,
+                                                                   payload.value().stored_size});
             }
 
             entries.push_back(entry_metadata{canonical.value().value,

@@ -16,6 +16,11 @@ namespace libbsa::detail
 
   result<host_file_path> resolve_host_file_path(std::string_view host_path)
   {
+    if (host_path.find('\0') != std::string_view::npos)
+    {
+      return error{error_code::invalid_argument, "archive path contains embedded NUL bytes"};
+    }
+
     std::string utf8_path{host_path};
     if (utf8_path.empty())
     {
