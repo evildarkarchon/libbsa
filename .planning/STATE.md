@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: passed
+status: milestone_complete
 stopped_at: Completed 17.1-03-PLAN.md
 last_updated: "2026-05-15T04:53:54.324Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 6
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 20
   completed_plans: 20
-  percent: 100
+  percent: 117
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-05-15)
 
 ## Current Position
 
-Phase: 17.1 (address-tech-debt-in-planning-v1-1-milestone-audit-md) — COMPLETE
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 17.1
+Plan: Not started
+Status: Milestone complete
 Last activity: 2026-05-15
 
 Progress: [██████████] 100%
@@ -36,7 +36,7 @@ Current note: Inserted urgent Phase 17.1 to address tech debt from .planning/v1.
 
 ## Performance Metrics
 
-- Total plans completed: 101
+- Total plans completed: 104
 - Current milestone plans completed: 20
 - Historical baseline: v1.0 shipped across 12 phases and 75 plans
 - Latest execution: 17.1-03 completed in 25min across 2 tasks and 4 files
