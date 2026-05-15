@@ -59,6 +59,8 @@ libbsa::result<void> example_create_ba2_dx10(std::string_view dds_host_path,
 
 Create a `ba2_dx10_writer` for a texture target and add DDS host files with archive virtual texture paths. The writer validates and snapshots DDS input at add time, then `write_to` uses target metadata to select the compressed BA2 DX10 route.
 
+Do not reuse a BA2 DX10 writer after `write_to`: the write attempt consumes the writer, runs best-effort cleanup for its temporary DDS snapshots, and later `add_file` or `write_to` calls report `invalid_argument`. Ordinary success and `result`-returning failure paths clean writer-owned snapshot data, but a crash, forced termination, OS shutdown, or external temp-directory interference can still leave residual temp artifacts.
+
 ## `example_handle_result_errors`
 
 ```cpp

@@ -400,6 +400,9 @@ class ba2_gnrl_writer {
 /// finalized to a host-path archive. The public DX10 contract is compressed-only
 /// at archive level: callers do not choose raw, per-entry, or per-chunk overrides
 /// because uncompressed texture archives are not a stable compatibility target.
+/// DDS data is snapshotted when files are added, and `write_to` consumes the
+/// BA2 DX10 writer after any ordinary write attempt so that writer-owned snapshot
+/// data can be cleaned promptly instead of retained for retry.
 ///
 /// Thread-safety: separately constructed or moved-to writer objects may be used
 /// concurrently, but mutation is not concurrent with other mutation or
@@ -441,7 +444,9 @@ class ba2_dx10_writer {
   /// Adds a DDS host-file payload with an explicit archive-internal texture path.
   ///
   /// The DDS file is validated and snapshotted at add time; expected caller-data
-  /// failures are reported through `result<void>`.
+  /// failures are reported through `result<void>`. After `write_to` has consumed
+  /// this BA2 DX10 writer, later `add_file` calls fail through `result<void>` with
+  /// `error_code::invalid_argument` rather than reusing stale staged snapshots.
   LIBBSA_API result<void> add_file(std::string_view archive_path, std::string_view dds_host_path);
 
   /// Finalizes the writer state into a new BA2 DX10 archive at `host_path`.
@@ -450,12 +455,18 @@ class ba2_dx10_writer {
   /// was enabled. Publication uses a writer-owned temporary directory beside `host_path`,
   /// overwrites only supported regular-file destinations, rejects detectable reparse points,
   /// and returns validation, compression, or I/O failures as structured errors.
+  /// `write_to` is a consuming operation for BA2 DX10: after any ordinary attempt,
+  /// whether it succeeds or returns a `result` error, successful completion and
+  /// ordinary failure unwinding run best-effort snapshot cleanup. Later `write_to`
+  /// calls fail through `result<void>` with `error_code::invalid_argument`.
   LIBBSA_API result<void> write_to(std::string_view host_path) const;
 
   /// Finalizes the BA2 DX10 writer using explicit write-call execution controls.
   ///
   /// `execution.worker_count` must be positive. A value of `1` preserves the
   /// serial behavior and output-publication policy of the one-argument overload.
+  /// The BA2 DX10 consumed-after-write and best-effort snapshot cleanup rules are
+  /// identical to the one-argument overload.
   LIBBSA_API result<void> write_to(std::string_view host_path, write_execution_options execution) const;
 
  private:

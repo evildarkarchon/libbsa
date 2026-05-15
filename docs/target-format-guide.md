@@ -71,6 +71,18 @@ When `overwrite_existing` is false, libbsa uses no-overwrite publication: the ca
 
 Publication relies on Windows host-filesystem rename/replace behavior. Local NTFS paths are the intended baseline; a network filesystem, reparse-point provider, or other filesystem redirector can expose provider-specific atomicity, durability, or permission failures. Writer publication failures are returned as `io_error` results with the writer-specific diagnostic prefix, and libbsa cleans writer-owned temporary output on a best-effort basis.
 
+## BA2 DX10 temporary snapshot lifecycle
+
+BA2 DX10 writers snapshot DDS subresource data into writer-owned `libbsa-dx10-snapshot-*` temporary directories when `add_file` succeeds. That snapshot data intentionally outlives the caller's DDS host file until finalization, but it is specific to BA2 DX10 and does not define one-shot behavior for TES3, TES4-family BSA, or BA2 GNRL writers.
+
+`ba2_dx10_writer::write_to` is a consuming operation after any ordinary write attempt. On successful `write_to` completion, libbsa removes the writer-owned snapshot directory on a best-effort basis before returning success. After that point, later BA2 DX10 `add_file` or `write_to` calls return `invalid_argument` through the existing `result` contract because the staged snapshot data has been discarded.
+
+For ordinary result-returning failure unwinding, including validation, snapshot-read, output, or publish failures that return through `result<void>`, libbsa still runs best-effort snapshot cleanup before returning the primary error. Cleanup failure does not replace the validation, write, or publish error because callers need the original failure to diagnose the archive operation.
+
+Destructor safety-net cleanup remains for BA2 DX10 writers that are abandoned before `write_to`, moved over, or fail before ordinary finalization cleanup can run. The destructor path is best-effort and is intended to release writer-owned snapshot data during normal C++ object teardown.
+
+Residual abnormal-termination risk remains: a process crash, forced termination, hard termination, OS shutdown, or external temp-directory interference can leave residual BA2 DX10 snapshot artifacts behind. libbsa does not claim crash-proof, forced-termination-proof, hard-termination-proof, or OS-shutdown-proof cleanup.
+
 ## compatibility warnings
 
 Validation warnings use stable public `compatibility_warning_code` values. The warning catalog in `docs/compatibility-evidence.md` gives the rule and evidence for each code.
