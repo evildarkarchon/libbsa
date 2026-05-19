@@ -111,6 +111,56 @@ TEST_CASE("parser_preparer_seam_policy requires dedicated TES4 parser seams",
   require_absent_tokens(parse_body, collapsed_table_and_payload_tokens);
 }
 
+TEST_CASE("parser_preparer_seam_policy requires dedicated BA2 DX10 parser seams",
+          "[unit][parser_preparer_seam_policy][ba2_dx10]")
+{
+  const auto root = source_root();
+  const auto parser = read_text_file(root / "src/formats/ba2/ba2_dx10_parser.cpp");
+  const auto records_header = read_text_file(root / "src/formats/ba2/ba2_dx10_records.hpp");
+  const auto names_header = read_text_file(root / "src/formats/ba2/ba2_dx10_names.hpp");
+
+  constexpr auto parser_evidence = std::to_array<std::string_view>({
+      "#include \"formats/ba2/ba2_dx10_records.hpp\"",
+      "#include \"formats/ba2/ba2_dx10_names.hpp\"",
+      "read_ba2_dx10_header",
+      "read_ba2_dx10_records",
+      "read_ba2_dx10_names",
+      "read_ba2_dx10_names_from_file",
+  });
+  require_all_tokens(parser, parser_evidence);
+
+  constexpr auto records_role_evidence = std::to_array<std::string_view>({
+      "ba2_dx10_header_fields",
+      "ba2_dx10_record",
+      "ba2_dx10_chunk_record",
+      "fixed BA2 DX10 header",
+      "texture record and chunk tables without materializing public entries",
+  });
+  require_all_tokens(records_header, records_role_evidence);
+
+  constexpr auto names_role_evidence = std::to_array<std::string_view>({
+      "read_ba2_dx10_names_from_file",
+      "read_ba2_dx10_names",
+      "count-delimited BA2 DX10 filename-table bytes",
+      "exact byte count consumed by the encoded names",
+  });
+  require_all_tokens(names_header, names_role_evidence);
+
+  const auto parse_body = function_body(parser,
+                                        "result<ba2_dx10_archive> parse_ba2_dx10_archive_impl(",
+                                        "  } // namespace");
+  constexpr auto collapsed_record_and_name_tokens = std::to_array<std::string_view>({
+      "read_u32_le",
+      "read_u64_le",
+      "read_bytes(4U)",
+      "reader.read_u16_le",
+      "BAADF00D sentinel",
+      "encoded filename length",
+      "filename table entries",
+  });
+  require_absent_tokens(parse_body, collapsed_record_and_name_tokens);
+}
+
 TEST_CASE("parser_preparer_seam_policy requires dedicated BA2 DX10 preparer seams",
           "[unit][parser_preparer_seam_policy]")
 {

@@ -126,6 +126,8 @@ set(libbsa_library_sources
   src/detail/host_file.cpp
   src/detail/host_file_path.cpp
   src/formats/ba2/ba2_format_detector.cpp
+  src/formats/ba2/ba2_dx10_records.cpp
+  src/formats/ba2/ba2_dx10_names.cpp
   src/formats/ba2/ba2_dx10_parser.cpp
   src/formats/ba2/ba2_dx10_reader.cpp
   src/formats/ba2/ba2_dx10_chunk_assembler.cpp

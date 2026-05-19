@@ -58,16 +58,7 @@ namespace libbsa::formats::ba2
     using detail::read_file_bytes_at;
     using detail::span_fits;
     using detail::span_fits_u64;
-
-    bool spans_overlap_u64(std::uint64_t first_start, std::uint64_t first_length, std::uint64_t second_start,
-                           std::uint64_t second_length) noexcept
-    {
-      if (first_length == 0U || second_length == 0U)
-      {
-        return false;
-      }
-      return first_start < second_start + second_length && second_start < first_start + first_length;
-    }
+    using detail::spans_overlap_u64;
 
     std::pair<std::string_view, std::string_view> split_directory_file(std::string_view archive_path) noexcept
     {

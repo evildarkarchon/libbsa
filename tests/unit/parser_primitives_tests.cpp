@@ -105,6 +105,15 @@ TEST_CASE("parser_primitives reject spans outside archive bounds", "[unit][parse
   REQUIRE(libbsa::detail::span_fits_u64(5U, 0U, 5U));
   REQUIRE_FALSE(libbsa::detail::span_fits_u64(3U, 3U, 5U));
   REQUIRE_FALSE(libbsa::detail::span_fits_u64(std::numeric_limits<std::uint64_t>::max(), 1U, 5U));
+
+  REQUIRE(libbsa::detail::spans_overlap_u64(0U, 4U, 3U, 2U));
+  REQUIRE(libbsa::detail::spans_overlap_u64(3U, 2U, 0U, 4U));
+  REQUIRE_FALSE(libbsa::detail::spans_overlap_u64(0U, 3U, 3U, 2U));
+  REQUIRE_FALSE(libbsa::detail::spans_overlap_u64(0U, 0U, 0U, 1U));
+
+  constexpr auto near_max_u64 = std::numeric_limits<std::uint64_t>::max() - 4U;
+  REQUIRE(libbsa::detail::spans_overlap_u64(near_max_u64, 10U, near_max_u64 + 2U, 1U));
+  REQUIRE_FALSE(libbsa::detail::spans_overlap_u64(near_max_u64, 10U, 0U, 4U));
 }
 
 TEST_CASE("parser_primitives enforce metadata count limits", "[unit][parser_primitives][malformed]")

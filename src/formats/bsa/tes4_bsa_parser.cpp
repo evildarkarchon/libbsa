@@ -25,22 +25,13 @@ namespace libbsa::formats::bsa
     using detail::normalize_display_separators;
     using detail::read_file_bytes_at;
     using detail::span_fits;
+    using detail::spans_overlap_u64;
 
     struct stored_payload_span
     {
       std::uint64_t offset;
       std::uint64_t size;
     };
-
-    bool spans_overlap_u64(std::uint64_t first_start, std::uint64_t first_length, std::uint64_t second_start,
-                           std::uint64_t second_length) noexcept
-    {
-      if (first_length == 0U || second_length == 0U)
-      {
-        return false;
-      }
-      return first_start < second_start + second_length && second_start < first_start + first_length;
-    }
 
     template <typename PayloadReader>
     result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size,

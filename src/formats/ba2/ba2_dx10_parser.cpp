@@ -1,6 +1,8 @@
 #include "formats/ba2/ba2_dx10_parser.hpp"
 
 #include "formats/ba2/ba2_constants.hpp"
+#include "formats/ba2/ba2_dx10_names.hpp"
+#include "formats/ba2/ba2_dx10_records.hpp"
 #include "texture/dds_layout.hpp"
 
 #include <detail/archive_path.hpp>
@@ -14,7 +16,6 @@
 #include <array>
 #include <fstream>
 #include <limits>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -28,77 +29,18 @@ namespace libbsa::formats::ba2
 
     constexpr std::uint64_t reconstructed_dds_header_size = 148U;
 
-    struct header_fields
-    {
-      std::uint32_t magic;
-      std::uint32_t version;
-      std::uint32_t subtype;
-      std::uint32_t file_count;
-      std::uint64_t file_table_offset;
-      ba2_archive_metadata ba2;
-    };
-
-    struct dx10_chunk_record
-    {
-      std::uint64_t offset;
-      std::uint32_t packed_size;
-      std::uint32_t raw_size;
-      std::uint16_t start_mip;
-      std::uint16_t end_mip;
-    };
-
     struct stored_chunk_span
     {
       std::uint64_t offset;
       std::uint64_t size;
     };
 
-    struct dx10_record
-    {
-      std::uint32_t name_hash;
-      std::array<std::byte, 4> extension;
-      std::uint32_t directory_hash;
-      std::uint8_t unknown_tex;
-      std::uint8_t chunk_count;
-      std::uint16_t chunk_header_size;
-      std::uint16_t height;
-      std::uint16_t width;
-      std::uint8_t num_mips;
-      std::uint8_t dxgi_format;
-      std::uint16_t cube_maps_raw;
-      std::vector<dx10_chunk_record> chunks;
-    };
-
     using detail::add_fits;
     using detail::add_fits_u64;
-    using detail::archive_string_from_bytes;
-    using detail::multiply_fits;
     using detail::normalize_display_separators;
     using detail::read_file_bytes_at;
     using detail::span_fits_u64;
-
-    bool spans_overlap_u64(std::uint64_t first_start, std::uint64_t first_length, std::uint64_t second_start,
-                           std::uint64_t second_length) noexcept
-    {
-      if (first_length == 0U || second_length == 0U)
-      {
-        return false;
-      }
-      return first_start < second_start + second_length && second_start < first_start + first_length;
-    }
-
-    std::size_t header_size_for(std::uint32_t version) noexcept
-    {
-      if (version == ba2_starfield_v3_version)
-      {
-        return ba2_starfield_v3_header_size;
-      }
-      if (version == ba2_starfield_v2_version)
-      {
-        return ba2_starfield_v2_header_size;
-      }
-      return ba2_common_header_size;
-    }
+    using detail::spans_overlap_u64;
 
     std::pair<std::string_view, std::string_view> split_directory_file(std::string_view archive_path) noexcept
     {
@@ -165,250 +107,7 @@ namespace libbsa::formats::ba2
       return fourcc;
     }
 
-    result<void> append_u16_le(std::vector<std::byte> &output, std::uint16_t value)
-    {
-      const std::array bytes{static_cast<std::byte>(value & 0xFFU), static_cast<std::byte>((value >> 8U) & 0xFFU)};
-      return detail::append_byte_vector(output, bytes, "BA2 DX10 encoded filename length");
-    }
-
-    result<std::vector<std::byte>> parse_ba2_dx10_names_from_file(std::ifstream &input,
-                                                                  std::uint64_t file_table_offset,
-                                                                  std::uint64_t first_payload_offset,
-                                                                  std::uint32_t file_count)
-    {
-      if (file_table_offset > first_payload_offset)
-      {
-        return error{error_code::format_error, "BA2 DX10 filename table overlaps payload data"};
-      }
-
-      std::vector<std::byte> encoded_names;
-      std::size_t minimum_encoded_size = 0;
-      if (!multiply_fits(file_count, 2U, minimum_encoded_size))
-      {
-        return error{error_code::format_error, "BA2 DX10 encoded filename table is too large"};
-      }
-      auto reserved = detail::reserve_byte_vector(encoded_names, minimum_encoded_size, "BA2 DX10 encoded filename table");
-      if (!reserved)
-      {
-        return reserved.error();
-      }
-
-      std::uint64_t cursor = file_table_offset;
-      for (std::uint32_t index = 0; index < file_count; ++index)
-      {
-        if (first_payload_offset - cursor < 2U)
-        {
-          return error{error_code::format_error, "BA2 DX10 filename table is truncated before UInt16 length"};
-        }
-
-        auto length_bytes = read_file_bytes_at(input, cursor, 2U, "BA2 DX10 filename length");
-        if (!length_bytes)
-        {
-          return length_bytes.error();
-        }
-
-        detail::binary_reader length_reader{length_bytes.value()};
-        const auto length = length_reader.read_u16_le();
-        if (!length)
-        {
-          return error{error_code::format_error, "BA2 DX10 filename table is truncated before UInt16 length"};
-        }
-        cursor += 2U;
-        if (static_cast<std::uint64_t>(length.value()) > first_payload_offset - cursor)
-        {
-          return error{error_code::format_error, "BA2 DX10 filename table name crosses payload data"};
-        }
-
-        auto name_bytes = read_file_bytes_at(input, cursor, length.value(), "BA2 DX10 filename bytes");
-        if (!name_bytes)
-        {
-          return name_bytes.error();
-        }
-
-        auto appended_length = append_u16_le(encoded_names, length.value());
-        if (!appended_length)
-        {
-          return appended_length.error();
-        }
-        auto appended_name = detail::append_byte_vector(encoded_names, name_bytes.value(), "BA2 DX10 encoded filename bytes");
-        if (!appended_name)
-        {
-          return appended_name.error();
-        }
-        cursor += length.value();
-      }
-
-      return encoded_names;
-    }
-
-    result<header_fields> read_header(detail::binary_reader &reader)
-    {
-      const auto magic = reader.read_u32_le();
-      const auto version = reader.read_u32_le();
-      const auto subtype = reader.read_u32_le();
-      const auto file_count = reader.read_u32_le();
-      const auto file_table_offset = reader.read_u64_le();
-      if (!magic || !version || !subtype || !file_count || !file_table_offset)
-      {
-        return error{error_code::format_error, "BA2 DX10 fixed header is truncated before FileTableOffset"};
-      }
-
-      ba2_archive_metadata ba2{};
-      if (version.value() >= ba2_starfield_v2_version)
-      {
-        const auto unknown1 = reader.read_u32_le();
-        const auto unknown2 = reader.read_u32_le();
-        if (!unknown1 || !unknown2)
-        {
-          return error{error_code::format_error, "BA2 DX10 Starfield v2 header fields are truncated"};
-        }
-        ba2.starfield_unknown1 = unknown1.value();
-        ba2.starfield_unknown2 = unknown2.value();
-      }
-      if (version.value() >= ba2_starfield_v3_version)
-      {
-        const auto compression_method = reader.read_u32_le();
-        if (!compression_method)
-        {
-          return error{error_code::format_error, "BA2 DX10 Starfield v3 CompressionMethod is truncated"};
-        }
-        ba2.compression_method = compression_method.value();
-      }
-
-      return header_fields{magic.value(), version.value(), subtype.value(), file_count.value(), file_table_offset.value(), ba2};
-    }
-
-    result<std::vector<dx10_record>> read_records(detail::binary_reader &reader, std::uint32_t file_count,
-                                                  std::uint64_t file_table_offset)
-    {
-      std::vector<dx10_record> records;
-      auto reserved = detail::reserve_metadata_vector(records, file_count, "BA2 DX10 records");
-      if (!reserved)
-      {
-        return reserved.error();
-      }
-      std::uint64_t aggregate_chunk_count = 0;
-      for (std::uint32_t index = 0; index < file_count; ++index)
-      {
-        const auto name_hash = reader.read_u32_le();
-        const auto extension_bytes = reader.read_bytes(4U);
-        const auto directory_hash = reader.read_u32_le();
-        const auto unknown_tex = reader.read_u8();
-        const auto chunk_count = reader.read_u8();
-        const auto chunk_header_size = reader.read_u16_le();
-        const auto height = reader.read_u16_le();
-        const auto width = reader.read_u16_le();
-        const auto num_mips = reader.read_u8();
-        const auto dxgi_format = reader.read_u8();
-        const auto cube_maps_raw = reader.read_u16_le();
-        if (!name_hash || !extension_bytes || !directory_hash || !unknown_tex || !chunk_count || !chunk_header_size || !height ||
-            !width || !num_mips || !dxgi_format || !cube_maps_raw)
-        {
-          return error{error_code::format_error, "BA2 DX10 record table is truncated"};
-        }
-        if (chunk_count.value() == 0U)
-        {
-          return error{error_code::format_error, "BA2 DX10 record has no texture chunks"};
-        }
-        // TES5Edit writes and reads a fixed 24-byte DX10 chunk header. Phase 6 rejects other widths so
-        // parser position cannot drift into payload or filename bytes.
-        if (chunk_header_size.value() != ba2_dx10_chunk_header_size)
-        {
-          return error{error_code::format_error, "BA2 DX10 chunk_header_size is unsupported"};
-        }
-        std::uint64_t next_aggregate_chunk_count = 0;
-        if (!add_fits_u64(aggregate_chunk_count, chunk_count.value(), next_aggregate_chunk_count) ||
-            next_aggregate_chunk_count > detail::metadata_dx10_chunk_count_limit)
-        {
-          return error{error_code::format_error, "BA2 DX10 aggregate texture chunk count exceeds libbsa metadata limit"};
-        }
-        aggregate_chunk_count = next_aggregate_chunk_count;
-
-        std::array<std::byte, 4> extension{};
-        std::copy(extension_bytes.value().begin(), extension_bytes.value().end(), extension.begin());
-        dx10_record record{name_hash.value(),
-                           extension,
-                           directory_hash.value(),
-                           unknown_tex.value(),
-                           chunk_count.value(),
-                           chunk_header_size.value(),
-                           height.value(),
-                           width.value(),
-                           num_mips.value(),
-                           dxgi_format.value(),
-                           cube_maps_raw.value(),
-                           {}};
-        auto reserved_chunks = detail::reserve_metadata_vector(record.chunks, chunk_count.value(), "BA2 DX10 chunk records");
-        if (!reserved_chunks)
-        {
-          return reserved_chunks.error();
-        }
-        for (std::uint8_t chunk_index = 0; chunk_index < chunk_count.value(); ++chunk_index)
-        {
-          const auto offset = reader.read_u64_le();
-          const auto packed_size = reader.read_u32_le();
-          const auto raw_size = reader.read_u32_le();
-          const auto start_mip = reader.read_u16_le();
-          const auto end_mip = reader.read_u16_le();
-          const auto sentinel = reader.read_u32_le();
-          if (!offset || !packed_size || !raw_size || !start_mip || !end_mip || !sentinel)
-          {
-            return error{error_code::format_error, "BA2 DX10 chunk table is truncated"};
-          }
-          if (sentinel.value() != ba2_record_sentinel)
-          {
-            return error{error_code::format_error, "BA2 DX10 chunk BAADF00D sentinel is invalid"};
-          }
-          record.chunks.push_back(
-              dx10_chunk_record{offset.value(), packed_size.value(), raw_size.value(), start_mip.value(), end_mip.value()});
-        }
-        records.push_back(std::move(record));
-      }
-      if (reader.position() != file_table_offset)
-      {
-        return error{error_code::format_error, "BA2 DX10 FileTableOffset does not match texture record table size"};
-      }
-      return records;
-    }
-
-    result<std::vector<std::string>> read_names(std::span<const std::byte> name_table, std::uint32_t file_count,
-                                                std::size_t &consumed)
-    {
-      detail::binary_reader reader{name_table};
-      std::vector<std::string> names;
-      auto reserved = detail::reserve_metadata_vector(names, file_count, "BA2 DX10 filename table entries");
-      if (!reserved)
-      {
-        return reserved.error();
-      }
-      for (std::uint32_t index = 0; index < file_count; ++index)
-      {
-        const auto length = reader.read_u16_le();
-        if (!length)
-        {
-          return error{error_code::format_error, "BA2 DX10 filename table is truncated before UInt16 length"};
-        }
-        const auto bytes = reader.read_bytes(length.value());
-        if (!bytes)
-        {
-          return error{error_code::format_error, "BA2 DX10 filename table is truncated before name bytes"};
-        }
-        if (bytes.value().empty())
-        {
-          return error{error_code::format_error, "BA2 DX10 filename table contains an empty name"};
-        }
-        auto name = archive_string_from_bytes(bytes.value(), "BA2 DX10 filename bytes");
-        if (!name)
-        {
-          return name.error();
-        }
-        names.push_back(std::move(name.value()));
-      }
-      consumed = reader.position();
-      return names;
-    }
-
-    entry_compression compression_for(const dx10_chunk_record &chunk, detected_ba2_format detected) noexcept
+    entry_compression compression_for(const ba2_dx10_chunk_record &chunk, detected_ba2_format detected) noexcept
     {
       if (chunk.packed_size == 0U)
       {
@@ -419,7 +118,7 @@ namespace libbsa::formats::ba2
       return detected.default_compression;
     }
 
-    result<std::uint64_t> first_payload_offset_for(std::span<const dx10_record> records, std::uint64_t archive_size)
+    result<std::uint64_t> first_payload_offset_for(std::span<const ba2_dx10_record> records, std::uint64_t archive_size)
     {
       std::uint64_t first_payload_offset = archive_size;
       std::size_t expected_chunk_count = 0;
@@ -471,7 +170,7 @@ namespace libbsa::formats::ba2
       return first_payload_offset;
     }
 
-    std::uint32_t inferred_array_size(const dx10_record &record) noexcept
+    std::uint32_t inferred_array_size(const ba2_dx10_record &record) noexcept
     {
       // TES5Edit treats CubeMaps == 2049 as the cubemap signal. Preserve cube_maps_raw separately so
       // future compatibility work can revisit broader Bethesda-specific flag meanings without data loss.
@@ -492,7 +191,7 @@ namespace libbsa::formats::ba2
       return std::max(1U, slices);
     }
 
-    result<std::vector<texture_chunk_metadata>> public_chunks_for(const dx10_record &record, detected_ba2_format detected)
+    result<std::vector<texture_chunk_metadata>> public_chunks_for(const ba2_dx10_record &record, detected_ba2_format detected)
     {
       try
       {
@@ -553,7 +252,7 @@ namespace libbsa::formats::ba2
 
     result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size,
                                                             std::size_t name_table_end,
-                                                            std::span<const dx10_record> records,
+                                                            std::span<const ba2_dx10_record> records,
                                                             std::span<const std::string> names,
                                                             detected_ba2_format detected)
     {
@@ -702,7 +401,7 @@ namespace libbsa::formats::ba2
       }
 
       detail::binary_reader reader{metadata_bytes};
-      auto header = read_header(reader);
+      auto header = read_ba2_dx10_header(reader);
       if (!header)
       {
         return header.error();
@@ -727,7 +426,7 @@ namespace libbsa::formats::ba2
         return error{error_code::format_error, "BA2 DX10 FileTableOffset is outside the metadata span"};
       }
 
-      auto records = read_records(reader, header.value().file_count, header.value().file_table_offset);
+      auto records = read_ba2_dx10_records(reader, header.value().file_count, header.value().file_table_offset);
       if (!records)
       {
         return records.error();
@@ -735,7 +434,7 @@ namespace libbsa::formats::ba2
 
       const auto file_table_offset = static_cast<std::size_t>(header.value().file_table_offset);
       std::size_t name_table_consumed = 0;
-      auto names = read_names(metadata_bytes.subspan(file_table_offset), header.value().file_count, name_table_consumed);
+      auto names = read_ba2_dx10_names(metadata_bytes.subspan(file_table_offset), header.value().file_count, name_table_consumed);
       if (!names)
       {
         return names.error();
@@ -787,13 +486,13 @@ namespace libbsa::formats::ba2
     {
       return input.error();
     }
-    auto fixed_header = read_file_bytes_at(input.value(), 0U, header_size_for(detected.version), "BA2 DX10 fixed header");
+    auto fixed_header = read_file_bytes_at(input.value(), 0U, ba2_dx10_fixed_header_size_for(detected.version), "BA2 DX10 fixed header");
     if (!fixed_header)
     {
       return fixed_header.error();
     }
     detail::binary_reader header_reader{fixed_header.value()};
-    auto header = read_header(header_reader);
+    auto header = read_ba2_dx10_header(header_reader);
     if (!header)
     {
       return header.error();
@@ -813,7 +512,7 @@ namespace libbsa::formats::ba2
     {
       return count_limit.error();
     }
-    if (header.value().file_table_offset > archive_size || header.value().file_table_offset < header_size_for(header.value().version))
+    if (header.value().file_table_offset > archive_size || header.value().file_table_offset < ba2_dx10_fixed_header_size_for(header.value().version))
     {
       return error{error_code::format_error, "BA2 DX10 FileTableOffset is outside the metadata span"};
     }
@@ -827,12 +526,12 @@ namespace libbsa::formats::ba2
       return metadata_bytes.error();
     }
     detail::binary_reader metadata_reader{metadata_bytes.value()};
-    auto parsed_header = read_header(metadata_reader);
+    auto parsed_header = read_ba2_dx10_header(metadata_reader);
     if (!parsed_header)
     {
       return parsed_header.error();
     }
-    auto records = read_records(metadata_reader, header.value().file_count, header.value().file_table_offset);
+    auto records = read_ba2_dx10_records(metadata_reader, header.value().file_count, header.value().file_table_offset);
     if (!records)
     {
       return records.error();
@@ -849,7 +548,7 @@ namespace libbsa::formats::ba2
     }
     // BA2 DX10 filename tables are count-delimited, so sparse padding between the last encoded name
     // and first payload must not be allocated during open/list metadata parsing.
-    auto name_table_bytes = parse_ba2_dx10_names_from_file(input.value(),
+    auto name_table_bytes = read_ba2_dx10_names_from_file(input.value(),
                                                            header.value().file_table_offset,
                                                            first_payload_offset.value(),
                                                            header.value().file_count);

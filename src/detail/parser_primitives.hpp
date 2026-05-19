@@ -96,6 +96,12 @@ namespace libbsa::detail
   /// Returns true when a 64-bit archive byte span is fully contained in the host file size.
   bool span_fits_u64(std::uint64_t start, std::uint64_t length, std::uint64_t total) noexcept;
 
+  /// Returns true when two non-empty 64-bit archive byte spans intersect without overflowing end offsets.
+  bool spans_overlap_u64(std::uint64_t first_start,
+                         std::uint64_t first_length,
+                         std::uint64_t second_start,
+                         std::uint64_t second_length) noexcept;
+
   /// Reads exactly `count` bytes at `offset`, rejecting unrepresentable stream positions and truncation.
   ///
   /// The helper translates byte-buffer allocation failures into `format_error`, reports seek/read failures as

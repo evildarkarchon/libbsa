@@ -59,6 +59,22 @@ namespace libbsa::detail
     return start <= total && length <= total - start;
   }
 
+  bool spans_overlap_u64(std::uint64_t first_start,
+                         std::uint64_t first_length,
+                         std::uint64_t second_start,
+                         std::uint64_t second_length) noexcept
+  {
+    if (first_length == 0U || second_length == 0U)
+    {
+      return false;
+    }
+
+    const auto max = std::numeric_limits<std::uint64_t>::max();
+    const auto first_end = first_start > max - first_length ? max : first_start + first_length;
+    const auto second_end = second_start > max - second_length ? max : second_start + second_length;
+    return first_start < second_end && second_start < first_end;
+  }
+
   result<std::vector<std::byte>> read_file_bytes_at(std::ifstream &input,
                                                     std::uint64_t offset,
                                                     std::size_t count,
