@@ -59,6 +59,7 @@ Deflate and LZ4 compression/decompression support are required.
 - Add comments for non-obvious why: format compatibility constraints, ownership/lifetime decisions, error-handling edge cases, threading behavior, cancellation behavior, and deliberate deviations from the reference implementation.
 - Add Doxygen-compliant C++ doc comments (/// or /** ... */) for public APIs and for methods that are added or substantially rewritten.
 - Trivial private helpers may omit doc comments when their purpose is obvious.
+- Any change that may affect format compatibility must be verified against the reference implementation and documented in the commit message.
 
 ## Validation Expectations
 
