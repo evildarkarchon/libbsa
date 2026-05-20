@@ -29,7 +29,7 @@ Use these public proof files together when auditing the default sweep:
 - `tests/fixtures/README.md` documents fixture provenance, generated-archive policy, optional local corpus rules, and test label vocabulary.
 - `tests/unit/archive_reader_dispatch_tests.cpp` reopens representative generated archives through the public `archive_reader` dispatch surface and verifies metadata, lookup, extraction, and bulk extraction behavior.
 - Family writer tests prove writer-output archive behavior: `tests/unit/tes3_bsa_writer_tests.cpp`, `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/ba2_gnrl_writer_tests.cpp`, and `tests/unit/ba2_dx10_writer_tests.cpp`.
-- `tests/unit/validation_api_tests.cpp` validates representative generated fixtures, writer-produced archives, and malformed matrix rows through the public validation API.
+- `tests/unit/validation_api_tests.cpp` validates representative and direct generated success fixtures, writer-produced archives, and malformed matrix rows through the public validation API. Its direct validation success matrix includes `tes4_v103.bsa`, `tes4_v104.bsa`, `tes4_v105.bsa`, `ba2_gnrl_fo4.ba2`, `ba2_gnrl_sfv2.ba2`, `ba2_gnrl_sfv3.ba2`, `ba2_dx10_fo4.ba2`, and `ba2_dx10_sfv3.ba2`; it also validates writer-produced Starfield BA2 v3 method 0 deflate and method 3 raw LZ4 block routes for both BA2 GNRL and BA2 DX10.
 - `tests/fixtures/generated/validate_fixture_manifests.py` keeps manifest shape, referenced malformed archives, and compatibility-matrix evidence references consistent with committed generated assets.
 
 A focused default CMake/CTest sweep can be run with repository paths and presets only:
@@ -54,7 +54,7 @@ ctest --preset windows-msvc-debug-static -L ba2_gnrl_writer
 ctest --preset windows-msvc-debug-static -L ba2_dx10_writer
 ```
 
-These commands intentionally avoid optional local corpus inputs. They should prove the public default fixture and round-trip story from committed synthetic assets while leaving per-variant validation-success granularity to `docs/coverage-audit-matrix.md` and validation API tests.
+These commands intentionally avoid optional local corpus inputs. They prove the public default fixture, round-trip, and direct validation success story from committed synthetic assets; `docs/coverage-audit-matrix.md` remains the source of truth for per-family granularity.
 
 The executable opt-in comparison harness is `tests/unit/local_game_fixture_tests.cpp`; it consumes `LIBBSA_BSARCHPRO_EXPECTED` or a local `bsarchpro_expected.json` manifest under `LIBBSA_GAME_FIXTURES` and compares libbsa metadata plus optional extracted bytes or FNV-1a payload hashes against BSArchPro-derived expectations.
 

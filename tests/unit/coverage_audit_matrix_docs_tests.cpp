@@ -195,6 +195,102 @@ TEST_CASE("compatibility_evidence exposes default fixture round-trip proof sweep
                       "Default acceptance must continue to pass from committed generated fixtures, writer-output archives, and policy tests alone"});
 }
 
+TEST_CASE("coverage_audit_matrix preserves direct validation success evidence",
+          "[unit][coverage_audit_matrix][docs_policy]")
+{
+  const auto matrix = read_text_file(source_root() / "docs" / "coverage-audit-matrix.md");
+
+  const auto tes4 = require_markdown_section(matrix, "### TES4-family BSA");
+  require_all_tokens(tes4,
+                     {"| Validation API behavior | Proven |",
+                      "`tests/unit/validation_api_tests.cpp`",
+                      "`tes4_v103.bsa`",
+                      "`tes4_v104.bsa`",
+                      "`tes4_v105.bsa`",
+                      "extractability enabled",
+                      "writer-produced TES4 archives",
+                      "malformed BSA diagnostics"});
+
+  const auto ba2_gnrl = require_markdown_section(matrix, "### BA2 GNRL");
+  require_all_tokens(ba2_gnrl,
+                     {"| Validation API behavior | Proven |",
+                      "`tests/unit/validation_api_tests.cpp`",
+                      "`ba2_gnrl_fo4.ba2`",
+                      "`ba2_gnrl_sfv2.ba2`",
+                      "`ba2_gnrl_sfv3.ba2`",
+                      "writer-produced Starfield BA2 v3",
+                      "method 0 deflate",
+                      "method 3 raw LZ4 block",
+                      "malformed matrix rows cover BA2 GNRL failures"});
+
+  const auto ba2_dx10 = require_markdown_section(matrix, "### BA2 DX10");
+  require_all_tokens(ba2_dx10,
+                     {"| Validation API behavior | Proven |",
+                      "`tests/unit/validation_api_tests.cpp`",
+                      "`ba2_dx10_fo4.ba2`",
+                      "`ba2_dx10_sfv3.ba2`",
+                      "writer-produced Starfield BA2 v3",
+                      "method 0 deflate",
+                      "method 3 raw LZ4 block texture routes",
+                      "malformed matrix rows cover BA2 DX10 failures"});
+}
+
+TEST_CASE("coverage_audit_matrix keeps COV-GAP-001 closed while preserving remaining gaps",
+          "[unit][coverage_audit_matrix][docs_policy]")
+{
+  const auto matrix = read_text_file(source_root() / "docs" / "coverage-audit-matrix.md");
+
+  require_all_tokens(matrix,
+                     {"`COV-GAP-001` validation-success gap is no longer open",
+                      "`COV-GAP-002`",
+                      "`COV-GAP-003`",
+                      "`COV-GAP-004`"});
+  require_no_tokens(matrix,
+                    {"| 1 | `COV-GAP-001`",
+                     "| `COV-GAP-001` |",
+                     "see `COV-GAP-001`",
+                     "not currently enumerated",
+                     "Direct validation success rows for Starfield v2/v3 generated fixtures are not enumerated",
+                     "Direct validation success rows for Starfield v3 DX10 generated fixtures and both Starfield compression methods are not enumerated"});
+}
+
+TEST_CASE("compatibility_evidence names direct validation matrix and Starfield compression routes",
+          "[unit][coverage_audit_matrix][docs_policy]")
+{
+  const auto compatibility_evidence = read_text_file(source_root() / "docs" / "compatibility-evidence.md");
+
+  require_all_tokens(compatibility_evidence,
+                     {"direct validation success matrix includes",
+                      "`tes4_v103.bsa`",
+                      "`tes4_v104.bsa`",
+                      "`tes4_v105.bsa`",
+                      "`ba2_gnrl_fo4.ba2`",
+                      "`ba2_gnrl_sfv2.ba2`",
+                      "`ba2_gnrl_sfv3.ba2`",
+                      "`ba2_dx10_fo4.ba2`",
+                      "`ba2_dx10_sfv3.ba2`",
+                      "writer-produced Starfield BA2 v3 method 0 deflate and method 3 raw LZ4 block routes",
+                      "both BA2 GNRL and BA2 DX10"});
+}
+
+TEST_CASE("public_api_reality_check routes closed validation proof without API redesign",
+          "[unit][coverage_audit_matrix][docs_policy]")
+{
+  const auto public_api_reality_check = read_text_file(source_root() / "docs" / "public-api-reality-check.md");
+
+  require_all_tokens(public_api_reality_check,
+                     {"`COV-GAP-001` is closed by direct validation proof",
+                      "Direct validation success rows now exist",
+                      "The validation API shape required no helper/API redesign",
+                      "method 0 deflate",
+                      "method 3 raw LZ4 block",
+                      "Closed. Keep validation API and docs-policy tests as the guardrail"});
+  require_no_tokens(public_api_reality_check,
+                    {"direct success validation rows for all variant-specific routes are not fully enumerated",
+                     "if direct proof is required",
+                     "Coverage matrix notes direct variant-specific validation success rows are incomplete"});
+}
+
 TEST_CASE("coverage_audit_matrix preserves status vocabulary and ranked gaps", "[unit][coverage_audit_matrix][docs_policy]")
 {
   const auto matrix = read_text_file(source_root() / "docs" / "coverage-audit-matrix.md");
