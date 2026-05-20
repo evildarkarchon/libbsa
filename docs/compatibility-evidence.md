@@ -14,7 +14,7 @@ Default acceptance must continue to pass from repository-reproducible generated 
 
 ## Default fixture and round-trip proof sweep
 
-The default proof sweep uses committed legal generated fixtures, writer-output archives produced by the public writer APIs, Catch2/CTest cases, and manifest validation only. It does not require local game archives, copied game payload bytes, or BSArchPro-derived comparison output. `LIBBSA_GAME_FIXTURES` and `LIBBSA_BSARCHPRO_EXPECTED` are optional advisory inputs for local smoke/compare confidence; unset variables must not block the default suite.
+The default proof sweep uses committed legal generated fixtures, writer-output archives produced by the public writer APIs, the installed package-consumer runtime smoke, Catch2/CTest cases, and manifest validation only. It does not require local game archives, copied game payload bytes, or BSArchPro-derived comparison output. `LIBBSA_GAME_FIXTURES` and `LIBBSA_BSARCHPRO_EXPECTED` are optional advisory inputs for local smoke/compare confidence; unset variables must not block the default suite.
 
 The current default sweep covers four archive families:
 
@@ -30,6 +30,7 @@ Use these public proof files together when auditing the default sweep:
 - `tests/unit/archive_reader_dispatch_tests.cpp` reopens representative generated archives through the public `archive_reader` dispatch surface and verifies metadata, lookup, extraction, and bulk extraction behavior.
 - Family writer tests prove writer-output archive behavior: `tests/unit/tes3_bsa_writer_tests.cpp`, `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/ba2_gnrl_writer_tests.cpp`, and `tests/unit/ba2_dx10_writer_tests.cpp`.
 - `tests/unit/validation_api_tests.cpp` validates representative and direct generated success fixtures, writer-produced archives, and malformed matrix rows through the public validation API. Its direct validation success matrix includes `tes4_v103.bsa`, `tes4_v104.bsa`, `tes4_v105.bsa`, `ba2_gnrl_fo4.ba2`, `ba2_gnrl_sfv2.ba2`, `ba2_gnrl_sfv3.ba2`, `ba2_dx10_fo4.ba2`, and `ba2_dx10_sfv3.ba2`; it also validates writer-produced Starfield BA2 v3 method 0 deflate and method 3 raw LZ4 block routes for both BA2 GNRL and BA2 DX10.
+- `tests/package-consumer/main.cpp` is exercised by the `package_consumer_smoke` CTest gate. The gate installs libbsa, configures an external project against the installed `libbsa::libbsa` target, and at runtime creates, opens, validates, and extracts writer-produced TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives without local game archives or TES5Edit fixture dependencies.
 - `tests/fixtures/generated/validate_fixture_manifests.py` keeps manifest shape, referenced malformed archives, and compatibility-matrix evidence references consistent with committed generated assets.
 
 A focused default CMake/CTest sweep can be run with repository paths and presets only:
@@ -43,6 +44,13 @@ ctest --preset windows-msvc-debug-static -L roundtrip
 ctest --preset windows-msvc-debug-static -L validation_api
 ctest --preset windows-msvc-debug-static -L docs_policy
 ctest --preset windows-msvc-debug-static -L target_format_policy
+ctest --preset windows-msvc-debug-static -L package_consumer --output-on-failure
+```
+
+For only the installed-package runtime archive proof, run the focused package-consumer CTest directly:
+
+```powershell
+ctest --preset windows-msvc-debug-static -R package_consumer_smoke --output-on-failure
 ```
 
 For a family-writer-only round-trip pass, run the writer labels directly:

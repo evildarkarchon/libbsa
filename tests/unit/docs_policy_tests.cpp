@@ -203,7 +203,13 @@ TEST_CASE("docs_policy public API audit is discoverable and routes proof gaps",
                       "docs/coverage-audit-matrix.md",
                       "docs/compatibility-evidence.md",
                       "Optional corpus evidence",
-                      "not required for default support claims"});
+                      "not required for default support claims",
+                      "package_consumer_smoke",
+                      "installed `libbsa::libbsa` target",
+                      "TES3 BSA",
+                      "TES4-family BSA",
+                      "BA2 GNRL",
+                      "BA2 DX10"});
 
   require_all_tokens(examples,
                      {"These examples are compile-checked by `tests/package-consumer/main.cpp`",
@@ -221,7 +227,13 @@ TEST_CASE("docs_policy public API audit is discoverable and routes proof gaps",
                       "tes3_bsa_writer",
                       "tes4_bsa_writer",
                       "ba2_gnrl_writer",
-                      "ba2_dx10_writer"});
+                      "ba2_dx10_writer",
+                      "package_consumer_smoke",
+                      "installed `libbsa::libbsa` target",
+                      "TES3 BSA",
+                      "TES4-family BSA",
+                      "BA2 GNRL",
+                      "BA2 DX10"});
 
   require_all_tokens(audit,
                      {"proof-and-routing document",
@@ -243,20 +255,43 @@ TEST_CASE("docs_policy public API audit is discoverable and routes proof gaps",
                       "ba2_dx10_writer",
                       "No broad public facade is justified",
                       "`COV-GAP-003`",
-                      "S05",
-                      "installed-package runtime archive creation/opening for every family is intentionally not proven by default"});
+                      "S05 closes `COV-GAP-003`",
+                      "package_consumer_smoke",
+                      "installed `libbsa::libbsa` target",
+                      "TES3 BSA",
+                      "TES4-family BSA",
+                      "BA2 GNRL",
+                      "BA2 DX10",
+                      "without changing the public API shape"});
+
+  require_no_tokens(audit,
+                    {"installed-package runtime archive creation/opening for every family is intentionally not proven by default",
+                     "Package-consumer runtime proof is representative, not every-family archive runtime proof",
+                     "leave installed-package every-family runtime proof to the `COV-GAP-003` route"});
 
   require_all_tokens(catalog,
                      {"Optional local game or BSArchPro-derived checks",
                       "never required for the default suite",
                       "Optional local corpus checks are advisory evidence only",
-                      "absent local or copyrighted inputs do not block default green status"});
+                      "absent local or copyrighted inputs do not block default green status",
+                      "package_consumer_smoke",
+                      "installed `libbsa::libbsa` target",
+                      "creates, opens, validates, and extracts writer-produced TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives",
+                      "ctest --preset windows-msvc-debug-static -R package_consumer_smoke --output-on-failure"});
 
   require_all_tokens(matrix,
-                     {"`COV-GAP-003`",
-                      "Package-consumer runtime proof for creating/opening every archive family from an installed package",
-                      "actual archive behavior is covered by always-on unit fixture tests",
-                      "S05 integrated confidence/package-release polish"});
+                     {"`COV-GAP-003` package-consumer runtime gap is no longer open",
+                      "package_consumer_smoke",
+                      "installed `libbsa::libbsa` target",
+                      "creates, opens, validates, and extracts writer-produced TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives",
+                      "`COV-GAP-002`",
+                      "`COV-GAP-004`"});
+
+  require_no_tokens(matrix,
+                    {"| 2 | `COV-GAP-003`",
+                     "Package-consumer runtime proof for creating/opening every archive family from an installed package",
+                     "actual archive behavior is covered by always-on unit fixture tests",
+                     "S05 integrated confidence/package-release polish"});
 }
 
 TEST_CASE("docs_policy public proof docs keep optional evidence and fixture boundaries explicit",

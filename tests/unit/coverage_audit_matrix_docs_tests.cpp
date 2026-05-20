@@ -175,6 +175,7 @@ TEST_CASE("compatibility_evidence exposes default fixture round-trip proof sweep
                      {"## Default fixture and round-trip proof sweep",
                       "committed legal generated fixtures",
                       "writer-output archives produced by the public writer APIs",
+                      "installed package-consumer runtime smoke",
                       "Catch2/CTest cases",
                       "manifest validation only",
                       "It does not require local game archives",
@@ -189,10 +190,54 @@ TEST_CASE("compatibility_evidence exposes default fixture round-trip proof sweep
                       "`tests/unit/ba2_gnrl_writer_tests.cpp`",
                       "`tests/unit/ba2_dx10_writer_tests.cpp`",
                       "`tests/unit/validation_api_tests.cpp`",
+                      "`tests/package-consumer/main.cpp`",
+                      "`package_consumer_smoke` CTest gate",
+                      "installed `libbsa::libbsa` target",
+                      "creates, opens, validates, and extracts writer-produced TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives",
+                      "ctest --preset windows-msvc-debug-static -R package_consumer_smoke --output-on-failure",
                       "`tests/fixtures/generated/validate_fixture_manifests.py`",
                       "`LIBBSA_GAME_FIXTURES` and `LIBBSA_BSARCHPRO_EXPECTED` are optional advisory inputs",
                       "unset variables must not block the default suite",
                       "Default acceptance must continue to pass from committed generated fixtures, writer-output archives, and policy tests alone"});
+}
+
+TEST_CASE("coverage_audit_matrix proves installed package-consumer runtime for every family",
+          "[unit][coverage_audit_matrix][docs_policy][package_consumer]")
+{
+  const auto matrix = read_text_file(source_root() / "docs" / "coverage-audit-matrix.md");
+
+  const auto tes3 = require_markdown_section(matrix, "### TES3 BSA");
+  require_all_tokens(tes3,
+                     {"| Public/package-consumer API proof | Proven |",
+                      "`package_consumer_smoke` runtime creates a writer-produced TES3 BSA",
+                      "opens it through `archive_reader`",
+                      "validates it through `validate_archive`",
+                      "extracts it through sink, `extract_bytes`, and bulk extraction paths"});
+
+  const auto tes4 = require_markdown_section(matrix, "### TES4-family BSA");
+  require_all_tokens(tes4,
+                     {"| Public/package-consumer API proof | Proven |",
+                      "`package_consumer_smoke` runtime creates a writer-produced TES4-family BSA",
+                      "opens it through `archive_reader`",
+                      "validates it through `validate_archive`",
+                      "extracts it through sink, `extract_bytes`, and bulk extraction paths"});
+
+  const auto ba2_gnrl = require_markdown_section(matrix, "### BA2 GNRL");
+  require_all_tokens(ba2_gnrl,
+                     {"| Public/package-consumer API proof | Proven |",
+                      "`package_consumer_smoke` runtime creates a writer-produced BA2 GNRL archive",
+                      "opens it through `archive_reader`",
+                      "validates it through `validate_archive`",
+                      "extracts it through sink, `extract_bytes`, and bulk extraction paths"});
+
+  const auto ba2_dx10 = require_markdown_section(matrix, "### BA2 DX10");
+  require_all_tokens(ba2_dx10,
+                     {"| Public/package-consumer API proof | Proven |",
+                      "`package_consumer_smoke` runtime generates a tiny legal BC1 DXT10 DDS input inline",
+                      "creates a writer-produced BA2 DX10 archive",
+                      "opens it through `archive_reader`",
+                      "validates it through `validate_archive`",
+                      "extracts the reconstructed DDS through sink, `extract_bytes`, and bulk extraction paths"});
 }
 
 TEST_CASE("coverage_audit_matrix preserves direct validation success evidence",
@@ -235,23 +280,32 @@ TEST_CASE("coverage_audit_matrix preserves direct validation success evidence",
                       "malformed matrix rows cover BA2 DX10 failures"});
 }
 
-TEST_CASE("coverage_audit_matrix keeps COV-GAP-001 closed while preserving remaining gaps",
+TEST_CASE("coverage_audit_matrix keeps COV-GAP-001 and COV-GAP-003 closed while preserving deferred gaps",
           "[unit][coverage_audit_matrix][docs_policy]")
 {
   const auto matrix = read_text_file(source_root() / "docs" / "coverage-audit-matrix.md");
 
   require_all_tokens(matrix,
                      {"`COV-GAP-001` validation-success gap is no longer open",
-                      "`COV-GAP-002`",
-                      "`COV-GAP-003`",
-                      "`COV-GAP-004`"});
+                      "`COV-GAP-003` package-consumer runtime gap is no longer open",
+                      "package_consumer_smoke",
+                      "installed `libbsa::libbsa` target",
+                      "creates, opens, validates, and extracts writer-produced TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives",
+                      "`COV-GAP-002` | Low / Deferred",
+                      "`COV-GAP-004` | Low / Deferred"});
   require_no_tokens(matrix,
                     {"| 1 | `COV-GAP-001`",
+                     "| 1 | `COV-GAP-003`",
+                     "| 2 | `COV-GAP-003`",
+                     "| 3 | `COV-GAP-003`",
                      "| `COV-GAP-001` |",
                      "see `COV-GAP-001`",
                      "not currently enumerated",
                      "Direct validation success rows for Starfield v2/v3 generated fixtures are not enumerated",
-                     "Direct validation success rows for Starfield v3 DX10 generated fixtures and both Starfield compression methods are not enumerated"});
+                     "Direct validation success rows for Starfield v3 DX10 generated fixtures and both Starfield compression methods are not enumerated",
+                     "installed-package runtime archive creation/opening for every family is intentionally not proven by default",
+                     "actual archive behavior is covered by always-on unit fixture tests",
+                     "S05 integrated confidence/package-release polish"});
 }
 
 TEST_CASE("compatibility_evidence names direct validation matrix and Starfield compression routes",
@@ -273,7 +327,7 @@ TEST_CASE("compatibility_evidence names direct validation matrix and Starfield c
                       "both BA2 GNRL and BA2 DX10"});
 }
 
-TEST_CASE("public_api_reality_check routes closed validation proof without API redesign",
+TEST_CASE("public_api_reality_check routes closed validation and package-consumer proof without API redesign",
           "[unit][coverage_audit_matrix][docs_policy]")
 {
   const auto public_api_reality_check = read_text_file(source_root() / "docs" / "public-api-reality-check.md");
@@ -284,11 +338,19 @@ TEST_CASE("public_api_reality_check routes closed validation proof without API r
                       "The validation API shape required no helper/API redesign",
                       "method 0 deflate",
                       "method 3 raw LZ4 block",
-                      "Closed. Keep validation API and docs-policy tests as the guardrail"});
+                      "Closed. Keep validation API and docs-policy tests as the guardrail",
+                      "S05 closes `COV-GAP-003`",
+                      "package_consumer_smoke",
+                      "installed `libbsa::libbsa` target",
+                      "create, open, validate, and extract writer-produced TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives",
+                      "without changing the public API shape"});
   require_no_tokens(public_api_reality_check,
                     {"direct success validation rows for all variant-specific routes are not fully enumerated",
                      "if direct proof is required",
-                     "Coverage matrix notes direct variant-specific validation success rows are incomplete"});
+                     "Coverage matrix notes direct variant-specific validation success rows are incomplete",
+                     "installed-package runtime archive creation/opening for every family is intentionally not proven by default",
+                     "Package-consumer runtime proof is representative, not every-family archive runtime proof",
+                     "leave installed-package every-family runtime proof to the `COV-GAP-003` route"});
 }
 
 TEST_CASE("coverage_audit_matrix preserves status vocabulary and ranked gaps", "[unit][coverage_audit_matrix][docs_policy]")

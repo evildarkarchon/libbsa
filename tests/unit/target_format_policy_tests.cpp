@@ -146,8 +146,43 @@ TEST_CASE("target_format_policy package consumer examples have docs and CTest sm
   REQUIRE(package_cmake.find("target_link_libraries(libbsa_package_consumer PRIVATE libbsa::libbsa)") !=
           std::string::npos);
   REQUIRE(package_cmake.find("add_test(NAME libbsa_package_consumer_run") != std::string::npos);
-  REQUIRE(package_source.find("consumer-smoke.bsa") != std::string::npos);
   REQUIRE(package_source.find("libbsa::error_code::io_error") != std::string::npos);
+
+  constexpr std::array<std::string_view, 4> package_runtime_families{
+      "TES3 BSA",
+      "TES4-family BSA",
+      "BA2 GNRL",
+      "BA2 DX10",
+  };
+  for (const auto family : package_runtime_families)
+  {
+    INFO("Missing package-consumer runtime family token: " << family);
+    REQUIRE(docs.find(std::string{family}) != std::string::npos);
+    REQUIRE(package_source.find(std::string{family}) != std::string::npos);
+  }
+
+  constexpr std::array<std::string_view, 9> runtime_source_tokens{
+      "run_installed_package_archive_runtime_smoke",
+      "archive_runtime_case",
+      "verify_archive_runtime_case",
+      "example_validate_archive",
+      "libbsa::validate_archive",
+      "reader.extract(",
+      "reader.extract_bytes(",
+      "example_bulk_extract(",
+      "build_tiny_bc1_dds_dxt10_source",
+  };
+  for (const auto token : runtime_source_tokens)
+  {
+    INFO("Missing package-consumer runtime proof source token: " << token);
+    REQUIRE(package_source.find(std::string{token}) != std::string::npos);
+  }
+
+  REQUIRE(docs.find("package_consumer_smoke") != std::string::npos);
+  REQUIRE(docs.find("installed `libbsa::libbsa` target") != std::string::npos);
+  REQUIRE(docs.find("opens, validates, and extracts") != std::string::npos);
+  REQUIRE(smoke_cmake.find("--install") != std::string::npos);
+  REQUIRE(smoke_cmake.find("CMAKE_PREFIX_PATH") != std::string::npos);
 
   constexpr std::array<std::string_view, 6> forbidden_fixture_dependencies{
       ".gsd/",

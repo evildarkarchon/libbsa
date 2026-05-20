@@ -2,6 +2,8 @@
 
 These examples are compile-checked by `tests/package-consumer/main.cpp` through the installed `libbsa::libbsa` package target. Each snippet includes only `<libbsa/libbsa.hpp>` plus standard C++ headers. The declarations below are representative entry points; the prose calls out adjacent public APIs that a consumer should choose from in the same flow.
 
+The installed-package `package_consumer_smoke` CTest configures these examples against the installed `libbsa::libbsa` target and, at runtime, creates writer-produced TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives, then opens, validates, and extracts them through the public API. That is default package-consumer proof for the current families, not exhaustive real-game or BSArchPro corpus compatibility.
+
 ## Path model
 
 Keep host filesystem paths and archive virtual paths separate. Host paths name archives, source files, DDS inputs, and output destinations on disk. Archive virtual paths name entries inside an archive and use libbsa lookup normalization, independent of host separator, drive, casing, or output-root policy. libbsa does not decide whether `textures/example.dds` should be written under a particular host directory; callers own that mapping.
