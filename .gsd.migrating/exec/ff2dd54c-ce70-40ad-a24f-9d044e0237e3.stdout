@@ -1,0 +1,25 @@
+validation_exists=true
+validation_mtime=2026-05-20T04:17:10.507594+00:00
+artifact=.gsd/milestones/M001-k9wo8b/slices/S01/S01-SUMMARY.md mtime=2026-05-20T01:44:23.630460+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S01/S01-UAT.md mtime=2026-05-20T01:44:23.631459+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S01/S01-ASSESSMENT.md mtime=2026-05-20T01:45:28.786264+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S02/S02-SUMMARY.md mtime=2026-05-20T02:28:47.878510+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S02/S02-UAT.md mtime=2026-05-20T02:28:47.879009+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S02/S02-ASSESSMENT.md mtime=2026-05-20T02:29:58.228083+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S03/S03-SUMMARY.md mtime=2026-05-20T02:47:17.362755+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S03/S03-UAT.md mtime=2026-05-20T02:47:17.363759+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S03/S03-ASSESSMENT.md mtime=2026-05-20T02:47:54.756147+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S04/S04-SUMMARY.md mtime=2026-05-20T03:18:17.905333+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S04/S04-UAT.md mtime=2026-05-20T03:18:17.906334+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S04/S04-ASSESSMENT.md mtime=2026-05-20T03:19:10.001211+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S05/S05-SUMMARY.md mtime=2026-05-20T04:02:23.531932+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S05/S05-UAT.md mtime=2026-05-20T04:02:23.532433+00:00 newer_than_validation=false
+artifact=.gsd/milestones/M001-k9wo8b/slices/S05/S05-ASSESSMENT.md mtime=2026-05-20T04:13:19.867144+00:00 newer_than_validation=false
+missing_artifacts=0
+artifacts_newer_than_validation=0
+validation_contains=verdict: pass=true
+validation_contains=Requirement Coverage=true
+validation_contains=Cross-Slice Integration=true
+validation_contains=Verification Class Compliance=true
+validation_contains=Artifact presence verification=true
+s05_assessment_clarification=true

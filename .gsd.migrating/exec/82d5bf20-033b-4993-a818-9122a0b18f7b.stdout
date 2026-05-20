@@ -1,0 +1,134 @@
+Test project J:/libbsa/build/windows-msvc-debug-static
+      Start  10: docs_policy public API audit is discoverable and routes proof gaps
+ 1/16 Test  #10: docs_policy public API audit is discoverable and routes proof gaps ..................................   Passed    0.12 sec
+      Start  12: coverage_audit_matrix lists every current archive family
+ 2/16 Test  #12: coverage_audit_matrix lists every current archive family ............................................   Passed    0.02 sec
+      Start  98: coverage_audit_matrix stays free of internal planning identifiers
+ 3/16 Test  #98: coverage_audit_matrix stays free of internal planning identifiers ...................................   Passed    0.02 sec
+      Start 131: coverage_audit_matrix preserves default fixture and manifest evidence policy
+ 4/16 Test #131: coverage_audit_matrix preserves default fixture and manifest evidence policy ........................   Passed    0.02 sec
+      Start 157: compatibility_evidence exposes default fixture round-trip proof sweep
+ 5/16 Test #157: compatibility_evidence exposes default fixture round-trip proof sweep ...............................   Passed    0.01 sec
+      Start 202: coverage_audit_matrix preserves direct validation success evidence
+ 6/16 Test #202: coverage_audit_matrix preserves direct validation success evidence ..................................   Passed    0.01 sec
+      Start 207: coverage_audit_matrix is discoverable from compatibility evidence catalog
+ 7/16 Test #207: coverage_audit_matrix is discoverable from compatibility evidence catalog ...........................   Passed    0.01 sec
+      Start 220: coverage_audit_matrix preserves default round-trip evidence for every family
+ 8/16 Test #220: coverage_audit_matrix preserves default round-trip evidence for every family ........................   Passed    0.01 sec
+      Start 268: coverage_audit_matrix preserves every required support axis
+ 9/16 Test #268: coverage_audit_matrix preserves every required support axis .........................................   Passed    0.02 sec
+      Start 289: coverage_audit_matrix keeps COV-GAP-001 and COV-GAP-003 closed while preserving deferred gaps
+10/16 Test #289: coverage_audit_matrix keeps COV-GAP-001 and COV-GAP-003 closed while preserving deferred gaps .......   Passed    0.12 sec
+      Start 322: coverage_audit_matrix proves installed package-consumer runtime for every family
+11/16 Test #322: coverage_audit_matrix proves installed package-consumer runtime for every family ....................   Passed    0.02 sec
+      Start 338: public_api_reality_check routes closed validation and package-consumer proof without API redesign
+12/16 Test #338: public_api_reality_check routes closed validation and package-consumer proof without API redesign ...   Passed    0.01 sec
+      Start 354: coverage_audit_matrix preserves status vocabulary and ranked gaps
+13/16 Test #354: coverage_audit_matrix preserves status vocabulary and ranked gaps ...................................   Passed    0.12 sec
+      Start 368: compatibility_evidence names direct validation matrix and Starfield compression routes
+14/16 Test #368: compatibility_evidence names direct validation matrix and Starfield compression routes ..............   Passed    0.01 sec
+      Start 387: coverage_audit_matrix names compatibility matrix as malformed submatrix only
+15/16 Test #387: coverage_audit_matrix names compatibility matrix as malformed submatrix only ........................   Passed    0.01 sec
+      Start 414: coverage_audit_matrix separates advisory local evidence from default proof
+16/16 Test #414: coverage_audit_matrix separates advisory local evidence from default proof ..........................   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 16
+
+Label Time Summary:
+coverage_audit_matrix    =   0.56 sec*proc (16 tests)
+doc_structure            =   0.12 sec*proc (1 test)
+docs_policy              =   0.56 sec*proc (16 tests)
+package_consumer         =   0.02 sec*proc (1 test)
+unit                     =   0.56 sec*proc (16 tests)
+
+Total Test time (real) =   0.58 sec
+Test project J:/libbsa/build/windows-msvc-debug-static
+      Start  10: docs_policy public API audit is discoverable and routes proof gaps
+ 1/24 Test  #10: docs_policy public API audit is discoverable and routes proof gaps ..................................   Passed    0.02 sec
+      Start  12: coverage_audit_matrix lists every current archive family
+ 2/24 Test  #12: coverage_audit_matrix lists every current archive family ............................................   Passed    0.01 sec
+      Start  46: docs_policy static boundary keeps public API documentation optional
+ 3/24 Test  #46: docs_policy static boundary keeps public API documentation optional .................................   Passed    0.12 sec
+      Start  98: coverage_audit_matrix stays free of internal planning identifiers
+ 4/24 Test  #98: coverage_audit_matrix stays free of internal planning identifiers ...................................   Passed    0.12 sec
+      Start 131: coverage_audit_matrix preserves default fixture and manifest evidence policy
+ 5/24 Test #131: coverage_audit_matrix preserves default fixture and manifest evidence policy ........................   Passed    0.12 sec
+      Start 157: compatibility_evidence exposes default fixture round-trip proof sweep
+ 6/24 Test #157: compatibility_evidence exposes default fixture round-trip proof sweep ...............................   Passed    0.02 sec
+      Start 159: docs_policy integration examples document the full consumer journey
+ 7/24 Test #159: docs_policy integration examples document the full consumer journey .................................   Passed    0.02 sec
+      Start 192: docs_policy public proof docs keep optional evidence and fixture boundaries explicit
+ 8/24 Test #192: docs_policy public proof docs keep optional evidence and fixture boundaries explicit ................   Passed    0.02 sec
+      Start 202: coverage_audit_matrix preserves direct validation success evidence
+ 9/24 Test #202: coverage_audit_matrix preserves direct validation success evidence ..................................   Passed    0.02 sec
+      Start 207: coverage_audit_matrix is discoverable from compatibility evidence catalog
+10/24 Test #207: coverage_audit_matrix is discoverable from compatibility evidence catalog ...........................   Passed    0.02 sec
+      Start 220: coverage_audit_matrix preserves default round-trip evidence for every family
+11/24 Test #220: coverage_audit_matrix preserves default round-trip evidence for every family ........................   Passed    0.02 sec
+      Start 233: docs_policy API mainpage preserves public operation structure
+12/24 Test #233: docs_policy API mainpage preserves public operation structure .......................................   Passed    0.12 sec
+      Start 257: docs_policy Doxyfile boundary documents public headers and excludes private inputs
+13/24 Test #257: docs_policy Doxyfile boundary documents public headers and excludes private inputs ..................   Passed    0.12 sec
+      Start 268: coverage_audit_matrix preserves every required support axis
+14/24 Test #268: coverage_audit_matrix preserves every required support axis .........................................   Passed    0.02 sec
+      Start 289: coverage_audit_matrix keeps COV-GAP-001 and COV-GAP-003 closed while preserving deferred gaps
+15/24 Test #289: coverage_audit_matrix keeps COV-GAP-001 and COV-GAP-003 closed while preserving deferred gaps .......   Passed    0.02 sec
+      Start 304: docs_policy compatibility evidence points to audit and preserves proof boundaries
+16/24 Test #304: docs_policy compatibility evidence points to audit and preserves proof boundaries ...................   Passed    0.01 sec
+      Start 317: docs_policy public documentation surfaces hide planning identifiers
+17/24 Test #317: docs_policy public documentation surfaces hide planning identifiers .................................   Passed    0.02 sec
+      Start 322: coverage_audit_matrix proves installed package-consumer runtime for every family
+18/24 Test #322: coverage_audit_matrix proves installed package-consumer runtime for every family ....................   Passed    0.12 sec
+      Start 338: public_api_reality_check routes closed validation and package-consumer proof without API redesign
+19/24 Test #338: public_api_reality_check routes closed validation and package-consumer proof without API redesign ...   Passed    0.02 sec
+      Start 354: coverage_audit_matrix preserves status vocabulary and ranked gaps
+20/24 Test #354: coverage_audit_matrix preserves status vocabulary and ranked gaps ...................................   Passed    0.12 sec
+      Start 368: compatibility_evidence names direct validation matrix and Starfield compression routes
+21/24 Test #368: compatibility_evidence names direct validation matrix and Starfield compression routes ..............   Passed    0.02 sec
+      Start 380: docs_policy mainpage links audited API proof and consumer sharp edges
+22/24 Test #380: docs_policy mainpage links audited API proof and consumer sharp edges ...............................   Passed    0.01 sec
+      Start 387: coverage_audit_matrix names compatibility matrix as malformed submatrix only
+23/24 Test #387: coverage_audit_matrix names compatibility matrix as malformed submatrix only ........................   Passed    0.01 sec
+      Start 414: coverage_audit_matrix separates advisory local evidence from default proof
+24/24 Test #414: coverage_audit_matrix separates advisory local evidence from default proof ..........................   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 24
+
+Label Time Summary:
+coverage_audit_matrix    =   0.67 sec*proc (16 tests)
+doc_structure            =   0.22 sec*proc (7 tests)
+docs_policy              =   1.11 sec*proc (24 tests)
+package_consumer         =   0.12 sec*proc (1 test)
+static_boundary          =   0.26 sec*proc (3 tests)
+unit                     =   1.11 sec*proc (24 tests)
+
+Total Test time (real) =   1.14 sec
+Test project J:/libbsa/build/windows-msvc-debug-static
+    Start  86: target_format_policy package consumer examples have docs and CTest smoke gates
+1/7 Test  #86: target_format_policy package consumer examples have docs and CTest smoke gates ..........   Passed    0.02 sec
+    Start 111: target_format_policy guide preserves legal evidence and reference boundaries
+2/7 Test #111: target_format_policy guide preserves legal evidence and reference boundaries ............   Passed    0.01 sec
+    Start 287: target_format_policy guide covers every supported target format and compression route
+3/7 Test #287: target_format_policy guide covers every supported target format and compression route ...   Passed    0.12 sec
+    Start 298: target_format_policy guide documents public compatibility_warning_code values
+4/7 Test #298: target_format_policy guide documents public compatibility_warning_code values ...........   Passed    0.01 sec
+    Start 394: target_format_policy guide documents writer output publication safety
+5/7 Test #394: target_format_policy guide documents writer output publication safety ...................   Passed    0.01 sec
+    Start 436: package_consumer_smoke
+6/7 Test #436: package_consumer_smoke ..................................................................   Passed    6.29 sec
+    Start 437: package_consumer_runtime_dll_copy
+7/7 Test #437: package_consumer_runtime_dll_copy .......................................................   Passed    0.05 sec
+
+100% tests passed, 0 tests failed out of 7
+
+Label Time Summary:
+doc_structure           =   0.18 sec*proc (5 tests)
+fixture                 =   0.01 sec*proc (1 test)
+package_consumer        =   6.37 sec*proc (3 tests)
+publish                 =   0.01 sec*proc (1 test)
+static_boundary         =   0.01 sec*proc (1 test)
+target_format_policy    =   6.53 sec*proc (7 tests)
+unit                    =   0.18 sec*proc (5 tests)
+validation_policy       =   0.01 sec*proc (1 test)
+
+Total Test time (real) =   6.55 sec

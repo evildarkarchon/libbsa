@@ -1,0 +1,18 @@
+{
+  "id": "a681416f-085e-4a73-9849-651a1867fb1e",
+  "runtime": "bash",
+  "purpose": "check whether M001 LEARNINGS artifact already exists before write",
+  "script_chars": 164,
+  "started_at": "2026-05-20T04:22:14.587Z",
+  "finished_at": "2026-05-20T04:22:14.620Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 33,
+  "stdout_bytes": 23,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\a681416f-085e-4a73-9849-651a1867fb1e.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\a681416f-085e-4a73-9849-651a1867fb1e.stderr"
+}

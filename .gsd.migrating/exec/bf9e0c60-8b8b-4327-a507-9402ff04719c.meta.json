@@ -1,0 +1,18 @@
+{
+  "id": "bf9e0c60-8b8b-4327-a507-9402ff04719c",
+  "runtime": "bash",
+  "purpose": "collect all M001-k9wo8b GSD-task commit evidence touching production files",
+  "script_chars": 1257,
+  "started_at": "2026-05-20T04:19:36.949Z",
+  "finished_at": "2026-05-20T04:19:38.150Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 1201,
+  "stdout_bytes": 2808,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\bf9e0c60-8b8b-4327-a507-9402ff04719c.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\bf9e0c60-8b8b-4327-a507-9402ff04719c.stderr"
+}

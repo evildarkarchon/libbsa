@@ -1,0 +1,145 @@
+[src/formats/bsa] 31 C++ files
+  src/formats/bsa/bsa_format_detector.cpp
+  src/formats/bsa/bsa_format_detector.hpp
+  src/formats/bsa/tes3_bsa_layout.cpp
+  src/formats/bsa/tes3_bsa_layout.hpp
+  src/formats/bsa/tes3_bsa_parser.cpp
+  src/formats/bsa/tes3_bsa_parser.hpp
+  src/formats/bsa/tes3_bsa_prepare.cpp
+  src/formats/bsa/tes3_bsa_prepare.hpp
+  src/formats/bsa/tes3_bsa_reader.cpp
+  src/formats/bsa/tes3_bsa_reader.hpp
+  src/formats/bsa/tes3_bsa_serialize.cpp
+  src/formats/bsa/tes3_bsa_serialize.hpp
+  src/formats/bsa/tes3_bsa_writer.cpp
+  src/formats/bsa/tes3_bsa_writer.hpp
+  src/formats/bsa/tes4_bsa_constants.hpp
+  src/formats/bsa/tes4_bsa_layout.cpp
+  src/formats/bsa/tes4_bsa_layout.hpp
+  src/formats/bsa/tes4_bsa_parser.cpp
+  src/formats/bsa/tes4_bsa_parser.hpp
+  src/formats/bsa/tes4_bsa_payload_descriptor.cpp
+  src/formats/bsa/tes4_bsa_payload_descriptor.hpp
+  src/formats/bsa/tes4_bsa_prepare.cpp
+  src/formats/bsa/tes4_bsa_prepare.hpp
+  src/formats/bsa/tes4_bsa_reader.cpp
+  src/formats/bsa/tes4_bsa_reader.hpp
+  src/formats/bsa/tes4_bsa_serialize.cpp
+  src/formats/bsa/tes4_bsa_serialize.hpp
+  src/formats/bsa/tes4_bsa_table.cpp
+  src/formats/bsa/tes4_bsa_table.hpp
+  src/formats/bsa/tes4_bsa_writer.cpp
+  src/formats/bsa/tes4_bsa_writer.hpp
+[src/formats/ba2] 35 C++ files
+  src/formats/ba2/ba2_constants.hpp
+  src/formats/ba2/ba2_dx10_chunk_assembler.cpp
+  src/formats/ba2/ba2_dx10_chunk_assembler.hpp
+  src/formats/ba2/ba2_dx10_layout.cpp
+  src/formats/ba2/ba2_dx10_layout.hpp
+  src/formats/ba2/ba2_dx10_names.cpp
+  src/formats/ba2/ba2_dx10_names.hpp
+  src/formats/ba2/ba2_dx10_parser.cpp
+  src/formats/ba2/ba2_dx10_parser.hpp
+  src/formats/ba2/ba2_dx10_prepare.cpp
+  src/formats/ba2/ba2_dx10_prepare.hpp
+  src/formats/ba2/ba2_dx10_reader.cpp
+  src/formats/ba2/ba2_dx10_reader.hpp
+  src/formats/ba2/ba2_dx10_records.cpp
+  src/formats/ba2/ba2_dx10_records.hpp
+  src/formats/ba2/ba2_dx10_serialize.cpp
+  src/formats/ba2/ba2_dx10_serialize.hpp
+  src/formats/ba2/ba2_dx10_snapshot_builder.cpp
+  src/formats/ba2/ba2_dx10_snapshot_builder.hpp
+  src/formats/ba2/ba2_dx10_writer.cpp
+  src/formats/ba2/ba2_dx10_writer.hpp
+  src/formats/ba2/ba2_format_detector.cpp
+  src/formats/ba2/ba2_format_detector.hpp
+  src/formats/ba2/ba2_gnrl_layout.cpp
+  src/formats/ba2/ba2_gnrl_layout.hpp
+  src/formats/ba2/ba2_gnrl_parser.cpp
+  src/formats/ba2/ba2_gnrl_parser.hpp
+  src/formats/ba2/ba2_gnrl_prepare.cpp
+  src/formats/ba2/ba2_gnrl_prepare.hpp
+  src/formats/ba2/ba2_gnrl_reader.cpp
+  src/formats/ba2/ba2_gnrl_reader.hpp
+  src/formats/ba2/ba2_gnrl_serialize.cpp
+  src/formats/ba2/ba2_gnrl_serialize.hpp
+  src/formats/ba2/ba2_gnrl_writer.cpp
+  src/formats/ba2/ba2_gnrl_writer.hpp
+[src/detail] 28 C++ files
+  src/detail/archive_path.cpp
+  src/detail/archive_path.hpp
+  src/detail/atomic_file_ops.hpp
+  src/detail/bethesda_hash.cpp
+  src/detail/bethesda_hash.hpp
+  src/detail/binary_io.cpp
+  src/detail/binary_io.hpp
+  src/detail/byte_vector.hpp
+  src/detail/compression_router.cpp
+  src/detail/compression_router.hpp
+  src/detail/deflate_codec.cpp
+  src/detail/deflate_codec.hpp
+  src/detail/host_file.cpp
+  src/detail/host_file.hpp
+  src/detail/host_file_path.cpp
+  src/detail/host_file_path.hpp
+  src/detail/lz4_block_codec.cpp
+  src/detail/lz4_block_codec.hpp
+  src/detail/lz4_frame_codec.cpp
+  src/detail/lz4_frame_codec.hpp
+  src/detail/parallel_work.cpp
+  src/detail/parallel_work.hpp
+  src/detail/parser_primitives.cpp
+  src/detail/parser_primitives.hpp
+  src/detail/payload_stream.cpp
+  src/detail/payload_stream.hpp
+  src/detail/writer_publish.cpp
+  src/detail/writer_publish.hpp
+[src/texture] 4 C++ files
+  src/texture/dds_layout.cpp
+  src/texture/dds_layout.hpp
+  src/texture/directxtex_analyzer.cpp
+  src/texture/directxtex_analyzer.hpp
+
+Public header include scan for forbidden/leaky deps:
+  include/libbsa/archive.hpp: ['DXGI', 'lz4', 'filesystem']
+  include/libbsa/export.hpp: clean
+  include/libbsa/libbsa.hpp: clean
+  include/libbsa/result.hpp: ['expected']
+  include/libbsa/validation.hpp: ['expected', 'filesystem']
+  include/libbsa/version.hpp: clean
+  include/libbsa/writer.hpp: ['lz4', 'expected']
+
+Internal codec/texture files include scan:
+  *deflate*:
+    src/detail/deflate_codec.cpp
+    src/detail/deflate_codec.hpp
+  *lz4*:
+    src/detail/lz4_block_codec.cpp
+    src/detail/lz4_block_codec.hpp
+    src/detail/lz4_frame_codec.cpp
+    src/detail/lz4_frame_codec.hpp
+  *dds*:
+    src/texture/dds_layout.cpp
+    src/texture/dds_layout.hpp
+  *dx10*:
+    src/formats/ba2/ba2_dx10_chunk_assembler.cpp
+    src/formats/ba2/ba2_dx10_chunk_assembler.hpp
+    src/formats/ba2/ba2_dx10_layout.cpp
+    src/formats/ba2/ba2_dx10_layout.hpp
+    src/formats/ba2/ba2_dx10_names.cpp
+    src/formats/ba2/ba2_dx10_names.hpp
+    src/formats/ba2/ba2_dx10_parser.cpp
+    src/formats/ba2/ba2_dx10_parser.hpp
+    src/formats/ba2/ba2_dx10_prepare.cpp
+    src/formats/ba2/ba2_dx10_prepare.hpp
+    src/formats/ba2/ba2_dx10_reader.cpp
+    src/formats/ba2/ba2_dx10_reader.hpp
+    src/formats/ba2/ba2_dx10_records.cpp
+    src/formats/ba2/ba2_dx10_records.hpp
+    src/formats/ba2/ba2_dx10_serialize.cpp
+    src/formats/ba2/ba2_dx10_serialize.hpp
+    src/formats/ba2/ba2_dx10_snapshot_builder.cpp
+    src/formats/ba2/ba2_dx10_snapshot_builder.hpp
+    src/formats/ba2/ba2_dx10_writer.cpp
+    src/formats/ba2/ba2_dx10_writer.hpp

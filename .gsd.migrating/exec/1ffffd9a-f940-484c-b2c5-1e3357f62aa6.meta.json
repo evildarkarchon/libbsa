@@ -1,0 +1,18 @@
+{
+  "id": "1ffffd9a-f940-484c-b2c5-1e3357f62aa6",
+  "runtime": "bash",
+  "purpose": "inspect working tree non-gsd changes for milestone verification context",
+  "script_chars": 509,
+  "started_at": "2026-05-20T04:18:56.139Z",
+  "finished_at": "2026-05-20T04:18:56.380Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 241,
+  "stdout_bytes": 9562,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\1ffffd9a-f940-484c-b2c5-1e3357f62aa6.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\1ffffd9a-f940-484c-b2c5-1e3357f62aa6.stderr"
+}

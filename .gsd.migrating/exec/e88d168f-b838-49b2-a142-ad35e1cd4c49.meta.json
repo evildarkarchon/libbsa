@@ -1,0 +1,18 @@
+{
+  "id": "e88d168f-b838-49b2-a142-ad35e1cd4c49",
+  "runtime": "bash",
+  "purpose": "Repository inventory for M001 coverage audit",
+  "script_chars": 1253,
+  "started_at": "2026-05-20T04:29:25.647Z",
+  "finished_at": "2026-05-20T04:29:25.848Z",
+  "exit_code": 1,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 201,
+  "stdout_bytes": 0,
+  "stderr_bytes": 234,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\e88d168f-b838-49b2-a142-ad35e1cd4c49.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\e88d168f-b838-49b2-a142-ad35e1cd4c49.stderr"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "952915c7-33f2-46ed-b40f-1f54a78fde21",
+  "runtime": "bash",
+  "purpose": "locate GSD decision artifacts for M001 closeout",
+  "script_chars": 252,
+  "started_at": "2026-05-20T04:21:39.048Z",
+  "finished_at": "2026-05-20T04:21:39.165Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 117,
+  "stdout_bytes": 53,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\952915c7-33f2-46ed-b40f-1f54a78fde21.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\952915c7-33f2-46ed-b40f-1f54a78fde21.stderr"
+}

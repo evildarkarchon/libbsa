@@ -1,0 +1,177 @@
+--- .gsd/milestones/M001-k9wo8b/M001-k9wo8b-ROADMAP.md ---
+# M001-k9wo8b: Audit and Stabilization Baseline
+## Success Criteria
+- A truthful coverage/gap matrix exists for all current archive families and agreed capability axes.
+- The public API capability story is audited against real headers, docs, and package-consumer usage.
+- A risk-bounded tranche of highest-risk audit gaps is fixed with durable proof.
+- Remaining gaps are explicitly deferred with rationale and future ownership.
+- Default build/test/package-consumer verification passes without requiring local copyrighted fixtures.
+- TES5Edit remains untouched and read-only.
+## Slices
+- [x] **S01: S01** `risk:high` `depends:[]`
+- [x] **S02: S02** `risk:high` `depends:[]`
+- [x] **S03: S03** `risk:high` `depends:[]`
+- [x] **S04: S04** `risk:medium` `depends:[]`
+- [x] **S05: S05** `risk:medium` `depends:[]`
+## Boundary Map
+### S01 -> S02
+- Coverage/gap matrix schema and initial rows for all current archive families and capability axes.
+- Ranked gap list with identifiers, risk level, evidence source, and likely remediation path.
+- Existing code, tests, docs, generated fixture targets, package-consumer examples, and requirements R001-R009.
+### S01 -> S03
+- Highest-risk fixture, round-trip, or capability gaps selected for M001 remediation.
+- Matrix proof references that show which archive families and capability axes need tests or fixes.
+- Existing generated fixtures, writer tests, reader tests, compatibility policy docs, and matrix findings.
+### S01 and S03 -> S04
+- Error/validation/compatibility-warning gaps observed by the audit or encountered while fixing coverage gaps.
+- Behavior-specific tests that expose inconsistent public result/error behavior.
+- Public result/error model, validation API, reader/writer failure paths, and fixed coverage gaps.
+### S02 and S03 and S04 -> S05
+- API audit conclusions, fixed gap proof, stabilized diagnostics, and updated documentation or policy checks.
+- All slice outputs to run integrated build/test/package-consumer verification and finalize fixed/deferred matrix status.
+
+--- .gsd/milestones/M001-k9wo8b/slices/S01/S01-SUMMARY.md ---
+# S01: Coverage Audit Matrix
+## What Happened
+## Verification
+## Requirements Advanced
+- R006 — S01 documented `COV-GAP-001`, the validation API partial-proof gap for variant-specific success rows, as input to the S04 error/validation stabilization pass.
+- R009 — S01 kept TES5Edit as reference-only and based default proof on committed/generated fixtures, always-on tests, package-consumer checks, and public docs rather than mutable TES5Edit data.
+## Requirements Validated
+- R001 — `docs/coverage-audit-matrix.md` now provides the durable coverage/gap matrix, and closeout verification passed docs smoke checks plus 7/7 focused `coverage_audit_matrix` CTest policy tests.
+- R002 — The matrix includes TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10, and the focused policy suite includes a test requiring all four current archive families.
+## New Requirements Surfaced
+- No new formal requirements surfaced; lower-risk work is captured as `COV-GAP-001` through `COV-GAP-004`.
+## Requirements Invalidated or Re-scoped
+## Operational Readiness
+## Deviations
+## Known Limitations
+## Follow-ups
+## Files Created/Modified
+- `docs/coverage-audit-matrix.md` — New public human-first support-truth matrix with status vocabulary, evidence policy, family/axis rows, advisory local evidence section, malformed-submatrix clarification, ranked gaps, and maintenance rule
+- `docs/compatibility-evidence.md` — Linked the coverage audit matrix from the compatibility evidence catalog.
+- `tests/unit/coverage_audit_matrix_docs_tests.cpp` — New Catch2 docs-policy tests enforcing required families, axes, status/ranked gaps, advisory-evidence separation, malformed-submatrix wording, public-doc hygiene, and discoverability.
+- `tests/CMakeLists.txt` — Registered the coverage audit matrix docs-policy test source with `libbsa_tests`.
+
+--- .gsd/milestones/M001-k9wo8b/slices/S02/S02-SUMMARY.md ---
+# S02: Public API Reality Check
+## What Happened
+## Verification
+## Requirements Advanced
+- R009 — Advanced by documenting and testing the package-consumer public API proof story through umbrella-header examples, installed target smoke, and public-doc policy checks.
+- R001 — Preserved by keeping support claims tied to coverage-matrix proof and not overstating archive-family behavior.
+- R002 — Preserved by keeping package-consumer/default proof independent of copyrighted local fixtures and mutable TES5Edit data.
+- R006 — Identified as supporting validation-proof work still routed to S04 rather than prematurely closed by S02 documentation changes.
+## Requirements Validated
+## New Requirements Surfaced
+## Requirements Invalidated or Re-scoped
+## Operational Readiness
+## Deviations
+## Known Limitations
+## Follow-ups
+## Files Created/Modified
+- `docs/public-api-reality-check.md` — New audit document mapping public API flows to proof status, sharp edges, helper decisions, and COV-GAP routing.
+- `docs/coverage-audit-matrix.md` — Updated to keep COV-GAP-003 open and routed to S05 for every-family installed-package runtime proof.
+- `docs/api-mainpage.md` — Linked the audited public API proof story and evidence boundaries from the high-level API page.
+- `docs/integration-examples.md` — Expanded consumer guidance for reader lookup/extraction, `extract_bytes`, bulk extraction, validation, error-code branching, writer finalization, BA2 DX10 lifecycle, and path boundaries.
+- `docs/compatibility-evidence.md` — Linked the public API reality-check and preserved default-versus-optional evidence policy.
+- `tests/package-consumer/main.cpp` — Strengthened installed-package compile smoke for umbrella-header reader lookup/extraction and missing-path error-path behavior.
+- `tests/unit/docs_policy_tests.cpp` — Added policy checks enforcing public API audit discoverability, core journey docs, optional evidence boundaries, and documentation hygiene.
+- `tests/unit/target_format_policy_tests.cpp` — Added package-consumer and fixture-boundary policy checks plus worker-count/public guide enforcement.
+- `test.cmd` — Added minimal Windows cmd shim for `test -s` verification gate usage.
+- `grep.cmd` — Added minimal Windows cmd shim for `grep -Fq` verification gate usage.
+- `.gsd/DECISIONS.md` — Regenerated after recording D010 public API facade/helper decision.
+
+--- .gsd/milestones/M001-k9wo8b/slices/S03/S03-SUMMARY.md ---
+# S03: Fixture and Round-trip Gap Closure
+## What Happened
+## Verification
+## Requirements Advanced
+- R001 — Strengthened the already-validated coverage matrix contract by adding docs-policy guardrails for default fixture/round-trip evidence.
+- R002 — Kept all four current archive families represented in the default proof sweep and policy tests.
+- R009 — Preserved the TES5Edit read-only boundary by relying only on committed/generated legal fixtures and tracked public documentation.
+## Requirements Validated
+- R004 — Validated via `docs/compatibility-evidence.md`, `tests/unit/coverage_audit_matrix_docs_tests.cpp`, regenerated fixture targets, and closeout gsd_exec `32ead1c3-4c7a-46d1-a9b4-f710429f00aa` passing 15/15 checks across docs smoke, fi
+- R005 — Validated by preserving generated fixture CI proof, writer reopen/round-trip proof, manifest validation, and documented optional local corpus paths as separate advisory evidence in the compatibility evidence catalog and docs-policy
+## New Requirements Surfaced
+- None.
+## Requirements Invalidated or Re-scoped
+## Operational Readiness
+## Deviations
+## Known Limitations
+## Follow-ups
+## Files Created/Modified
+- `docs/compatibility-evidence.md` — Added the public default fixture and round-trip proof sweep with default versus optional evidence boundaries.
+- `tests/unit/coverage_audit_matrix_docs_tests.cpp` — Added docs-policy assertions guarding round-trip/reopen and fixture/manifest evidence across current archive families.
+- `.gsd/REQUIREMENTS.md` — Updated R004 and R005 to validated through DB-backed requirement updates.
+
+--- .gsd/milestones/M001-k9wo8b/slices/S04/S04-SUMMARY.md ---
+# S04: Error and Validation Stabilization
+## What Happened
+## Verification
+- `cmake --preset windows-msvc-debug-static` — exit 0; configure completed and generated `build/windows-msvc-debug-static`.
+- `cmake --build --preset windows-msvc-debug-static --target libbsa_tests` — exit 0; built `libbsa.lib` and `libbsa_tests.exe`.
+- `ctest --preset windows-msvc-debug-static -R coverage_audit_matrix --output-on-failure` — exit 0; 11/11 docs-policy tests passed, including direct validation success evidence and COV-GAP-001 closed-policy checks.
+- `ctest --preset windows-msvc-debug-static -L validation_api --output-on-failure` — exit 0; 8/8 validation API tests passed, including generated fixtures, expected-variant mismatch warning, writer-produced archives, and Starfield BA2 v3 co
+- `ctest --preset windows-msvc-debug-static -R compatibility_warning --output-on-failure` — exit 0; 5/5 compatibility warning/policy tests passed.
+## Requirements Advanced
+- R001 — Updated the durable coverage/gap matrix and docs-policy guards so validation evidence status remains truthful after COV-GAP-001 closure.
+- R004 — Completed a risk-bounded high-risk validation evidence gap with direct tests and documentation proof.
+- R009 — S04 work stayed outside `TES5Edit/`; no reference submodule content was edited, formatted, vendored, or used as mutable fixture data.
+## Requirements Validated
+- R006 — Fresh closeout verification `b97534ad-8a07-4c3b-86fc-6b1a2fba4577` passed configure, build, 11/11 coverage matrix docs-policy tests, 8/8 validation API tests, and 5/5 compatibility warning tests after R006 was updated to validated.
+## New Requirements Surfaced
+- None.
+## Requirements Invalidated or Re-scoped
+## Operational Readiness
+## Deviations
+## Known Limitations
+## Follow-ups
+## Files Created/Modified
+- `tests/unit/validation_api_tests.cpp` — Added public validation success proof for generated archive routes, writer-produced Starfield BA2 v3 compression method routes, and expected-variant mismatch warning behavior.
+- `tests/unit/coverage_audit_matrix_docs_tests.cpp` — Added docs-policy guards for direct validation evidence, COV-GAP-001 closure, optional-local-corpus boundaries, and public API routing.
+- `docs/coverage-audit-matrix.md` — Updated validation API behavior rows and ranked gaps so COV-GAP-001 is closed while remaining gaps stay scoped/deferred.
+- `docs/compatibility-evidence.md` — Documented direct validation success matrix and Starfield BA2 v3 method 0/method 3 proof in the default evidence sweep.
+- `docs/public-api-reality-check.md` — Updated public API reality story to reflect direct validation proof without helper/API redesign.
+- `.gsd/REQUIREMENTS.md` — Regenerated by GSD after updating R006 validation status and proof.
+
+--- .gsd/milestones/M001-k9wo8b/slices/S05/S05-SUMMARY.md ---
+# S05: S05
+## What Happened
+## Verification
+## Requirements Advanced
+- R001 — Finalized the matrix with closed/deferred gap status and policy tests.
+- R003 — Finalized the public API story with package-consumer runtime evidence and no major facade redesign.
+- R005 — Added installed package-consumer runtime proof to the layered default/advisory evidence model.
+- R007 — Implemented and verified installed/exported target runtime proof across all current archive families.
+- R008 — Kept dependency-light public header and C++20 boundaries covered by docs/static-boundary tests.
+- R009 — Preserved the TES5Edit read-only boundary and refreshed evidence without mutating the submodule.
+## Requirements Validated
+- R001 — Focused coverage_audit_matrix label passed 16/16 and final docs close COV-GAP-001/COV-GAP-003 while deferring only COV-GAP-002/COV-GAP-004.
+- R002 — Full default CTest passed 438/438 and package_consumer_smoke covers TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 runtime archive paths.
+- R003 — Public API reality-check docs and policy labels passed; S05 closes package-consumer proof without API redesign.
+- R004 — Full default CTest passed after the S03/S04 remediation tranche, preserving fixed gap proof.
+- R005 — Full default CTest passed with only opt-in local corpus comparisons skipped; package_consumer label passed 4/4 and docs-policy preserves advisory boundaries.
+- R006 — Full default CTest passed after S04 validation/error stabilization; validation and compatibility warning policy coverage remains in the suite.
+- R007 — Package-consumer label passed 4/4, including installed runtime archive creation/open/validate/extract smoke and runtime DLL copy.
+- R008 — Full CTest plus docs_policy and target_format_policy labels passed, including public API/static-boundary checks.
+- R009 — Prior T03 git-status evidence showed no TES5Edit status lines, and closeout non-git check found zero files changed after that status evidence.
+## New Requirements Surfaced
+- None.
+## Requirements Invalidated or Re-scoped
+## Operational Readiness
+## Deviations
+## Known Limitations
+## Follow-ups
+## Files Created/Modified
+- `tests/package-consumer/main.cpp` — Expanded installed package smoke to create, reopen, validate, and extract representative archives for all current families through the umbrella public API.
+- `docs/coverage-audit-matrix.md` — Finalized M001 support-truth statuses: COV-GAP-001/COV-GAP-003 closed and COV-GAP-002/COV-GAP-004 deferred.
+- `docs/public-api-reality-check.md` — Updated public API audit conclusion to include closed installed-package runtime proof and no major redesign.
+- `docs/compatibility-evidence.md` — Aligned default package-consumer proof with optional real-game/BSArchPro advisory evidence.
+- `docs/integration-examples.md` — Documented the package-consumer journey and runtime proof expectations.
+- `docs/api-mainpage.md` — Linked the audited API proof and consumer-facing support story.
+- `tests/unit/docs_policy_tests.cpp` — Added/updated policy checks for docs evidence boundaries and package-consumer proof.
+- `tests/unit/coverage_audit_matrix_docs_tests.cpp` — Added/updated policy checks for final matrix statuses, closed/former gaps, and installed package-consumer proof.
+- `tests/unit/target_format_policy_tests.cpp` — Added/updated target-format policy checks for package-consumer, optional evidence, and TES5Edit boundaries.
+- `.gsd/REQUIREMENTS.md` — Regenerated by requirement updates marking R003/R007/R008/R009 validated and refreshing R001/R005 validation notes.
+

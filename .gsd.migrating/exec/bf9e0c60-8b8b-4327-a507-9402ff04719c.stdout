@@ -1,0 +1,44 @@
+candidate_commit_count=9
+production_commit=0cec8651a4b1f33516b3f3e27a1262d332f75fbb subject=docs: Closed COV-GAP-003 in public docs and policy tests by documenting… non_gsd_files=8
+  file=docs/api-mainpage.md
+  file=docs/compatibility-evidence.md
+  file=docs/coverage-audit-matrix.md
+  file=docs/integration-examples.md
+  file=docs/public-api-reality-check.md
+  file=tests/unit/coverage_audit_matrix_docs_tests.cpp
+  file=tests/unit/docs_policy_tests.cpp
+  file=tests/unit/target_format_policy_tests.cpp
+production_commit=81b23d8c8bea201377b1deb7b2a9868ba8c95aaf subject=feat: Added a fixture-free installed package runtime smoke that writes,… non_gsd_files=1
+  file=tests/package-consumer/main.cpp
+production_commit=2832256e9b131ebd8bcb3ba16e35893a25cc2ac3 subject=docs: Updated the public validation evidence docs and docs-policy guard… non_gsd_files=4
+  file=docs/compatibility-evidence.md
+  file=docs/coverage-audit-matrix.md
+  file=docs/public-api-reality-check.md
+  file=tests/unit/coverage_audit_matrix_docs_tests.cpp
+production_commit=1aaf316f67e0db4d4e702d18e7fb4c62c789c73a subject=test: Extended public validation API tests to prove expanded generated… non_gsd_files=1
+  file=tests/unit/validation_api_tests.cpp
+production_commit=33ddafa1811eb5fba33f182115d6706d5d561039 subject=docs: Added docs-policy assertions that lock round-trip fixture evidenc… non_gsd_files=1
+  file=tests/unit/coverage_audit_matrix_docs_tests.cpp
+production_commit=d71da0434d4ea34352bc75c018399872f4107b26 subject=feat: Documented the default generated-fixture and writer round-trip pr… non_gsd_files=10
+  file=docs/api-mainpage.md
+  file=docs/compatibility-evidence.md
+  file=docs/coverage-audit-matrix.md
+  file=docs/integration-examples.md
+  file=docs/public-api-reality-check.md
+  file=grep.cmd
+  file=test.cmd
+  file=tests/package-consumer/main.cpp
+  file=tests/unit/docs_policy_tests.cpp
+  file=tests/unit/target_format_policy_tests.cpp
+production_commit=a94438aa230447a35f0f208e44ebdbdcefd53c88 subject=test: Added Catch2 policy coverage that locks the coverage audit matrix… non_gsd_files=2
+  file=tests/CMakeLists.txt
+  file=tests/unit/coverage_audit_matrix_docs_tests.cpp
+production_commit=93713deb0182387424c7718807d288e08c3439f1 subject=chore: Strengthened TES3 fixture manifest validation and regenerated TE… non_gsd_files=6
+  file=tests/fixtures/generated/archives/tes3_malformed_manifest.json
+  file=tests/fixtures/generated/archives/tes3_success_manifest.json
+  file=tests/fixtures/generated/archives/tes3_writer_canonical_manifest.json
+  file=tests/fixtures/generated/generate_tes3_bsa_fixtures.cpp
+  file=tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp
+  file=tests/fixtures/generated/validate_fixture_manifests.py
+production_commit_count=8
+production_file_touch_count=33

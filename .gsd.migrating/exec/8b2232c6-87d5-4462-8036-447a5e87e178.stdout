@@ -1,0 +1,12 @@
+100% tests passed, 0 tests failed out of 438
+Total Test time (real) =  27.26 sec
+The following tests did not run:
+	247 - local game fixtures are opt-in (Skipped)
+	284 - BSArchPro-derived expected fixture comparisons are opt-in (Skipped)
+100% tests passed, 0 tests failed out of 438
+compatibility_warning                   =   0.08 sec*proc (4 tests)
+coverage_audit_matrix                   =   0.57 sec*proc (16 tests)
+docs_policy                             =   0.93 sec*proc (24 tests)
+package_consumer                        =   7.05 sec*proc (4 tests)
+target_format_policy                    =   7.20 sec*proc (7 tests)
+validation_api                          =   0.49 sec*proc (8 tests)

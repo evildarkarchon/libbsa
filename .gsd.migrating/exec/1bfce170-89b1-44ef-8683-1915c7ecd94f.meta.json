@@ -1,0 +1,18 @@
+{
+  "id": "1bfce170-89b1-44ef-8683-1915c7ecd94f",
+  "runtime": "bash",
+  "purpose": "Source module map and dependency boundary scan for M001",
+  "script_chars": 1098,
+  "started_at": "2026-05-20T04:30:27.850Z",
+  "finished_at": "2026-05-20T04:30:27.936Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 86,
+  "stdout_bytes": 5462,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\1bfce170-89b1-44ef-8683-1915c7ecd94f.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\1bfce170-89b1-44ef-8683-1915c7ecd94f.stderr"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "83b52c73-7b5a-4aee-8f67-20d62d30232e",
+  "runtime": "bash",
+  "purpose": "verify production file changes excluding GSD state directories",
+  "script_chars": 721,
+  "started_at": "2026-05-20T04:19:09.052Z",
+  "finished_at": "2026-05-20T04:19:09.278Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 226,
+  "stdout_bytes": 2709,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\83b52c73-7b5a-4aee-8f67-20d62d30232e.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\83b52c73-7b5a-4aee-8f67-20d62d30232e.stderr"
+}

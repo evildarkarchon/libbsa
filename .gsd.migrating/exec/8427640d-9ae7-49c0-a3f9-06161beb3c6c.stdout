@@ -1,0 +1,20 @@
+presets_file=present
+configurePresets:
+  windows-msvc-debug-static
+  windows-msvc-debug-shared
+  windows-msvc-release-static
+  windows-msvc-release-shared
+  windows-msvc-asan-static
+buildPresets:
+  windows-msvc-debug-static
+  windows-msvc-debug-shared
+  windows-msvc-release-static
+  windows-msvc-release-shared
+  windows-msvc-asan-static
+testPresets:
+  windows-msvc-debug-static
+  windows-msvc-debug-shared
+  windows-msvc-release-static
+  windows-msvc-release-shared
+  windows-msvc-asan-static
+build_dirs:

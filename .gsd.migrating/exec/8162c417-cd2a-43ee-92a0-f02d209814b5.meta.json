@@ -1,0 +1,18 @@
+{
+  "id": "8162c417-cd2a-43ee-92a0-f02d209814b5",
+  "runtime": "bash",
+  "purpose": "summarize CMake preset binary dirs",
+  "script_chars": 316,
+  "started_at": "2026-05-20T04:20:35.069Z",
+  "finished_at": "2026-05-20T04:20:35.200Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 131,
+  "stdout_bytes": 1157,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\8162c417-cd2a-43ee-92a0-f02d209814b5.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\8162c417-cd2a-43ee-92a0-f02d209814b5.stderr"
+}

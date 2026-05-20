@@ -1,0 +1,18 @@
+{
+  "id": "cd8bad27-e754-4f03-aa72-f41c5ba9cc12",
+  "runtime": "bash",
+  "purpose": "Existing build/test availability check for M001 research",
+  "script_chars": 392,
+  "started_at": "2026-05-20T04:31:35.891Z",
+  "finished_at": "2026-05-20T04:31:36.128Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 237,
+  "stdout_bytes": 6862,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\cd8bad27-e754-4f03-aa72-f41c5ba9cc12.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\cd8bad27-e754-4f03-aa72-f41c5ba9cc12.stderr"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "ff2dd54c-ce70-40ad-a24f-9d044e0237e3",
+  "runtime": "bash",
+  "purpose": "freshness and artifact presence check for M001-k9wo8b validation closeout",
+  "script_chars": 1896,
+  "started_at": "2026-05-20T04:20:04.012Z",
+  "finished_at": "2026-05-20T04:20:04.886Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 874,
+  "stdout_bytes": 2366,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\ff2dd54c-ce70-40ad-a24f-9d044e0237e3.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\ff2dd54c-ce70-40ad-a24f-9d044e0237e3.stderr"
+}

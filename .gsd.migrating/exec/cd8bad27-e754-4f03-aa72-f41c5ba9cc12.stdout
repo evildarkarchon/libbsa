@@ -1,0 +1,84 @@
+build/windows-msvc-debug-static exists
+MSBuild version 18.6.3+84d3e95b4 for .NET Framework
+MSBUILD : error MSB1009: Project file does not exist.
+Switch: help.vcxproj
+Test project J:/libbsa/build/windows-msvc-debug-static
+  Test   #1: payload_stream rejects partial sink writes and zero chunk size
+  Test   #2: bulk_extraction records per-entry failures without aborting siblings
+  Test   #3: tes3_bsa_lookup helper normalizes variants over parsed entries
+  Test   #4: dds_layout plans DX10 chunks from default policy and byte caps
+  Test   #5: compatibility_warning reports BA2 target family mismatch
+  Test   #6: BA2 GNRL writer keeps raw disk hashing byte-stable with memory entries
+  Test   #7: BA2 GNRL writer rejects duplicate canonical archive paths at write time
+  Test   #8: archive_reader open rejects empty host paths
+  Test   #9: public_include_boundary DX10 writer contract exposes no raw override surface
+  Test  #10: docs_policy public API audit is discoverable and routes proof gaps
+  Test  #11: compression_router rejects unsupported explicit enum values
+  Test  #12: coverage_audit_matrix lists every current archive family
+  Test  #13: binary_io reader reads checked little-endian fields
+  Test  #14: parser_preparer_seam_policy requires dedicated TES4 parser seams
+  Test  #15: BA2 GNRL writer resolves non-ASCII UTF-8 output host paths
+  Test  #16: compatibility_warning reports BSA embedded name compatibility risk
+  Test  #17: ba2_gnrl_end_table opens archives with payloads before the filename table
+  Test  #18: tes3_bsa_writer copies memory entries into writer-owned state
+  Test  #19: host_file writer host-path inventory covers source output finalization and dedupe dispositions
+  Test  #20: writer_execution_options defaults to serial worker count
+  Test  #21: ba2_writer_execution duplicate DX10 canonical paths return format_error without partial output
+  Test  #22: bounded_memory_policy public API boundary hides private BA2 writer helpers
+  Test  #23: payload_stream validates archive size and stream ranges
+  Test  #24: payload_stream transfers exact bytes across chunk size 17
+  Test  #25: byte_vector helpers translate impossible byte-buffer growth
+  Test  #26: ba2_dx10_detector rejects aggregate texture chunk counts above the metadata limit
+  Test  #27: tes3_bsa_entries materializes large non-overlapping spans outside payload order
+  Test  #28: validation_policy CTest label taxonomy is documented and backed by selectable tests
+  Test  #29: TES4 BSA writer refuses to overwrite existing output when overwrite_existing is false
+  Test  #30: BA2 GNRL writer keeps compressed disk entries byte-stable with memory entries
+  Test  #31: benchmark_policy static boundary keeps report generation out of default CTest timing gates
+  Test  #32: tes3_bsa_detector leaves unrelated bytes unsupported
+  Test  #33: lz4_codec rejects malformed frame and raw block payloads
+  Test  #34: validation_policy requires-game-fixture label is selectable without local archives
+  Test  #35: host_file reads exact whole-file payloads
+  Test  #36: BA2 GNRL writer raw Fallout 4 output reopens with end filename table
+  Test  #37: host_file reports allocation limits through results
+  Test  #38: export_surface public emitted APIs are explicitly annotated
+  Test  #39: ba2_gnrl_metadata lists manifest-backed records from filename tables
+  Test  #40: tes4_bsa_malformed_open rejects malformed open-phase fixtures with stable error codes
+  Test  #41: BA2 DX10 writer shares duplicate DDS chunk offsets when deduplicate_payloads = true
+  Test  #42: TES4 BSA writer dedupes matching disk-backed raw payloads
+  Test  #43: BA2 GNRL writer all-compressed policy routes through target compression methods
+  Test  #44: ba2_dx10 aggregate overflow fixtures are unreachable under record field bounds
+  Test  #45: host_path_correctness_boundary non-ASCII host path exercises reader dispatch surface
+  Test  #46: docs_policy static boundary keeps public API documentation optional
+  Test  #47: writer_publish refuses an existing destination before writing when overwrite is disabled
+  Test  #48: ba2_gnrl_lookup normalizes variants and reports stable missing-path behavior
+  Test  #49: tes3_bsa_writer preserves caller-owned temp-name sibling files
+  Test  #50: parser archive-file opens use the shared host_file seam
+  Test  #51: validation_policy verification matrix contract keeps planning summaries truthful
+  Test  #52: BA2 DX10 writer keeps duplicate DDS chunk offsets distinct when deduplicate_payloads = false
+  Test  #53: ba2_dx10_detector opens sparse archive without reading the payload gap
+  Test  #54: tes4_bsa_detection opens byte-driven TES4-family BSA variants
+  Test  #55: validation_policy verification matrix contract keeps fixture policy truthful
+  Test  #56: ba2_dx10_compressed_chunk_fallbacks preserve reconstructed fixture bytes
+  Test  #57: tes3_bsa_malformed returns format_error for oversized declared metadata without exceptions
+  Test  #58: lz4_codec frame exact-to-sink rejects malformed and overproducing frames
+  Test  #59: tes4_bsa_malformed_open rejects metadata counts above parser limits
+  Test  #60: ba2_writer_execution DX10 worker_count preserves starfield v3 raw LZ4 texture output
+  Test  #61: BA2 GNRL writer reports invalid archive paths as invalid arguments
+  Test  #62: tes4_bsa_detection rejects non-BSA bytes regardless of host extension
+  Test  #63: tes4_bsa_extract_bytes matches extract path errors for invalid and missing paths
+  Test  #64: bounded_memory_policy targeted writer stages avoid byte-at-a-time disk source accumulation
+  Test  #65: lz4_codec frame exact-to-sink writes bounded chunks
+  Test  #66: bulk_extraction streams large raw archive families through bounded chunks
+  Test  #67: validation_policy verification matrix contract keeps release package proof inside CTest
+  Test  #68: archive_reader open reports I/O errors for missing host files
+  Test  #69: tes3_bsa_writer replaces existing output only when overwrite is enabled
+  Test  #70: deflate_codec round trips exact-size payloads
+  Test  #71: tes3_bsa_writer resolves non-ASCII UTF-8 disk source and output host paths
+  Test  #72: TES4 BSA writer leaves embedded names absent by default and when explicitly disabled
+  Test  #73: TES4 BSA writer gates parseable DDS texture formats by target profile
+  Test  #74: bulk_extraction source policy documents raw chunking and compressed allocation boundaries
+  Test  #75: host_file helper surface exposes the shared host_file_path contract
+  Test  #76: TES4 BSA writer keeps compressed disk entries byte-stable with memory entries
+  Test  #77: tes4_bsa_v104_extract skips embedded names before raw and deflate payloads
+  Test  #78: bounded_memory_policy static boundary keeps BA2 writer implementations independent of TES5Edit
+  Test  #79: tes4_bsa_metadata exposes archive-level open state

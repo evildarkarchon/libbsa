@@ -1,0 +1,129 @@
+--- commit 0cec865 ---
+0cec8651a4b1f33516b3f3e27a1262d332f75fbb
+docs: Closed COV-GAP-003 in public docs and policy tests by documenting…
+- docs/coverage-audit-matrix.md
+- docs/public-api-reality-check.md
+- docs/compatibility-evidence.md
+- docs/integration-examples.md
+- docs/api-mainpage.md
+- tests/unit/docs_policy_tests.cpp
+- tests/unit/coverage_audit_matrix_docs_tests.cpp
+- tests/unit/target_format_policy_tests.cpp
+
+GSD context:
+- Milestone: M001-k9wo8b - Audit and Stabilization Baseline
+- Slice: S05
+- Task: T02 - Closed COV-GAP-003 in public docs and policy tests by documenting and enforcing installed package-consumer archive runtime proof for TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10.
+
+GSD-Task: S05/T02
+
+files_non_gsd=8
+file: docs/api-mainpage.md
+file: docs/compatibility-evidence.md
+file: docs/coverage-audit-matrix.md
+file: docs/integration-examples.md
+file: docs/public-api-reality-check.md
+file: tests/unit/coverage_audit_matrix_docs_tests.cpp
+file: tests/unit/docs_policy_tests.cpp
+file: tests/unit/target_format_policy_tests.cpp
+--- commit 81b23d8 ---
+81b23d8c8bea201377b1deb7b2a9868ba8c95aaf
+feat: Added a fixture-free installed package runtime smoke that writes,…
+- tests/package-consumer/main.cpp
+
+GSD context:
+- Milestone: M001-k9wo8b - Audit and Stabilization Baseline
+- Slice: S05
+- Task: T01 - Added a fixture-free installed package runtime smoke that writes, reopens, validates, and extracts TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives through the umbrella public API.
+
+GSD-Task: S05/T01
+
+files_non_gsd=1
+file: tests/package-consumer/main.cpp
+--- commit 2832256 ---
+2832256e9b131ebd8bcb3ba16e35893a25cc2ac3
+docs: Updated the public validation evidence docs and docs-policy guard…
+- docs/coverage-audit-matrix.md
+- docs/compatibility-evidence.md
+- docs/public-api-reality-check.md
+- tests/unit/coverage_audit_matrix_docs_tests.cpp
+
+GSD context:
+- Milestone: M001-k9wo8b - Audit and Stabilization Baseline
+- Slice: S04
+- Task: T02 - Updated the public validation evidence docs and docs-policy guards so COV-GAP-001 is closed without changing the validation API shape.
+
+GSD-Task: S04/T02
+
+files_non_gsd=4
+file: docs/compatibility-evidence.md
+file: docs/coverage-audit-matrix.md
+file: docs/public-api-reality-check.md
+file: tests/unit/coverage_audit_matrix_docs_tests.cpp
+--- commit 1aaf316 ---
+1aaf316f67e0db4d4e702d18e7fb4c62c789c73a
+test: Extended public validation API tests to prove expanded generated…
+- tests/unit/validation_api_tests.cpp
+
+GSD context:
+- Milestone: M001-k9wo8b - Audit and Stabilization Baseline
+- Slice: S04
+- Task: T01 - Extended public validation API tests to prove expanded generated success fixtures, Starfield BA2 v3 method routes, and expected-variant mismatch warnings.
+
+GSD-Task: S04/T01
+
+files_non_gsd=1
+file: tests/unit/validation_api_tests.cpp
+--- commit 33ddafa ---
+33ddafa1811eb5fba33f182115d6706d5d561039
+docs: Added docs-policy assertions that lock round-trip fixture evidenc…
+- tests/unit/coverage_audit_matrix_docs_tests.cpp
+
+GSD context:
+- Milestone: M001-k9wo8b - Audit and Stabilization Baseline
+- Slice: S03
+- Task: T02 - Added docs-policy assertions that lock round-trip fixture evidence across TES3, TES4-family BSA, BA2 GNRL, and BA2 DX10, then verified the focused generated-fixture sweep.
+
+GSD-Task: S03/T02
+
+files_non_gsd=1
+file: tests/unit/coverage_audit_matrix_docs_tests.cpp
+--- commit d71da04 ---
+d71da0434d4ea34352bc75c018399872f4107b26
+feat: Documented the default generated-fixture and writer round-trip pr…
+- docs/compatibility-evidence.md
+
+GSD context:
+- Milestone: M001-k9wo8b - Audit and Stabilization Baseline
+- Slice: S03
+- Task: T01 - Documented the default generated-fixture and writer round-trip proof sweep in the compatibility evidence catalog.
+
+GSD-Task: S03/T01
+
+files_non_gsd=10
+file: docs/api-mainpage.md
+file: docs/compatibility-evidence.md
+file: docs/coverage-audit-matrix.md
+file: docs/integration-examples.md
+file: docs/public-api-reality-check.md
+file: grep.cmd
+file: test.cmd
+file: tests/package-consumer/main.cpp
+file: tests/unit/docs_policy_tests.cpp
+file: tests/unit/target_format_policy_tests.cpp
+--- commit a94438a ---
+a94438aa230447a35f0f208e44ebdbdcefd53c88
+test: Added Catch2 policy coverage that locks the coverage audit matrix…
+- tests/unit/coverage_audit_matrix_docs_tests.cpp
+- tests/CMakeLists.txt
+
+GSD context:
+- Milestone: M001-k9wo8b - Audit and Stabilization Baseline
+- Slice: S01
+- Task: T02 - Added Catch2 policy coverage that locks the coverage audit matrix contract into the default test suite.
+
+GSD-Task: S01/T02
+
+files_non_gsd=2
+file: tests/CMakeLists.txt
+file: tests/unit/coverage_audit_matrix_docs_tests.cpp

@@ -1,34 +1,92 @@
 {
   "version": 1,
-  "exported_at": "2026-05-20T04:02:23.546Z",
+  "exported_at": "2026-05-20T04:37:00.628Z",
   "milestones": [
     {
       "id": "M001",
       "title": "Audit and Stabilization Baseline",
-      "status": "queued",
+      "status": "active",
       "depends_on": [],
       "created_at": "2026-05-19T23:47:11.505Z",
       "completed_at": null,
-      "vision": "",
-      "success_criteria": [],
-      "key_risks": [],
-      "proof_strategy": [],
-      "verification_contract": "",
-      "verification_integration": "",
-      "verification_operational": "",
-      "verification_uat": "",
-      "definition_of_done": [],
-      "requirement_coverage": "",
-      "boundary_map_markdown": "",
+      "vision": "Make libbsa support claims truthful and evidence backed by auditing the implemented archive families, public API story, validation and error behavior, generated fixture proof, package consumer proof, and public documentation, then close a bounded set of the highest claim risk gaps without requiring copyrighted local archives or BSArchPro output.",
+      "success_criteria": [
+        "A public docs coverage and gap matrix covers every current archive family and agreed capability axis with final Proven, Fixed, Partial, Missing, or Deferred status, evidence references, and rationale.",
+        "A ranked claim risk gap list shows what M001 fixed, what remains deferred, why, and likely future ownership.",
+        "The public API story for archive_reader, validate_archive, bulk extraction, family specific writers, result errors, validation diagnostics, dependency light headers, and package consumer usage is audited and backed by evidence.",
+        "A bounded tranche of highest risk gaps is closed with durable repository proof such as Catch2 tests, generated fixtures, manifests, validation tests, policy checks, docs, or package consumer examples.",
+        "Default completion uses only generated legal fixtures and repository checks; optional local game archive or BSArchPro comparison paths remain opt in and non blocking.",
+        "The installed and exported public API remains usable through <libbsa/libbsa.hpp> and the libbsa::libbsa target.",
+        "The TES5Edit submodule remains read only and is not edited, formatted, staged, compiled into libbsa, or used as mutable fixture data."
+      ],
+      "key_risks": [
+        {
+          "risk": "Support claims may be broader than default proof demonstrates.",
+          "whyItMatters": "If docs imply unproven compatibility, consumers may trust archive operations that only work for narrow generated cases or are not tested at all."
+        },
+        {
+          "risk": "Audit only completion would not stabilize the repository.",
+          "whyItMatters": "The milestone requires concrete remediation proof for a bounded high risk tranche, not just a gap document."
+        },
+        {
+          "risk": "Public API friction may tempt a broad facade redesign.",
+          "whyItMatters": "A large API redesign would increase compatibility and consumer risk before there is evidence; M001 should only add small helpers or docs when immediately proven."
+        },
+        {
+          "risk": "Optional compatibility evidence may be unavailable locally.",
+          "whyItMatters": "Completion must remain legally reproducible with generated fixtures and package consumer checks, while optional game or BSArchPro paths stay advisory."
+        },
+        {
+          "risk": "Verification command names and lanes may vary by local Windows environment.",
+          "whyItMatters": "S01 and S04 must cite the repository supported CMake presets and package checks rather than inventing untracked local workflows."
+        }
+      ],
+      "proof_strategy": [
+        {
+          "riskOrUnknown": "What libbsa actually proves for each archive family and capability axis.",
+          "retireIn": "S01",
+          "whatWillBeProven": "A public coverage matrix maps each family and axis to concrete tests, fixtures, docs, package consumer checks, source surfaces, or explicit gaps."
+        },
+        {
+          "riskOrUnknown": "Whether the public API and error model are clear, dependency light, package consumable, and consistent with requirements.",
+          "retireIn": "S02",
+          "whatWillBeProven": "Public headers, docs, examples, package consumer usage, result errors, and validation semantics are audited and either accepted, fixed in small ways, or queued for S03."
+        },
+        {
+          "riskOrUnknown": "Which highest claim risk gaps can be closed safely inside M001.",
+          "retireIn": "S03",
+          "whatWillBeProven": "Selected gaps are fixed through code, tests, generated fixtures, manifests, docs, policy checks, or package consumer proof, with non selected gaps explicitly deferred."
+        },
+        {
+          "riskOrUnknown": "Whether the final repository still works as an integrated package consumable whole.",
+          "retireIn": "S04",
+          "whatWillBeProven": "The default Windows CMake, CTest, generated fixture, validation, compatibility, public API policy, and package consumer gates pass or are documented with clear remediation if they fail."
+        }
+      ],
+      "verification_contract": "Verification must use the repository supported Windows MSVC CMake presets, CTest labels or presets, generated legal fixtures, public API policy tests, validation and compatibility tests, and package consumer smoke checks. Exact command names should be read from CMakePresets.json and workflow docs during execution; do not require copyrighted local game archives or BSArchPro output for default completion.",
+      "verification_integration": "S04 must run the full default build and test path available in the repository plus package consumer checks that prove <libbsa/libbsa.hpp> and the exported libbsa::libbsa target. Earlier slices should run focused checks for changed docs, tests, fixtures, validation behavior, or public header policy before handing off.",
+      "verification_operational": "No daemon, cloud service, GUI, or long running operational lifecycle is in scope. Operational proof means local Windows developer workflows are reproducible, generated fixture based, legally safe, and do not depend on optional local archives or external credentials.",
+      "verification_uat": "A maintainer should be able to open the public docs matrix, follow evidence links, see which support claims are proven or deferred, and run the documented default CMake, CTest, and package consumer workflow without local game data.",
+      "definition_of_done": [
+        "All four archive families have final matrix rows across the agreed axes.",
+        "Every active requirement R001 through R009 is mapped to a primary owner slice with supporting slices where relevant.",
+        "Every M001 fixed gap has durable proof committed in tests, fixtures, docs, policy checks, package consumer examples, or validation behavior.",
+        "Every remaining non fixed gap has explicit deferred status, rationale, and future ownership.",
+        "Package consumer proof and public header dependency checks remain green.",
+        "Default verification does not require secrets, copyrighted archives, or BSArchPro output.",
+        "TES5Edit remains unchanged and outside all implementation, formatting, staging, and fixture generation work."
+      ],
+      "requirement_coverage": "R001 primary S01, supporting S03 and S04: create and finalize the truthful coverage gap matrix. R002 primary S01, supporting S04: all current archive families are represented and rechecked. R003 primary S02, supporting S03 and S04: public API capability story is audited and improved only with evidence backed changes. R004 primary S03, supporting S01 and S02: highest risk gaps are selected from audits and fixed with durable proof. R005 primary S04, supporting S01 and S03: layered generated fixture, package consumer, and optional compatibility proof remains default safe and opt in where appropriate. R006 primary S02, supporting S03: structured public error and validation behavior is audited and stabilized for high risk inconsistencies. R007 primary S04, supporting S02: installed package consumer API remains usable. R008 primary S02, supporting S04: dependency light C++20 public headers are preserved and checked. R009 primary S04, supporting all slices: TES5Edit remains read only throughout planning, implementation, and verification.",
+      "boundary_map_markdown": "## Boundary Map\n\n| Boundary | Planning stance | Owning slice |\n| --- | --- | --- |\n| Requirements | Active R001 through R009 must be mapped, fixed, deferred, or explicitly out of scope. | S01 and S04 |\n| Decisions | Preserve the audit first, risk bounded remediation, public docs matrix, layered proof, and no broad API redesign decisions. | All slices |\n| Shutdown or lifecycle | No service lifecycle is involved; no shutdown behavior is in scope. | Out of scope |\n| Revenue or billing | No revenue, billing, or monetization boundary is involved. | Out of scope |\n| Auth or secrets | No auth providers, credentials, SaaS APIs, or secret material are required. | Out of scope |\n| Shared resources | Local filesystem, generated fixtures, CMake build trees, vcpkg packages, and the read only TES5Edit submodule are the shared resources. | S01, S03, S04 |\n| Reconnection or offline behavior | No network reconnection behavior is involved; default verification should work without external services after dependencies are available. | Out of scope |\n\n## Skills Discovered\n\nInstalled prompt skills directly relevant to this milestone include api-design, design-an-interface, tdd, verify-before-complete, write-docs, cmake, cpp-testing, review, and systematic-debugging. No additional external skills are required for the core technologies because the milestone uses repository local C++20, CMake, vcpkg, Catch2, generated fixtures, and documentation proof rather than a new SaaS or framework integration.",
       "sequence": 0
     },
     {
       "id": "M001-k9wo8b",
       "title": "Audit and Stabilization Baseline",
-      "status": "active",
+      "status": "complete",
       "depends_on": [],
       "created_at": "2026-05-19T23:49:31.998Z",
-      "completed_at": null,
+      "completed_at": "2026-05-20T04:25:52.510Z",
       "vision": "Make libbsa's current support claims truthful and actionable by auditing all implemented Bethesda archive families, auditing the public API story, and fixing a risk-bounded tranche of the highest-risk bugs or testing gaps with durable proof.",
       "success_criteria": [
         "A truthful coverage/gap matrix exists for all current archive families and agreed capability axes.",
@@ -99,6 +157,101 @@
     }
   ],
   "slices": [
+    {
+      "milestone_id": "M001",
+      "id": "S01",
+      "title": "Evidence Matrix and Gap Ranking",
+      "status": "pending",
+      "risk": "Highest risk: current docs, tests, fixtures, and support claims may not align, so downstream remediation could target the wrong gaps unless the truth source is established first.",
+      "depends": [],
+      "demo": "A public docs coverage matrix and ranked gap list exist for TES3 BSA, TES4 family BSA, BA2 GNRL, and BA2 DX10, with evidence links and fixed partial missing deferred status seeded from repository proof.",
+      "created_at": "2026-05-20T04:37:00.621Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "Create the public truth surface that inventories current proof, exposes claim risk, and assigns initial requirement ownership before any remediation work begins.",
+      "success_criteria": "- Public docs contain a human readable coverage and gap matrix covering TES3 BSA, TES4 family BSA, BA2 GNRL, and BA2 DX10.\n- Matrix axes include read, write, extraction, round trip, malformed handling, validation, compatibility evidence, package consumer proof, and docs or API proof.\n- Each cell has an initial status of Proven, Partial, Missing, Deferred, or Needs Fix plus concise evidence references to tests, fixtures, package consumer checks, docs, or source surfaces.\n- A ranked gap list calls out claim risk, data integrity risk, remediation candidate status, and likely future ownership.\n- Requirements R001 through R009 are mapped to a primary slice or explicitly marked supporting, deferred, or out of scope in the matrix notes.",
+      "proof_level": "Documentation and repository evidence audit with focused static checks only. No production behavior changes are required in this slice, but every claim must cite concrete repository evidence or be marked as a gap.",
+      "integration_closure": "The matrix becomes the downstream contract for S02 through S04: S02 audits API and error rows against the same evidence shape, S03 fixes selected high risk gaps from the ranked list, and S04 finalizes statuses after verification.",
+      "observability_impact": "Improves project observability by turning support claims into an inspectable public artifact with evidence references, gap ownership, and deferred rationale instead of implicit tribal knowledge.",
+      "sequence": 1,
+      "replan_triggered_at": null,
+      "is_sketch": 0,
+      "sketch_scope": ""
+    },
+    {
+      "milestone_id": "M001",
+      "id": "S02",
+      "title": "Public API and Error Contract Audit",
+      "status": "pending",
+      "risk": "High risk: public headers and package consumer examples may compile while still leaving consumers unclear about the stable core API, validation semantics, dependency leakage, or branchable error behavior.",
+      "depends": [
+        "S01"
+      ],
+      "demo": "The coverage matrix and docs identify the stable public API story, package consumer evidence, public header dependency boundaries, validation semantics, and any API or error contract gaps that need fixes.",
+      "created_at": "2026-05-20T04:37:00.621Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "Audit and tighten the public consumer contract around archive reading, validation, extraction, writers, result errors, and dependency light headers.",
+      "success_criteria": "",
+      "proof_level": "",
+      "integration_closure": "",
+      "observability_impact": "",
+      "sequence": 2,
+      "replan_triggered_at": null,
+      "is_sketch": 1,
+      "sketch_scope": "This slice starts from the S01 matrix and narrows the audit to public interfaces and installed package usage. It should add only small evidence backed helper, docs, test, or policy changes if the audit proves consumer friction, while avoiding a broad facade redesign."
+    },
+    {
+      "milestone_id": "M001",
+      "id": "S03",
+      "title": "Risk Bounded Gap Remediation",
+      "status": "pending",
+      "risk": "High risk: the milestone is not complete if it only documents gaps, but the exact safe remediation set must be selected from S01 and S02 evidence rather than guessed up front.",
+      "depends": [
+        "S01",
+        "S02"
+      ],
+      "demo": "A coherent tranche of the highest claim risk gaps is fixed with durable tests, generated fixture evidence, validation or package consumer proof, and the matrix marks each fixed or intentionally deferred gap.",
+      "created_at": "2026-05-20T04:37:00.621Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "Implement the bounded stabilization changes that most improve truthfulness, data integrity confidence, API trust, or validation reliability.",
+      "success_criteria": "",
+      "proof_level": "",
+      "integration_closure": "",
+      "observability_impact": "",
+      "sequence": 3,
+      "replan_triggered_at": null,
+      "is_sketch": 1,
+      "sketch_scope": "This slice chooses fixes only after the audit ranks gaps and identifies which ones are safe to close inside M001. Expected work may include focused Catch2 tests, generated fixture manifests, validation behavior fixes, policy tests, package consumer checks, or small docs backed API helpers, but should not expand into broad compatibility, performance, or release readiness rewrites."
+    },
+    {
+      "milestone_id": "M001",
+      "id": "S04",
+      "title": "Integrated Verification and Truth Closeout",
+      "status": "pending",
+      "risk": "Medium risk: individual fixes can pass locally while the default package consumable whole or public truth matrix drifts from final behavior.",
+      "depends": [
+        "S03"
+      ],
+      "demo": "The default Windows CMake and CTest workflow plus package consumer proof passes, the public matrix records final statuses and evidence, and remaining gaps have explicit deferred rationale and owners.",
+      "created_at": "2026-05-20T04:37:00.621Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "Close the milestone with integrated proof that the repository remains buildable, testable, package consumable, legally reproducible, and truthful about remaining limitations.",
+      "success_criteria": "",
+      "proof_level": "",
+      "integration_closure": "",
+      "observability_impact": "",
+      "sequence": 4,
+      "replan_triggered_at": null,
+      "is_sketch": 1,
+      "sketch_scope": "This slice runs the agreed default verification gate and finalizes docs after S03 changes are known. It should verify that copyrighted local archives and BSArchPro comparisons remain optional non blocking paths, that TES5Edit stays untouched, and that the final matrix is not docs only."
+    },
     {
       "milestone_id": "M001-k9wo8b",
       "id": "S01",

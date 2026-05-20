@@ -1,0 +1,18 @@
+{
+  "id": "d336ae10-aedd-4cd9-a4d2-ea27a8603712",
+  "runtime": "bash",
+  "purpose": "Install relevant vcpkg skill discovered for M001 build/dependency work",
+  "script_chars": 108,
+  "started_at": "2026-05-20T04:29:00.207Z",
+  "finished_at": "2026-05-20T04:29:02.730Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 2523,
+  "stdout_bytes": 6095,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\d336ae10-aedd-4cd9-a4d2-ea27a8603712.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\d336ae10-aedd-4cd9-a4d2-ea27a8603712.stderr"
+}
