@@ -398,15 +398,38 @@ TEST_CASE("coverage_audit_matrix names compatibility matrix as malformed submatr
                       "does not replace the reader, extraction, writer, round-trip, package-consumer, docs-policy, or optional local-corpus evidence"});
 }
 
-TEST_CASE("coverage_audit_matrix stays free of internal planning identifiers",
+TEST_CASE("public coverage docs stay free of internal planning identifiers",
           "[unit][coverage_audit_matrix][docs_policy]")
 {
-  const auto matrix = read_text_file(source_root() / "docs" / "coverage-audit-matrix.md");
+  SECTION("coverage audit matrix")
+  {
+    const auto matrix = read_text_file(source_root() / "docs" / "coverage-audit-matrix.md");
 
-  require_no_tokens(matrix,
-                    {".gsd/",
-                     "M001",
-                     "S01"});
+    require_no_tokens(matrix,
+                      {".gsd/",
+                       "M001",
+                       "S01"});
+  }
+
+  SECTION("compatibility evidence catalog")
+  {
+    const auto compatibility_evidence = read_text_file(source_root() / "docs" / "compatibility-evidence.md");
+
+    require_no_tokens(compatibility_evidence,
+                      {".gsd/",
+                       "M001",
+                       "S01"});
+  }
+
+  SECTION("public API reality check")
+  {
+    const auto public_api_reality_check = read_text_file(source_root() / "docs" / "public-api-reality-check.md");
+
+    require_no_tokens(public_api_reality_check,
+                      {".gsd/",
+                       "M001",
+                       "S01"});
+  }
 }
 
 TEST_CASE("coverage_audit_matrix is discoverable from compatibility evidence catalog",
