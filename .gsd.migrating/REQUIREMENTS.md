@@ -4,61 +4,6 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Active
 
-### R003 — Public API capability story audited: M001 must verify what the public API actually supports beyond basic extraction and writing, and identify API friction or missing ergonomic helpers.
-- Class: core-capability
-- Status: active
-- Description: Public API capability story audited: M001 must verify what the public API actually supports beyond basic extraction and writing, and identify API friction or missing ergonomic helpers.
-- Why it matters: The current API may already expose more than remembered, but it needs a clearer, proper consumer-facing story.
-- Source: user
-- Primary owning slice: M001-k9wo8b/S02
-- Supporting slices: M001-k9wo8b/S05
-- Validation: mapped
-- Notes: Keep archive_reader and family-specific writers as the core; add helpers only when audit evidence justifies them.
-
-### R006 — Structured public error behavior remains consistent: M001 must audit and stabilize public result/error behavior where high-risk inconsistencies are found.
-- Class: failure-visibility
-- Status: active
-- Description: Structured public error behavior remains consistent: M001 must audit and stabilize public result/error behavior where high-risk inconsistencies are found.
-- Why it matters: Archive libraries need reliable diagnostic behavior for malformed data, I/O failures, and compatibility issues.
-- Source: inferred
-- Primary owning slice: M001-k9wo8b/S04
-- Supporting slices: M001-k9wo8b/S01, M001-k9wo8b/S03
-- Validation: mapped
-- Notes: Keep libbsa::result<T>, stable error_code categories, and human-readable diagnostic messages as the public failure model.
-
-### R007 — Package-consumer API remains installable and usable: M001 must prove the installed/exported public API can be consumed through the package target and umbrella header.
-- Class: integration
-- Status: active
-- Description: Package-consumer API remains installable and usable: M001 must prove the installed/exported public API can be consumed through the package target and umbrella header.
-- Why it matters: A reusable library is not stable if it only works internally and cannot be consumed as installed.
-- Source: inferred
-- Primary owning slice: M001-k9wo8b/S05
-- Supporting slices: M001-k9wo8b/S02
-- Validation: mapped
-- Notes: Package-consumer proof should cover representative read, write, validation, bulk extraction, and error handling examples where feasible.
-
-### R008 — Public headers remain dependency-light C++20: M001 changes must not expose private codec, DirectXTex, platform, or C++23-only types in public headers.
-- Class: constraint
-- Status: active
-- Description: Public headers remain dependency-light C++20: M001 changes must not expose private codec, DirectXTex, platform, or C++23-only types in public headers.
-- Why it matters: Consumers need a stable C++20 API without inheriting implementation dependencies or newer language requirements.
-- Source: inferred
-- Primary owning slice: M001-k9wo8b/S02
-- Supporting slices: M001-k9wo8b/S05
-- Validation: mapped
-- Notes: Public headers should continue to use libbsa-owned metadata/result types and avoid leaking libdeflate, LZ4, DirectXTex, DXGI, or std::expected.
-
-### R009 — TES5Edit remains read-only reference only: M001 must not edit, format, stage, compile, vendor, or use TES5Edit as mutable fixture data.
-- Class: constraint
-- Status: active
-- Description: TES5Edit remains read-only reference only: M001 must not edit, format, stage, compile, vendor, or use TES5Edit as mutable fixture data.
-- Why it matters: TES5Edit is behavioral reference/prior art only; modifying it violates the project boundary.
-- Source: user
-- Primary owning slice: M001-k9wo8b/S01
-- Supporting slices: M001-k9wo8b/S02, M001-k9wo8b/S03, M001-k9wo8b/S04, M001-k9wo8b/S05
-- Validation: mapped
-- Notes: All implementation, tests, docs, and generated artifacts must live outside TES5Edit/.
-
 ## Validated
 
 ### R001 — Truthful coverage matrix: M001 must produce a durable coverage/gap matrix that states what libbsa currently proves and where gaps remain.
@@ -69,8 +14,8 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M001-k9wo8b/S01
 - Supporting slices: M001-k9wo8b/S02, M001-k9wo8b/S03, M001-k9wo8b/S04, M001-k9wo8b/S05
-- Validation: S01 produced `docs/coverage-audit-matrix.md`, a durable human-first support-truth matrix with default evidence sources, family/axis statuses, advisory local-evidence separation, and ranked gaps `COV-GAP-001` through `COV-GAP-004`. Fresh S01 closeout verification passed docs smoke checks plus `ctest --preset windows-msvc-debug-static -R coverage_audit_matrix --output-on-failure` (7/7 tests).
-- Notes: Validated by M001-k9wo8b/S01 closeout; future slices may update the matrix as gaps are fixed or deferred.
+- Validation: S01 produced `docs/coverage-audit-matrix.md`; S05 finalized it with fixed/deferred status and package-consumer runtime evidence. Fresh S05 closeout verification gsd_exec `5feeb285-70a3-4a07-8f84-5187c2e7037a` passed `ctest --preset windows-msvc-debug-static -L coverage_audit_matrix --output-on-failure` (`16/16`), `docs_policy` (`24/24`), and `target_format_policy` (`7/7`), including tests that keep COV-GAP-001/COV-GAP-003 closed and COV-GAP-002/COV-GAP-004 deferred.
+- Notes: Validated by S01 and finalized by M001-k9wo8b/S05. The matrix is now the M001 support-truth source: COV-GAP-001 and COV-GAP-003 are closed/former gaps, while COV-GAP-002 and COV-GAP-004 remain explicitly deferred with rationale and future ownership.
 
 ### R002 — All current archive families audited: TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 must all be included in the audit scope.
 - Class: core-capability
@@ -82,6 +27,17 @@ This file is the explicit capability and coverage contract for the project.
 - Supporting slices: M001-k9wo8b/S03, M001-k9wo8b/S04
 - Validation: `docs/coverage-audit-matrix.md` includes TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 rows with required capability axes. Fresh S01 closeout verification passed required family greps and the `coverage_audit_matrix lists every current archive family` Catch2/CTest policy case.
 - Notes: Validated by M001-k9wo8b/S01 closeout; all required current archive families are represented in the public matrix and protected by docs-policy tests.
+
+### R003 — Public API capability story audited: M001 must verify what the public API actually supports beyond basic extraction and writing, and identify API friction or missing ergonomic helpers.
+- Class: core-capability
+- Status: validated
+- Description: Public API capability story audited: M001 must verify what the public API actually supports beyond basic extraction and writing, and identify API friction or missing ergonomic helpers.
+- Why it matters: The current API may already expose more than remembered, but it needs a clearer, proper consumer-facing story.
+- Source: user
+- Primary owning slice: M001-k9wo8b/S02
+- Supporting slices: M001-k9wo8b/S05
+- Validation: S02 audited the public API capability story and S05 finalized it in `docs/public-api-reality-check.md`, `docs/api-mainpage.md`, and policy tests. Fresh S05 closeout verification gsd_exec `dd048d7e-b313-49fb-a513-91437f8ef731` passed configure/build/full CTest/package-consumer (`438/438` default tests and `4/4` package-consumer tests), and gsd_exec `5feeb285-70a3-4a07-8f84-5187c2e7037a` passed focused `coverage_audit_matrix`, `docs_policy`, and `target_format_policy` labels.
+- Notes: Validated at M001-k9wo8b/S05 closeout. The audit kept archive_reader and family-specific writers as the core public story, closed the installed package runtime proof gap, and deferred any major ergonomic facade/API redesign to R010/M002 rather than adding unproven API surface.
 
 ### R004 — Highest-risk audit gaps fixed with proof: M001 must fix a risk-bounded tranche of the most important gaps discovered by the audit and prove each fix durably.
 - Class: quality-attribute
@@ -102,8 +58,52 @@ This file is the explicit capability and coverage contract for the project.
 - Source: user
 - Primary owning slice: M001-k9wo8b/S03
 - Supporting slices: M001-k9wo8b/S05
-- Validation: S03 preserved layered fixture and compatibility proof by adding the public `Default fixture and round-trip proof sweep` section to `docs/compatibility-evidence.md`, enforcing coverage-matrix/default-proof wording through Catch2 docs-policy tests, and passing closeout verification gsd_exec `32ead1c3-4c7a-46d1-a9b4-f710429f00aa` across generated fixture targets, writer round-trip/reopen labels for all four current archive families, reader dispatch, validation API, and manifest validation.
-- Notes: Optional `LIBBSA_GAME_FIXTURES` and `LIBBSA_BSARCHPRO_EXPECTED` paths remain advisory only and are explicitly separate from default proof.
+- Validation: S03 preserved the layered generated-fixture and compatibility-proof model; S05 added installed-package runtime archive proof and kept optional local evidence boundaries documented. Fresh S05 closeout verification gsd_exec `dd048d7e-b313-49fb-a513-91437f8ef731` passed full default CTest (`438/438`, with only the two opt-in local fixture/BSArchPro comparison tests skipped) and package-consumer label (`4/4`). Focused docs-policy verification gsd_exec `5feeb285-70a3-4a07-8f84-5187c2e7037a` passed coverage, docs, and target-format policy labels that preserve the default-versus-optional evidence story.
+- Notes: Validated by S03 and finalized by M001-k9wo8b/S05. Default legal fixture/package-consumer proof is green; optional game fixtures and BSArchPro expected-data comparisons remain advisory and explicitly non-blocking.
+
+### R006 — Structured public error behavior remains consistent: M001 must audit and stabilize public result/error behavior where high-risk inconsistencies are found.
+- Class: failure-visibility
+- Status: validated
+- Description: Structured public error behavior remains consistent: M001 must audit and stabilize public result/error behavior where high-risk inconsistencies are found.
+- Why it matters: Archive libraries need reliable diagnostic behavior for malformed data, I/O failures, and compatibility issues.
+- Source: inferred
+- Primary owning slice: M001-k9wo8b/S04
+- Supporting slices: M001-k9wo8b/S01, M001-k9wo8b/S03
+- Validation: S04 stabilized high-risk public result/error/validation behavior through public API and docs-policy proof. Fresh closeout verification gsd_exec `b97534ad-8a07-4c3b-86fc-6b1a2fba4577` passed `cmake --preset windows-msvc-debug-static`, `cmake --build --preset windows-msvc-debug-static --target libbsa_tests`, `ctest --preset windows-msvc-debug-static -R coverage_audit_matrix --output-on-failure` (11/11), `ctest --preset windows-msvc-debug-static -L validation_api --output-on-failure` (8/8), and `ctest --preset windows-msvc-debug-static -R compatibility_warning --output-on-failure` (5/5).
+- Notes: S04 kept the existing public error model intact, added branchable validation/warning proof for generated success fixtures, writer-produced Starfield BA2 v3 method 0/method 3 routes, expected-variant mismatch warnings, and updated evidence docs/policy guards so COV-GAP-001 is closed while COV-GAP-003 and COV-GAP-004 remain out of scope for S05/later work.
+
+### R007 — Package-consumer API remains installable and usable: M001 must prove the installed/exported public API can be consumed through the package target and umbrella header.
+- Class: integration
+- Status: validated
+- Description: Package-consumer API remains installable and usable: M001 must prove the installed/exported public API can be consumed through the package target and umbrella header.
+- Why it matters: A reusable library is not stable if it only works internally and cannot be consumed as installed.
+- Source: inferred
+- Primary owning slice: M001-k9wo8b/S05
+- Supporting slices: M001-k9wo8b/S02
+- Validation: S05 extended `tests/package-consumer/main.cpp` so an installed consumer including only `<libbsa/libbsa.hpp>` and linking `libbsa::libbsa` creates writer-produced TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives, reopens them through `archive_reader`, validates them through `validate_archive`, and extracts payloads. Fresh closeout verification gsd_exec `dd048d7e-b313-49fb-a513-91437f8ef731` passed `ctest --preset windows-msvc-debug-static -L package_consumer --output-on-failure` (`4/4` tests including `package_consumer_smoke` and runtime DLL copy).
+- Notes: Validated at M001-k9wo8b/S05 closeout. The package-consumer smoke remains self-contained and does not rely on TES5Edit, `.gsd`, `.planning`, `.audits`, source-tree fixtures, game fixtures, or BSArchPro-derived expected data.
+
+### R008 — Public headers remain dependency-light C++20: M001 changes must not expose private codec, DirectXTex, platform, or C++23-only types in public headers.
+- Class: constraint
+- Status: validated
+- Description: Public headers remain dependency-light C++20: M001 changes must not expose private codec, DirectXTex, platform, or C++23-only types in public headers.
+- Why it matters: Consumers need a stable C++20 API without inheriting implementation dependencies or newer language requirements.
+- Source: inferred
+- Primary owning slice: M001-k9wo8b/S02
+- Supporting slices: M001-k9wo8b/S05
+- Validation: S05 preserved the dependency-light public header story in docs and policy tests. Fresh closeout verification gsd_exec `dd048d7e-b313-49fb-a513-91437f8ef731` passed full default CTest (`438/438`), including public API/static-boundary tests, and gsd_exec `5feeb285-70a3-4a07-8f84-5187c2e7037a` passed focused `docs_policy` (`24/24`) and `target_format_policy` (`7/7`) labels.
+- Notes: Validated at M001-k9wo8b/S05 closeout. Public headers remain C++20 and dependency-light; DirectXTex, private codec, and implementation details stay behind internal adapters and policy tests.
+
+### R009 — TES5Edit remains read-only reference only: M001 must not edit, format, stage, compile, vendor, or use TES5Edit as mutable fixture data.
+- Class: constraint
+- Status: validated
+- Description: TES5Edit remains read-only reference only: M001 must not edit, format, stage, compile, vendor, or use TES5Edit as mutable fixture data.
+- Why it matters: TES5Edit is behavioral reference/prior art only; modifying it violates the project boundary.
+- Source: user
+- Primary owning slice: M001-k9wo8b/S01
+- Supporting slices: M001-k9wo8b/S02, M001-k9wo8b/S03, M001-k9wo8b/S04, M001-k9wo8b/S05
+- Validation: T03 recorded `git status --short -- TES5Edit` exit 0 with no TES5Edit status lines in gsd_exec `c93e7807-2f93-480e-956b-a72a386372ad`. The S05 closer did not run git commands; instead it reused that prior evidence and ran non-git freshness check gsd_exec `dab7acc3-c02a-4244-a622-df2df2944624`, which found `changed_files_after_prior_git_status=0` under `TES5Edit`.
+- Notes: Validated at M001-k9wo8b/S05 closeout. No S05 implementation, docs, tests, generated fixtures, or closeout artifacts edited, formatted, staged, compiled, vendored, or used TES5Edit as mutable fixture data.
 
 ## Deferred
 
@@ -201,15 +201,15 @@ This file is the explicit capability and coverage contract for the project.
 
 | ID | Class | Status | Primary owner | Supporting | Proof |
 |---|---|---|---|---|---|
-| R001 | failure-visibility | validated | M001-k9wo8b/S01 | M001-k9wo8b/S02, M001-k9wo8b/S03, M001-k9wo8b/S04, M001-k9wo8b/S05 | S01 produced `docs/coverage-audit-matrix.md`, a durable human-first support-truth matrix with default evidence sources, family/axis statuses, advisory local-evidence separation, and ranked gaps `COV-GAP-001` through `COV-GAP-004`. Fresh S01 closeout verification passed docs smoke checks plus `ctest --preset windows-msvc-debug-static -R coverage_audit_matrix --output-on-failure` (7/7 tests). |
+| R001 | failure-visibility | validated | M001-k9wo8b/S01 | M001-k9wo8b/S02, M001-k9wo8b/S03, M001-k9wo8b/S04, M001-k9wo8b/S05 | S01 produced `docs/coverage-audit-matrix.md`; S05 finalized it with fixed/deferred status and package-consumer runtime evidence. Fresh S05 closeout verification gsd_exec `5feeb285-70a3-4a07-8f84-5187c2e7037a` passed `ctest --preset windows-msvc-debug-static -L coverage_audit_matrix --output-on-failure` (`16/16`), `docs_policy` (`24/24`), and `target_format_policy` (`7/7`), including tests that keep COV-GAP-001/COV-GAP-003 closed and COV-GAP-002/COV-GAP-004 deferred. |
 | R002 | core-capability | validated | M001-k9wo8b/S01 | M001-k9wo8b/S03, M001-k9wo8b/S04 | `docs/coverage-audit-matrix.md` includes TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 rows with required capability axes. Fresh S01 closeout verification passed required family greps and the `coverage_audit_matrix lists every current archive family` Catch2/CTest policy case. |
-| R003 | core-capability | active | M001-k9wo8b/S02 | M001-k9wo8b/S05 | mapped |
+| R003 | core-capability | validated | M001-k9wo8b/S02 | M001-k9wo8b/S05 | S02 audited the public API capability story and S05 finalized it in `docs/public-api-reality-check.md`, `docs/api-mainpage.md`, and policy tests. Fresh S05 closeout verification gsd_exec `dd048d7e-b313-49fb-a513-91437f8ef731` passed configure/build/full CTest/package-consumer (`438/438` default tests and `4/4` package-consumer tests), and gsd_exec `5feeb285-70a3-4a07-8f84-5187c2e7037a` passed focused `coverage_audit_matrix`, `docs_policy`, and `target_format_policy` labels. |
 | R004 | quality-attribute | validated | M001-k9wo8b/S03 | M001-k9wo8b/S04 | S03 closed the selected high claim-risk fixture/round-trip tranche by documenting the default legal generated-fixture proof sweep in `docs/compatibility-evidence.md`, adding docs-policy Catch2 guardrails in `tests/unit/coverage_audit_matrix_docs_tests.cpp`, regenerating the default synthetic fixture targets, and passing the focused closeout verification sweep in gsd_exec `32ead1c3-4c7a-46d1-a9b4-f710429f00aa` (15/15 checks including coverage_audit_matrix, reader_backend_dispatch, TES3/TES4/BA2 GNRL/BA2 DX10 writer labels, validation_api, and validate_fixture_manifests). |
-| R005 | quality-attribute | validated | M001-k9wo8b/S03 | M001-k9wo8b/S05 | S03 preserved layered fixture and compatibility proof by adding the public `Default fixture and round-trip proof sweep` section to `docs/compatibility-evidence.md`, enforcing coverage-matrix/default-proof wording through Catch2 docs-policy tests, and passing closeout verification gsd_exec `32ead1c3-4c7a-46d1-a9b4-f710429f00aa` across generated fixture targets, writer round-trip/reopen labels for all four current archive families, reader dispatch, validation API, and manifest validation. |
-| R006 | failure-visibility | active | M001-k9wo8b/S04 | M001-k9wo8b/S01, M001-k9wo8b/S03 | mapped |
-| R007 | integration | active | M001-k9wo8b/S05 | M001-k9wo8b/S02 | mapped |
-| R008 | constraint | active | M001-k9wo8b/S02 | M001-k9wo8b/S05 | mapped |
-| R009 | constraint | active | M001-k9wo8b/S01 | M001-k9wo8b/S02, M001-k9wo8b/S03, M001-k9wo8b/S04, M001-k9wo8b/S05 | mapped |
+| R005 | quality-attribute | validated | M001-k9wo8b/S03 | M001-k9wo8b/S05 | S03 preserved the layered generated-fixture and compatibility-proof model; S05 added installed-package runtime archive proof and kept optional local evidence boundaries documented. Fresh S05 closeout verification gsd_exec `dd048d7e-b313-49fb-a513-91437f8ef731` passed full default CTest (`438/438`, with only the two opt-in local fixture/BSArchPro comparison tests skipped) and package-consumer label (`4/4`). Focused docs-policy verification gsd_exec `5feeb285-70a3-4a07-8f84-5187c2e7037a` passed coverage, docs, and target-format policy labels that preserve the default-versus-optional evidence story. |
+| R006 | failure-visibility | validated | M001-k9wo8b/S04 | M001-k9wo8b/S01, M001-k9wo8b/S03 | S04 stabilized high-risk public result/error/validation behavior through public API and docs-policy proof. Fresh closeout verification gsd_exec `b97534ad-8a07-4c3b-86fc-6b1a2fba4577` passed `cmake --preset windows-msvc-debug-static`, `cmake --build --preset windows-msvc-debug-static --target libbsa_tests`, `ctest --preset windows-msvc-debug-static -R coverage_audit_matrix --output-on-failure` (11/11), `ctest --preset windows-msvc-debug-static -L validation_api --output-on-failure` (8/8), and `ctest --preset windows-msvc-debug-static -R compatibility_warning --output-on-failure` (5/5). |
+| R007 | integration | validated | M001-k9wo8b/S05 | M001-k9wo8b/S02 | S05 extended `tests/package-consumer/main.cpp` so an installed consumer including only `<libbsa/libbsa.hpp>` and linking `libbsa::libbsa` creates writer-produced TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives, reopens them through `archive_reader`, validates them through `validate_archive`, and extracts payloads. Fresh closeout verification gsd_exec `dd048d7e-b313-49fb-a513-91437f8ef731` passed `ctest --preset windows-msvc-debug-static -L package_consumer --output-on-failure` (`4/4` tests including `package_consumer_smoke` and runtime DLL copy). |
+| R008 | constraint | validated | M001-k9wo8b/S02 | M001-k9wo8b/S05 | S05 preserved the dependency-light public header story in docs and policy tests. Fresh closeout verification gsd_exec `dd048d7e-b313-49fb-a513-91437f8ef731` passed full default CTest (`438/438`), including public API/static-boundary tests, and gsd_exec `5feeb285-70a3-4a07-8f84-5187c2e7037a` passed focused `docs_policy` (`24/24`) and `target_format_policy` (`7/7`) labels. |
+| R009 | constraint | validated | M001-k9wo8b/S01 | M001-k9wo8b/S02, M001-k9wo8b/S03, M001-k9wo8b/S04, M001-k9wo8b/S05 | T03 recorded `git status --short -- TES5Edit` exit 0 with no TES5Edit status lines in gsd_exec `c93e7807-2f93-480e-956b-a72a386372ad`. The S05 closer did not run git commands; instead it reused that prior evidence and ran non-git freshness check gsd_exec `dab7acc3-c02a-4244-a622-df2df2944624`, which found `changed_files_after_prior_git_status=0` under `TES5Edit`. |
 | R010 | differentiator | deferred | M002 provisional | none | unmapped |
 | R011 | quality-attribute | deferred | M003 provisional | none | unmapped |
 | R012 | quality-attribute | deferred | M004 provisional | none | unmapped |
@@ -221,7 +221,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Coverage Summary
 
-- Active requirements: 5
-- Mapped to slices: 5
-- Validated: 4 (R001, R002, R004, R005)
+- Active requirements: 0
+- Mapped to slices: 0
+- Validated: 9 (R001, R002, R003, R004, R005, R006, R007, R008, R009)
 - Unmapped active requirements: 0

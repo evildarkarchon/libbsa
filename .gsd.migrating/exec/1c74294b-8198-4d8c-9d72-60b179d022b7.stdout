@@ -1,0 +1,2 @@
+
+[T03] command=pwsh release-static configure+build+package_consumer exit=1 duration=0s

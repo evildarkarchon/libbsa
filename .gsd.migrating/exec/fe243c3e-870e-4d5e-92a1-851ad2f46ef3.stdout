@@ -1,0 +1,20 @@
+tests\unit\docs_policy_tests.cpp: stale term: intentionally not proven
+tests\unit\docs_policy_tests.cpp: stale term: actual archive behavior is covered by always-on unit fixture tests
+tests\unit\docs_policy_tests.cpp: stale term: S05 integrated confidence/package-release polish
+tests\unit\docs_policy_tests.cpp: stale term: Package-consumer runtime proof is representative, not every-family archive runtime proof
+tests\unit\docs_policy_tests.cpp: stale term: leave installed-package every-family runtime proof to the `COV-GAP-003` route
+tests\unit\docs_policy_tests.cpp: stale term: | 2 | `COV-GAP-003`
+tests\unit\coverage_audit_matrix_docs_tests.cpp: stale term: intentionally not proven
+tests\unit\coverage_audit_matrix_docs_tests.cpp: stale term: actual archive behavior is covered by always-on unit fixture tests
+tests\unit\coverage_audit_matrix_docs_tests.cpp: stale term: S05 integrated confidence/package-release polish
+tests\unit\coverage_audit_matrix_docs_tests.cpp: stale term: Package-consumer runtime proof is representative, not every-family archive runtime proof
+tests\unit\coverage_audit_matrix_docs_tests.cpp: stale term: leave installed-package every-family runtime proof to the `COV-GAP-003` route
+tests\unit\coverage_audit_matrix_docs_tests.cpp: stale term: | 1 | `COV-GAP-003`
+tests\unit\coverage_audit_matrix_docs_tests.cpp: stale term: | 2 | `COV-GAP-003`
+tests\unit\coverage_audit_matrix_docs_tests.cpp: stale term: | 3 | `COV-GAP-003`
+stale_found= True
+COV-GAP-003 occurrences:
+docs\coverage-audit-matrix.md: 1
+docs\public-api-reality-check.md: 2
+tests\unit\docs_policy_tests.cpp: 5
+tests\unit\coverage_audit_matrix_docs_tests.cpp: 7

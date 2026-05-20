@@ -1,0 +1,7 @@
+VCPKG_ROOT=
+APPDATA=
+LOCALAPPDATA=
+USERPROFILE=C:\Users\evild
+cmake=/c/Program Files/CMake/bin/cmake
+cl=cmd=/c/WINDOWS/system32/cmd.exe
+pwsh=/c/Program Files/PowerShell/7/pwsh

@@ -1,8 +1,8 @@
 {
   "nodes": [
     {
-      "id": "concept:phase:planning",
-      "label": "Phase: planning",
+      "id": "concept:phase:validating-milestone",
+      "label": "Phase: validating-milestone",
       "type": "concept",
       "confidence": "EXTRACTED",
       "sourceFile": "STATE.md"
@@ -16,5 +16,5 @@
     }
   ],
   "edges": [],
-  "builtAt": "2026-05-20T02:47:17.376Z"
+  "builtAt": "2026-05-20T04:02:23.549Z"
 }

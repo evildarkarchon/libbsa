@@ -1,17 +1,19 @@
 # GSD State
 
-**Active Milestone:** None
+**Active Milestone:** M001-k9wo8b: Audit and Stabilization Baseline
 **Active Slice:** None
-**Phase:** pre-planning
-**Requirements Status:** 0 active · 0 validated · 0 deferred · 0 out of scope
+**Phase:** completing-milestone
+**Requirements Status:** 0 active · 9 validated · 4 deferred · 4 out of scope
 
 ## Milestone Registry
+- ⬜ **M001:** Audit and Stabilization Baseline
+- 🔄 **M001-k9wo8b:** Audit and Stabilization Baseline
 
 ## Recent Decisions
 - None recorded
 
 ## Blockers
-- DB unavailable — runtime markdown state derivation is disabled
+- None
 
 ## Next Action
-Open or create the canonical GSD database before deriving workflow state.
+All slices complete in M001-k9wo8b. Write milestone summary.

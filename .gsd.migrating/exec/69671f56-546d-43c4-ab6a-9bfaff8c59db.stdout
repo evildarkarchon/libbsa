@@ -1,0 +1,86 @@
+26:   constexpr std::uint32_t dds_dxt10_header_size = 148U;
+27:   constexpr std::uint32_t dds_fourcc_dx10 = 0x30315844U;
+28:   constexpr std::uint32_t dds_header_flags_volume = 0x00800000U;
+29:   constexpr std::uint32_t dds_caps_texture = 0x00001000U;
+30:   constexpr std::uint32_t dds_caps_complex = 0x00000008U;
+31:   constexpr std::uint32_t dds_caps_mipmap = 0x00400000U;
+32:   constexpr std::uint32_t dds_caps2_cubemap = 0x00000200U;
+33:   constexpr std::uint32_t dds_caps2_cubemap_all_faces = 0x0000FC00U;
+34:   constexpr std::uint32_t dds_caps2_volume = 0x00200000U;
+35:   constexpr std::uint32_t dds_resource_dimension_texture1d = 2U;
+36:   constexpr std::uint32_t dds_resource_dimension_texture2d = 3U;
+37:   constexpr std::uint32_t dds_resource_dimension_texture3d = 4U;
+103:     std::uint32_t source_chunk_index{0};
+148:   struct source_dds_spec
+161:     std::uint32_t resource_dimension{dds_resource_dimension_texture2d};
+276:       throw std::runtime_error("unsupported DDS source fixture format size");
+300:   std::size_t dds_mip_size(std::uint32_t format, std::uint32_t width, std::uint32_t height)
+310:   std::vector<source_dds_spec> source_dds_valid_specs()
+352:   std::vector<std::byte> build_source_dds(const source_dds_spec &spec)
+357:         0x0002100FU | (spec.resource_dimension == dds_resource_dimension_texture3d ? dds_header_flags_volume : 0U);
+358:     const auto caps = dds_caps_texture | (spec.mip_count > 1U ? dds_caps_complex | dds_caps_mipmap : 0U) |
+359:                       (spec.is_cubemap ? dds_caps_complex : 0U);
+363:       caps2 = dds_caps2_cubemap | dds_caps2_cubemap_all_faces;
+365:     else if (spec.resource_dimension == dds_resource_dimension_texture3d)
+367:       caps2 = dds_caps2_volume;
+370:                              spec.resource_dimension == dds_resource_dimension_texture3d ? spec.depth : 0U,
+379:     for (const auto value : {32U, 0x00000004U, dds_fourcc_dx10, 0U, 0U, 0U, 0U, 0U, caps, caps2, 0U, 0U, 0U})
+383:     for (const auto value : {spec.format_id, spec.resource_dimension, spec.is_cubemap ? 4U : 0U, spec.array_size, 0U})
+387:     if (writer.bytes.size() != dds_dxt10_header_size)
+392:     if (spec.resource_dimension == dds_resource_dimension_texture3d)
+399:         const auto size = dds_mip_size(spec.format_id, width, height);
+419:             const auto size = dds_mip_size(spec.format_id, width, height);
+428:   void write_source_case_json(std::ostringstream &out, const source_dds_spec &spec, std::string_view indent)
+438:   std::string writer_sources_manifest(const std::vector<source_dds_spec> &specs)
+442:     out << "  \"manifest_kind\": \"ba2_dx10_writer_source_dds_cases\",\n";
+444:            "\"source\": \"repository-owned synthetic DDS bytes generated for libbsa tests; no game or TES5Edit bytes copied\"},\n";
+448:       write_source_case_json(out, specs[index], "    ");
+456:       const auto found = std::find_if(specs.begin(), specs.end(), [&](const source_dds_spec &spec)
+460:         throw std::runtime_error("missing structural DDS source case");
+463:       write_source_case_json(out, *found, "");
+490:     throw std::runtime_error("unknown BA2 DX10 compression route");
+517:       throw std::runtime_error("BA2 DX10 fixture path must include a filename stem and extension");
+538:       chunk.raw_size = checked_u32(chunk.decoded_payload.size(), "BA2 DX10 decoded chunk");
+548:         throw std::runtime_error("failed to compress BA2 DX10 fixture chunk: " + compressed.error().message);
+551:       chunk.packed_size = checked_u32(chunk.stored_payload.size(), "BA2 DX10 packed chunk");
+578:       size += checked_u32(texture.original_path.size() + 2U, "BA2 DX10 FileTableOffset name table");
+598:     writer.u32(checked_u32(archive.textures.size(), "BA2 DX10 file count"));
+670:       message << "internal BA2 DX10 fixture size accounting mismatch: wrote " << writer.bytes.size() << " expected "
+689:                                       .segment = {.source_chunk_index = 0}}}},
+698:                                       .segment = {.source_chunk_index = 0}},
+703:                                       .segment = {.start_mip = 1, .end_mip = 1, .source_chunk_index = 1}}}},
+710:                           .chunks = {{.decoded_payload = repeated_bytes(0x60, 4), .segment = {.face_index = 0, .source_chunk_index = 0}},
+711:                                      {.decoded_payload = repeated_bytes(0x70, 4), .segment = {.face_index = 1, .source_chunk_index = 1}},
+712:                                      {.decoded_payload = repeated_bytes(0x80, 4), .segment = {.face_index = 2, .source_chunk_index = 2}},
+713:                                      {.decoded_payload = repeated_bytes(0x90, 4), .segment = {.face_index = 3, .source_chunk_index = 3}},
+714:                                      {.decoded_payload = repeated_bytes(0xA0, 4), .segment = {.face_index = 4, .source_chunk_index = 4}},
+715:                                      {.decoded_payload = repeated_bytes(0xB0, 4), .segment = {.face_index = 5, .source_chunk_index = 5}}}}}};
+732:                                       .segment = {.source_chunk_index = 0}}}},
+740:                                       .segment = {.array_index = 0, .source_chunk_index = 0}},
+743:                                       .segment = {.array_index = 1, .source_chunk_index = 1}}}}}};
+755:                           .chunks = {{.decoded_payload = repeated_bytes(0x21, 4), .segment = {.source_chunk_index = 0}}}},
+760:                           .chunks = {{.decoded_payload = repeated_bytes(0x31, 4), .segment = {.source_chunk_index = 0}}}}}};
+797:       throw std::runtime_error("BA2 DX10 mutation offset is out of range");
+807:       throw std::runtime_error("BA2 DX10 mutation offset is out of range");
+819:       throw std::runtime_error("BA2 DX10 mutation offset is out of range");
+835:     out << "  \"type\": \"DX10\",\n";
+842:     out << "    \"source\": \"synthetic texture bytes generated for libbsa tests; no game or TES5Edit bytes copied\"\n";
+874:       out << "      \"expected_dds_payload\": {\"bytes_hex\": \"" << to_hex(decoded) << "\", \"sha256_placeholder\": \"" << to_hex(decoded) << "\"},\n";
+884:             << chunk.segment.start_mip << ", \"end_mip\": " << chunk.segment.end_mip << ", \"source_chunk_index\": "
+885:             << chunk.segment.source_chunk_index << "}}" << (chunk_index + 1U == texture.chunks.size() ? "\n" : ",\n");
+906:   void generate_writer_sources(const std::filesystem::path &source_dir)
+908:     const auto specs = source_dds_valid_specs();
+911:       write_file(source_dir / spec.file, build_source_dds(spec));
+914:     write_file(source_dir / "ba2_dx10_malformed_truncated.dds", bytes({0x44, 0x44, 0x53, 0x20, 0x7C}));
+915:     const source_dds_spec unsupported{"unsupported_r32g32b32a32_float",
+926:     write_file(source_dir / unsupported.file, build_source_dds(unsupported));
+927:     const source_dds_spec unsupported_1d{"unsupported_r8_unorm_1d",
+938:                                          dds_resource_dimension_texture1d,
+940:     write_file(source_dir / unsupported_1d.file, build_source_dds(unsupported_1d));
+941:     const source_dds_spec unsupported_3d{"unsupported_r8g8b8a8_unorm_3d",
+952:                                          dds_resource_dimension_texture3d,
+954:     write_file(source_dir / unsupported_3d.file, build_source_dds(unsupported_3d));
+955:     write_text(source_dir / "ba2_dx10_writer_sources_manifest.json", writer_sources_manifest(specs));
+966:     "source": "synthetic malformed texture bytes generated for libbsa tests; no game or TES5Edit bytes copied"
+1059: /// Generates deterministic BA2 DX10 texture fixtures and manifests from repository-owned synthetic bytes.
+1067:     generate_writer_sources(output_dir.parent_path() / "source");

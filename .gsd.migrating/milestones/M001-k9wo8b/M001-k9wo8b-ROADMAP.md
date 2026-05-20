@@ -22,10 +22,10 @@
 - [x] **S03: S03** `risk:high` `depends:[]`
   > After this: The highest-risk generated-fixture or round-trip gaps found by the audit are fixed with durable Catch2/policy/fixture proof across the affected archive families.
 
-- [ ] **S04: S04** `risk:medium` `depends:[]`
+- [x] **S04: S04** `risk:medium` `depends:[]`
   > After this: High-risk inconsistent result/error/validation behavior discovered by the audit is stabilized and covered by tests, without redesigning the public error model.
 
-- [ ] **S05: Integrated Confidence Pass** `risk:medium` `depends:[S02,S03,S04]`
+- [x] **S05: S05** `risk:medium` `depends:[]`
   > After this: Default build/test/package-consumer verification passes, the matrix is updated with fixed/deferred status, optional compatibility paths remain documented, and remaining gaps are explicitly handed to later milestones.
 
 ## Boundary Map

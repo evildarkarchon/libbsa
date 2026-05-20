@@ -1,0 +1,3 @@
+cmakePath=C:\Program Files\CMake\bin\cmake.exe exists=True
+
+[T03] command=pwsh explicit-cmake --version exit=0

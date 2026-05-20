@@ -1,0 +1,18 @@
+{
+  "id": "1c74294b-8198-4d8c-9d72-60b179d022b7",
+  "runtime": "bash",
+  "purpose": "T03 advisory retry: release static package_consumer via PowerShell environment",
+  "script_chars": 663,
+  "started_at": "2026-05-20T03:52:25.461Z",
+  "finished_at": "2026-05-20T03:52:25.849Z",
+  "exit_code": 1,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 388,
+  "stdout_bytes": 87,
+  "stderr_bytes": 255,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\1c74294b-8198-4d8c-9d72-60b179d022b7.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\1c74294b-8198-4d8c-9d72-60b179d022b7.stderr"
+}

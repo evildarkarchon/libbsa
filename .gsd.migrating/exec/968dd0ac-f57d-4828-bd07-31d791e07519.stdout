@@ -1,0 +1,32 @@
+Test project J:/libbsa/build/windows-msvc-debug-static
+      Start  39: coverage_audit_matrix preserves status vocabulary and ranked gaps
+ 1/11 Test  #39: coverage_audit_matrix preserves status vocabulary and ranked gaps ................   Passed    0.02 sec
+      Start  44: coverage_audit_matrix preserves default fixture and manifest evidence policy
+ 2/11 Test  #44: coverage_audit_matrix preserves default fixture and manifest evidence policy .....   Passed    0.02 sec
+      Start 104: coverage_audit_matrix preserves every required support axis
+ 3/11 Test #104: coverage_audit_matrix preserves every required support axis ......................   Passed    0.13 sec
+      Start 197: coverage_audit_matrix keeps COV-GAP-001 closed while preserving remaining gaps
+ 4/11 Test #197: coverage_audit_matrix keeps COV-GAP-001 closed while preserving remaining gaps ...   Passed    0.02 sec
+      Start 198: coverage_audit_matrix names compatibility matrix as malformed submatrix only
+ 5/11 Test #198: coverage_audit_matrix names compatibility matrix as malformed submatrix only .....   Passed    0.02 sec
+      Start 206: coverage_audit_matrix preserves default round-trip evidence for every family
+ 6/11 Test #206: coverage_audit_matrix preserves default round-trip evidence for every family .....   Passed    0.02 sec
+      Start 238: coverage_audit_matrix separates advisory local evidence from default proof
+ 7/11 Test #238: coverage_audit_matrix separates advisory local evidence from default proof .......   Passed    0.02 sec
+      Start 278: coverage_audit_matrix preserves direct validation success evidence
+ 8/11 Test #278: coverage_audit_matrix preserves direct validation success evidence ...............   Passed    0.02 sec
+      Start 283: coverage_audit_matrix is discoverable from compatibility evidence catalog
+ 9/11 Test #283: coverage_audit_matrix is discoverable from compatibility evidence catalog ........   Passed    0.13 sec
+      Start 342: coverage_audit_matrix stays free of internal planning identifiers
+10/11 Test #342: coverage_audit_matrix stays free of internal planning identifiers ................   Passed    0.13 sec
+      Start 373: coverage_audit_matrix lists every current archive family
+11/11 Test #373: coverage_audit_matrix lists every current archive family .........................   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 11
+
+Label Time Summary:
+coverage_audit_matrix    =   0.52 sec*proc (11 tests)
+docs_policy              =   0.52 sec*proc (11 tests)
+unit                     =   0.52 sec*proc (11 tests)
+
+Total Test time (real) =   1.30 sec

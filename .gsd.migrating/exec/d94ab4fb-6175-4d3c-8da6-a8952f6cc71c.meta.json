@@ -1,0 +1,18 @@
+{
+  "id": "d94ab4fb-6175-4d3c-8da6-a8952f6cc71c",
+  "runtime": "bash",
+  "purpose": "T02 verification: validation_api label tests",
+  "script_chars": 78,
+  "started_at": "2026-05-20T03:13:20.426Z",
+  "finished_at": "2026-05-20T03:13:21.187Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 761,
+  "stdout_bytes": 2112,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\d94ab4fb-6175-4d3c-8da6-a8952f6cc71c.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\d94ab4fb-6175-4d3c-8da6-a8952f6cc71c.stderr"
+}

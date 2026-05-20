@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T02",
+  "unitId": "M001-k9wo8b/S05/T02",
+  "timestamp": 1779249045976,
+  "passed": true,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "cmake --preset windows-msvc-debug-static\ncmake --build --preset windows-msvc-debug-static --target libbsa_tests\nctest --preset windows-msvc-debug-static -L coverage_audit_matrix --output-on-failure\nctest --preset windows-msvc-debug-static -L docs_policy --output-on-failure\nctest --preset windows-msvc-debug-static -L target_format_policy --output-on-failure\nctest --preset windows-msvc-debug-static -L package_consumer --output-on-failure",
+      "exitCode": 0,
+      "durationMs": 767,
+      "verdict": "pass"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "a7cfc3f2-c7db-4910-b003-9d63a1f3102c",
+  "runtime": "bash",
+  "purpose": "S05 CMake install export and package consumer target scan",
+  "script_chars": 251,
+  "started_at": "2026-05-20T03:22:08.196Z",
+  "finished_at": "2026-05-20T03:22:08.250Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 54,
+  "stdout_bytes": 2344,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\a7cfc3f2-c7db-4910-b003-9d63a1f3102c.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\a7cfc3f2-c7db-4910-b003-9d63a1f3102c.stderr"
+}

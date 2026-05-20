@@ -1,0 +1,5 @@
+libbsa includes:
+1: #include <libbsa/libbsa.hpp>
+forbidden_present= []
+line_count= 755
+std::filesystem current_path line present= True

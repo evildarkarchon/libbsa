@@ -1,0 +1,18 @@
+{
+  "id": "d62fd33d-dcd0-4589-96e5-5f51b03fda39",
+  "runtime": "bash",
+  "purpose": "S05 fixture and package proof file inventory",
+  "script_chars": 432,
+  "started_at": "2026-05-20T03:22:00.310Z",
+  "finished_at": "2026-05-20T03:22:00.432Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 122,
+  "stdout_bytes": 5807,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\d62fd33d-dcd0-4589-96e5-5f51b03fda39.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\d62fd33d-dcd0-4589-96e5-5f51b03fda39.stderr"
+}

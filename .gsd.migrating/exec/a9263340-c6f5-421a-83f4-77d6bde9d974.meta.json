@@ -1,0 +1,18 @@
+{
+  "id": "a9263340-c6f5-421a-83f4-77d6bde9d974",
+  "runtime": "bash",
+  "purpose": "T03 diagnostic: cmd.exe sees CMake and vcpkg env",
+  "script_chars": 286,
+  "started_at": "2026-05-20T03:53:50.249Z",
+  "finished_at": "2026-05-20T03:53:50.310Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 61,
+  "stdout_bytes": 167,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\a9263340-c6f5-421a-83f4-77d6bde9d974.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\a9263340-c6f5-421a-83f4-77d6bde9d974.stderr"
+}

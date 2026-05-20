@@ -1,0 +1,18 @@
+{
+  "id": "dab7acc3-c02a-4244-a622-df2df2944624",
+  "runtime": "python",
+  "purpose": "S05 closeout non-git TES5Edit post-status modification check",
+  "script_chars": 720,
+  "started_at": "2026-05-20T03:59:07.926Z",
+  "finished_at": "2026-05-20T03:59:07.983Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 57,
+  "stdout_bytes": 104,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\dab7acc3-c02a-4244-a622-df2df2944624.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\dab7acc3-c02a-4244-a622-df2df2944624.stderr"
+}

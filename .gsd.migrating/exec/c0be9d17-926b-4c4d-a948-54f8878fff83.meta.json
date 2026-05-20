@@ -1,0 +1,18 @@
+{
+  "id": "c0be9d17-926b-4c4d-a948-54f8878fff83",
+  "runtime": "bash",
+  "purpose": "Scan BA2 DX10 writer test helpers for minimal DDS source creation",
+  "script_chars": 179,
+  "started_at": "2026-05-20T03:20:50.640Z",
+  "finished_at": "2026-05-20T03:20:50.709Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 69,
+  "stdout_bytes": 17245,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\c0be9d17-926b-4c4d-a948-54f8878fff83.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\c0be9d17-926b-4c4d-a948-54f8878fff83.stderr"
+}

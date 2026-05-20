@@ -1,0 +1,18 @@
+{
+  "id": "d1a5ccfd-73ca-40f0-b19e-4545699c67ec",
+  "runtime": "bash",
+  "purpose": "T03 integrated gate: build libbsa_tests windows-msvc-debug-static",
+  "script_chars": 261,
+  "started_at": "2026-05-20T03:51:14.249Z",
+  "finished_at": "2026-05-20T03:51:15.276Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 1027,
+  "stdout_bytes": 1471,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\d1a5ccfd-73ca-40f0-b19e-4545699c67ec.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\d1a5ccfd-73ca-40f0-b19e-4545699c67ec.stderr"
+}

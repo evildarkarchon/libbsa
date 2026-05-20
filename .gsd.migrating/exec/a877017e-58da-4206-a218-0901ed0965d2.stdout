@@ -1,0 +1,19 @@
+-- docs\coverage-audit-matrix.md --
+104: | Public/package-consumer API proof | Proven | `tests/package-consumer/main.cpp`; `docs/integration-examples.md`; `tests/unit/public_include_boundary_tests.cpp`; `tests/unit/export_surface_policy_tests.cpp` | Package-con
+133: | 2 | `COV-GAP-003` | Low | Package-consumer runtime proof for creating/opening every archive family from an installed package. | `tests/package-consumer/main.cpp` compile/links representative public APIs and smoke-check
+-- docs\public-api-reality-check.md --
+22: | Umbrella include and installed target usage | `<libbsa/libbsa.hpp>`, `libbsa::libbsa`, `LIBBSA_API` | `libbsa.hpp` includes the reader, result, validation, version, and writer headers. `tests/package-consumer/main.cpp`
+34: | BA2 DX10 writer lifecycle | `ba2_dx10_writer`, `ba2_dx10_target`, `ba2_dx10_writer_options`, `ba2_dx10_writer::add_file`, `ba2_dx10_writer::write_to` | `writer.hpp`, `target-format-guide.md`, and `integration-examples.
+67: 4. Package-consumer runtime proof is representative, not every-family archive runtime proof; that is the known `COV-GAP-003` route.
+76: | `COV-GAP-003` | Package-consumer compile/link and minimal runtime error-path proof exist, but installed-package runtime archive creation/opening for every family is intentionally not proven by default. | Route to S05 i
+85: 3. Keep executable per-variant validation proof in `tests/unit/validation_api_tests.cpp` and docs-policy checks, and leave installed-package every-family runtime proof to the `COV-GAP-003` route.
+-- docs\compatibility-evidence.md --
+-- docs\integration-examples.md --
+-- docs\api-mainpage.md --
+-- tests\unit\docs_policy_tests.cpp --
+245:                       "`COV-GAP-003`",
+247:                       "installed-package runtime archive creation/opening for every family is intentionally not proven by default"});
+256:                      {"`COV-GAP-003`",
+-- tests\unit\coverage_audit_matrix_docs_tests.cpp --
+246:                       "`COV-GAP-003`",
+-- tests\unit\target_format_policy_tests.cpp --

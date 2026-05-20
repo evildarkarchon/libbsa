@@ -1,0 +1,18 @@
+{
+  "id": "e8d325ee-c5cd-4771-9f86-734fbaeb4690",
+  "runtime": "bash",
+  "purpose": "T03 diagnostic: verify PowerShell explicit CMake invocation emits output",
+  "script_chars": 276,
+  "started_at": "2026-05-20T03:53:05.107Z",
+  "finished_at": "2026-05-20T03:53:05.433Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 326,
+  "stdout_bytes": 112,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\e8d325ee-c5cd-4771-9f86-734fbaeb4690.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\e8d325ee-c5cd-4771-9f86-734fbaeb4690.stderr"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "92387069-a265-407e-b552-d0ee06137e9f",
+  "runtime": "bash",
+  "purpose": "T01 verification: package consumer smoke windows-msvc-debug-static",
+  "script_chars": 86,
+  "started_at": "2026-05-20T03:40:57.124Z",
+  "finished_at": "2026-05-20T03:41:03.655Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 6531,
+  "stdout_bytes": 368,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\92387069-a265-407e-b552-d0ee06137e9f.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\92387069-a265-407e-b552-d0ee06137e9f.stderr"
+}

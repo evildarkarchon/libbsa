@@ -1,0 +1,29 @@
+Test project J:/libbsa/build/windows-msvc-debug-static
+    Start  86: target_format_policy package consumer examples have docs and CTest smoke gates
+1/7 Test  #86: target_format_policy package consumer examples have docs and CTest smoke gates ..........   Passed    0.02 sec
+    Start 111: target_format_policy guide preserves legal evidence and reference boundaries
+2/7 Test #111: target_format_policy guide preserves legal evidence and reference boundaries ............   Passed    0.12 sec
+    Start 287: target_format_policy guide covers every supported target format and compression route
+3/7 Test #287: target_format_policy guide covers every supported target format and compression route ...   Passed    0.12 sec
+    Start 298: target_format_policy guide documents public compatibility_warning_code values
+4/7 Test #298: target_format_policy guide documents public compatibility_warning_code values ...........   Passed    0.12 sec
+    Start 394: target_format_policy guide documents writer output publication safety
+5/7 Test #394: target_format_policy guide documents writer output publication safety ...................   Passed    0.12 sec
+    Start 436: package_consumer_smoke
+6/7 Test #436: package_consumer_smoke ..................................................................   Passed    5.85 sec
+    Start 437: package_consumer_runtime_dll_copy
+7/7 Test #437: package_consumer_runtime_dll_copy .......................................................   Passed    0.06 sec
+
+100% tests passed, 0 tests failed out of 7
+
+Label Time Summary:
+doc_structure           =   0.51 sec*proc (5 tests)
+fixture                 =   0.12 sec*proc (1 test)
+package_consumer        =   5.92 sec*proc (3 tests)
+publish                 =   0.12 sec*proc (1 test)
+static_boundary         =   0.12 sec*proc (1 test)
+target_format_policy    =   6.41 sec*proc (7 tests)
+unit                    =   0.51 sec*proc (5 tests)
+validation_policy       =   0.12 sec*proc (1 test)
+
+Total Test time (real) =   6.43 sec

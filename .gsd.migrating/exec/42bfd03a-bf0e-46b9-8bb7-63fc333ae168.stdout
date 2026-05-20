@@ -1,0 +1,10 @@
+[debug full CTest] .gsd\exec\d916e6bb-4da3-45ae-b93e-b501f3ff1e30.stdout
+Total Test time (real) =  26.17 sec
+The following tests did not run:
+	247 - local game fixtures are opt-in (Skipped)
+	284 - BSArchPro-derived expected fixture comparisons are opt-in (Skipped)
+
+[debug package_consumer CTest] .gsd\exec\1f202f2d-0493-4c47-bbe7-787a84638449.stdout
+100% tests passed, 0 tests failed out of 4
+Total Test time (real) =   5.99 sec
+

@@ -1,0 +1,18 @@
+{
+  "id": "236e3546-f265-4361-a27b-d7f421098dd8",
+  "runtime": "bash",
+  "purpose": "summarize DDS generator helper locations",
+  "script_chars": 488,
+  "started_at": "2026-05-20T03:33:41.618Z",
+  "finished_at": "2026-05-20T03:33:41.704Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 86,
+  "stdout_bytes": 6369,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\236e3546-f265-4361-a27b-d7f421098dd8.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\236e3546-f265-4361-a27b-d7f421098dd8.stderr"
+}

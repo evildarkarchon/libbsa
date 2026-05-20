@@ -1,0 +1,18 @@
+{
+  "id": "b69775ab-ffde-448f-8d3c-a4d41e99fed4",
+  "runtime": "python",
+  "purpose": "s05_requirements_status_summary",
+  "script_chars": 863,
+  "started_at": "2026-05-20T03:30:49.759Z",
+  "finished_at": "2026-05-20T03:30:49.811Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 52,
+  "stdout_bytes": 7790,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\b69775ab-ffde-448f-8d3c-a4d41e99fed4.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\b69775ab-ffde-448f-8d3c-a4d41e99fed4.stderr"
+}

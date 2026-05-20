@@ -1,0 +1,21 @@
+Test project J:/libbsa/build/windows-msvc-debug-static
+    Start  86: target_format_policy package consumer examples have docs and CTest smoke gates
+1/4 Test  #86: target_format_policy package consumer examples have docs and CTest smoke gates .....   Passed    0.02 sec
+    Start 322: coverage_audit_matrix proves installed package-consumer runtime for every family
+2/4 Test #322: coverage_audit_matrix proves installed package-consumer runtime for every family ...   Passed    0.02 sec
+    Start 436: package_consumer_smoke
+3/4 Test #436: package_consumer_smoke .............................................................   Passed    5.93 sec
+    Start 437: package_consumer_runtime_dll_copy
+4/4 Test #437: package_consumer_runtime_dll_copy ..................................................   Passed    0.05 sec
+
+100% tests passed, 0 tests failed out of 4
+
+Label Time Summary:
+coverage_audit_matrix    =   0.02 sec*proc (1 test)
+doc_structure            =   0.02 sec*proc (1 test)
+docs_policy              =   0.02 sec*proc (1 test)
+package_consumer         =   6.02 sec*proc (4 tests)
+target_format_policy     =   6.01 sec*proc (3 tests)
+unit                     =   0.04 sec*proc (2 tests)
+
+Total Test time (real) =   6.04 sec

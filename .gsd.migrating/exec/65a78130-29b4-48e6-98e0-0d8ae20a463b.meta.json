@@ -1,0 +1,18 @@
+{
+  "id": "65a78130-29b4-48e6-98e0-0d8ae20a463b",
+  "runtime": "python",
+  "purpose": "s05_planning_recon_path_and_token_summary",
+  "script_chars": 2436,
+  "started_at": "2026-05-20T03:28:19.380Z",
+  "finished_at": "2026-05-20T03:28:19.430Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 50,
+  "stdout_bytes": 17579,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\65a78130-29b4-48e6-98e0-0d8ae20a463b.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\65a78130-29b4-48e6-98e0-0d8ae20a463b.stderr"
+}

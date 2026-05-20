@@ -1,12 +1,12 @@
 {
-  "compiledAt": "2026-05-20T03:06:15.851Z",
+  "compiledAt": "2026-05-20T04:08:18.274Z",
   "milestoneId": "M001-k9wo8b",
   "pipeline": {
     "clarifyRoundLimit": 3,
     "researchSynthesized": true,
     "draftContextIncluded": false,
     "finalizedContextIncluded": true,
-    "sourcePhase": "executing"
+    "sourcePhase": "completing-milestone"
   },
   "nodes": [
     {
@@ -185,12 +185,17 @@
       "dependsOn": [
         "execute-task:M001-k9wo8b:S04:T01"
       ],
-      "writes": [],
+      "writes": [
+        "docs/coverage-audit-matrix.md",
+        "docs/compatibility-evidence.md",
+        "docs/public-api-reality-check.md",
+        "tests/unit/coverage_audit_matrix_docs_tests.cpp"
+      ],
       "metadata": {
         "unitType": "execute-task",
         "unitId": "M001-k9wo8b.S04.T02",
-        "title": "Update evidence docs and policy guards",
-        "status": "pending"
+        "title": "Updated the public validation evidence docs and docs-policy guards so COV-GAP-001 is closed without changing the validation API shape.",
+        "status": "complete"
       }
     },
     {
@@ -203,7 +208,79 @@
         "unitType": "complete-slice",
         "unitId": "M001-k9wo8b.S04",
         "title": "S04",
-        "status": "pending"
+        "status": "complete"
+      }
+    },
+    {
+      "id": "execute-task:M001-k9wo8b:S05:T01",
+      "kind": "unit",
+      "dependsOn": [],
+      "writes": [
+        "tests/package-consumer/main.cpp"
+      ],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S05.T01",
+        "title": "Added a fixture-free installed package runtime smoke that writes, reopens, validates, and extracts TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives through the umbrella public API.",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "execute-task:M001-k9wo8b:S05:T02",
+      "kind": "unit",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S05:T01"
+      ],
+      "writes": [
+        "docs/coverage-audit-matrix.md",
+        "docs/public-api-reality-check.md",
+        "docs/compatibility-evidence.md",
+        "docs/integration-examples.md",
+        "docs/api-mainpage.md",
+        "tests/unit/docs_policy_tests.cpp",
+        "tests/unit/coverage_audit_matrix_docs_tests.cpp",
+        "tests/unit/target_format_policy_tests.cpp"
+      ],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S05.T02",
+        "title": "Closed COV-GAP-003 in public docs and policy tests by documenting and enforcing installed package-consumer archive runtime proof for TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10.",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "execute-task:M001-k9wo8b:S05:T03",
+      "kind": "unit",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S05:T02"
+      ],
+      "writes": [
+        ".gsd/exec/5c65c624-bc72-48d2-b583-f965df05a464.stdout",
+        ".gsd/exec/d1a5ccfd-73ca-40f0-b19e-4545699c67ec.stdout",
+        ".gsd/exec/d916e6bb-4da3-45ae-b93e-b501f3ff1e30.stdout",
+        ".gsd/exec/1f202f2d-0493-4c47-bbe7-787a84638449.stdout",
+        ".gsd/exec/e87bb418-9197-4fe4-bab4-fd125465e5e7.stdout",
+        ".gsd/exec/4c7a60f7-8c46-417e-b8f0-8c2c301c6f99.stdout",
+        ".gsd/exec/c93e7807-2f93-480e-956b-a72a386372ad.stdout"
+      ],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S05.T03",
+        "title": "Ran the M001/S05 integrated verification gate and recorded passing debug static build, full CTest, package-consumer proof, and TES5Edit boundary evidence.",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "complete-slice:M001-k9wo8b:S05",
+      "kind": "verification",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S05:T03"
+      ],
+      "metadata": {
+        "unitType": "complete-slice",
+        "unitId": "M001-k9wo8b.S05",
+        "title": "S05",
+        "status": "complete"
       }
     }
   ]

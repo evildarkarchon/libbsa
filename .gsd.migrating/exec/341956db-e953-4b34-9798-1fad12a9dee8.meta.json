@@ -1,0 +1,18 @@
+{
+  "id": "341956db-e953-4b34-9798-1fad12a9dee8",
+  "runtime": "bash",
+  "purpose": "Verification: build libbsa_tests windows-msvc-debug-static",
+  "script_chars": 70,
+  "started_at": "2026-05-20T03:49:21.327Z",
+  "finished_at": "2026-05-20T03:49:25.569Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 4242,
+  "stdout_bytes": 1580,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\341956db-e953-4b34-9798-1fad12a9dee8.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\341956db-e953-4b34-9798-1fad12a9dee8.stderr"
+}

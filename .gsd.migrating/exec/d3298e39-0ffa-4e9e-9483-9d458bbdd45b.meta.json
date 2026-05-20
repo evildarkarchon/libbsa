@@ -1,0 +1,18 @@
+{
+  "id": "d3298e39-0ffa-4e9e-9483-9d458bbdd45b",
+  "runtime": "bash",
+  "purpose": "inspect package consumer source for forbidden direct libbsa includes and basic C++ issues",
+  "script_chars": 540,
+  "started_at": "2026-05-20T03:40:35.212Z",
+  "finished_at": "2026-05-20T03:40:35.295Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 83,
+  "stdout_bytes": 140,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\d3298e39-0ffa-4e9e-9483-9d458bbdd45b.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\d3298e39-0ffa-4e9e-9483-9d458bbdd45b.stderr"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "fe243c3e-870e-4d5e-92a1-851ad2f46ef3",
+  "runtime": "bash",
+  "purpose": "Scan public docs/tests for stale COV-GAP-003 wording after edits",
+  "script_chars": 1158,
+  "started_at": "2026-05-20T03:48:59.846Z",
+  "finished_at": "2026-05-20T03:48:59.929Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 83,
+  "stdout_bytes": 1679,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\fe243c3e-870e-4d5e-92a1-851ad2f46ef3.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\fe243c3e-870e-4d5e-92a1-851ad2f46ef3.stderr"
+}

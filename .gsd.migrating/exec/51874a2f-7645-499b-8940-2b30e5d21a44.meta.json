@@ -1,0 +1,18 @@
+{
+  "id": "51874a2f-7645-499b-8940-2b30e5d21a44",
+  "runtime": "bash",
+  "purpose": "T03 diagnostic: cmd.exe /c escaping check with explicit double slash",
+  "script_chars": 291,
+  "started_at": "2026-05-20T03:54:01.450Z",
+  "finished_at": "2026-05-20T03:54:01.587Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 137,
+  "stdout_bytes": 193,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\51874a2f-7645-499b-8940-2b30e5d21a44.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\51874a2f-7645-499b-8940-2b30e5d21a44.stderr"
+}

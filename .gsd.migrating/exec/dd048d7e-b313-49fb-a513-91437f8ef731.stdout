@@ -1,0 +1,1045 @@
+BEGIN: cmake --preset windows-msvc-debug-static
+-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+-- Configuring done (0.6s)
+-- Generating done (0.1s)
+-- Build files have been written to: J:/libbsa/build/windows-msvc-debug-static
+END: cmake --preset windows-msvc-debug-static | exit=0 | duration_ms=816
+BEGIN: cmake --build --preset windows-msvc-debug-static --target libbsa_tests
+MSBuild version 18.6.3+84d3e95b4 for .NET Framework
+
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\ZERO_CHECK.vcxproj]
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\libbsa.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\Debug\libbsa.lib
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\libbsa_tests.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa_tests.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\tests\Debug\libbsa_tests.exe
+END: cmake --build --preset windows-msvc-debug-static --target libbsa_tests | exit=0 | duration_ms=1063
+BEGIN: ctest --preset windows-msvc-debug-static --output-on-failure
+Test project J:/libbsa/build/windows-msvc-debug-static
+        Start   1: payload_stream rejects partial sink writes and zero chunk size
+  1/438 Test   #1: payload_stream rejects partial sink writes and zero chunk size ..........................................................   Passed    0.02 sec
+        Start   2: bulk_extraction records per-entry failures without aborting siblings
+  2/438 Test   #2: bulk_extraction records per-entry failures without aborting siblings ....................................................   Passed    0.02 sec
+        Start   3: tes3_bsa_lookup helper normalizes variants over parsed entries
+  3/438 Test   #3: tes3_bsa_lookup helper normalizes variants over parsed entries ..........................................................   Passed    0.02 sec
+        Start   4: dds_layout plans DX10 chunks from default policy and byte caps
+  4/438 Test   #4: dds_layout plans DX10 chunks from default policy and byte caps ..........................................................   Passed    0.01 sec
+        Start   5: compatibility_warning reports BA2 target family mismatch
+  5/438 Test   #5: compatibility_warning reports BA2 target family mismatch ................................................................   Passed    0.02 sec
+        Start   6: BA2 GNRL writer keeps raw disk hashing byte-stable with memory entries
+  6/438 Test   #6: BA2 GNRL writer keeps raw disk hashing byte-stable with memory entries ..................................................   Passed    0.02 sec
+        Start   7: BA2 GNRL writer rejects duplicate canonical archive paths at write time
+  7/438 Test   #7: BA2 GNRL writer rejects duplicate canonical archive paths at write time .................................................   Passed    0.01 sec
+        Start   8: archive_reader open rejects empty host paths
+  8/438 Test   #8: archive_reader open rejects empty host paths ............................................................................   Passed    0.12 sec
+        Start   9: public_include_boundary DX10 writer contract exposes no raw override surface
+  9/438 Test   #9: public_include_boundary DX10 writer contract exposes no raw override surface ............................................   Passed    0.01 sec
+        Start  10: docs_policy public API audit is discoverable and routes proof gaps
+ 10/438 Test  #10: docs_policy public API audit is discoverable and routes proof gaps ......................................................   Passed    0.02 sec
+        Start  11: compression_router rejects unsupported explicit enum values
+ 11/438 Test  #11: compression_router rejects unsupported explicit enum values .............................................................   Passed    0.02 sec
+        Start  12: coverage_audit_matrix lists every current archive family
+ 12/438 Test  #12: coverage_audit_matrix lists every current archive family ................................................................   Passed    0.01 sec
+        Start  13: binary_io reader reads checked little-endian fields
+ 13/438 Test  #13: binary_io reader reads checked little-endian fields .....................................................................   Passed    0.01 sec
+        Start  14: parser_preparer_seam_policy requires dedicated TES4 parser seams
+ 14/438 Test  #14: parser_preparer_seam_policy requires dedicated TES4 parser seams ........................................................   Passed    0.02 sec
+        Start  15: BA2 GNRL writer resolves non-ASCII UTF-8 output host paths
+ 15/438 Test  #15: BA2 GNRL writer resolves non-ASCII UTF-8 output host paths ..............................................................   Passed    0.02 sec
+        Start  16: compatibility_warning reports BSA embedded name compatibility risk
+ 16/438 Test  #16: compatibility_warning reports BSA embedded name compatibility risk ......................................................   Passed    0.13 sec
+        Start  17: ba2_gnrl_end_table opens archives with payloads before the filename table
+ 17/438 Test  #17: ba2_gnrl_end_table opens archives with payloads before the filename table ...............................................   Passed    0.02 sec
+        Start  18: tes3_bsa_writer copies memory entries into writer-owned state
+ 18/438 Test  #18: tes3_bsa_writer copies memory entries into writer-owned state ...........................................................   Passed    0.02 sec
+        Start  19: host_file writer host-path inventory covers source output finalization and dedupe dispositions
+ 19/438 Test  #19: host_file writer host-path inventory covers source output finalization and dedupe dispositions ..........................   Passed    0.02 sec
+        Start  20: writer_execution_options defaults to serial worker count
+ 20/438 Test  #20: writer_execution_options defaults to serial worker count ................................................................   Passed    0.02 sec
+        Start  21: ba2_writer_execution duplicate DX10 canonical paths return format_error without partial output
+ 21/438 Test  #21: ba2_writer_execution duplicate DX10 canonical paths return format_error without partial output ..........................   Passed    0.02 sec
+        Start  22: bounded_memory_policy public API boundary hides private BA2 writer helpers
+ 22/438 Test  #22: bounded_memory_policy public API boundary hides private BA2 writer helpers ..............................................   Passed    0.02 sec
+        Start  23: payload_stream validates archive size and stream ranges
+ 23/438 Test  #23: payload_stream validates archive size and stream ranges .................................................................   Passed    0.12 sec
+        Start  24: payload_stream transfers exact bytes across chunk size 17
+ 24/438 Test  #24: payload_stream transfers exact bytes across chunk size 17 ...............................................................   Passed    0.01 sec
+        Start  25: byte_vector helpers translate impossible byte-buffer growth
+ 25/438 Test  #25: byte_vector helpers translate impossible byte-buffer growth .............................................................   Passed    0.01 sec
+        Start  26: ba2_dx10_detector rejects aggregate texture chunk counts above the metadata limit
+ 26/438 Test  #26: ba2_dx10_detector rejects aggregate texture chunk counts above the metadata limit .......................................   Passed    1.87 sec
+        Start  27: tes3_bsa_entries materializes large non-overlapping spans outside payload order
+ 27/438 Test  #27: tes3_bsa_entries materializes large non-overlapping spans outside payload order .........................................   Passed    0.06 sec
+        Start  28: validation_policy CTest label taxonomy is documented and backed by selectable tests
+ 28/438 Test  #28: validation_policy CTest label taxonomy is documented and backed by selectable tests .....................................   Passed    0.02 sec
+        Start  29: TES4 BSA writer refuses to overwrite existing output when overwrite_existing is false
+ 29/438 Test  #29: TES4 BSA writer refuses to overwrite existing output when overwrite_existing is false ...................................   Passed    0.01 sec
+        Start  30: BA2 GNRL writer keeps compressed disk entries byte-stable with memory entries
+ 30/438 Test  #30: BA2 GNRL writer keeps compressed disk entries byte-stable with memory entries ...........................................   Passed    0.02 sec
+        Start  31: benchmark_policy static boundary keeps report generation out of default CTest timing gates
+ 31/438 Test  #31: benchmark_policy static boundary keeps report generation out of default CTest timing gates ..............................   Passed    0.13 sec
+        Start  32: tes3_bsa_detector leaves unrelated bytes unsupported
+ 32/438 Test  #32: tes3_bsa_detector leaves unrelated bytes unsupported ....................................................................   Passed    0.01 sec
+        Start  33: lz4_codec rejects malformed frame and raw block payloads
+ 33/438 Test  #33: lz4_codec rejects malformed frame and raw block payloads ................................................................   Passed    0.02 sec
+        Start  34: validation_policy requires-game-fixture label is selectable without local archives
+ 34/438 Test  #34: validation_policy requires-game-fixture label is selectable without local archives ......................................   Passed    0.01 sec
+        Start  35: host_file reads exact whole-file payloads
+ 35/438 Test  #35: host_file reads exact whole-file payloads ...............................................................................   Passed    0.02 sec
+        Start  36: BA2 GNRL writer raw Fallout 4 output reopens with end filename table
+ 36/438 Test  #36: BA2 GNRL writer raw Fallout 4 output reopens with end filename table ....................................................   Passed    0.02 sec
+        Start  37: host_file reports allocation limits through results
+ 37/438 Test  #37: host_file reports allocation limits through results .....................................................................   Passed    0.02 sec
+        Start  38: export_surface public emitted APIs are explicitly annotated
+ 38/438 Test  #38: export_surface public emitted APIs are explicitly annotated .............................................................   Passed    0.02 sec
+        Start  39: ba2_gnrl_metadata lists manifest-backed records from filename tables
+ 39/438 Test  #39: ba2_gnrl_metadata lists manifest-backed records from filename tables ....................................................   Passed    0.02 sec
+        Start  40: tes4_bsa_malformed_open rejects malformed open-phase fixtures with stable error codes
+ 40/438 Test  #40: tes4_bsa_malformed_open rejects malformed open-phase fixtures with stable error codes ...................................   Passed    0.02 sec
+        Start  41: BA2 DX10 writer shares duplicate DDS chunk offsets when deduplicate_payloads = true
+ 41/438 Test  #41: BA2 DX10 writer shares duplicate DDS chunk offsets when deduplicate_payloads = true .....................................   Passed    0.02 sec
+        Start  42: TES4 BSA writer dedupes matching disk-backed raw payloads
+ 42/438 Test  #42: TES4 BSA writer dedupes matching disk-backed raw payloads ...............................................................   Passed    0.02 sec
+        Start  43: BA2 GNRL writer all-compressed policy routes through target compression methods
+ 43/438 Test  #43: BA2 GNRL writer all-compressed policy routes through target compression methods .........................................   Passed    0.03 sec
+        Start  44: ba2_dx10 aggregate overflow fixtures are unreachable under record field bounds
+ 44/438 Test  #44: ba2_dx10 aggregate overflow fixtures are unreachable under record field bounds ..........................................   Passed    0.01 sec
+        Start  45: host_path_correctness_boundary non-ASCII host path exercises reader dispatch surface
+ 45/438 Test  #45: host_path_correctness_boundary non-ASCII host path exercises reader dispatch surface ....................................   Passed    0.04 sec
+        Start  46: docs_policy static boundary keeps public API documentation optional
+ 46/438 Test  #46: docs_policy static boundary keeps public API documentation optional .....................................................   Passed    0.01 sec
+        Start  47: writer_publish refuses an existing destination before writing when overwrite is disabled
+ 47/438 Test  #47: writer_publish refuses an existing destination before writing when overwrite is disabled ................................   Passed    0.02 sec
+        Start  48: ba2_gnrl_lookup normalizes variants and reports stable missing-path behavior
+ 48/438 Test  #48: ba2_gnrl_lookup normalizes variants and reports stable missing-path behavior ............................................   Passed    0.02 sec
+        Start  49: tes3_bsa_writer preserves caller-owned temp-name sibling files
+ 49/438 Test  #49: tes3_bsa_writer preserves caller-owned temp-name sibling files ..........................................................   Passed    0.02 sec
+        Start  50: parser archive-file opens use the shared host_file seam
+ 50/438 Test  #50: parser archive-file opens use the shared host_file seam .................................................................   Passed    0.02 sec
+        Start  51: validation_policy verification matrix contract keeps planning summaries truthful
+ 51/438 Test  #51: validation_policy verification matrix contract keeps planning summaries truthful ........................................   Passed    0.01 sec
+        Start  52: BA2 DX10 writer keeps duplicate DDS chunk offsets distinct when deduplicate_payloads = false
+ 52/438 Test  #52: BA2 DX10 writer keeps duplicate DDS chunk offsets distinct when deduplicate_payloads = false ............................   Passed    0.02 sec
+        Start  53: ba2_dx10_detector opens sparse archive without reading the payload gap
+ 53/438 Test  #53: ba2_dx10_detector opens sparse archive without reading the payload gap ..................................................   Passed    1.58 sec
+        Start  54: tes4_bsa_detection opens byte-driven TES4-family BSA variants
+ 54/438 Test  #54: tes4_bsa_detection opens byte-driven TES4-family BSA variants ...........................................................   Passed    0.12 sec
+        Start  55: validation_policy verification matrix contract keeps fixture policy truthful
+ 55/438 Test  #55: validation_policy verification matrix contract keeps fixture policy truthful ............................................   Passed    0.12 sec
+        Start  56: ba2_dx10_compressed_chunk_fallbacks preserve reconstructed fixture bytes
+ 56/438 Test  #56: ba2_dx10_compressed_chunk_fallbacks preserve reconstructed fixture bytes ................................................   Passed    0.02 sec
+        Start  57: tes3_bsa_malformed returns format_error for oversized declared metadata without exceptions
+ 57/438 Test  #57: tes3_bsa_malformed returns format_error for oversized declared metadata without exceptions ..............................   Passed    0.02 sec
+        Start  58: lz4_codec frame exact-to-sink rejects malformed and overproducing frames
+ 58/438 Test  #58: lz4_codec frame exact-to-sink rejects malformed and overproducing frames ................................................   Passed    0.02 sec
+        Start  59: tes4_bsa_malformed_open rejects metadata counts above parser limits
+ 59/438 Test  #59: tes4_bsa_malformed_open rejects metadata counts above parser limits .....................................................   Passed    0.13 sec
+        Start  60: ba2_writer_execution DX10 worker_count preserves starfield v3 raw LZ4 texture output
+ 60/438 Test  #60: ba2_writer_execution DX10 worker_count preserves starfield v3 raw LZ4 texture output ....................................   Passed    0.03 sec
+        Start  61: BA2 GNRL writer reports invalid archive paths as invalid arguments
+ 61/438 Test  #61: BA2 GNRL writer reports invalid archive paths as invalid arguments ......................................................   Passed    0.01 sec
+        Start  62: tes4_bsa_detection rejects non-BSA bytes regardless of host extension
+ 62/438 Test  #62: tes4_bsa_detection rejects non-BSA bytes regardless of host extension ...................................................   Passed    0.01 sec
+        Start  63: tes4_bsa_extract_bytes matches extract path errors for invalid and missing paths
+ 63/438 Test  #63: tes4_bsa_extract_bytes matches extract path errors for invalid and missing paths ........................................   Passed    0.01 sec
+        Start  64: bounded_memory_policy targeted writer stages avoid byte-at-a-time disk source accumulation
+ 64/438 Test  #64: bounded_memory_policy targeted writer stages avoid byte-at-a-time disk source accumulation ..............................   Passed    0.02 sec
+        Start  65: lz4_codec frame exact-to-sink writes bounded chunks
+ 65/438 Test  #65: lz4_codec frame exact-to-sink writes bounded chunks .....................................................................   Passed    0.02 sec
+        Start  66: bulk_extraction streams large raw archive families through bounded chunks
+ 66/438 Test  #66: bulk_extraction streams large raw archive families through bounded chunks ...............................................   Passed    0.05 sec
+        Start  67: validation_policy verification matrix contract keeps release package proof inside CTest
+ 67/438 Test  #67: validation_policy verification matrix contract keeps release package proof inside CTest .................................   Passed    0.13 sec
+        Start  68: archive_reader open reports I/O errors for missing host files
+ 68/438 Test  #68: archive_reader open reports I/O errors for missing host files ...........................................................   Passed    0.12 sec
+        Start  69: tes3_bsa_writer replaces existing output only when overwrite is enabled
+ 69/438 Test  #69: tes3_bsa_writer replaces existing output only when overwrite is enabled .................................................   Passed    0.13 sec
+        Start  70: deflate_codec round trips exact-size payloads
+ 70/438 Test  #70: deflate_codec round trips exact-size payloads ...........................................................................   Passed    0.01 sec
+        Start  71: tes3_bsa_writer resolves non-ASCII UTF-8 disk source and output host paths
+ 71/438 Test  #71: tes3_bsa_writer resolves non-ASCII UTF-8 disk source and output host paths ..............................................   Passed    0.13 sec
+        Start  72: TES4 BSA writer leaves embedded names absent by default and when explicitly disabled
+ 72/438 Test  #72: TES4 BSA writer leaves embedded names absent by default and when explicitly disabled ....................................   Passed    0.02 sec
+        Start  73: TES4 BSA writer gates parseable DDS texture formats by target profile
+ 73/438 Test  #73: TES4 BSA writer gates parseable DDS texture formats by target profile ...................................................   Passed    0.13 sec
+        Start  74: bulk_extraction source policy documents raw chunking and compressed allocation boundaries
+ 74/438 Test  #74: bulk_extraction source policy documents raw chunking and compressed allocation boundaries ...............................   Passed    0.02 sec
+        Start  75: host_file helper surface exposes the shared host_file_path contract
+ 75/438 Test  #75: host_file helper surface exposes the shared host_file_path contract .....................................................   Passed    0.02 sec
+        Start  76: TES4 BSA writer keeps compressed disk entries byte-stable with memory entries
+ 76/438 Test  #76: TES4 BSA writer keeps compressed disk entries byte-stable with memory entries ...........................................   Passed    0.02 sec
+        Start  77: tes4_bsa_v104_extract skips embedded names before raw and deflate payloads
+ 77/438 Test  #77: tes4_bsa_v104_extract skips embedded names before raw and deflate payloads ..............................................   Passed    0.02 sec
+        Start  78: bounded_memory_policy static boundary keeps BA2 writer implementations independent of TES5Edit
+ 78/438 Test  #78: bounded_memory_policy static boundary keeps BA2 writer implementations independent of TES5Edit ..........................   Passed    0.01 sec
+        Start  79: tes4_bsa_metadata exposes archive-level open state
+ 79/438 Test  #79: tes4_bsa_metadata exposes archive-level open state ......................................................................   Passed    0.12 sec
+        Start  80: tes3_bsa_writer rejects duplicate canonical archive paths at write time
+ 80/438 Test  #80: tes3_bsa_writer rejects duplicate canonical archive paths at write time .................................................   Passed    0.02 sec
+        Start  81: BA2 GNRL writer dedupes raw disk sources under non-ASCII host paths
+ 81/438 Test  #81: BA2 GNRL writer dedupes raw disk sources under non-ASCII host paths .....................................................   Passed    0.02 sec
+        Start  82: BA2 DX10 chunk assembler streams snapshot-backed chunk assembly in texture order
+ 82/438 Test  #82: BA2 DX10 chunk assembler streams snapshot-backed chunk assembly in texture order ........................................   Passed    0.03 sec
+        Start  83: BA2 DX10 writer rejects Starfield-only DDS formats for Fallout 4 archives
+ 83/438 Test  #83: BA2 DX10 writer rejects Starfield-only DDS formats for Fallout 4 archives ...............................................   Passed    0.03 sec
+        Start  84: tes3_bsa_writer rejects invalid archive paths
+ 84/438 Test  #84: tes3_bsa_writer rejects invalid archive paths ...........................................................................   Passed    0.01 sec
+        Start  85: ba2_gnrl_detector rejects record hash mismatches
+ 85/438 Test  #85: ba2_gnrl_detector rejects record hash mismatches ........................................................................   Passed    0.02 sec
+        Start  86: target_format_policy package consumer examples have docs and CTest smoke gates
+ 86/438 Test  #86: target_format_policy package consumer examples have docs and CTest smoke gates ..........................................   Passed    0.02 sec
+        Start  87: tes3_bsa_writer emits byte-accurate raw TES3 tables in hash order
+ 87/438 Test  #87: tes3_bsa_writer emits byte-accurate raw TES3 tables in hash order .......................................................   Passed    0.02 sec
+        Start  88: validation setup relies on archive_reader open instead of a duplicate readability preflight
+ 88/438 Test  #88: validation setup relies on archive_reader open instead of a duplicate readability preflight .............................   Passed    0.01 sec
+        Start  89: TES4 BSA writer rejects duplicate canonical archive paths at write time
+ 89/438 Test  #89: TES4 BSA writer rejects duplicate canonical archive paths at write time .................................................   Passed    0.01 sec
+        Start  90: tes3_bsa_writer refuses overwrite by default and preserves existing bytes
+ 90/438 Test  #90: tes3_bsa_writer refuses overwrite by default and preserves existing bytes ...............................................   Passed    0.02 sec
+        Start  91: tes3_bsa_entries exposes manifest-backed metadata and offsets
+ 91/438 Test  #91: tes3_bsa_entries exposes manifest-backed metadata and offsets ...........................................................   Passed    0.01 sec
+        Start  92: host_file iterates bounded chunks
+ 92/438 Test  #92: host_file iterates bounded chunks .......................................................................................   Passed    0.02 sec
+        Start  93: TES4 BSA writer requires explicit archive paths for disk entries
+ 93/438 Test  #93: TES4 BSA writer requires explicit archive paths for disk entries ........................................................   Passed    0.01 sec
+        Start  94: binary_io reader read_bytes advances only on success
+ 94/438 Test  #94: binary_io reader read_bytes advances only on success ....................................................................   Passed    0.01 sec
+        Start  95: validation_api reports compatibility_matrix malformed rows as validation errors
+ 95/438 Test  #95: validation_api reports compatibility_matrix malformed rows as validation errors .........................................   Passed    0.02 sec
+        Start  96: tes4_bsa_malformed_open rejects matched oversized file counts before allocation
+ 96/438 Test  #96: tes4_bsa_malformed_open rejects matched oversized file counts before allocation .........................................   Passed    0.12 sec
+        Start  97: ba2_gnrl_detector returns format_error for oversized declared record tables
+ 97/438 Test  #97: ba2_gnrl_detector returns format_error for oversized declared record tables .............................................   Passed    0.02 sec
+        Start  98: coverage_audit_matrix stays free of internal planning identifiers
+ 98/438 Test  #98: coverage_audit_matrix stays free of internal planning identifiers .......................................................   Passed    0.12 sec
+        Start  99: ba2_dx10_writer reopens starfield method 0 deflate compression archives through archive_reader
+ 99/438 Test  #99: ba2_dx10_writer reopens starfield method 0 deflate compression archives through archive_reader ..........................   Passed    0.03 sec
+        Start 100: ba2_dx10_writer::add_file snapshots DDS bytes before later source file changes
+100/438 Test #100: ba2_dx10_writer::add_file snapshots DDS bytes before later source file changes ..........................................   Passed    0.03 sec
+        Start 101: archive_reader open routes detection and size probes through host_file helpers
+101/438 Test #101: archive_reader open routes detection and size probes through host_file helpers ..........................................   Passed    0.13 sec
+        Start 102: bulk_extraction coalesces duplicate successes in serial mode
+102/438 Test #102: bulk_extraction coalesces duplicate successes in serial mode ............................................................   Passed    0.02 sec
+        Start 103: build_policy static boundary lets BUILD_TESTING disable test dependency discovery
+103/438 Test #103: build_policy static boundary lets BUILD_TESTING disable test dependency discovery .......................................   Passed    0.12 sec
+        Start 104: BA2 GNRL writer accepts explicit Fallout 4 disk archive paths
+104/438 Test #104: BA2 GNRL writer accepts explicit Fallout 4 disk archive paths ...........................................................   Passed    0.12 sec
+        Start 105: ba2_gnrl_extract streams manifest bytes and extract_bytes matches
+105/438 Test #105: ba2_gnrl_extract streams manifest bytes and extract_bytes matches .......................................................   Passed    0.02 sec
+        Start 106: validation_policy local fixture boundary keeps game archives ignored and provenance documented
+106/438 Test #106: validation_policy local fixture boundary keeps game archives ignored and provenance documented ..........................   Passed    0.07 sec
+        Start 107: tes3_bsa_entries accepts adjacent spans and zero-byte boundary entries
+107/438 Test #107: tes3_bsa_entries accepts adjacent spans and zero-byte boundary entries ..................................................   Passed    0.02 sec
+        Start 108: unsupported_future_bsa reports unsupported for recognized future BSA versions
+108/438 Test #108: unsupported_future_bsa reports unsupported for recognized future BSA versions ...........................................   Passed    0.02 sec
+        Start 109: host_file writer host-path inventory policy is represented by an explicit matrix
+109/438 Test #109: host_file writer host-path inventory policy is represented by an explicit matrix ........................................   Passed    0.02 sec
+        Start 110: ba2 gnrl writer preparation stage prepares minimal memory entries
+110/438 Test #110: ba2 gnrl writer preparation stage prepares minimal memory entries .......................................................   Passed    0.01 sec
+        Start 111: target_format_policy guide preserves legal evidence and reference boundaries
+111/438 Test #111: target_format_policy guide preserves legal evidence and reference boundaries ............................................   Passed    0.01 sec
+        Start 112: BA2 DX10 writer DDS source manifest rejects malformed and unsupported DDS sources
+112/438 Test #112: BA2 DX10 writer DDS source manifest rejects malformed and unsupported DDS sources .......................................   Passed    0.12 sec
+        Start 113: tes3_bsa_writer atomic replace helper preserves output when replacement fails
+113/438 Test #113: tes3_bsa_writer atomic replace helper preserves output when replacement fails ...........................................   Passed    0.02 sec
+        Start 114: validation_policy verification matrix contract keeps the main workflow matrix truthful
+114/438 Test #114: validation_policy verification matrix contract keeps the main workflow matrix truthful ..................................   Passed    0.02 sec
+        Start 115: payload_stream streams raw ranges with bounded chunks
+115/438 Test #115: payload_stream streams raw ranges with bounded chunks ...................................................................   Passed    0.02 sec
+        Start 116: writer_publish overwrites existing regular archives through the atomic replacement path
+116/438 Test #116: writer_publish overwrites existing regular archives through the atomic replacement path .................................   Passed    0.02 sec
+        Start 117: BA2 GNRL writer move construction transfers staged entries
+117/438 Test #117: BA2 GNRL writer move construction transfers staged entries ..............................................................   Passed    0.02 sec
+        Start 118: tes3_bsa_extract helper is raw-only and enforces sink writes
+118/438 Test #118: tes3_bsa_extract helper is raw-only and enforces sink writes ............................................................   Passed    0.13 sec
+        Start 119: tes4_bsa_malformed_open rejects partially overlapping payload spans
+119/438 Test #119: tes4_bsa_malformed_open rejects partially overlapping payload spans .....................................................   Passed    0.02 sec
+        Start 120: tes4 payload descriptor seam derives embedded-name prefix raw size compression and rejects metadata overlap
+120/438 Test #120: tes4 payload descriptor seam derives embedded-name prefix raw size compression and rejects metadata overlap .............   Passed    0.02 sec
+        Start 121: bulk_extraction does not pre-merge distinct request strings
+121/438 Test #121: bulk_extraction does not pre-merge distinct request strings .............................................................   Passed    0.02 sec
+        Start 122: host_file_path contract does not preserve caller UTF-8 text as dead diagnostics state
+122/438 Test #122: host_file_path contract does not preserve caller UTF-8 text as dead diagnostics state ...................................   Passed    0.02 sec
+        Start 123: archive_reader extraction dispatch reuses the stored resolved host path
+123/438 Test #123: archive_reader extraction dispatch reuses the stored resolved host path .................................................   Passed    0.01 sec
+        Start 124: benchmark_policy static boundary rejects fixed speedup threshold gates
+124/438 Test #124: benchmark_policy static boundary rejects fixed speedup threshold gates ..................................................   Passed    0.01 sec
+        Start 125: TES4 BSA writer does not dedupe matching source bytes with different embedded-name prefixes
+125/438 Test #125: TES4 BSA writer does not dedupe matching source bytes with different embedded-name prefixes .............................   Passed    0.02 sec
+        Start 126: writer_publish cleans temporary output after callback errors
+126/438 Test #126: writer_publish cleans temporary output after callback errors ............................................................   Passed    0.02 sec
+        Start 127: validation_policy verification matrix contract keeps README truthful
+127/438 Test #127: validation_policy verification matrix contract keeps README truthful ....................................................   Passed    0.01 sec
+        Start 128: bethesda_hash exposes TES3 sort halves
+128/438 Test #128: bethesda_hash exposes TES3 sort halves ..................................................................................   Passed    0.01 sec
+        Start 129: BA2 GNRL dedupe disk comparisons reject source size changes
+129/438 Test #129: BA2 GNRL dedupe disk comparisons reject source size changes .............................................................   Passed    0.02 sec
+        Start 130: TES4 BSA writer copies memory entries into writer-owned state
+130/438 Test #130: TES4 BSA writer copies memory entries into writer-owned state ...........................................................   Passed    0.02 sec
+        Start 131: coverage_audit_matrix preserves default fixture and manifest evidence policy
+131/438 Test #131: coverage_audit_matrix preserves default fixture and manifest evidence policy ............................................   Passed    0.01 sec
+        Start 132: BA2 DX10 writer cleans snapshot directories on missing snapshot failure
+132/438 Test #132: BA2 DX10 writer cleans snapshot directories on missing snapshot failure .................................................   Passed    0.25 sec
+        Start 133: tes3_bsa_extract streams and returns bytes from data-section-relative offsets
+133/438 Test #133: tes3_bsa_extract streams and returns bytes from data-section-relative offsets ...........................................   Passed    0.12 sec
+        Start 134: dds_layout computes locked DX10 mip byte sizes
+134/438 Test #134: dds_layout computes locked DX10 mip byte sizes ..........................................................................   Passed    0.01 sec
+        Start 135: tes4 writer layout stage toggles duplicate payload reuse
+135/438 Test #135: tes4 writer layout stage toggles duplicate payload reuse ................................................................   Passed    0.02 sec
+        Start 136: dds_layout allows repeated mip ranges across different array slices
+136/438 Test #136: dds_layout allows repeated mip ranges across different array slices .....................................................   Passed    0.01 sec
+        Start 137: bulk_extraction preserves request order and bytes in serial and parallel mode
+137/438 Test #137: bulk_extraction preserves request order and bytes in serial and parallel mode ...........................................   Passed    0.02 sec
+        Start 138: bulk_extraction coalesces duplicate successes in parallel mode
+138/438 Test #138: bulk_extraction coalesces duplicate successes in parallel mode ..........................................................   Passed    0.02 sec
+        Start 139: ba2 dx10 writer preparation stage preserves multi-mip snapshot chunk order
+139/438 Test #139: ba2 dx10 writer preparation stage preserves multi-mip snapshot chunk order ..............................................   Passed    0.02 sec
+        Start 140: ba2_dx10_malformed manifest cases fail with stable errors
+140/438 Test #140: ba2_dx10_malformed manifest cases fail with stable errors ...............................................................   Passed    0.02 sec
+        Start 141: ba2_dx10_layout exposes validated order and rejects contradictory format-defined order
+141/438 Test #141: ba2_dx10_layout exposes validated order and rejects contradictory format-defined order ..................................   Passed    0.02 sec
+        Start 142: ba2_dx10_writer::add_file rejects malformed DDS bytes
+142/438 Test #142: ba2_dx10_writer::add_file rejects malformed DDS bytes ...................................................................   Passed    0.02 sec
+        Start 143: BA2 DX10 writer move assignment transfers snapshot-backed entries
+143/438 Test #143: BA2 DX10 writer move assignment transfers snapshot-backed entries .......................................................   Passed    0.02 sec
+        Start 144: migrated writer call sites build host_file_path contracts before shared helper reads
+144/438 Test #144: migrated writer call sites build host_file_path contracts before shared helper reads ....................................   Passed    0.02 sec
+        Start 145: ba2_dx10_detector opens generated FO4 texture archive
+145/438 Test #145: ba2_dx10_detector opens generated FO4 texture archive ...................................................................   Passed    0.02 sec
+        Start 146: BA2 GNRL writer overwrites existing archives when overwrite_existing is true
+146/438 Test #146: BA2 GNRL writer overwrites existing archives when overwrite_existing is true ............................................   Passed    0.02 sec
+        Start 147: thread_safety_policy public headers point to canonical guidance
+147/438 Test #147: thread_safety_policy public headers point to canonical guidance .........................................................   Passed    0.12 sec
+        Start 148: BA2 DX10 chunk assembler fails on missing or truncated snapshot bytes before publish-visible output changes
+148/438 Test #148: BA2 DX10 chunk assembler fails on missing or truncated snapshot bytes before publish-visible output changes .............   Passed    0.02 sec
+        Start 149: ba2_dx10_writer::add_file accepts duplicate canonical archive paths for write-time validation
+149/438 Test #149: ba2_dx10_writer::add_file accepts duplicate canonical archive paths for write-time validation ...........................   Passed    0.02 sec
+        Start 150: dds_layout computes cubemap DDS face order with source chunk identity
+150/438 Test #150: dds_layout computes cubemap DDS face order with source chunk identity ...................................................   Passed    0.01 sec
+        Start 151: parser_primitives reject spans outside archive bounds
+151/438 Test #151: parser_primitives reject spans outside archive bounds ...................................................................   Passed    0.01 sec
+        Start 152: ba2_dx10_metadata keeps non-texture entries opt-in
+152/438 Test #152: ba2_dx10_metadata keeps non-texture entries opt-in ......................................................................   Passed    0.01 sec
+        Start 153: TES4 BSA writer leaves duplicate stored bytes at distinct offsets by default
+153/438 Test #153: TES4 BSA writer leaves duplicate stored bytes at distinct offsets by default ............................................   Passed    0.02 sec
+        Start 154: tes4 writer layout stage compares raw disk and memory payloads
+154/438 Test #154: tes4 writer layout stage compares raw disk and memory payloads ..........................................................   Passed    0.01 sec
+        Start 155: tes4 writer preparation stage prepares minimal memory folders
+155/438 Test #155: tes4 writer preparation stage prepares minimal memory folders ...........................................................   Passed    0.01 sec
+        Start 156: archive_path rejects obvious invalid virtual paths
+156/438 Test #156: archive_path rejects obvious invalid virtual paths ......................................................................   Passed    0.01 sec
+        Start 157: compatibility_evidence exposes default fixture round-trip proof sweep
+157/438 Test #157: compatibility_evidence exposes default fixture round-trip proof sweep ...................................................   Passed    0.01 sec
+        Start 158: TES4 BSA writer compresses inherited entries and preserves raw overrides under all-compressed policy
+158/438 Test #158: TES4 BSA writer compresses inherited entries and preserves raw overrides under all-compressed policy ....................   Passed    0.02 sec
+        Start 159: docs_policy integration examples document the full consumer journey
+159/438 Test #159: docs_policy integration examples document the full consumer journey .....................................................   Passed    0.01 sec
+        Start 160: TES3 writer move construction transfers staged entries
+160/438 Test #160: TES3 writer move construction transfers staged entries ..................................................................   Passed    0.02 sec
+        Start 161: BA2 DX10 writer cleans snapshot directories on truncated snapshot failure and preserves destination bytes
+161/438 Test #161: BA2 DX10 writer cleans snapshot directories on truncated snapshot failure and preserves destination bytes ...............   Passed    0.27 sec
+        Start 162: archive_reader_extract_bytes preflights materialization before payload extraction
+162/438 Test #162: archive_reader_extract_bytes preflights materialization before payload extraction .......................................   Passed    0.12 sec
+        Start 163: payload_stream validates single-vector materialization limits
+163/438 Test #163: payload_stream validates single-vector materialization limits ...........................................................   Passed    0.01 sec
+        Start 164: BA2 GNRL writer refuses to overwrite existing output when overwrite_existing is false
+164/438 Test #164: BA2 GNRL writer refuses to overwrite existing output when overwrite_existing is false ...................................   Passed    0.02 sec
+        Start 165: tes3_bsa_malformed rejects generated malformed TES3 cases with stable error codes
+165/438 Test #165: tes3_bsa_malformed rejects generated malformed TES3 cases with stable error codes .......................................   Passed    0.02 sec
+        Start 166: tes3_bsa_malformed reports unsorted hashes before payload overlap
+166/438 Test #166: tes3_bsa_malformed reports unsorted hashes before payload overlap .......................................................   Passed    0.12 sec
+        Start 167: export_surface public export header documents macro modes
+167/438 Test #167: export_surface public export header documents macro modes ...............................................................   Passed    0.01 sec
+        Start 168: tes3_bsa_malformed rejects overlapping non-empty payload spans
+168/438 Test #168: tes3_bsa_malformed rejects overlapping non-empty payload spans ..........................................................   Passed    0.12 sec
+        Start 169: bounded_memory_policy static boundary keeps BSA writer implementations independent of TES5Edit
+169/438 Test #169: bounded_memory_policy static boundary keeps BSA writer implementations independent of TES5Edit ..........................   Passed    0.01 sec
+        Start 170: BA2 DX10 writer records use canonical stem hash and extension metadata
+170/438 Test #170: BA2 DX10 writer records use canonical stem hash and extension metadata ..................................................   Passed    0.02 sec
+        Start 171: TES4 BSA writer serializes derived file flags and hash-sorted tables
+171/438 Test #171: TES4 BSA writer serializes derived file flags and hash-sorted tables ....................................................   Passed    0.02 sec
+        Start 172: tes3_bsa_writer committed fixture manifest records canonical writer evidence
+172/438 Test #172: tes3_bsa_writer committed fixture manifest records canonical writer evidence ............................................   Passed    0.02 sec
+        Start 173: TES4 BSA writer reports invalid archive paths as invalid arguments
+173/438 Test #173: TES4 BSA writer reports invalid archive paths as invalid arguments ......................................................   Passed    0.02 sec
+        Start 174: TES4 BSA writer does not dedupe matching source bytes with different compression encodings
+174/438 Test #174: TES4 BSA writer does not dedupe matching source bytes with different compression encodings ..............................   Passed    0.02 sec
+        Start 175: ba2_dx10_detector rejects record hash mismatches
+175/438 Test #175: ba2_dx10_detector rejects record hash mismatches ........................................................................   Passed    0.02 sec
+        Start 176: raw writer serializers reopen disk sources through the shared host_file seam
+176/438 Test #176: raw writer serializers reopen disk sources through the shared host_file seam ............................................   Passed    0.01 sec
+        Start 177: ba2 dx10 writer layout stage toggles duplicate chunk reuse
+177/438 Test #177: ba2 dx10 writer layout stage toggles duplicate chunk reuse ..............................................................   Passed    0.01 sec
+        Start 178: tes3_bsa_writer rejects output host paths containing NUL bytes
+178/438 Test #178: tes3_bsa_writer rejects output host paths containing NUL bytes ..........................................................   Passed    0.02 sec
+        Start 179: writer_hotspot_policy requires BA2 GNRL staged dedupe identity before exact equality
+179/438 Test #179: writer_hotspot_policy requires BA2 GNRL staged dedupe identity before exact equality ....................................   Passed    0.02 sec
+        Start 180: BA2 DX10 writer state removes snapshot temp directory on teardown
+180/438 Test #180: BA2 DX10 writer state removes snapshot temp directory on teardown .......................................................   Passed    0.36 sec
+        Start 181: parser_primitives validate checked arithmetic
+181/438 Test #181: parser_primitives validate checked arithmetic ...........................................................................   Passed    0.13 sec
+        Start 182: tes3_bsa_writer publish helper never replaces an existing destination
+182/438 Test #182: tes3_bsa_writer publish helper never replaces an existing destination ...................................................   Passed    0.02 sec
+        Start 183: writer_hotspot_policy requires truthful BA2 DX10 lifecycle docs
+183/438 Test #183: writer_hotspot_policy requires truthful BA2 DX10 lifecycle docs .........................................................   Passed    0.02 sec
+        Start 184: validation_policy configured build profiles are Windows-only and documented
+184/438 Test #184: validation_policy configured build profiles are Windows-only and documented .............................................   Passed    0.02 sec
+        Start 185: dds_layout builds deterministic DDS DXT10 headers
+185/438 Test #185: dds_layout builds deterministic DDS DXT10 headers .......................................................................   Passed    0.01 sec
+        Start 186: ba2 dx10 writer preparation stage prepares multi-mip and cubemap entries
+186/438 Test #186: ba2 dx10 writer preparation stage prepares multi-mip and cubemap entries ................................................   Passed    0.12 sec
+        Start 187: BA2 DX10 writer overwrites existing archives when overwrite_existing is true
+187/438 Test #187: BA2 DX10 writer overwrites existing archives when overwrite_existing is true ............................................   Passed    0.02 sec
+        Start 188: validation_api reports expected variant mismatch as a valid risky warning
+188/438 Test #188: validation_api reports expected variant mismatch as a valid risky warning ...............................................   Passed    0.02 sec
+        Start 189: bounded_memory_policy public API boundary hides private BSA writer helpers
+189/438 Test #189: bounded_memory_policy public API boundary hides private BSA writer helpers ..............................................   Passed    0.02 sec
+        Start 190: benchmark_policy README documents commands schema and data policy
+190/438 Test #190: benchmark_policy README documents commands schema and data policy .......................................................   Passed    0.01 sec
+        Start 191: tes3 writer preparation stage reports malformed disk entries
+191/438 Test #191: tes3 writer preparation stage reports malformed disk entries ............................................................   Passed    0.01 sec
+        Start 192: docs_policy public proof docs keep optional evidence and fixture boundaries explicit
+192/438 Test #192: docs_policy public proof docs keep optional evidence and fixture boundaries explicit ....................................   Passed    0.02 sec
+        Start 193: TES4 writer move assignment transfers staged entries
+193/438 Test #193: TES4 writer move assignment transfers staged entries ....................................................................   Passed    0.02 sec
+        Start 194: BA2 DX10 writer refuses to overwrite existing output by default and preserves bytes
+194/438 Test #194: BA2 DX10 writer refuses to overwrite existing output by default and preserves bytes .....................................   Passed    0.02 sec
+        Start 195: BA2 DX10 writer DDS source manifest exposes dedicated structural cases
+195/438 Test #195: BA2 DX10 writer DDS source manifest exposes dedicated structural cases ..................................................   Passed    0.12 sec
+        Start 196: ba2_dx10_writer::add_file rejects unsupported DDS formats
+196/438 Test #196: ba2_dx10_writer::add_file rejects unsupported DDS formats ...............................................................   Passed    0.02 sec
+        Start 197: tes4_bsa_malformed_open rejects file record hash mismatches
+197/438 Test #197: tes4_bsa_malformed_open rejects file record hash mismatches .............................................................   Passed    0.02 sec
+        Start 198: bulk_extraction rejects unsupported large worker counts as an outer argument error
+198/438 Test #198: bulk_extraction rejects unsupported large worker counts as an outer argument error ......................................   Passed    0.02 sec
+        Start 199: lz4_codec frame and raw block round trip independently
+199/438 Test #199: lz4_codec frame and raw block round trip independently ..................................................................   Passed    0.01 sec
+        Start 200: export_surface root CMake installs export header and disables auto export
+200/438 Test #200: export_surface root CMake installs export header and disables auto export ...............................................   Passed    0.02 sec
+        Start 201: tes4_bsa_v105_extract writes LZ4 frame payloads through bounded sink chunks
+201/438 Test #201: tes4_bsa_v105_extract writes LZ4 frame payloads through bounded sink chunks .............................................   Passed    0.02 sec
+        Start 202: coverage_audit_matrix preserves direct validation success evidence
+202/438 Test #202: coverage_audit_matrix preserves direct validation success evidence ......................................................   Passed    0.01 sec
+        Start 203: ba2_dx10_writer::add_file rejects a missing DDS host path with structured error
+203/438 Test #203: ba2_dx10_writer::add_file rejects a missing DDS host path with structured error .........................................   Passed    0.02 sec
+        Start 204: archive_path normalizes separators and ASCII case
+204/438 Test #204: archive_path normalizes separators and ASCII case .......................................................................   Passed    0.02 sec
+        Start 205: bethesda_hash supports split TES4 overload constants
+205/438 Test #205: bethesda_hash supports split TES4 overload constants ....................................................................   Passed    0.01 sec
+        Start 206: tes3_bsa_writer rejects archive paths containing NUL bytes
+206/438 Test #206: tes3_bsa_writer rejects archive paths containing NUL bytes ..............................................................   Passed    0.01 sec
+        Start 207: coverage_audit_matrix is discoverable from compatibility evidence catalog
+207/438 Test #207: coverage_audit_matrix is discoverable from compatibility evidence catalog ...............................................   Passed    0.01 sec
+        Start 208: result stores successful values
+208/438 Test #208: result stores successful values .........................................................................................   Passed    0.01 sec
+        Start 209: writer_publish rejects non-regular overwrite targets before writing
+209/438 Test #209: writer_publish rejects non-regular overwrite targets before writing .....................................................   Passed    0.02 sec
+        Start 210: writer_execution_options rejects unsupported large worker counts before creating output
+210/438 Test #210: writer_execution_options rejects unsupported large worker counts before creating output .................................   Passed    0.02 sec
+        Start 211: tes3_bsa_writer rejects overwrite targets that are existing directories
+211/438 Test #211: tes3_bsa_writer rejects overwrite targets that are existing directories .................................................   Passed    0.12 sec
+        Start 212: payload_stream propagates source and sink failures
+212/438 Test #212: payload_stream propagates source and sink failures ......................................................................   Passed    0.12 sec
+        Start 213: reader reopen declarations consume the shared host_file_path contract
+213/438 Test #213: reader reopen declarations consume the shared host_file_path contract ...................................................   Passed    0.02 sec
+        Start 214: parser_primitives reject stream limits before seeking or allocating
+214/438 Test #214: parser_primitives reject stream limits before seeking or allocating .....................................................   Passed    0.01 sec
+        Start 215: public_include_boundary umbrella header exposes public boundary types
+215/438 Test #215: public_include_boundary umbrella header exposes public boundary types ...................................................   Passed    0.01 sec
+        Start 216: ba2 gnrl writer layout stage toggles duplicate payload reuse
+216/438 Test #216: ba2 gnrl writer layout stage toggles duplicate payload reuse ............................................................   Passed    0.02 sec
+        Start 217: writer_publish reserves isolated temp directories and cleans them after success
+217/438 Test #217: writer_publish reserves isolated temp directories and cleans them after success .........................................   Passed    0.02 sec
+        Start 218: host_file_path rejects malformed UTF-8 before filesystem I/O
+218/438 Test #218: host_file_path rejects malformed UTF-8 before filesystem I/O ............................................................   Passed    0.01 sec
+        Start 219: dds_layout rejects gaps, duplicate coverage, impossible sizes, and unsupported formats
+219/438 Test #219: dds_layout rejects gaps, duplicate coverage, impossible sizes, and unsupported formats ..................................   Passed    0.02 sec
+        Start 220: coverage_audit_matrix preserves default round-trip evidence for every family
+220/438 Test #220: coverage_audit_matrix preserves default round-trip evidence for every family ............................................   Passed    0.01 sec
+        Start 221: TES4 BSA writer reports missing disk sources as I/O errors
+221/438 Test #221: TES4 BSA writer reports missing disk sources as I/O errors ..............................................................   Passed    0.02 sec
+        Start 222: validation_api accepts generated fixture archives
+222/438 Test #222: validation_api accepts generated fixture archives .......................................................................   Passed    0.02 sec
+        Start 223: tes4_bsa_extract_bytes returns bounded consumer-visible bytes through extraction path
+223/438 Test #223: tes4_bsa_extract_bytes returns bounded consumer-visible bytes through extraction path ...................................   Passed    0.02 sec
+        Start 224: payload_stream writes decoded spans in chunks
+224/438 Test #224: payload_stream writes decoded spans in chunks ...........................................................................   Passed    0.01 sec
+        Start 225: payload_stream reads exact archive ranges
+225/438 Test #225: payload_stream reads exact archive ranges ...............................................................................   Passed    0.01 sec
+        Start 226: host_path_correctness_boundary suite registration is wired into libbsa_tests
+226/438 Test #226: host_path_correctness_boundary suite registration is wired into libbsa_tests ............................................   Passed    0.12 sec
+        Start 227: ba2_gnrl_bounded_open opens sparse large-payload archives without reading payload bytes
+227/438 Test #227: ba2_gnrl_bounded_open opens sparse large-payload archives without reading payload bytes .................................   Passed    0.02 sec
+        Start 228: ba2_gnrl_malformed manifest cases fail with stable error codes
+228/438 Test #228: ba2_gnrl_malformed manifest cases fail with stable error codes ..........................................................   Passed    0.02 sec
+        Start 229: parser_primitives materialize archive strings through result errors
+229/438 Test #229: parser_primitives materialize archive strings through result errors .....................................................   Passed    0.01 sec
+        Start 230: writer_publish reports publish failures with the writer diagnostic prefix and cleans temp output
+230/438 Test #230: writer_publish reports publish failures with the writer diagnostic prefix and cleans temp output ........................   Passed    0.02 sec
+        Start 231: BA2 GNRL writer per-entry raw and compressed overrides affect only raw versus packed state
+231/438 Test #231: BA2 GNRL writer per-entry raw and compressed overrides affect only raw versus packed state ..............................   Passed    0.02 sec
+        Start 232: host_path_correctness_boundary stays public-API-only and phase-scoped
+232/438 Test #232: host_path_correctness_boundary stays public-API-only and phase-scoped ...................................................   Passed    0.01 sec
+        Start 233: docs_policy API mainpage preserves public operation structure
+233/438 Test #233: docs_policy API mainpage preserves public operation structure ...........................................................   Passed    0.01 sec
+        Start 234: TES4 BSA writer records compressed override metadata while archive default remains raw
+234/438 Test #234: TES4 BSA writer records compressed override metadata while archive default remains raw ..................................   Passed    0.02 sec
+        Start 235: ba2_dx10_extract detects partial_sink writes after header output
+235/438 Test #235: ba2_dx10_extract detects partial_sink writes after header output ........................................................   Passed    0.11 sec
+        Start 236: TES4 BSA writer shares offsets for opt-in identical final stored bytes
+236/438 Test #236: TES4 BSA writer shares offsets for opt-in identical final stored bytes ..................................................   Passed    0.02 sec
+        Start 237: bulk_extraction options default to serial extraction
+237/438 Test #237: bulk_extraction options default to serial extraction ....................................................................   Passed    0.01 sec
+        Start 238: tes4_bsa_malformed_open rejects inconsistent table offsets
+238/438 Test #238: tes4_bsa_malformed_open rejects inconsistent table offsets ..............................................................   Passed    0.02 sec
+        Start 239: compression_router sink route streams LZ4 frame payloads
+239/438 Test #239: compression_router sink route streams LZ4 frame payloads ................................................................   Passed    0.02 sec
+        Start 240: writer_publish no-overwrite publication preserves a raced destination and cleans temp output
+240/438 Test #240: writer_publish no-overwrite publication preserves a raced destination and cleans temp output ............................   Passed    0.02 sec
+        Start 241: tes3_bsa_writer rejects source host paths containing NUL bytes
+241/438 Test #241: tes3_bsa_writer rejects source host paths containing NUL bytes ..........................................................   Passed    0.01 sec
+        Start 242: deflate_codec rejects truncated and exact-size mismatches
+242/438 Test #242: deflate_codec rejects truncated and exact-size mismatches ...............................................................   Passed    0.12 sec
+        Start 243: parser entry declarations consume the shared host-file path contract
+243/438 Test #243: parser entry declarations consume the shared host-file path contract ....................................................   Passed    0.01 sec
+        Start 244: validation_api reports malformed archives without lenient readers
+244/438 Test #244: validation_api reports malformed archives without lenient readers .......................................................   Passed    0.01 sec
+        Start 245: tes4 raw table seam reports table sizing and folder file-name offset handling
+245/438 Test #245: tes4 raw table seam reports table sizing and folder file-name offset handling ...........................................   Passed    0.01 sec
+        Start 246: compatibility_matrix evidence references resolve to manifests or test tokens
+246/438 Test #246: compatibility_matrix evidence references resolve to manifests or test tokens ............................................   Passed    0.02 sec
+        Start 247: local game fixtures are opt-in
+247/438 Test #247: local game fixtures are opt-in ..........................................................................................***Skipped   0.01 sec
+        Start 248: BA2 DX10 writer is consumed after successful write attempts
+248/438 Test #248: BA2 DX10 writer is consumed after successful write attempts .............................................................   Passed    0.02 sec
+        Start 249: BA2 GNRL writer reports missing disk sources as I/O errors
+249/438 Test #249: BA2 GNRL writer reports missing disk sources as I/O errors ..............................................................   Passed    0.01 sec
+        Start 250: host_file_path source uses strict UTF-8 conversion instead of narrow path construction
+250/438 Test #250: host_file_path source uses strict UTF-8 conversion instead of narrow path construction ..................................   Passed    0.01 sec
+        Start 251: ba2_dx10_compression routes raw deflate and LZ4 block chunks
+251/438 Test #251: ba2_dx10_compression routes raw deflate and LZ4 block chunks ............................................................   Passed    0.12 sec
+        Start 252: BA2 DX10 writer rejects non-regular overwrite targets without replacing them
+252/438 Test #252: BA2 DX10 writer rejects non-regular overwrite targets without replacing them ............................................   Passed    0.12 sec
+        Start 253: validation_policy verification matrix contract keeps ASan as a separate hardening job
+253/438 Test #253: validation_policy verification matrix contract keeps ASan as a separate hardening job ...................................   Passed    0.01 sec
+        Start 254: writer_hotspot_policy requires BA2 GNRL disk-source change diagnostics
+254/438 Test #254: writer_hotspot_policy requires BA2 GNRL disk-source change diagnostics ..................................................   Passed    0.01 sec
+        Start 255: compatibility_warning behavior covers every public warning code
+255/438 Test #255: compatibility_warning behavior covers every public warning code .........................................................   Passed    0.13 sec
+        Start 256: ba2_dx10_lookup preserves canonical lowercase paths and original spelling
+256/438 Test #256: ba2_dx10_lookup preserves canonical lowercase paths and original spelling ...............................................   Passed    0.02 sec
+        Start 257: docs_policy Doxyfile boundary documents public headers and excludes private inputs
+257/438 Test #257: docs_policy Doxyfile boundary documents public headers and excludes private inputs ......................................   Passed    0.12 sec
+        Start 258: writer_publish rejects existing reparse-point overwrite targets before writing
+258/438 Test #258: writer_publish rejects existing reparse-point overwrite targets before writing ..........................................   Passed    0.13 sec
+        Start 259: thread_safety_policy public types have canonical documentation sections
+259/438 Test #259: thread_safety_policy public types have canonical documentation sections .................................................   Passed    0.02 sec
+        Start 260: BA2 DX10 snapshot builder preserves add-time snapshot immutability and target validation
+260/438 Test #260: BA2 DX10 snapshot builder preserves add-time snapshot immutability and target validation ................................   Passed    0.02 sec
+        Start 261: bethesda_hash returns TES3 TES4 and FO4 constants
+261/438 Test #261: bethesda_hash returns TES3 TES4 and FO4 constants .......................................................................   Passed    0.01 sec
+        Start 262: tes4_bsa_lookup normalizes variants and distinguishes missing from invalid paths
+262/438 Test #262: tes4_bsa_lookup normalizes variants and distinguishes missing from invalid paths ........................................   Passed    0.02 sec
+        Start 263: ba2_dx10_detector rejects declared file counts above the metadata limit
+263/438 Test #263: ba2_dx10_detector rejects declared file counts above the metadata limit .................................................   Passed    0.02 sec
+        Start 264: ba2_gnrl_detector rejects declared file counts above the metadata limit
+264/438 Test #264: ba2_gnrl_detector rejects declared file counts above the metadata limit .................................................   Passed    0.02 sec
+        Start 265: archive_reader exposes compile-only Phase 3 reader contracts
+265/438 Test #265: archive_reader exposes compile-only Phase 3 reader contracts ............................................................   Passed    0.01 sec
+        Start 266: writer_execution_options rejects zero worker count before creating output
+266/438 Test #266: writer_execution_options rejects zero worker count before creating output ...............................................   Passed    0.02 sec
+        Start 267: BA2 DX10 chunk assembler preserves Fallout 4 and Starfield v3 compression routing
+267/438 Test #267: BA2 DX10 chunk assembler preserves Fallout 4 and Starfield v3 compression routing .......................................   Passed    0.12 sec
+        Start 268: coverage_audit_matrix preserves every required support axis
+268/438 Test #268: coverage_audit_matrix preserves every required support axis .............................................................   Passed    0.12 sec
+        Start 269: BA2 GNRL writer rejects empty disk source host paths
+269/438 Test #269: BA2 GNRL writer rejects empty disk source host paths ....................................................................   Passed    0.01 sec
+        Start 270: tes3 writer layout stage assigns raw offsets and rejects oversized spans
+270/438 Test #270: tes3 writer layout stage assigns raw offsets and rejects oversized spans ................................................   Passed    0.01 sec
+        Start 271: writer_hotspot_policy requires TES4 dedupe candidate narrowing before exact equality
+271/438 Test #271: writer_hotspot_policy requires TES4 dedupe candidate narrowing before exact equality ....................................   Passed    0.13 sec
+        Start 272: BA2 GNRL writer dedupes compressed stored bytes but not raw and compressed source twins
+272/438 Test #272: BA2 GNRL writer dedupes compressed stored bytes but not raw and compressed source twins .................................   Passed    0.02 sec
+        Start 273: TES4 BSA writer rejects overwrite targets that are existing directories
+273/438 Test #273: TES4 BSA writer rejects overwrite targets that are existing directories .................................................   Passed    0.02 sec
+        Start 274: tes3 writer preparation stage prepares and sorts minimal memory entries
+274/438 Test #274: tes3 writer preparation stage prepares and sorts minimal memory entries .................................................   Passed    0.01 sec
+        Start 275: tes3_bsa_writer publish helper moves output when destination is free
+275/438 Test #275: tes3_bsa_writer publish helper moves output when destination is free ....................................................   Passed    0.12 sec
+        Start 276: ba2_writer_execution GNRL worker_count preserves Fallout 4 deflate output
+276/438 Test #276: ba2_writer_execution GNRL worker_count preserves Fallout 4 deflate output ...............................................   Passed    0.04 sec
+        Start 277: ba2_gnrl_detector opens Starfield v2 GNRL metadata with version-gated unknowns
+277/438 Test #277: ba2_gnrl_detector opens Starfield v2 GNRL metadata with version-gated unknowns ..........................................   Passed    0.02 sec
+        Start 278: ba2_dx10_writer::add_file accepts a valid DDS source
+278/438 Test #278: ba2_dx10_writer::add_file accepts a valid DDS source ....................................................................   Passed    0.02 sec
+        Start 279: validation_policy verification matrix contract requires supported preset triads
+279/438 Test #279: validation_policy verification matrix contract requires supported preset triads .........................................   Passed    0.01 sec
+        Start 280: TES4 BSA writer target-default compression round-trips inherited entries
+280/438 Test #280: TES4 BSA writer target-default compression round-trips inherited entries ................................................   Passed    0.02 sec
+        Start 281: ba2_writer_execution GNRL worker_count preserves starfield v3 raw LZ4 output
+281/438 Test #281: ba2_writer_execution GNRL worker_count preserves starfield v3 raw LZ4 output ............................................   Passed    0.04 sec
+        Start 282: bulk_extraction records partial sink writes as per-entry I/O errors
+282/438 Test #282: bulk_extraction records partial sink writes as per-entry I/O errors .....................................................   Passed    0.02 sec
+        Start 283: bulk_extraction mirrors duplicate sink factory failures without aborting siblings
+283/438 Test #283: bulk_extraction mirrors duplicate sink factory failures without aborting siblings .......................................   Passed    0.02 sec
+        Start 284: BSArchPro-derived expected fixture comparisons are opt-in
+284/438 Test #284: BSArchPro-derived expected fixture comparisons are opt-in ...............................................................***Skipped   0.01 sec
+        Start 285: compatibility_matrix schema spans malformed families and risk categories
+285/438 Test #285: compatibility_matrix schema spans malformed families and risk categories ................................................   Passed    0.01 sec
+        Start 286: writer_publish delegation boundary keeps all writer families on the shared helper
+286/438 Test #286: writer_publish delegation boundary keeps all writer families on the shared helper .......................................   Passed    0.02 sec
+        Start 287: target_format_policy guide covers every supported target format and compression route
+287/438 Test #287: target_format_policy guide covers every supported target format and compression route ...................................   Passed    0.13 sec
+        Start 288: parser_preparer_seam_policy requires dedicated BA2 DX10 preparer seams
+288/438 Test #288: parser_preparer_seam_policy requires dedicated BA2 DX10 preparer seams ..................................................   Passed    0.01 sec
+        Start 289: coverage_audit_matrix keeps COV-GAP-001 and COV-GAP-003 closed while preserving deferred gaps
+289/438 Test #289: coverage_audit_matrix keeps COV-GAP-001 and COV-GAP-003 closed while preserving deferred gaps ...........................   Passed    0.01 sec
+        Start 290: BA2 DX10 writer resolves non-ASCII UTF-8 output host paths
+290/438 Test #290: BA2 DX10 writer resolves non-ASCII UTF-8 output host paths ..............................................................   Passed    0.02 sec
+        Start 291: writer_publish rejects reparse-point overwrite targets introduced before final publication
+291/438 Test #291: writer_publish rejects reparse-point overwrite targets introduced before final publication ..............................   Passed    0.02 sec
+        Start 292: ba2_dx10_detector rejects partially overlapping chunk payload spans
+292/438 Test #292: ba2_dx10_detector rejects partially overlapping chunk payload spans .....................................................   Passed    0.02 sec
+        Start 293: ba2_dx10_directxtex validates reconstructed DDS metadata
+293/438 Test #293: ba2_dx10_directxtex validates reconstructed DDS metadata ................................................................   Passed    0.02 sec
+        Start 294: TES4 BSA writer groups mixed-case folder spellings by canonical path
+294/438 Test #294: TES4 BSA writer groups mixed-case folder spellings by canonical path ....................................................   Passed    0.02 sec
+        Start 295: dds_layout repeats DX10 chunk plans for arrays and cubemaps
+295/438 Test #295: dds_layout repeats DX10 chunk plans for arrays and cubemaps .............................................................   Passed    0.01 sec
+        Start 296: validation_api accepts writer-produced archives
+296/438 Test #296: validation_api accepts writer-produced archives .........................................................................   Passed    0.13 sec
+        Start 297: tes4 writer serialization stage rejects raw disk source size changes
+297/438 Test #297: tes4 writer serialization stage rejects raw disk source size changes ....................................................   Passed    0.02 sec
+        Start 298: target_format_policy guide documents public compatibility_warning_code values
+298/438 Test #298: target_format_policy guide documents public compatibility_warning_code values ...........................................   Passed    0.01 sec
+        Start 299: ba2 dx10 writer preparation stage prepares a single-mip chunk
+299/438 Test #299: ba2 dx10 writer preparation stage prepares a single-mip chunk ...........................................................   Passed    0.02 sec
+        Start 300: void result represents success
+300/438 Test #300: void result represents success ..........................................................................................   Passed    0.01 sec
+        Start 301: TES4 BSA writer raw output reopens for every target profile
+301/438 Test #301: TES4 BSA writer raw output reopens for every target profile .............................................................   Passed    0.03 sec
+        Start 302: ba2_dx10_metadata exposes texture chunks from manifest records
+302/438 Test #302: ba2_dx10_metadata exposes texture chunks from manifest records ..........................................................   Passed    0.02 sec
+        Start 303: validation_policy verification matrix contract requires checked-in MSVC ASan wiring
+303/438 Test #303: validation_policy verification matrix contract requires checked-in MSVC ASan wiring .....................................   Passed    0.01 sec
+        Start 304: docs_policy compatibility evidence points to audit and preserves proof boundaries
+304/438 Test #304: docs_policy compatibility evidence points to audit and preserves proof boundaries .......................................   Passed    0.01 sec
+        Start 305: ba2 dx10 writer preparation stage rejects truncated snapshots before publishing output
+305/438 Test #305: ba2 dx10 writer preparation stage rejects truncated snapshots before publishing output ..................................   Passed    0.12 sec
+        Start 306: BA2 DX10 writer removes snapshot temp directories after successful write while alive
+306/438 Test #306: BA2 DX10 writer removes snapshot temp directories after successful write while alive ....................................   Passed    0.26 sec
+        Start 307: public writer output paths resolve UTF-8 text before native publish
+307/438 Test #307: public writer output paths resolve UTF-8 text before native publish .....................................................   Passed    0.02 sec
+        Start 308: tes4_bsa_malformed_open rejects duplicate canonical paths during entry parsing
+308/438 Test #308: tes4_bsa_malformed_open rejects duplicate canonical paths during entry parsing ..........................................   Passed    0.01 sec
+        Start 309: benchmark_policy runner preserves required report scenario structure
+309/438 Test #309: benchmark_policy runner preserves required report scenario structure ....................................................   Passed    0.02 sec
+        Start 310: BA2 DX10 writer rejects valid non-2D DDS sources
+310/438 Test #310: BA2 DX10 writer rejects valid non-2D DDS sources ........................................................................   Passed    0.02 sec
+        Start 311: ba2_dx10_detector accepts exact duplicate non-empty chunk payload spans
+311/438 Test #311: ba2_dx10_detector accepts exact duplicate non-empty chunk payload spans .................................................   Passed    0.02 sec
+        Start 312: parser_preparer_seam_policy requires dedicated BA2 DX10 parser seams
+312/438 Test #312: parser_preparer_seam_policy requires dedicated BA2 DX10 parser seams ....................................................   Passed    0.02 sec
+        Start 313: ba2 gnrl writer layout stage compares prepared payload bytes
+313/438 Test #313: ba2 gnrl writer layout stage compares prepared payload bytes ............................................................   Passed    0.02 sec
+        Start 314: archive_reader_dispatch_policy forbids stored backend identity in reader state
+314/438 Test #314: archive_reader_dispatch_policy forbids stored backend identity in reader state ..........................................   Passed    0.01 sec
+        Start 315: tes3_bsa_detector classifies Morrowind magic bytes before parser dispatch
+315/438 Test #315: tes3_bsa_detector classifies Morrowind magic bytes before parser dispatch ...............................................   Passed    0.13 sec
+        Start 316: ba2_gnrl_detector accepts exact duplicate non-empty payload spans
+316/438 Test #316: ba2_gnrl_detector accepts exact duplicate non-empty payload spans .......................................................   Passed    0.02 sec
+        Start 317: docs_policy public documentation surfaces hide planning identifiers
+317/438 Test #317: docs_policy public documentation surfaces hide planning identifiers .....................................................   Passed    0.02 sec
+        Start 318: tes3_bsa_writer atomic replace helper swaps existing destinations
+318/438 Test #318: tes3_bsa_writer atomic replace helper swaps existing destinations .......................................................   Passed    0.02 sec
+        Start 319: writer_execution_options worker count one preserves serial writer behavior
+319/438 Test #319: writer_execution_options worker count one preserves serial writer behavior ..............................................   Passed    0.05 sec
+        Start 320: result error access reports success misuse as a logic error
+320/438 Test #320: result error access reports success misuse as a logic error .............................................................   Passed    0.01 sec
+        Start 321: writer_hotspot_policy keeps public BA2 DX10 writer declaration shape stable
+321/438 Test #321: writer_hotspot_policy keeps public BA2 DX10 writer declaration shape stable .............................................   Passed    0.02 sec
+        Start 322: coverage_audit_matrix proves installed package-consumer runtime for every family
+322/438 Test #322: coverage_audit_matrix proves installed package-consumer runtime for every family ........................................   Passed    0.01 sec
+        Start 323: ba2_dx10_writer preserves multi mip array and cubemap image payload bytes through extraction
+323/438 Test #323: ba2_dx10_writer preserves multi mip array and cubemap image payload bytes through extraction ............................   Passed    0.04 sec
+        Start 324: host_file removed host-path diagnostic state stays absent from live source and test contracts
+324/438 Test #324: host_file removed host-path diagnostic state stays absent from live source and test contracts ...........................   Passed    0.02 sec
+        Start 325: result exposes stable error codes
+325/438 Test #325: result exposes stable error codes .......................................................................................   Passed    0.01 sec
+        Start 326: ba2_dx10_writer::add_file rejects an empty DDS host path
+326/438 Test #326: ba2_dx10_writer::add_file rejects an empty DDS host path ................................................................   Passed    0.01 sec
+        Start 327: tes4_bsa_malformed_open rejects payload spans inside metadata
+327/438 Test #327: tes4_bsa_malformed_open rejects payload spans inside metadata ...........................................................   Passed    0.02 sec
+        Start 328: bulk_extraction mirrors duplicate missing path failures without aborting siblings
+328/438 Test #328: bulk_extraction mirrors duplicate missing path failures without aborting siblings .......................................   Passed    0.02 sec
+        Start 329: ba2_gnrl_detector rejects Phase 5 unsupported BA2 profiles with stable errors
+329/438 Test #329: ba2_gnrl_detector rejects Phase 5 unsupported BA2 profiles with stable errors ...........................................   Passed    0.01 sec
+        Start 330: tes4_bsa_malformed_open returns format_error for oversized declared file-name bytes
+330/438 Test #330: tes4_bsa_malformed_open returns format_error for oversized declared file-name bytes .....................................   Passed    0.02 sec
+        Start 331: validation_policy compatibility evidence catalog documents public warning-code structure
+331/438 Test #331: validation_policy compatibility evidence catalog documents public warning-code structure ................................   Passed    0.12 sec
+        Start 332: host_path_correctness_boundary smoke setup uses the locked non-ASCII directory and filename without copying manifests
+332/438 Test #332: host_path_correctness_boundary smoke setup uses the locked non-ASCII directory and filename without copying manifests ...   Passed    0.13 sec
+        Start 333: ba2_gnrl_detector opens Fallout 4 GNRL metadata without Starfield fields
+333/438 Test #333: ba2_gnrl_detector opens Fallout 4 GNRL metadata without Starfield fields ................................................   Passed    0.02 sec
+        Start 334: writer call sites use the neutral host_file helper seam
+334/438 Test #334: writer call sites use the neutral host_file helper seam .................................................................   Passed    0.02 sec
+        Start 335: bsa_writer_execution missing disk source with worker_count preserves existing output
+335/438 Test #335: bsa_writer_execution missing disk source with worker_count preserves existing output ....................................   Passed    0.02 sec
+        Start 336: tes3_bsa_writer reports missing disk sources from write_to
+336/438 Test #336: tes3_bsa_writer reports missing disk sources from write_to ..............................................................   Passed    0.12 sec
+        Start 337: tes4_bsa_entry_metadata accepts exact duplicate payload spans for writer dedupe
+337/438 Test #337: tes4_bsa_entry_metadata accepts exact duplicate payload spans for writer dedupe .........................................   Passed    0.02 sec
+        Start 338: public_api_reality_check routes closed validation and package-consumer proof without API redesign
+338/438 Test #338: public_api_reality_check routes closed validation and package-consumer proof without API redesign .......................   Passed    0.01 sec
+        Start 339: validation_api caps extractability before reading sparse payload bytes
+339/438 Test #339: validation_api caps extractability before reading sparse payload bytes ..................................................   Passed    0.02 sec
+        Start 340: host_path_correctness_boundary suite source carries the locked non-ASCII token and smoke selector
+340/438 Test #340: host_path_correctness_boundary suite source carries the locked non-ASCII token and smoke selector .......................   Passed    0.01 sec
+        Start 341: host_file rejects sources that shrink or grow
+341/438 Test #341: host_file rejects sources that shrink or grow ...........................................................................   Passed    0.02 sec
+        Start 342: tes3_bsa_malformed maps invalid archive names to format_error
+342/438 Test #342: tes3_bsa_malformed maps invalid archive names to format_error ...........................................................   Passed    0.02 sec
+        Start 343: validation_policy CI and presets preserve static shared and TES5Edit build boundaries
+343/438 Test #343: validation_policy CI and presets preserve static shared and TES5Edit build boundaries ...................................   Passed    0.01 sec
+        Start 344: BA2 GNRL writer preserves pre-existing deterministic temp-name siblings
+344/438 Test #344: BA2 GNRL writer preserves pre-existing deterministic temp-name siblings .................................................   Passed    0.12 sec
+        Start 345: payload_stream rejects truncated exact archive reads
+345/438 Test #345: payload_stream rejects truncated exact archive reads ....................................................................   Passed    0.02 sec
+        Start 346: bsa_writer_execution TES4 worker_count preserves deflate and LZ4-frame output compatibility
+346/438 Test #346: bsa_writer_execution TES4 worker_count preserves deflate and LZ4-frame output compatibility .............................   Passed    0.06 sec
+        Start 347: tes3_bsa_writer rejects empty archives
+347/438 Test #347: tes3_bsa_writer rejects empty archives ..................................................................................   Passed    0.14 sec
+        Start 348: tes3_bsa_writer output reopens through reader lookup and extraction APIs
+348/438 Test #348: tes3_bsa_writer output reopens through reader lookup and extraction APIs ................................................   Passed    0.03 sec
+        Start 349: compression_router none method uses result-based byte-vector allocation
+349/438 Test #349: compression_router none method uses result-based byte-vector allocation .................................................   Passed    0.01 sec
+        Start 350: ba2_dx10_extract reconstructs DDS bytes through sink and extract_bytes
+350/438 Test #350: ba2_dx10_extract reconstructs DDS bytes through sink and extract_bytes ..................................................   Passed    0.02 sec
+        Start 351: host_file_path rejects embedded NUL bytes before filesystem I/O
+351/438 Test #351: host_file_path rejects embedded NUL bytes before filesystem I/O .........................................................   Passed    0.01 sec
+        Start 352: tes4_bsa_extract reads selected payloads from the host archive on demand
+352/438 Test #352: tes4_bsa_extract reads selected payloads from the host archive on demand ................................................   Passed    0.02 sec
+        Start 353: tes4_bsa_malformed_open rejects folder record hash mismatches
+353/438 Test #353: tes4_bsa_malformed_open rejects folder record hash mismatches ...........................................................   Passed    0.02 sec
+        Start 354: coverage_audit_matrix preserves status vocabulary and ranked gaps
+354/438 Test #354: coverage_audit_matrix preserves status vocabulary and ranked gaps .......................................................   Passed    0.01 sec
+        Start 355: compression_router sink fallbacks preserve bytes and exact-size errors
+355/438 Test #355: compression_router sink fallbacks preserve bytes and exact-size errors ..................................................   Passed    0.02 sec
+        Start 356: ba2_gnrl_detector rejects non-empty payload spans in fixed metadata
+356/438 Test #356: ba2_gnrl_detector rejects non-empty payload spans in fixed metadata .....................................................   Passed    0.02 sec
+        Start 357: tes4_bsa_v105_extract routes compressed entries through LZ4 frame decoding
+357/438 Test #357: tes4_bsa_v105_extract routes compressed entries through LZ4 frame decoding ..............................................   Passed    0.02 sec
+        Start 358: public_include_boundary writer execution options stay dependency-light
+358/438 Test #358: public_include_boundary writer execution options stay dependency-light ..................................................   Passed    0.01 sec
+        Start 359: binary_io writer writes little-endian fields
+359/438 Test #359: binary_io writer writes little-endian fields ............................................................................   Passed    0.02 sec
+        Start 360: host_file_path decodes UTF-8 public host text into the native path
+360/438 Test #360: host_file_path decodes UTF-8 public host text into the native path ......................................................   Passed    0.02 sec
+        Start 361: reader_backend_dispatch preserves reader operations across representative backends
+361/438 Test #361: reader_backend_dispatch preserves reader operations across representative backends ......................................   Passed    0.02 sec
+        Start 362: reader reopen implementations use open_host_file instead of raw caller text
+362/438 Test #362: reader reopen implementations use open_host_file instead of raw caller text .............................................   Passed    0.01 sec
+        Start 363: host_path_correctness_boundary representative archives open validate and extract from non-ASCII paths
+363/438 Test #363: host_path_correctness_boundary representative archives open validate and extract from non-ASCII paths ...................   Passed    0.05 sec
+        Start 364: TES4 BSA writer ignores embedded name option for v103 target compatibility
+364/438 Test #364: TES4 BSA writer ignores embedded name option for v103 target compatibility ..............................................   Passed    0.12 sec
+        Start 365: host_file reports missing sources with caller diagnostics
+365/438 Test #365: host_file reports missing sources with caller diagnostics ...............................................................   Passed    0.01 sec
+        Start 366: tes3_bsa_lookup normalizes variants and stable missing-path behavior
+366/438 Test #366: tes3_bsa_lookup normalizes variants and stable missing-path behavior ....................................................   Passed    0.02 sec
+        Start 367: TES4 BSA writer resolves non-ASCII UTF-8 output host paths
+367/438 Test #367: TES4 BSA writer resolves non-ASCII UTF-8 output host paths ..............................................................   Passed    0.02 sec
+        Start 368: compatibility_evidence names direct validation matrix and Starfield compression routes
+368/438 Test #368: compatibility_evidence names direct validation matrix and Starfield compression routes ..................................   Passed    0.02 sec
+        Start 369: parser_primitives translate typed metadata reserve failures
+369/438 Test #369: parser_primitives translate typed metadata reserve failures .............................................................   Passed    0.01 sec
+        Start 370: thread_safety_policy documents callback sink writer validation and benchmark rules
+370/438 Test #370: thread_safety_policy documents callback sink writer validation and benchmark rules ......................................   Passed    0.01 sec
+        Start 371: compression_router none method preserves exact input bytes
+371/438 Test #371: compression_router none method preserves exact input bytes ..............................................................   Passed    0.01 sec
+        Start 372: binary_io reader reports malformed truncation without overread
+372/438 Test #372: binary_io reader reports malformed truncation without overread ..........................................................   Passed    0.01 sec
+        Start 373: ba2_dx10_writer reopens fo4 deflate compression archives through archive_reader
+373/438 Test #373: ba2_dx10_writer reopens fo4 deflate compression archives through archive_reader .........................................   Passed    0.03 sec
+        Start 374: validation_api reports result-level setup errors
+374/438 Test #374: validation_api reports result-level setup errors ........................................................................   Passed    0.01 sec
+        Start 375: ba2_gnrl_compressed_fallbacks preserve fixture bytes
+375/438 Test #375: ba2_gnrl_compressed_fallbacks preserve fixture bytes ....................................................................   Passed    0.02 sec
+        Start 376: parser_primitives normalize display separators only
+376/438 Test #376: parser_primitives normalize display separators only .....................................................................   Passed    0.01 sec
+        Start 377: deflate_codec translates impossible output allocations
+377/438 Test #377: deflate_codec translates impossible output allocations ..................................................................   Passed    0.01 sec
+        Start 378: ba2_gnrl_detector rejects partially overlapping payload spans
+378/438 Test #378: ba2_gnrl_detector rejects partially overlapping payload spans ...........................................................   Passed    0.02 sec
+        Start 379: BA2 DX10 writer preserves caller-owned temp-name sibling files during unique temp publish
+379/438 Test #379: BA2 DX10 writer preserves caller-owned temp-name sibling files during unique temp publish ...............................   Passed    0.02 sec
+        Start 380: docs_policy mainpage links audited API proof and consumer sharp edges
+380/438 Test #380: docs_policy mainpage links audited API proof and consumer sharp edges ...................................................   Passed    0.01 sec
+        Start 381: archive_reader_dispatch_policy forbids repeated family dispatch in public reader methods
+381/438 Test #381: archive_reader_dispatch_policy forbids repeated family dispatch in public reader methods ................................   Passed    0.01 sec
+        Start 382: tes4_bsa_compression_routing rejects corrupt compressed payloads and size mismatches
+382/438 Test #382: tes4_bsa_compression_routing rejects corrupt compressed payloads and size mismatches ....................................   Passed    0.02 sec
+        Start 383: tes4_bsa_malformed_open rejects count-derived table spans before allocation
+383/438 Test #383: tes4_bsa_malformed_open rejects count-derived table spans before allocation .............................................   Passed    0.01 sec
+        Start 384: compression_router dispatches explicit codec methods
+384/438 Test #384: compression_router dispatches explicit codec methods ....................................................................   Passed    0.01 sec
+        Start 385: ba2_gnrl_detector opens Starfield v3 GNRL metadata with compression method
+385/438 Test #385: ba2_gnrl_detector opens Starfield v3 GNRL metadata with compression method ..............................................   Passed    0.01 sec
+        Start 386: public_include_boundary excludes private Phase 2 implementation names
+386/438 Test #386: public_include_boundary excludes private Phase 2 implementation names ...................................................   Passed    0.06 sec
+        Start 387: coverage_audit_matrix names compatibility matrix as malformed submatrix only
+387/438 Test #387: coverage_audit_matrix names compatibility matrix as malformed submatrix only ............................................   Passed    0.01 sec
+        Start 388: BA2 DX10 writer cleans newly reserved snapshot directory when add_file fails
+388/438 Test #388: BA2 DX10 writer cleans newly reserved snapshot directory when add_file fails ............................................   Passed    0.26 sec
+        Start 389: ba2_dx10_detector returns format_error for oversized declared filename table offsets
+389/438 Test #389: ba2_dx10_detector returns format_error for oversized declared filename table offsets ....................................   Passed    0.02 sec
+        Start 390: bsa_writer_execution TES3 worker_count streams large disk-backed source and reopens output
+390/438 Test #390: bsa_writer_execution TES3 worker_count streams large disk-backed source and reopens output ..............................   Passed    0.03 sec
+        Start 391: benchmark_policy static boundary exposes explicit opt-in benchmark report tooling
+391/438 Test #391: benchmark_policy static boundary exposes explicit opt-in benchmark report tooling .......................................   Passed    0.02 sec
+        Start 392: ba2_writer_execution missing GNRL disk source with worker_count preserves existing sentinel
+392/438 Test #392: ba2_writer_execution missing GNRL disk source with worker_count preserves existing sentinel .............................   Passed    0.13 sec
+        Start 393: TES4 BSA writer emits opt-in embedded name prefixes for v104 and v105 targets
+393/438 Test #393: TES4 BSA writer emits opt-in embedded name prefixes for v104 and v105 targets ...........................................   Passed    0.12 sec
+        Start 394: target_format_policy guide documents writer output publication safety
+394/438 Test #394: target_format_policy guide documents writer output publication safety ...................................................   Passed    0.01 sec
+        Start 395: BA2 DX10 writer DDS source manifest covers locked formats
+395/438 Test #395: BA2 DX10 writer DDS source manifest covers locked formats ...............................................................   Passed    0.02 sec
+        Start 396: host_file reads bounded short prefixes
+396/438 Test #396: host_file reads bounded short prefixes ..................................................................................   Passed    0.01 sec
+        Start 397: BA2 GNRL writer rejects overwrite targets that are existing directories
+397/438 Test #397: BA2 GNRL writer rejects overwrite targets that are existing directories .................................................   Passed    0.02 sec
+        Start 398: tes3_bsa_malformed rejects declared file counts above the metadata limit
+398/438 Test #398: tes3_bsa_malformed rejects declared file counts above the metadata limit ................................................   Passed    0.12 sec
+        Start 399: ba2_gnrl_detector rejects unrepresentable high filename table ranges before materialization
+399/438 Test #399: ba2_gnrl_detector rejects unrepresentable high filename table ranges before materialization .............................   Passed    0.02 sec
+        Start 400: TES4 BSA writer overwrites existing archives when overwrite_existing is true
+400/438 Test #400: TES4 BSA writer overwrites existing archives when overwrite_existing is true ............................................   Passed    0.02 sec
+        Start 401: bulk_extraction rejects zero workers as an outer argument error
+401/438 Test #401: bulk_extraction rejects zero workers as an outer argument error .........................................................   Passed    0.02 sec
+        Start 402: ba2_dx10_writer reopens starfield method 3 raw LZ4 compression archives through archive_reader
+402/438 Test #402: ba2_dx10_writer reopens starfield method 3 raw LZ4 compression archives through archive_reader ..........................   Passed    0.03 sec
+        Start 403: ba2_gnrl_extract helper routes by metadata and detects partial_sink writes
+403/438 Test #403: ba2_gnrl_extract helper routes by metadata and detects partial_sink writes ..............................................   Passed    0.02 sec
+        Start 404: payload_stream rejects partial sink writes through shared helpers
+404/438 Test #404: payload_stream rejects partial sink writes through shared helpers .......................................................   Passed    0.01 sec
+        Start 405: BA2 GNRL writer raw Starfield v2 and v3 defaults reopen through public metadata
+405/438 Test #405: BA2 GNRL writer raw Starfield v2 and v3 defaults reopen through public metadata .........................................   Passed    0.12 sec
+        Start 406: BA2 DX10 writer cleans snapshot directories on output failure and preserves primary error
+406/438 Test #406: BA2 DX10 writer cleans snapshot directories on output failure and preserves primary error ...............................   Passed    0.26 sec
+        Start 407: tes4_bsa_entry_metadata materializes table paths, hashes, sizes, and embedded names
+407/438 Test #407: tes4_bsa_entry_metadata materializes table paths, hashes, sizes, and embedded names .....................................   Passed    0.02 sec
+        Start 408: compatibility_warning reports compressed sound payloads
+408/438 Test #408: compatibility_warning reports compressed sound payloads .................................................................   Passed    0.02 sec
+        Start 409: tes4_bsa_v103_extract streams raw and deflate entries by archive path
+409/438 Test #409: tes4_bsa_v103_extract streams raw and deflate entries by archive path ...................................................   Passed    0.02 sec
+        Start 410: dds_layout fails closed for hostile block-compressed dimensions
+410/438 Test #410: dds_layout fails closed for hostile block-compressed dimensions .........................................................   Passed    0.01 sec
+        Start 411: ba2_writer_execution missing GNRL disk source with worker_count leaves no partial output
+411/438 Test #411: ba2_writer_execution missing GNRL disk source with worker_count leaves no partial output ................................   Passed    0.02 sec
+        Start 412: tes4_bsa_malformed_open rejects folder record counts before allocation
+412/438 Test #412: tes4_bsa_malformed_open rejects folder record counts before allocation ..................................................   Passed    0.02 sec
+        Start 413: bsa_writer_execution overwrite failure with worker_count preserves readable previous archive
+413/438 Test #413: bsa_writer_execution overwrite failure with worker_count preserves readable previous archive ............................   Passed    0.02 sec
+        Start 414: coverage_audit_matrix separates advisory local evidence from default proof
+414/438 Test #414: coverage_audit_matrix separates advisory local evidence from default proof ..............................................   Passed    0.01 sec
+        Start 415: BA2 GNRL disk payload streaming rejects source size changes
+415/438 Test #415: BA2 GNRL disk payload streaming rejects source size changes .............................................................   Passed    0.02 sec
+        Start 416: validation_api accepts writer-produced Starfield BA2 v3 compression routes
+416/438 Test #416: validation_api accepts writer-produced Starfield BA2 v3 compression routes ..............................................   Passed    0.03 sec
+        Start 417: writer_publish preserves read-only overwrite targets when replacement is denied
+417/438 Test #417: writer_publish preserves read-only overwrite targets when replacement is denied .........................................   Passed    0.02 sec
+        Start 418: lz4_codec translates impossible output allocations
+418/438 Test #418: lz4_codec translates impossible output allocations ......................................................................   Passed    0.01 sec
+        Start 419: BA2 GNRL writer shares offsets for byte-identical stored payloads when dedupe is enabled
+419/438 Test #419: BA2 GNRL writer shares offsets for byte-identical stored payloads when dedupe is enabled ................................   Passed    0.02 sec
+        Start 420: tes4_bsa_sink_errors reports partial sink writes as io_error
+420/438 Test #420: tes4_bsa_sink_errors reports partial sink writes as io_error ............................................................   Passed    0.01 sec
+        Start 421: tes3_bsa_metadata opens generated Morrowind archives
+421/438 Test #421: tes3_bsa_metadata opens generated Morrowind archives ....................................................................   Passed    0.12 sec
+        Start 422: ba2_dx10_detector opens generated Starfield v3 texture archive
+422/438 Test #422: ba2_dx10_detector opens generated Starfield v3 texture archive ..........................................................   Passed    0.02 sec
+        Start 423: archive_path rejects embedded-NUL virtual paths
+423/438 Test #423: archive_path rejects embedded-NUL virtual paths .........................................................................   Passed    0.01 sec
+        Start 424: BA2 DX10 writer cleans snapshot directories on validation failure and consumes writer
+424/438 Test #424: BA2 DX10 writer cleans snapshot directories on validation failure and consumes writer ...................................   Passed    0.26 sec
+        Start 425: parser_primitives enforce metadata count limits
+425/438 Test #425: parser_primitives enforce metadata count limits .........................................................................   Passed    0.01 sec
+        Start 426: tes4_bsa_extract maps invalid and missing paths to stable errors
+426/438 Test #426: tes4_bsa_extract maps invalid and missing paths to stable errors ........................................................   Passed    0.01 sec
+        Start 427: BA2 GNRL writer preserves Starfield unknown overrides and BA2 record flags
+427/438 Test #427: BA2 GNRL writer preserves Starfield unknown overrides and BA2 record flags ..............................................   Passed    0.02 sec
+        Start 428: ba2_writer_execution DX10 worker_count preserves Fallout 4 deflate texture output
+428/438 Test #428: ba2_writer_execution DX10 worker_count preserves Fallout 4 deflate texture output .......................................   Passed    0.03 sec
+        Start 429: bounded_memory_policy BA2 DX10 snapshot temp directories use hardened reservation
+429/438 Test #429: bounded_memory_policy BA2 DX10 snapshot temp directories use hardened reservation .......................................   Passed    0.01 sec
+        Start 430: parser_primitives read exact bounded file spans
+430/438 Test #430: parser_primitives read exact bounded file spans .........................................................................   Passed    0.13 sec
+        Start 431: lz4_codec rejects cross-format and exact-size mismatches
+431/438 Test #431: lz4_codec rejects cross-format and exact-size mismatches ................................................................   Passed    0.01 sec
+        Start 432: archive_reader open stores the shared host_file_path contract
+432/438 Test #432: archive_reader open stores the shared host_file_path contract ...........................................................   Passed    0.01 sec
+        Start 433: BA2 GNRL writer keeps duplicate payload offsets distinct by default
+433/438 Test #433: BA2 GNRL writer keeps duplicate payload offsets distinct by default .....................................................   Passed    0.02 sec
+        Start 434: ba2_dx10_metadata exposes dependency-light texture metadata fields
+434/438 Test #434: ba2_dx10_metadata exposes dependency-light texture metadata fields ......................................................   Passed    0.01 sec
+        Start 435: bounded_memory_policy public API boundary keeps writer.hpp free of private codec and reference dependencies
+435/438 Test #435: bounded_memory_policy public API boundary keeps writer.hpp free of private codec and reference dependencies .............   Passed    0.01 sec
+        Start 436: package_consumer_smoke
+436/438 Test #436: package_consumer_smoke ..................................................................................................   Passed    5.96 sec
+        Start 437: package_consumer_runtime_dll_copy
+437/438 Test #437: package_consumer_runtime_dll_copy .......................................................................................   Passed    0.06 sec
+        Start 438: validate_fixture_manifests
+438/438 Test #438: validate_fixture_manifests ..............................................................................................   Passed    0.04 sec
+
+100% tests passed, 0 tests failed out of 438
+
+Label Time Summary:
+DX10                                    =   0.07 sec*proc (3 tests)
+add                                     =   0.43 sec*proc (10 tests)
+allocation                              =   0.30 sec*proc (12 tests)
+archive-path                            =   0.04 sec*proc (3 tests)
+archive_reader_dispatch_policy          =   0.03 sec*proc (2 tests)
+ba2_dx10                                =   0.02 sec*proc (1 test)
+ba2_dx10_compression                    =   0.14 sec*proc (2 tests)
+ba2_dx10_detector                       =   3.60 sec*proc (11 tests)
+ba2_dx10_directxtex                     =   0.02 sec*proc (1 test)
+ba2_dx10_extract                        =   0.13 sec*proc (2 tests)
+ba2_dx10_hash_lookup                    =   0.02 sec*proc (1 test)
+ba2_dx10_layout                         =   0.02 sec*proc (1 test)
+ba2_dx10_malformed                      =   0.02 sec*proc (1 test)
+ba2_dx10_metadata                       =   0.04 sec*proc (3 tests)
+ba2_dx10_overlap                        =   0.03 sec*proc (2 tests)
+ba2_dx10_writer                         =   3.32 sec*proc (45 tests)
+ba2_gnrl_bounded_open                   =   0.02 sec*proc (1 test)
+ba2_gnrl_detector                       =   0.18 sec*proc (11 tests)
+ba2_gnrl_end_table                      =   0.02 sec*proc (1 test)
+ba2_gnrl_extract                        =   0.05 sec*proc (3 tests)
+ba2_gnrl_hash_lookup                    =   0.02 sec*proc (1 test)
+ba2_gnrl_lookup                         =   0.02 sec*proc (1 test)
+ba2_gnrl_malformed                      =   0.02 sec*proc (1 test)
+ba2_gnrl_metadata                       =   0.02 sec*proc (1 test)
+ba2_gnrl_overlap                        =   0.03 sec*proc (2 tests)
+ba2_gnrl_reader                         =   0.02 sec*proc (1 test)
+ba2_gnrl_writer                         =   0.99 sec*proc (30 tests)
+ba2_writer_execution                    =   0.34 sec*proc (10 tests)
+benchmark_policy                        =   0.19 sec*proc (5 tests)
+bethesda_hash                           =   0.01 sec*proc (1 test)
+binary-io                               =   0.06 sec*proc (4 tests)
+bounded_memory_policy                   =   4.30 sec*proc (36 tests)
+bsa_writer_execution                    =   0.13 sec*proc (4 tests)
+build_policy                            =   0.12 sec*proc (1 test)
+bulk_extraction                         =   0.26 sec*proc (13 tests)
+byte_vector                             =   0.01 sec*proc (1 test)
+cleanup                                 =   1.94 sec*proc (8 tests)
+compat                                  =   0.49 sec*proc (10 tests)
+compatibility_matrix                    =   0.11 sec*proc (4 tests)
+compatibility_warning                   =   0.29 sec*proc (4 tests)
+compression                             =   0.43 sec*proc (18 tests)
+compression-router                      =   0.09 sec*proc (6 tests)
+coverage_audit_matrix                   =   0.44 sec*proc (16 tests)
+dds                                     =   0.38 sec*proc (4 tests)
+dds_layout                              =   0.11 sec*proc (8 tests)
+dedupe                                  =   0.08 sec*proc (4 tests)
+deflate                                 =   0.15 sec*proc (3 tests)
+doc_structure                           =   0.90 sec*proc (27 tests)
+docs_policy                             =   0.66 sec*proc (24 tests)
+export_surface                          =   0.05 sec*proc (3 tests)
+fixture                                 =   6.41 sec*proc (91 tests)
+fo4                                     =   0.03 sec*proc (1 test)
+hash                                    =   0.04 sec*proc (3 tests)
+host_file                               =   0.46 sec*proc (22 tests)
+host_file_path                          =   0.07 sec*proc (5 tests)
+host_path_correctness_boundary          =   0.36 sec*proc (6 tests)
+host_path_correctness_boundary_smoke    =   0.15 sec*proc (3 tests)
+lz4                                     =   0.09 sec*proc (6 tests)
+malformed                               =   3.45 sec*proc (57 tests)
+metadata                                =   0.02 sec*proc (1 test)
+overwrite                               =   0.55 sec*proc (13 tests)
+package_consumer                        =   6.04 sec*proc (4 tests)
+parser_preparer_seam                    =   0.22 sec*proc (6 tests)
+parser_preparer_seam_policy             =   0.05 sec*proc (3 tests)
+parser_primitives                       =   0.35 sec*proc (8 tests)
+payload-stream                          =   0.36 sec*proc (10 tests)
+payload_stream                          =   0.07 sec*proc (2 tests)
+public-api                              =   0.54 sec*proc (19 tests)
+publish                                 =   1.67 sec*proc (31 tests)
+reader_backend_dispatch                 =   0.06 sec*proc (2 tests)
+requires-game-fixture                   =   0.04 sec*proc (3 tests)
+roundtrip                               =   0.18 sec*proc (3 tests)
+security                                =   0.01 sec*proc (1 test)
+sink                                    =   0.07 sec*proc (4 tests)
+slow                                    =   0.02 sec*proc (1 test)
+sparse                                  =   1.58 sec*proc (1 test)
+starfield                               =   0.17 sec*proc (5 tests)
+static_boundary                         =   0.82 sec*proc (22 tests)
+stream                                  =   0.02 sec*proc (1 test)
+structural                              =   0.04 sec*proc (1 test)
+target_format_policy                    =   6.20 sec*proc (7 tests)
+temp                                    =   0.14 sec*proc (2 tests)
+tes3_bsa_detector                       =   0.14 sec*proc (2 tests)
+tes3_bsa_entries                        =   0.01 sec*proc (1 test)
+tes3_bsa_extract                        =   0.25 sec*proc (2 tests)
+tes3_bsa_lookup                         =   0.03 sec*proc (2 tests)
+tes3_bsa_malformed                      =   0.42 sec*proc (6 tests)
+tes3_bsa_metadata                       =   0.20 sec*proc (3 tests)
+tes3_bsa_writer                         =   1.07 sec*proc (24 tests)
+tes4_bsa                                =   0.03 sec*proc (2 tests)
+tes4_bsa_compression_routing            =   0.08 sec*proc (5 tests)
+tes4_bsa_detection                      =   0.14 sec*proc (2 tests)
+tes4_bsa_embedded_name                  =   0.06 sec*proc (4 tests)
+tes4_bsa_entry_metadata                 =   0.05 sec*proc (3 tests)
+tes4_bsa_hash_lookup                    =   0.05 sec*proc (3 tests)
+tes4_bsa_listing                        =   0.03 sec*proc (2 tests)
+tes4_bsa_lookup                         =   0.04 sec*proc (2 tests)
+tes4_bsa_malformed_open                 =   0.41 sec*proc (12 tests)
+tes4_bsa_metadata                       =   0.12 sec*proc (1 test)
+tes4_bsa_sink_errors                    =   0.01 sec*proc (1 test)
+tes4_bsa_v103_extract                   =   0.05 sec*proc (3 tests)
+tes4_bsa_v104_extract                   =   0.03 sec*proc (2 tests)
+tes4_bsa_v105_extract                   =   0.05 sec*proc (3 tests)
+tes4_bsa_writer                         =   0.96 sec*proc (32 tests)
+thread_safety_policy                    =   0.15 sec*proc (3 tests)
+unit                                    =  19.07 sec*proc (436 tests)
+unsupported_future_bsa                  =   0.02 sec*proc (1 test)
+validation_api                          =   0.27 sec*proc (8 tests)
+validation_policy                       =   0.62 sec*proc (12 tests)
+worker_count                            =   0.29 sec*proc (7 tests)
+writer-source-io                        =   0.14 sec*proc (7 tests)
+writer-stage                            =   0.63 sec*proc (19 tests)
+writer_execution_options                =   0.10 sec*proc (4 tests)
+writer_hotspot_policy                   =   0.19 sec*proc (5 tests)
+writer_ownership                        =   0.07 sec*proc (4 tests)
+writer_publish                          =   0.30 sec*proc (11 tests)
+
+Total Test time (real) =  25.28 sec
+
+The following tests did not run:
+	247 - local game fixtures are opt-in (Skipped)
+	284 - BSArchPro-derived expected fixture comparisons are opt-in (Skipped)
+END: ctest --preset windows-msvc-debug-static --output-on-failure | exit=0 | duration_ms=25346
+BEGIN: ctest --preset windows-msvc-debug-static -L package_consumer --output-on-failure
+Test project J:/libbsa/build/windows-msvc-debug-static
+    Start  86: target_format_policy package consumer examples have docs and CTest smoke gates
+1/4 Test  #86: target_format_policy package consumer examples have docs and CTest smoke gates .....   Passed    0.02 sec
+    Start 322: coverage_audit_matrix proves installed package-consumer runtime for every family
+2/4 Test #322: coverage_audit_matrix proves installed package-consumer runtime for every family ...   Passed    0.02 sec
+    Start 436: package_consumer_smoke
+3/4 Test #436: package_consumer_smoke .............................................................   Passed    5.91 sec
+    Start 437: package_consumer_runtime_dll_copy
+4/4 Test #437: package_consumer_runtime_dll_copy ..................................................   Passed    0.05 sec
+
+100% tests passed, 0 tests failed out of 4
+
+Label Time Summary:
+coverage_audit_matrix    =   0.02 sec*proc (1 test)
+doc_structure            =   0.02 sec*proc (1 test)
+docs_policy              =   0.02 sec*proc (1 test)
+package_consumer         =   6.00 sec*proc (4 tests)
+target_format_policy     =   5.98 sec*proc (3 tests)
+unit                     =   0.03 sec*proc (2 tests)
+
+Total Test time (real) =   6.01 sec
+END: ctest --preset windows-msvc-debug-static -L package_consumer --output-on-failure | exit=0 | duration_ms=6074

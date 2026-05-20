@@ -1,0 +1,13 @@
+CMake Error at C:/vcpkg/scripts/buildsystems/vcpkg.cmake:953 (message):
+  vcpkg install failed.  See logs for more information:
+  J:\libbsa\build\windows-msvc-release-static\vcpkg-manifest-install.log
+Call Stack (most recent call first):
+  build/windows-msvc-release-static/CMakeFiles/4.3.2/CMakeSystem.cmake:6 (include)
+  CMakeLists.txt:3 (project)
+
+
+CMake Error at CMakeLists.txt:3 (project):
+  No CMAKE_CXX_COMPILER could be found.
+
+
+

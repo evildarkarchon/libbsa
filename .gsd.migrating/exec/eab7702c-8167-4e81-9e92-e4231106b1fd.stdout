@@ -1,0 +1,11 @@
+## docs/coverage-audit-matrix.md
+'Partial | `include/libbsa/validation.hpp`; `tests/unit/validation_api_tests.cpp`': 0
+'see `COV-GAP-001`': 0
+'not currently enumerated': 0
+'| 1 | `COV-GAP-001`': 0
+## docs/public-api-reality-check.md
+'not fully enumerated': 0
+'if direct proof is required': 0
+'Coverage matrix notes direct variant-specific validation success rows are incomplete': 0
+## docs/compatibility-evidence.md
+'leaving per-variant validation-success granularity': 0

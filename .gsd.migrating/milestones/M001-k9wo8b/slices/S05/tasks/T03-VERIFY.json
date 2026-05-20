@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T03",
+  "unitId": "M001-k9wo8b/S05/T03",
+  "timestamp": 1779249386663,
+  "passed": true,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "cmake --preset windows-msvc-debug-static\ncmake --build --preset windows-msvc-debug-static --target libbsa_tests\nctest --preset windows-msvc-debug-static --output-on-failure\nctest --preset windows-msvc-debug-static -L package_consumer --output-on-failure\ngit status --short -- TES5Edit",
+      "exitCode": 0,
+      "durationMs": 756,
+      "verdict": "pass"
+    }
+  ]
+}

@@ -1,0 +1,170 @@
+--- write_source_dds ---
+--- make_dds ---
+--- dds_header ---
+23: {
+24: 
+25:   constexpr std::uint32_t dxgi_format_r8g8b8a8_unorm = 28U;
+26:   constexpr std::uint32_t dds_dxt10_header_size = 148U;
+27:   constexpr std::uint32_t dds_fourcc_dx10 = 0x30315844U;
+28:   constexpr std::uint32_t dds_header_flags_volume = 0x00800000U;
+29:   constexpr std::uint32_t dds_caps_texture = 0x00001000U;
+30:   constexpr std::uint32_t dds_caps_complex = 0x00000008U;
+31:   constexpr std::uint32_t dds_caps_mipmap = 0x00400000U;
+32:   constexpr std::uint32_t dds_caps2_cubemap = 0x00000200U;
+33:   constexpr std::uint32_t dds_caps2_cubemap_all_faces = 0x0000FC00U;
+34:   constexpr std::uint32_t dds_caps2_volume = 0x00200000U;
+35:   constexpr std::uint32_t dds_resource_dimension_texture1d = 2U;
+36:   constexpr std::uint32_t dds_resource_dimension_texture2d = 3U;
+37:   constexpr std::uint32_t dds_resource_dimension_texture3d = 4U;
+38: 
+39:   struct byte_buffer
+40:   {
+41:     std::vector<std::byte> bytes;
+42: 
+43:     void u8(std::uint8_t value) { bytes.push_back(static_cast<std::byte>(value)); }
+44: 
+45:     void u16(std::uint16_t value)
+46:     {
+47:       for (std::uint32_t index = 0; index < 2U; ++index)
+48:       {
+49:         u8(static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+50:       }
+51:     }
+52: 
+53:     void u32(std::uint32_t value)
+54:     {
+55:       for (std::uint32_t index = 0; index < 4U; ++index)
+56:       {
+57:         u8(static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+58:       }
+59:     }
+60: 
+61:     void u64(std::uint64_t value)
+62:     {
+63:       for (std::uint32_t index = 0; index < 8U; ++index)
+--- source_dds ---
+143:     std::uint32_t starfield_unknown2{0};
+144:     std::uint32_t compression_method{libbsa::formats::ba2::ba2_starfield_compression_deflate};
+145:     std::vector<texture_spec> textures;
+146:   };
+147: 
+148:   struct source_dds_spec
+149:   {
+150:     std::string id;
+151:     std::string file;
+152:     std::uint32_t format_id{0};
+153:     std::string format_name;
+154:     std::uint32_t width{1};
+155:     std::uint32_t height{1};
+156:     std::uint32_t mip_count{1};
+157:     std::uint32_t array_size{1};
+158:     bool is_cubemap{false};
+159:     std::string archive_path;
+160:     std::string structural_case{"format"};
+161:     std::uint32_t resource_dimension{dds_resource_dimension_texture2d};
+162:     std::uint32_t depth{1};
+163:   };
+164: 
+165:   std::vector<std::byte> bytes(std::initializer_list<unsigned int> values)
+166:   {
+167:     std::vector<std::byte> result;
+168:     result.reserve(values.size());
+169:     for (const auto value : values)
+170:     {
+171:       result.push_back(static_cast<std::byte>(value & 0xFFU));
+172:     }
+173:     return result;
+174:   }
+175: 
+176:   std::vector<std::byte> repeated_bytes(std::uint8_t seed, std::size_t count)
+177:   {
+178:     std::vector<std::byte> result;
+179:     result.reserve(count);
+180:     for (std::size_t index = 0; index < count; ++index)
+181:     {
+182:       result.push_back(static_cast<std::byte>(static_cast<std::uint8_t>(seed + index)));
+183:     }
+--- write_file ---
+766:     archive.stem = "ba2_dx10_unsupported_compression";
+767:     archive.compression_method = 99U;
+768:     return archive;
+769:   }
+770: 
+771:   void write_file(const std::filesystem::path &path, std::span<const std::byte> values)
+772:   {
+773:     std::filesystem::create_directories(path.parent_path());
+774:     std::ofstream out(path, std::ios::binary);
+775:     if (!out)
+776:     {
+777:       throw std::runtime_error("failed to open " + path.string());
+778:     }
+779:     out.write(reinterpret_cast<const char *>(values.data()), static_cast<std::streamsize>(values.size()));
+780:   }
+781: 
+782:   void write_text(const std::filesystem::path &path, const std::string &text)
+783:   {
+784:     std::filesystem::create_directories(path.parent_path());
+785:     std::ofstream out(path, std::ios::binary);
+786:     if (!out)
+787:     {
+788:       throw std::runtime_error("failed to open " + path.string());
+789:     }
+790:     out << text;
+791:   }
+792: 
+793:   void overwrite_u16(std::vector<std::byte> &values, std::size_t offset, std::uint16_t value)
+794:   {
+795:     if (offset + 2U > values.size())
+796:     {
+797:       throw std::runtime_error("BA2 DX10 mutation offset is out of range");
+798:     }
+799:     values[offset] = static_cast<std::byte>(value & 0xFFU);
+800:     values[offset + 1U] = static_cast<std::byte>((value >> 8U) & 0xFFU);
+801:   }
+802: 
+803:   void overwrite_u32(std::vector<std::byte> &values, std::size_t offset, std::uint32_t value)
+804:   {
+805:     if (offset + 4U > values.size())
+806:     {
+--- dds ---
+21: 
+22: namespace
+23: {
+24: 
+25:   constexpr std::uint32_t dxgi_format_r8g8b8a8_unorm = 28U;
+26:   constexpr std::uint32_t dds_dxt10_header_size = 148U;
+27:   constexpr std::uint32_t dds_fourcc_dx10 = 0x30315844U;
+28:   constexpr std::uint32_t dds_header_flags_volume = 0x00800000U;
+29:   constexpr std::uint32_t dds_caps_texture = 0x00001000U;
+30:   constexpr std::uint32_t dds_caps_complex = 0x00000008U;
+31:   constexpr std::uint32_t dds_caps_mipmap = 0x00400000U;
+32:   constexpr std::uint32_t dds_caps2_cubemap = 0x00000200U;
+33:   constexpr std::uint32_t dds_caps2_cubemap_all_faces = 0x0000FC00U;
+34:   constexpr std::uint32_t dds_caps2_volume = 0x00200000U;
+35:   constexpr std::uint32_t dds_resource_dimension_texture1d = 2U;
+36:   constexpr std::uint32_t dds_resource_dimension_texture2d = 3U;
+37:   constexpr std::uint32_t dds_resource_dimension_texture3d = 4U;
+38: 
+39:   struct byte_buffer
+40:   {
+41:     std::vector<std::byte> bytes;
+42: 
+43:     void u8(std::uint8_t value) { bytes.push_back(static_cast<std::byte>(value)); }
+44: 
+45:     void u16(std::uint16_t value)
+46:     {
+47:       for (std::uint32_t index = 0; index < 2U; ++index)
+48:       {
+49:         u8(static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+50:       }
+51:     }
+52: 
+53:     void u32(std::uint32_t value)
+54:     {
+55:       for (std::uint32_t index = 0; index < 4U; ++index)
+56:       {
+57:         u8(static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+58:       }
+59:     }
+60: 
+61:     void u64(std::uint64_t value)

@@ -1,0 +1,18 @@
+{
+  "id": "0c290bb5-23b2-4983-a4ca-7db87548a6ac",
+  "runtime": "bash",
+  "purpose": "T02 verification: configure windows-msvc-debug-static",
+  "script_chars": 40,
+  "started_at": "2026-05-20T03:13:06.503Z",
+  "finished_at": "2026-05-20T03:13:07.430Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 927,
+  "stdout_bytes": 208,
+  "stderr_bytes": 104,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\0c290bb5-23b2-4983-a4ca-7db87548a6ac.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\0c290bb5-23b2-4983-a4ca-7db87548a6ac.stderr"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "61905566-dd93-447c-92c7-35029a37d98d",
+  "runtime": "python",
+  "purpose": "verify milestone slice artifacts and assessment verdicts for validation audit",
+  "script_chars": 800,
+  "started_at": "2026-05-20T04:06:49.186Z",
+  "finished_at": "2026-05-20T04:06:49.224Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 38,
+  "stdout_bytes": 393,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\61905566-dd93-447c-92c7-35029a37d98d.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\61905566-dd93-447c-92c7-35029a37d98d.stderr"
+}

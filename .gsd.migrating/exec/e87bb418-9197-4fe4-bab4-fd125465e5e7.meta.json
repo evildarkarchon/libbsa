@@ -1,0 +1,18 @@
+{
+  "id": "e87bb418-9197-4fe4-bab4-fd125465e5e7",
+  "runtime": "bash",
+  "purpose": "T03 advisory release package proof: cmd configure/build/package_consumer windows-msvc-release-static",
+  "script_chars": 489,
+  "started_at": "2026-05-20T03:54:10.562Z",
+  "finished_at": "2026-05-20T03:54:10.895Z",
+  "exit_code": 1,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 333,
+  "stdout_bytes": 450,
+  "stderr_bytes": 352,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\e87bb418-9197-4fe4-bab4-fd125465e5e7.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\e87bb418-9197-4fe4-bab4-fd125465e5e7.stderr"
+}

@@ -1,7 +1,7 @@
 # Codebase Map
 
-Generated: 2026-05-20T03:06:15Z | Files: 500 | Described: 0/500
-<!-- gsd:codebase-meta {"generatedAt":"2026-05-20T03:06:15Z","fingerprint":"7d3f8bc1458fd7d5c6207a6d3358437351b784df","fileCount":500,"truncated":true} -->
+Generated: 2026-05-20T04:08:18Z | Files: 500 | Described: 0/500
+<!-- gsd:codebase-meta {"generatedAt":"2026-05-20T04:08:18Z","fingerprint":"7d3f8bc1458fd7d5c6207a6d3358437351b784df","fileCount":500,"truncated":true} -->
 Note: Truncated to first 500 files. Run with higher --max-files to include all.
 
 ### .agent/

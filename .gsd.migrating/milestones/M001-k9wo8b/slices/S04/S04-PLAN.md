@@ -35,7 +35,7 @@ cmake --build --preset windows-msvc-debug-static --target libbsa_tests
 ctest --preset windows-msvc-debug-static -L validation_api --output-on-failure
 ctest --preset windows-msvc-debug-static -R compatibility_warning --output-on-failure
 
-- [ ] **T02: Update evidence docs and policy guards** `est:1.5h`
+- [x] **T02: Update evidence docs and policy guards** `est:1.5h`
   Expected executor skills: write-docs, cpp-testing, verify-before-complete.
   - Files: `docs/coverage-audit-matrix.md`, `docs/compatibility-evidence.md`, `docs/public-api-reality-check.md`, `tests/unit/coverage_audit_matrix_docs_tests.cpp`
   - Verify: cmake --preset windows-msvc-debug-static

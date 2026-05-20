@@ -1,0 +1,104 @@
+[1/5] cmake --preset windows-msvc-debug-static
+-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+-- Configuring done (0.6s)
+-- Generating done (0.1s)
+-- Build files have been written to: J:/libbsa/build/windows-msvc-debug-static
+[2/5] cmake --build --preset windows-msvc-debug-static --target libbsa_tests
+MSBuild version 18.6.3+84d3e95b4 for .NET Framework
+
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\ZERO_CHECK.vcxproj]
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\libbsa.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\Debug\libbsa.lib
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\libbsa_tests.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa_tests.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\tests\Debug\libbsa_tests.exe
+[3/5] ctest --preset windows-msvc-debug-static -R coverage_audit_matrix --output-on-failure
+Test project J:/libbsa/build/windows-msvc-debug-static
+      Start  39: coverage_audit_matrix preserves status vocabulary and ranked gaps
+ 1/11 Test  #39: coverage_audit_matrix preserves status vocabulary and ranked gaps ................   Passed    0.02 sec
+      Start  44: coverage_audit_matrix preserves default fixture and manifest evidence policy
+ 2/11 Test  #44: coverage_audit_matrix preserves default fixture and manifest evidence policy .....   Passed    0.02 sec
+      Start 104: coverage_audit_matrix preserves every required support axis
+ 3/11 Test #104: coverage_audit_matrix preserves every required support axis ......................   Passed    0.01 sec
+      Start 197: coverage_audit_matrix keeps COV-GAP-001 closed while preserving remaining gaps
+ 4/11 Test #197: coverage_audit_matrix keeps COV-GAP-001 closed while preserving remaining gaps ...   Passed    0.12 sec
+      Start 198: coverage_audit_matrix names compatibility matrix as malformed submatrix only
+ 5/11 Test #198: coverage_audit_matrix names compatibility matrix as malformed submatrix only .....   Passed    0.02 sec
+      Start 206: coverage_audit_matrix preserves default round-trip evidence for every family
+ 6/11 Test #206: coverage_audit_matrix preserves default round-trip evidence for every family .....   Passed    0.02 sec
+      Start 238: coverage_audit_matrix separates advisory local evidence from default proof
+ 7/11 Test #238: coverage_audit_matrix separates advisory local evidence from default proof .......   Passed    0.12 sec
+      Start 278: coverage_audit_matrix preserves direct validation success evidence
+ 8/11 Test #278: coverage_audit_matrix preserves direct validation success evidence ...............   Passed    0.02 sec
+      Start 283: coverage_audit_matrix is discoverable from compatibility evidence catalog
+ 9/11 Test #283: coverage_audit_matrix is discoverable from compatibility evidence catalog ........   Passed    0.01 sec
+      Start 342: coverage_audit_matrix stays free of internal planning identifiers
+10/11 Test #342: coverage_audit_matrix stays free of internal planning identifiers ................   Passed    0.01 sec
+      Start 373: coverage_audit_matrix lists every current archive family
+11/11 Test #373: coverage_audit_matrix lists every current archive family .........................   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 11
+
+Label Time Summary:
+coverage_audit_matrix    =   0.38 sec*proc (11 tests)
+docs_policy              =   0.38 sec*proc (11 tests)
+unit                     =   0.38 sec*proc (11 tests)
+
+Total Test time (real) =   0.40 sec
+[4/5] ctest --preset windows-msvc-debug-static -L validation_api --output-on-failure
+Test project J:/libbsa/build/windows-msvc-debug-static
+    Start  49: validation_api reports result-level setup errors
+1/8 Test  #49: validation_api reports result-level setup errors ..................................   Passed    0.02 sec
+    Start 130: validation_api reports compatibility_matrix malformed rows as validation errors
+2/8 Test #130: validation_api reports compatibility_matrix malformed rows as validation errors ...   Passed    0.02 sec
+    Start 144: validation_api caps extractability before reading sparse payload bytes
+3/8 Test #144: validation_api caps extractability before reading sparse payload bytes ............   Passed    0.02 sec
+    Start 308: validation_api accepts writer-produced archives
+4/8 Test #308: validation_api accepts writer-produced archives ...................................   Passed    0.03 sec
+    Start 323: validation_api reports malformed archives without lenient readers
+5/8 Test #323: validation_api reports malformed archives without lenient readers .................   Passed    0.02 sec
+    Start 326: validation_api reports expected variant mismatch as a valid risky warning
+6/8 Test #326: validation_api reports expected variant mismatch as a valid risky warning .........   Passed    0.02 sec
+    Start 344: validation_api accepts writer-produced Starfield BA2 v3 compression routes
+7/8 Test #344: validation_api accepts writer-produced Starfield BA2 v3 compression routes ........   Passed    0.03 sec
+    Start 369: validation_api accepts generated fixture archives
+8/8 Test #369: validation_api accepts generated fixture archives .................................   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 8
+
+Label Time Summary:
+compat                  =   0.02 sec*proc (1 test)
+compatibility_matrix    =   0.02 sec*proc (1 test)
+fixture                 =   0.08 sec*proc (4 tests)
+malformed               =   0.05 sec*proc (3 tests)
+roundtrip               =   0.06 sec*proc (2 tests)
+unit                    =   0.17 sec*proc (8 tests)
+validation_api          =   0.17 sec*proc (8 tests)
+
+Total Test time (real) =   0.18 sec
+[5/5] ctest --preset windows-msvc-debug-static -R compatibility_warning --output-on-failure
+Test project J:/libbsa/build/windows-msvc-debug-static
+    Start 117: compatibility_warning reports BA2 target family mismatch
+1/5 Test #117: compatibility_warning reports BA2 target family mismatch ........................   Passed    0.03 sec
+    Start 145: compatibility_warning behavior covers every public warning code
+2/5 Test #145: compatibility_warning behavior covers every public warning code .................   Passed    0.14 sec
+    Start 219: target_format_policy guide documents public compatibility_warning_code values
+3/5 Test #219: target_format_policy guide documents public compatibility_warning_code values ...   Passed    0.02 sec
+    Start 312: compatibility_warning reports BSA embedded name compatibility risk
+4/5 Test #312: compatibility_warning reports BSA embedded name compatibility risk ..............   Passed    0.02 sec
+    Start 394: compatibility_warning reports compressed sound payloads
+5/5 Test #394: compatibility_warning reports compressed sound payloads .........................   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 5
+
+Label Time Summary:
+compat                   =   0.20 sec*proc (4 tests)
+compatibility_warning    =   0.20 sec*proc (4 tests)
+doc_structure            =   0.02 sec*proc (1 test)
+target_format_policy     =   0.02 sec*proc (1 test)
+unit                     =   0.21 sec*proc (5 tests)
+validation_policy        =   0.15 sec*proc (2 tests)
+
+Total Test time (real) =   0.23 sec
+S04 closeout verification passed: configure, build, coverage_audit_matrix, validation_api, compatibility_warning.

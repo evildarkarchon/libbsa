@@ -1,0 +1,18 @@
+{
+  "id": "aa86db10-3c2f-4c22-857f-56084ea1d15d",
+  "runtime": "bash",
+  "purpose": "S05 workspace status before planning",
+  "script_chars": 27,
+  "started_at": "2026-05-20T03:22:52.321Z",
+  "finished_at": "2026-05-20T03:22:52.401Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 80,
+  "stdout_bytes": 16211,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\aa86db10-3c2f-4c22-857f-56084ea1d15d.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\aa86db10-3c2f-4c22-857f-56084ea1d15d.stderr"
+}

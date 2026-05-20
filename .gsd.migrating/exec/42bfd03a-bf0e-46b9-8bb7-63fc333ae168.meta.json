@@ -1,0 +1,18 @@
+{
+  "id": "42bfd03a-bf0e-46b9-8bb7-63fc333ae168",
+  "runtime": "python",
+  "purpose": "T03 summarize CTest evidence counts from saved stdout",
+  "script_chars": 552,
+  "started_at": "2026-05-20T03:54:57.732Z",
+  "finished_at": "2026-05-20T03:54:57.770Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 38,
+  "stdout_bytes": 441,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\42bfd03a-bf0e-46b9-8bb7-63fc333ae168.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\42bfd03a-bf0e-46b9-8bb7-63fc333ae168.stderr"
+}

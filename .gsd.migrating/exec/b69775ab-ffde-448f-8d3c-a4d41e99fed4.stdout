@@ -1,0 +1,97 @@
+--- R001 ---
+### R001 — Truthful coverage matrix: M001 must produce a durable coverage/gap matrix that states what libbsa currently proves and where gaps remain.
+- Class: failure-visibility
+- Status: validated
+- Description: Truthful coverage matrix: M001 must produce a durable coverage/gap matrix that states what libbsa currently proves and where gaps remain.
+- Source: user
+- Validation: S01 produced `docs/coverage-audit-matrix.md`, a durable human-first support-truth matrix with default evidence sources, family/axis statuses, advisory local-evidence separation, and ranked gaps `COV-GAP-001` through `COV-GAP-0
+- Notes: Validated by M001-k9wo8b/S01 closeout; future slices may update the matrix as gaps are fixed or deferred.
+--- R002 ---
+### R002 — All current archive families audited: TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 must all be included in the audit scope.
+- Class: core-capability
+- Status: validated
+- Description: All current archive families audited: TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 must all be included in the audit scope.
+- Source: user
+- Validation: `docs/coverage-audit-matrix.md` includes TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 rows with required capability axes. Fresh S01 closeout verification passed required family greps and the `coverage_audit_matrix lists e
+- Notes: Validated by M001-k9wo8b/S01 closeout; all required current archive families are represented in the public matrix and protected by docs-policy tests.
+--- R003 ---
+### R003 — Public API capability story audited: M001 must verify what the public API actually supports beyond basic extraction and writing, and identify API friction or missing ergonomic helpers.
+- Class: core-capability
+- Status: active
+- Description: Public API capability story audited: M001 must verify what the public API actually supports beyond basic extraction and writing, and identify API friction or missing ergonomic helpers.
+- Source: user
+- Validation: mapped
+- Notes: Keep archive_reader and family-specific writers as the core; add helpers only when audit evidence justifies them.
+--- R004 ---
+### R004 — Highest-risk audit gaps fixed with proof: M001 must fix a risk-bounded tranche of the most important gaps discovered by the audit and prove each fix durably.
+- Class: quality-attribute
+- Status: validated
+- Description: Highest-risk audit gaps fixed with proof: M001 must fix a risk-bounded tranche of the most important gaps discovered by the audit and prove each fix durably.
+- Source: user
+- Validation: S03 closed the selected high claim-risk fixture/round-trip tranche by documenting the default legal generated-fixture proof sweep in `docs/compatibility-evidence.md`, adding docs-policy Catch2 guardrails in `tests/unit/coverag
+- Notes: COV-GAP-001 remains intentionally routed to S04 for validation-success granularity; S03 did not broaden scope into unrelated implementation or public API redesign work.
+--- R005 ---
+### R005 — Layered fixture and compatibility proof preserved: M001 must preserve generated fixture CI proof, package-consumer proof, and documented opt-in game/BSArchPro comparison paths.
+- Class: quality-attribute
+- Status: validated
+- Description: Layered fixture and compatibility proof preserved: M001 must preserve generated fixture CI proof, package-consumer proof, and documented opt-in game/BSArchPro comparison paths.
+- Source: user
+- Validation: S03 preserved layered fixture and compatibility proof by adding the public `Default fixture and round-trip proof sweep` section to `docs/compatibility-evidence.md`, enforcing coverage-matrix/default-proof wording through Catch
+- Notes: Optional `LIBBSA_GAME_FIXTURES` and `LIBBSA_BSARCHPRO_EXPECTED` paths remain advisory only and are explicitly separate from default proof.
+--- R006 ---
+### R006 — Structured public error behavior remains consistent: M001 must audit and stabilize public result/error behavior where high-risk inconsistencies are found.
+- Class: failure-visibility
+- Status: validated
+- Description: Structured public error behavior remains consistent: M001 must audit and stabilize public result/error behavior where high-risk inconsistencies are found.
+- Source: inferred
+- Validation: S04 stabilized high-risk public result/error/validation behavior through public API and docs-policy proof. Fresh closeout verification gsd_exec `b97534ad-8a07-4c3b-86fc-6b1a2fba4577` passed `cmake --preset windows-msvc-debug-s
+- Notes: S04 kept the existing public error model intact, added branchable validation/warning proof for generated success fixtures, writer-produced Starfield BA2 v3 method 0/method 3 routes, expected-variant mismatch warnings, and updated e
+--- R007 ---
+### R007 — Package-consumer API remains installable and usable: M001 must prove the installed/exported public API can be consumed through the package target and umbrella header.
+- Class: integration
+- Status: active
+- Description: Package-consumer API remains installable and usable: M001 must prove the installed/exported public API can be consumed through the package target and umbrella header.
+- Source: inferred
+- Validation: mapped
+- Notes: Package-consumer proof should cover representative read, write, validation, bulk extraction, and error handling examples where feasible.
+--- R008 ---
+### R008 — Public headers remain dependency-light C++20: M001 changes must not expose private codec, DirectXTex, platform, or C++23-only types in public headers.
+- Class: constraint
+- Status: active
+- Description: Public headers remain dependency-light C++20: M001 changes must not expose private codec, DirectXTex, platform, or C++23-only types in public headers.
+- Source: inferred
+- Validation: mapped
+- Notes: Public headers should continue to use libbsa-owned metadata/result types and avoid leaking libdeflate, LZ4, DirectXTex, DXGI, or std::expected.
+--- R009 ---
+### R009 — TES5Edit remains read-only reference only: M001 must not edit, format, stage, compile, vendor, or use TES5Edit as mutable fixture data.
+- Class: constraint
+- Status: active
+- Description: TES5Edit remains read-only reference only: M001 must not edit, format, stage, compile, vendor, or use TES5Edit as mutable fixture data.
+- Source: user
+- Validation: mapped
+- Notes: All implementation, tests, docs, and generated artifacts must live outside TES5Edit/.
+--- R011 ---
+### R011 — Exhaustive BSArchPro/game-corpus compatibility campaign is deferred beyond M001.
+- Class: quality-attribute
+- Status: deferred
+- Description: Exhaustive BSArchPro/game-corpus compatibility campaign is deferred beyond M001.
+- Source: inferred
+- Validation: unmapped
+- Notes: Provisional future owner: M003 compatibility hardening. M001 keeps the optional path documented and may use it if available, but default completion cannot depend on local copyrighted fixtures.
+--- R012 ---
+### R012 — Performance and large-archive stress gates are deferred beyond M001.
+- Class: quality-attribute
+- Status: deferred
+- Description: Performance and large-archive stress gates are deferred beyond M001.
+- Source: inferred
+- Validation: unmapped
+- Notes: Provisional future owner: M004 performance and operational polish. M001 should not regress existing benchmark/build hooks but does not need full stress criteria.
+--- R013 ---
+### R013 — Publish/release readiness contract is deferred beyond M001.
+- Class: launchability
+- Status: deferred
+- Description: Publish/release readiness contract is deferred beyond M001.
+- Source: inferred
+- Validation: unmapped
+- Notes: Provisional future owner: M005 release readiness. M001 may improve docs and package-consumer proof but does not need to declare the library ready for release.
+DONE

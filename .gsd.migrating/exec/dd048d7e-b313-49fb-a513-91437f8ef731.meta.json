@@ -1,0 +1,18 @@
+{
+  "id": "dd048d7e-b313-49fb-a513-91437f8ef731",
+  "runtime": "bash",
+  "purpose": "S05 closeout default debug static configure/build/full CTest/package-consumer verification",
+  "script_chars": 569,
+  "started_at": "2026-05-20T03:57:26.436Z",
+  "finished_at": "2026-05-20T03:57:59.926Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 33490,
+  "stdout_bytes": 121856,
+  "stderr_bytes": 104,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\dd048d7e-b313-49fb-a513-91437f8ef731.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\dd048d7e-b313-49fb-a513-91437f8ef731.stderr"
+}
