@@ -38,7 +38,8 @@ namespace
 
 } // namespace
 
-TEST_CASE("export_surface public export header documents macro modes", "[unit][public-api][export_surface]")
+TEST_CASE("export_surface public export header documents macro modes",
+          "[unit][public-api][export_surface][export_surface_policy]")
 {
   const auto header = read_text_file(source_root() / "include/libbsa/export.hpp");
 
@@ -51,7 +52,7 @@ TEST_CASE("export_surface public export header documents macro modes", "[unit][p
 }
 
 TEST_CASE("export_surface root CMake installs export header and disables auto export",
-          "[unit][public-api][export_surface]")
+          "[unit][public-api][export_surface][export_surface_policy]")
 {
   const auto cmake = read_text_file(source_root() / "CMakeLists.txt");
 
@@ -62,7 +63,8 @@ TEST_CASE("export_surface root CMake installs export header and disables auto ex
   REQUIRE(cmake.find("WINDOWS_EXPORT_ALL_SYMBOLS TRUE") == std::string::npos);
 }
 
-TEST_CASE("export_surface public emitted APIs are explicitly annotated", "[unit][public-api][export_surface]")
+TEST_CASE("export_surface public emitted APIs are explicitly annotated",
+          "[unit][public-api][export_surface][export_surface_policy]")
 {
   const auto archive_header = read_text_file(source_root() / "include/libbsa/archive.hpp");
   const auto writer_header = read_text_file(source_root() / "include/libbsa/writer.hpp");

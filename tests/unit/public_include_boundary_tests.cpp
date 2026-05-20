@@ -132,7 +132,8 @@ static_assert(requires(libbsa::validation_report report,
   { libbsa::validate_archive("archive.bsa") } -> std::same_as<libbsa::result<libbsa::validation_report>>;
 });
 
-TEST_CASE("public_include_boundary umbrella header exposes public boundary types", "[unit][public-api]")
+TEST_CASE("public_include_boundary umbrella header exposes public boundary types",
+          "[unit][public-api][public_include_boundary]")
 {
   [[maybe_unused]] libbsa::result<int> result{1};
   [[maybe_unused]] auto code = libbsa::error_code::unsupported;
@@ -172,7 +173,8 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
   REQUIRE(result.has_value());
 }
 
-TEST_CASE("public_include_boundary DX10 writer contract exposes no raw override surface", "[unit][public-api]")
+TEST_CASE("public_include_boundary DX10 writer contract exposes no raw override surface",
+          "[unit][public-api][public_include_boundary]")
 {
   // Phase 9 intentionally corrects the stale SPEC raw/compressed override wording:
   // the public DX10 writer is DDS-host-file-only and compressed-only at archive level.
@@ -202,7 +204,8 @@ TEST_CASE("public_include_boundary DX10 writer contract exposes no raw override 
   }
 }
 
-TEST_CASE("public_include_boundary excludes private Phase 2 implementation names", "[unit][public-api]")
+TEST_CASE("public_include_boundary excludes private Phase 2 implementation names",
+          "[unit][public-api][public_include_boundary]")
 {
   constexpr auto forbidden_tokens = std::to_array<std::string_view>({"libdeflate",
                                                                      "lz4::",
@@ -253,7 +256,8 @@ TEST_CASE("public_include_boundary excludes private Phase 2 implementation names
   }
 }
 
-TEST_CASE("public_include_boundary writer execution options stay dependency-light", "[unit][public-api]")
+TEST_CASE("public_include_boundary writer execution options stay dependency-light",
+          "[unit][public-api][public_include_boundary]")
 {
   const auto writer_header = std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa" / "writer.hpp";
   std::ifstream file{writer_header.string()};
