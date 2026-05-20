@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -27,6 +28,16 @@ namespace
     std::string_view file_name;
     libbsa::archive_type expected_type;
     libbsa::archive_variant expected_variant;
+    std::uint32_t expected_version;
+    libbsa::entry_compression expected_default_compression;
+    std::optional<std::uint32_t> expected_ba2_compression_method = std::nullopt;
+  };
+
+  struct starfield_validation_writer_case
+  {
+    std::string_view route_name;
+    std::uint32_t compression_method;
+    libbsa::entry_compression expected_default_compression;
   };
 
   std::filesystem::path generated_archive_dir()
@@ -144,10 +155,10 @@ namespace
     return libbsa::error_code::format_error;
   }
 
-  void require_valid_archive(std::string_view host_path,
-                             libbsa::archive_type expected_type,
-                             libbsa::archive_variant expected_variant,
-                             libbsa::validation_options options = {})
+  libbsa::validation_report require_valid_archive(std::string_view host_path,
+                                                  libbsa::archive_type expected_type,
+                                                  libbsa::archive_variant expected_variant,
+                                                  libbsa::validation_options options = {})
   {
     auto validated = libbsa::validate_archive(host_path, options);
     REQUIRE(validated.has_value());
@@ -159,6 +170,51 @@ namespace
     REQUIRE(report.metadata.has_value());
     CHECK(report.metadata->type == expected_type);
     CHECK(report.metadata->variant == expected_variant);
+    return report;
+  }
+
+  void require_metadata_matches_case(const libbsa::validation_report &report,
+                                     const validation_archive_case &test_case)
+  {
+    REQUIRE(report.metadata.has_value());
+    CHECK(report.metadata->version == test_case.expected_version);
+    CHECK(report.metadata->default_compression == test_case.expected_default_compression);
+
+    if (test_case.expected_type == libbsa::archive_type::ba2)
+    {
+      REQUIRE(report.metadata->ba2.has_value());
+      if (test_case.expected_ba2_compression_method.has_value())
+      {
+        REQUIRE(report.metadata->ba2->compression_method.has_value());
+        CHECK(report.metadata->ba2->compression_method.value() == test_case.expected_ba2_compression_method.value());
+      }
+      else
+      {
+        CHECK_FALSE(report.metadata->ba2->compression_method.has_value());
+      }
+    }
+    else
+    {
+      CHECK_FALSE(report.metadata->ba2.has_value());
+    }
+  }
+
+  const libbsa::compatibility_warning &require_warning(const libbsa::validation_report &report,
+                                                       libbsa::compatibility_warning_code code,
+                                                       libbsa::compatibility_warning_severity severity,
+                                                       bool has_archive_path)
+  {
+    for (const auto &warning : report.warnings)
+    {
+      if (warning.code == code)
+      {
+        CHECK(warning.severity == severity);
+        CHECK(warning.archive_path.has_value() == has_archive_path);
+        CHECK_FALSE(warning.message.empty());
+        return warning;
+      }
+    }
+    FAIL("missing expected compatibility warning");
   }
 
   void require_validation_setup_error(std::string_view host_path, libbsa::error_code expected_code)
@@ -277,6 +333,60 @@ namespace
     return output;
   }
 
+  std::filesystem::path write_ba2_gnrl_starfield_v3_archive(std::uint32_t compression_method)
+  {
+    const auto stem = std::string{"validation-api-ba2-gnrl-sfv3-method"} + std::to_string(compression_method);
+    const auto output = unique_output_path(stem, ".ba2");
+    libbsa::ba2_gnrl_writer_options options;
+    options.compression = libbsa::archive_compression_policy::all_compressed;
+    options.overwrite_existing = true;
+    options.starfield_compression_method = compression_method;
+    libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::starfield_v3, options};
+    REQUIRE(writer.add_bytes("Data/Validation/StarfieldRoute.bin",
+                             bytes_from_text("starfield BA2 GNRL validation route payload"))
+                .has_value());
+    REQUIRE(writer.write_to(output.string()).has_value());
+    return output;
+  }
+
+  std::filesystem::path write_ba2_dx10_starfield_v3_archive(std::uint32_t compression_method)
+  {
+    const auto stem = std::string{"validation-api-ba2-dx10-sfv3-method"} + std::to_string(compression_method);
+    const auto output = unique_output_path(stem, ".ba2");
+    libbsa::ba2_dx10_writer_options options;
+    options.overwrite_existing = true;
+    options.starfield_compression_method = compression_method;
+    libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::starfield_v3, options};
+    const auto dds_source = generated_source_dir() / "ba2_dx10_bc1_unorm.dds";
+    REQUIRE(writer.add_file("textures/validation/starfield_route.dds", dds_source.string()).has_value());
+    REQUIRE(writer.write_to(output.string()).has_value());
+    return output;
+  }
+
+  void require_starfield_v3_ba2_route(std::string_view route_name,
+                                      const std::filesystem::path &archive_path,
+                                      std::uint32_t compression_method,
+                                      libbsa::entry_compression expected_default_compression)
+  {
+    INFO("writer-produced Starfield BA2 v3 validation route: " << route_name);
+    INFO("writer-produced archive: " << archive_path.string());
+
+    libbsa::validation_options options;
+    options.validate_entry_extractability = true;
+
+    const auto report = require_valid_archive(archive_path.string(),
+                                              libbsa::archive_type::ba2,
+                                              libbsa::archive_variant::starfield,
+                                              options);
+    REQUIRE(report.metadata.has_value());
+    CHECK(report.metadata->version == 3U);
+    CHECK(report.metadata->file_count == 1U);
+    CHECK(report.metadata->default_compression == expected_default_compression);
+    REQUIRE(report.metadata->ba2.has_value());
+    REQUIRE(report.metadata->ba2->compression_method.has_value());
+    CHECK(report.metadata->ba2->compression_method.value() == compression_method);
+  }
+
 } // namespace
 
 TEST_CASE("validation_api reports result-level setup errors", "[unit][validation_api]")
@@ -355,19 +465,63 @@ TEST_CASE("validation_api accepts generated fixture archives", "[unit][fixture][
   options.validate_entry_extractability = true;
 
   constexpr std::array cases{
-      validation_archive_case{"tes3_success.bsa", libbsa::archive_type::bsa, libbsa::archive_variant::tes3},
-      validation_archive_case{"tes4_v103.bsa", libbsa::archive_type::bsa, libbsa::archive_variant::tes4},
-      validation_archive_case{"ba2_gnrl_fo4.ba2", libbsa::archive_type::ba2, libbsa::archive_variant::fallout4},
-      validation_archive_case{"ba2_dx10_fo4.ba2", libbsa::archive_type::ba2, libbsa::archive_variant::fallout4},
+      validation_archive_case{"tes3_success.bsa",
+                              libbsa::archive_type::bsa,
+                              libbsa::archive_variant::tes3,
+                              0x00000100U,
+                              libbsa::entry_compression::none},
+      validation_archive_case{"tes4_v103.bsa",
+                              libbsa::archive_type::bsa,
+                              libbsa::archive_variant::tes4,
+                              103U,
+                              libbsa::entry_compression::deflate},
+      validation_archive_case{"tes4_v104.bsa",
+                              libbsa::archive_type::bsa,
+                              libbsa::archive_variant::tes4,
+                              104U,
+                              libbsa::entry_compression::deflate},
+      validation_archive_case{"tes4_v105.bsa",
+                              libbsa::archive_type::bsa,
+                              libbsa::archive_variant::tes4,
+                              105U,
+                              libbsa::entry_compression::lz4_frame},
+      validation_archive_case{"ba2_gnrl_fo4.ba2",
+                              libbsa::archive_type::ba2,
+                              libbsa::archive_variant::fallout4,
+                              1U,
+                              libbsa::entry_compression::deflate},
+      validation_archive_case{"ba2_dx10_fo4.ba2",
+                              libbsa::archive_type::ba2,
+                              libbsa::archive_variant::fallout4,
+                              1U,
+                              libbsa::entry_compression::deflate},
+      validation_archive_case{"ba2_gnrl_sfv2.ba2",
+                              libbsa::archive_type::ba2,
+                              libbsa::archive_variant::starfield,
+                              2U,
+                              libbsa::entry_compression::deflate},
+      validation_archive_case{"ba2_gnrl_sfv3.ba2",
+                              libbsa::archive_type::ba2,
+                              libbsa::archive_variant::starfield,
+                              3U,
+                              libbsa::entry_compression::lz4_block,
+                              std::optional<std::uint32_t>{3U}},
+      validation_archive_case{"ba2_dx10_sfv3.ba2",
+                              libbsa::archive_type::ba2,
+                              libbsa::archive_variant::starfield,
+                              3U,
+                              libbsa::entry_compression::lz4_block,
+                              std::optional<std::uint32_t>{3U}},
   };
 
   for (const auto &test_case : cases)
   {
     INFO("generated fixture: " << test_case.file_name);
-    require_valid_archive((generated_archive_dir() / std::string{test_case.file_name}).string(),
-                          test_case.expected_type,
-                          test_case.expected_variant,
-                          options);
+    const auto report = require_valid_archive((generated_archive_dir() / std::string{test_case.file_name}).string(),
+                                              test_case.expected_type,
+                                              test_case.expected_variant,
+                                              options);
+    require_metadata_matches_case(report, test_case);
   }
 }
 
@@ -386,6 +540,53 @@ TEST_CASE("validation_api accepts writer-produced archives", "[unit][roundtrip][
                         libbsa::archive_type::ba2,
                         libbsa::archive_variant::fallout4,
                         options);
+}
+
+TEST_CASE("validation_api accepts writer-produced Starfield BA2 v3 compression routes",
+          "[unit][roundtrip][validation_api]")
+{
+  constexpr std::array cases{
+      starfield_validation_writer_case{"method 0 deflate", 0U, libbsa::entry_compression::deflate},
+      starfield_validation_writer_case{"method 3 raw LZ4 block", 3U, libbsa::entry_compression::lz4_block},
+  };
+
+  for (const auto &test_case : cases)
+  {
+    INFO("BA2 GNRL Starfield v3 " << test_case.route_name);
+    require_starfield_v3_ba2_route("GNRL",
+                                   write_ba2_gnrl_starfield_v3_archive(test_case.compression_method),
+                                   test_case.compression_method,
+                                   test_case.expected_default_compression);
+
+    INFO("BA2 DX10 Starfield v3 " << test_case.route_name);
+    require_starfield_v3_ba2_route("DX10",
+                                   write_ba2_dx10_starfield_v3_archive(test_case.compression_method),
+                                   test_case.compression_method,
+                                   test_case.expected_default_compression);
+  }
+}
+
+TEST_CASE("validation_api reports expected variant mismatch as a valid risky warning",
+          "[unit][compat][validation_api]")
+{
+  libbsa::validation_options options;
+  options.expected_type = libbsa::archive_type::bsa;
+  options.expected_variant = libbsa::archive_variant::tes4;
+  options.validate_entry_extractability = true;
+
+  INFO("expected variant mismatch fixture: tes3_success.bsa");
+  const auto report = require_valid_archive((generated_archive_dir() / "tes3_success.bsa").string(),
+                                            libbsa::archive_type::bsa,
+                                            libbsa::archive_variant::tes3,
+                                            options);
+
+  CHECK(report.valid);
+  CHECK(report.is_valid());
+  CHECK(report.errors.empty());
+  require_warning(report,
+                  libbsa::compatibility_warning_code::target_family_mismatch,
+                  libbsa::compatibility_warning_severity::risky,
+                  false);
 }
 
 TEST_CASE("validation_api reports malformed archives without lenient readers", "[unit][fixture][malformed][validation_api]")
