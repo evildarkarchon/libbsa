@@ -56,7 +56,10 @@ namespace
     const auto patterns = std::array{
         ForbiddenPattern{"phase label", std::regex{R"(\bphase\s+\d+\b)", std::regex_constants::icase}},
         ForbiddenPattern{"milestone label", std::regex{R"(\bmilestone\s+\d+\b)", std::regex_constants::icase}},
-        ForbiddenPattern{"decision ID", std::regex{R"(\bD-\d+\b)", std::regex_constants::icase}},
+        ForbiddenPattern{"milestone ID", std::regex{R"(\bM\d{3}(?:-[A-Za-z0-9]+)?\b)", std::regex_constants::icase}},
+        ForbiddenPattern{"slice ID", std::regex{R"(\bS\d{2}\b)", std::regex_constants::icase}},
+        ForbiddenPattern{"task ID", std::regex{R"(\bT\d{2}\b)", std::regex_constants::icase}},
+        ForbiddenPattern{"decision ID", std::regex{R"(\bD-?\d{3}\b)", std::regex_constants::icase}},
     };
 
     for (const auto &forbidden : patterns)
@@ -255,7 +258,7 @@ TEST_CASE("docs_policy public API audit is discoverable and routes proof gaps",
                       "ba2_dx10_writer",
                       "No broad public facade is justified",
                       "`COV-GAP-003`",
-                      "S05 closes `COV-GAP-003`",
+                      "Installed-package runtime proof now exists:",
                       "package_consumer_smoke",
                       "installed `libbsa::libbsa` target",
                       "TES3 BSA",
@@ -290,8 +293,7 @@ TEST_CASE("docs_policy public API audit is discoverable and routes proof gaps",
   require_no_tokens(matrix,
                     {"| 2 | `COV-GAP-003`",
                      "Package-consumer runtime proof for creating/opening every archive family from an installed package",
-                     "actual archive behavior is covered by always-on unit fixture tests",
-                     "S05 integrated confidence/package-release polish"});
+                     "actual archive behavior is covered by always-on unit fixture tests"});
 }
 
 TEST_CASE("docs_policy public proof docs keep optional evidence and fixture boundaries explicit",
@@ -342,6 +344,7 @@ TEST_CASE("docs_policy public documentation surfaces hide planning identifiers",
       "include/libbsa/writer.hpp",
       "docs/api-mainpage.md",
       "docs/integration-examples.md",
+      "docs/public-api-reality-check.md",
       "docs/thread-safety.md",
       "docs/compatibility-evidence.md",
       "tests/fixtures/README.md",

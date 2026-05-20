@@ -304,8 +304,7 @@ TEST_CASE("coverage_audit_matrix keeps COV-GAP-001 and COV-GAP-003 closed while 
                      "Direct validation success rows for Starfield v2/v3 generated fixtures are not enumerated",
                      "Direct validation success rows for Starfield v3 DX10 generated fixtures and both Starfield compression methods are not enumerated",
                      "installed-package runtime archive creation/opening for every family is intentionally not proven by default",
-                     "actual archive behavior is covered by always-on unit fixture tests",
-                     "S05 integrated confidence/package-release polish"});
+                     "actual archive behavior is covered by always-on unit fixture tests"});
 }
 
 TEST_CASE("compatibility_evidence names direct validation matrix and Starfield compression routes",
@@ -339,7 +338,7 @@ TEST_CASE("public_api_reality_check routes closed validation and package-consume
                       "method 0 deflate",
                       "method 3 raw LZ4 block",
                       "Closed. Keep validation API and docs-policy tests as the guardrail",
-                      "S05 closes `COV-GAP-003`",
+                      "Installed-package runtime proof now exists:",
                       "package_consumer_smoke",
                       "installed `libbsa::libbsa` target",
                       "create, open, validate, and extract writer-produced TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 archives",
@@ -408,7 +407,11 @@ TEST_CASE("public coverage docs stay free of internal planning identifiers",
     require_no_tokens(matrix,
                       {".gsd/",
                        "M001",
-                       "S01"});
+                       "S01",
+                       "S02",
+                       "S03",
+                       "S04",
+                       "S05"});
   }
 
   SECTION("compatibility evidence catalog")
@@ -418,7 +421,11 @@ TEST_CASE("public coverage docs stay free of internal planning identifiers",
     require_no_tokens(compatibility_evidence,
                       {".gsd/",
                        "M001",
-                       "S01"});
+                       "S01",
+                       "S02",
+                       "S03",
+                       "S04",
+                       "S05"});
   }
 
   SECTION("public API reality check")
@@ -428,7 +435,11 @@ TEST_CASE("public coverage docs stay free of internal planning identifiers",
     require_no_tokens(public_api_reality_check,
                       {".gsd/",
                        "M001",
-                       "S01"});
+                       "S01",
+                       "S02",
+                       "S03",
+                       "S04",
+                       "S05"});
   }
 }
 
