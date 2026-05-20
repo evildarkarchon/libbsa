@@ -1,0 +1,18 @@
+{
+  "id": "b597f325-ec51-4098-9003-9bb08a8aba18",
+  "runtime": "bash",
+  "purpose": "summarize coverage audit matrix statuses and gaps for S03 tranche selection",
+  "script_chars": 298,
+  "started_at": "2026-05-20T02:31:25.198Z",
+  "finished_at": "2026-05-20T02:31:25.272Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 74,
+  "stdout_bytes": 9838,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\b597f325-ec51-4098-9003-9bb08a8aba18.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\b597f325-ec51-4098-9003-9bb08a8aba18.stderr"
+}

@@ -1,0 +1,80 @@
+Test project J:/libbsa/build/windows-msvc-debug-static
+      Start  46: ba2_writer_execution GNRL worker_count preserves starfield v3 raw LZ4 output
+ 1/30 Test  #46: ba2_writer_execution GNRL worker_count preserves starfield v3 raw LZ4 output ..................   Passed    0.04 sec
+      Start  50: BA2 GNRL writer accepts explicit Fallout 4 disk archive paths
+ 2/30 Test  #50: BA2 GNRL writer accepts explicit Fallout 4 disk archive paths .................................   Passed    0.01 sec
+      Start  71: BA2 GNRL writer rejects duplicate canonical archive paths at write time
+ 3/30 Test  #71: BA2 GNRL writer rejects duplicate canonical archive paths at write time .......................   Passed    0.02 sec
+      Start  92: BA2 GNRL writer all-compressed policy routes through target compression methods
+ 4/30 Test  #92: BA2 GNRL writer all-compressed policy routes through target compression methods ...............   Passed    0.04 sec
+      Start  93: ba2 gnrl writer layout stage toggles duplicate payload reuse
+ 5/30 Test  #93: ba2 gnrl writer layout stage toggles duplicate payload reuse ..................................   Passed    0.02 sec
+      Start 100: ba2_writer_execution GNRL worker_count preserves Fallout 4 deflate output
+ 6/30 Test #100: ba2_writer_execution GNRL worker_count preserves Fallout 4 deflate output .....................   Passed    0.04 sec
+      Start 149: BA2 GNRL writer keeps duplicate payload offsets distinct by default
+ 7/30 Test #149: BA2 GNRL writer keeps duplicate payload offsets distinct by default ...........................   Passed    0.02 sec
+      Start 155: BA2 GNRL writer shares offsets for byte-identical stored payloads when dedupe is enabled
+ 8/30 Test #155: BA2 GNRL writer shares offsets for byte-identical stored payloads when dedupe is enabled ......   Passed    0.02 sec
+      Start 173: BA2 GNRL writer overwrites existing archives when overwrite_existing is true
+ 9/30 Test #173: BA2 GNRL writer overwrites existing archives when overwrite_existing is true ..................   Passed    0.02 sec
+      Start 177: BA2 GNRL writer resolves non-ASCII UTF-8 output host paths
+10/30 Test #177: BA2 GNRL writer resolves non-ASCII UTF-8 output host paths ....................................   Passed    0.02 sec
+      Start 183: BA2 GNRL writer raw Starfield v2 and v3 defaults reopen through public metadata
+11/30 Test #183: BA2 GNRL writer raw Starfield v2 and v3 defaults reopen through public metadata ...............   Passed    0.03 sec
+      Start 184: BA2 GNRL writer keeps raw disk hashing byte-stable with memory entries
+12/30 Test #184: BA2 GNRL writer keeps raw disk hashing byte-stable with memory entries ........................   Passed    0.13 sec
+      Start 188: ba2_writer_execution missing GNRL disk source with worker_count leaves no partial output
+13/30 Test #188: ba2_writer_execution missing GNRL disk source with worker_count leaves no partial output ......   Passed    0.02 sec
+      Start 194: BA2 GNRL dedupe disk comparisons reject source size changes
+14/30 Test #194: BA2 GNRL dedupe disk comparisons reject source size changes ...................................   Passed    0.13 sec
+      Start 207: BA2 GNRL writer keeps compressed disk entries byte-stable with memory entries
+15/30 Test #207: BA2 GNRL writer keeps compressed disk entries byte-stable with memory entries .................   Passed    0.14 sec
+      Start 222: BA2 GNRL writer reports invalid archive paths as invalid arguments
+16/30 Test #222: BA2 GNRL writer reports invalid archive paths as invalid arguments ............................   Passed    0.01 sec
+      Start 239: BA2 GNRL writer preserves pre-existing deterministic temp-name siblings
+17/30 Test #239: BA2 GNRL writer preserves pre-existing deterministic temp-name siblings .......................   Passed    0.02 sec
+      Start 246: BA2 GNRL writer per-entry raw and compressed overrides affect only raw versus packed state
+18/30 Test #246: BA2 GNRL writer per-entry raw and compressed overrides affect only raw versus packed state ....   Passed    0.02 sec
+      Start 251: ba2_writer_execution missing GNRL disk source with worker_count preserves existing sentinel
+19/30 Test #251: ba2_writer_execution missing GNRL disk source with worker_count preserves existing sentinel ...   Passed    0.13 sec
+      Start 257: BA2 GNRL disk payload streaming rejects source size changes
+20/30 Test #257: BA2 GNRL disk payload streaming rejects source size changes ...................................   Passed    0.02 sec
+      Start 286: BA2 GNRL writer preserves Starfield unknown overrides and BA2 record flags
+21/30 Test #286: BA2 GNRL writer preserves Starfield unknown overrides and BA2 record flags ....................   Passed    0.14 sec
+      Start 298: BA2 GNRL writer dedupes compressed stored bytes but not raw and compressed source twins
+22/30 Test #298: BA2 GNRL writer dedupes compressed stored bytes but not raw and compressed source twins .......   Passed    0.02 sec
+      Start 333: ba2 gnrl writer preparation stage prepares minimal memory entries
+23/30 Test #333: ba2 gnrl writer preparation stage prepares minimal memory entries .............................   Passed    0.01 sec
+      Start 349: BA2 GNRL writer reports missing disk sources as I/O errors
+24/30 Test #349: BA2 GNRL writer reports missing disk sources as I/O errors ....................................   Passed    0.01 sec
+      Start 358: BA2 GNRL writer rejects empty disk source host paths
+25/30 Test #358: BA2 GNRL writer rejects empty disk source host paths ..........................................   Passed    0.01 sec
+      Start 403: BA2 GNRL writer dedupes raw disk sources under non-ASCII host paths
+26/30 Test #403: BA2 GNRL writer dedupes raw disk sources under non-ASCII host paths ...........................   Passed    0.13 sec
+      Start 406: ba2 gnrl writer layout stage compares prepared payload bytes
+27/30 Test #406: ba2 gnrl writer layout stage compares prepared payload bytes ..................................   Passed    0.02 sec
+      Start 416: BA2 GNRL writer raw Fallout 4 output reopens with end filename table
+28/30 Test #416: BA2 GNRL writer raw Fallout 4 output reopens with end filename table ..........................   Passed    0.02 sec
+      Start 417: BA2 GNRL writer rejects overwrite targets that are existing directories
+29/30 Test #417: BA2 GNRL writer rejects overwrite targets that are existing directories .......................   Passed    0.12 sec
+      Start 424: BA2 GNRL writer refuses to overwrite existing output when overwrite_existing is false
+30/30 Test #424: BA2 GNRL writer refuses to overwrite existing output when overwrite_existing is false .........   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 30
+
+Label Time Summary:
+ba2_gnrl_writer          =   1.39 sec*proc (30 tests)
+ba2_writer_execution     =   0.21 sec*proc (4 tests)
+bounded_memory_policy    =   0.37 sec*proc (6 tests)
+dedupe                   =   0.27 sec*proc (2 tests)
+overwrite                =   0.14 sec*proc (2 tests)
+publish                  =   0.31 sec*proc (6 tests)
+starfield                =   0.04 sec*proc (1 test)
+stream                   =   0.02 sec*proc (1 test)
+temp                     =   0.02 sec*proc (1 test)
+unit                     =   1.39 sec*proc (30 tests)
+worker_count             =   0.21 sec*proc (4 tests)
+writer-source-io         =   0.40 sec*proc (3 tests)
+writer-stage             =   0.05 sec*proc (3 tests)
+
+Total Test time (real) =   2.44 sec

@@ -15,28 +15,6 @@ This file is the explicit capability and coverage contract for the project.
 - Validation: mapped
 - Notes: Keep archive_reader and family-specific writers as the core; add helpers only when audit evidence justifies them.
 
-### R004 — Highest-risk audit gaps fixed with proof: M001 must fix a risk-bounded tranche of the most important gaps discovered by the audit and prove each fix durably.
-- Class: quality-attribute
-- Status: active
-- Description: Highest-risk audit gaps fixed with proof: M001 must fix a risk-bounded tranche of the most important gaps discovered by the audit and prove each fix durably.
-- Why it matters: The milestone should produce concrete stabilization progress without ballooning into every possible remediation.
-- Source: user
-- Primary owning slice: M001-k9wo8b/S03
-- Supporting slices: M001-k9wo8b/S04
-- Validation: mapped
-- Notes: M001 does not promise to close every discovered gap; remaining gaps should be explicitly deferred with rationale.
-
-### R005 — Layered fixture and compatibility proof preserved: M001 must preserve generated fixture CI proof, package-consumer proof, and documented opt-in game/BSArchPro comparison paths.
-- Class: quality-attribute
-- Status: active
-- Description: Layered fixture and compatibility proof preserved: M001 must preserve generated fixture CI proof, package-consumer proof, and documented opt-in game/BSArchPro comparison paths.
-- Why it matters: libbsa needs repeatable proof while still keeping a path to higher-confidence real-world compatibility evidence.
-- Source: user
-- Primary owning slice: M001-k9wo8b/S03
-- Supporting slices: M001-k9wo8b/S05
-- Validation: mapped
-- Notes: Default CI must not require copyrighted archives or BSArchPro output; optional compatibility checks remain advisory but documented.
-
 ### R006 — Structured public error behavior remains consistent: M001 must audit and stabilize public result/error behavior where high-risk inconsistencies are found.
 - Class: failure-visibility
 - Status: active
@@ -104,6 +82,28 @@ This file is the explicit capability and coverage contract for the project.
 - Supporting slices: M001-k9wo8b/S03, M001-k9wo8b/S04
 - Validation: `docs/coverage-audit-matrix.md` includes TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 rows with required capability axes. Fresh S01 closeout verification passed required family greps and the `coverage_audit_matrix lists every current archive family` Catch2/CTest policy case.
 - Notes: Validated by M001-k9wo8b/S01 closeout; all required current archive families are represented in the public matrix and protected by docs-policy tests.
+
+### R004 — Highest-risk audit gaps fixed with proof: M001 must fix a risk-bounded tranche of the most important gaps discovered by the audit and prove each fix durably.
+- Class: quality-attribute
+- Status: validated
+- Description: Highest-risk audit gaps fixed with proof: M001 must fix a risk-bounded tranche of the most important gaps discovered by the audit and prove each fix durably.
+- Why it matters: The milestone should produce concrete stabilization progress without ballooning into every possible remediation.
+- Source: user
+- Primary owning slice: M001-k9wo8b/S03
+- Supporting slices: M001-k9wo8b/S04
+- Validation: S03 closed the selected high claim-risk fixture/round-trip tranche by documenting the default legal generated-fixture proof sweep in `docs/compatibility-evidence.md`, adding docs-policy Catch2 guardrails in `tests/unit/coverage_audit_matrix_docs_tests.cpp`, regenerating the default synthetic fixture targets, and passing the focused closeout verification sweep in gsd_exec `32ead1c3-4c7a-46d1-a9b4-f710429f00aa` (15/15 checks including coverage_audit_matrix, reader_backend_dispatch, TES3/TES4/BA2 GNRL/BA2 DX10 writer labels, validation_api, and validate_fixture_manifests).
+- Notes: COV-GAP-001 remains intentionally routed to S04 for validation-success granularity; S03 did not broaden scope into unrelated implementation or public API redesign work.
+
+### R005 — Layered fixture and compatibility proof preserved: M001 must preserve generated fixture CI proof, package-consumer proof, and documented opt-in game/BSArchPro comparison paths.
+- Class: quality-attribute
+- Status: validated
+- Description: Layered fixture and compatibility proof preserved: M001 must preserve generated fixture CI proof, package-consumer proof, and documented opt-in game/BSArchPro comparison paths.
+- Why it matters: libbsa needs repeatable proof while still keeping a path to higher-confidence real-world compatibility evidence.
+- Source: user
+- Primary owning slice: M001-k9wo8b/S03
+- Supporting slices: M001-k9wo8b/S05
+- Validation: S03 preserved layered fixture and compatibility proof by adding the public `Default fixture and round-trip proof sweep` section to `docs/compatibility-evidence.md`, enforcing coverage-matrix/default-proof wording through Catch2 docs-policy tests, and passing closeout verification gsd_exec `32ead1c3-4c7a-46d1-a9b4-f710429f00aa` across generated fixture targets, writer round-trip/reopen labels for all four current archive families, reader dispatch, validation API, and manifest validation.
+- Notes: Optional `LIBBSA_GAME_FIXTURES` and `LIBBSA_BSARCHPRO_EXPECTED` paths remain advisory only and are explicitly separate from default proof.
 
 ## Deferred
 
@@ -204,8 +204,8 @@ This file is the explicit capability and coverage contract for the project.
 | R001 | failure-visibility | validated | M001-k9wo8b/S01 | M001-k9wo8b/S02, M001-k9wo8b/S03, M001-k9wo8b/S04, M001-k9wo8b/S05 | S01 produced `docs/coverage-audit-matrix.md`, a durable human-first support-truth matrix with default evidence sources, family/axis statuses, advisory local-evidence separation, and ranked gaps `COV-GAP-001` through `COV-GAP-004`. Fresh S01 closeout verification passed docs smoke checks plus `ctest --preset windows-msvc-debug-static -R coverage_audit_matrix --output-on-failure` (7/7 tests). |
 | R002 | core-capability | validated | M001-k9wo8b/S01 | M001-k9wo8b/S03, M001-k9wo8b/S04 | `docs/coverage-audit-matrix.md` includes TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 rows with required capability axes. Fresh S01 closeout verification passed required family greps and the `coverage_audit_matrix lists every current archive family` Catch2/CTest policy case. |
 | R003 | core-capability | active | M001-k9wo8b/S02 | M001-k9wo8b/S05 | mapped |
-| R004 | quality-attribute | active | M001-k9wo8b/S03 | M001-k9wo8b/S04 | mapped |
-| R005 | quality-attribute | active | M001-k9wo8b/S03 | M001-k9wo8b/S05 | mapped |
+| R004 | quality-attribute | validated | M001-k9wo8b/S03 | M001-k9wo8b/S04 | S03 closed the selected high claim-risk fixture/round-trip tranche by documenting the default legal generated-fixture proof sweep in `docs/compatibility-evidence.md`, adding docs-policy Catch2 guardrails in `tests/unit/coverage_audit_matrix_docs_tests.cpp`, regenerating the default synthetic fixture targets, and passing the focused closeout verification sweep in gsd_exec `32ead1c3-4c7a-46d1-a9b4-f710429f00aa` (15/15 checks including coverage_audit_matrix, reader_backend_dispatch, TES3/TES4/BA2 GNRL/BA2 DX10 writer labels, validation_api, and validate_fixture_manifests). |
+| R005 | quality-attribute | validated | M001-k9wo8b/S03 | M001-k9wo8b/S05 | S03 preserved layered fixture and compatibility proof by adding the public `Default fixture and round-trip proof sweep` section to `docs/compatibility-evidence.md`, enforcing coverage-matrix/default-proof wording through Catch2 docs-policy tests, and passing closeout verification gsd_exec `32ead1c3-4c7a-46d1-a9b4-f710429f00aa` across generated fixture targets, writer round-trip/reopen labels for all four current archive families, reader dispatch, validation API, and manifest validation. |
 | R006 | failure-visibility | active | M001-k9wo8b/S04 | M001-k9wo8b/S01, M001-k9wo8b/S03 | mapped |
 | R007 | integration | active | M001-k9wo8b/S05 | M001-k9wo8b/S02 | mapped |
 | R008 | constraint | active | M001-k9wo8b/S02 | M001-k9wo8b/S05 | mapped |
@@ -221,7 +221,7 @@ This file is the explicit capability and coverage contract for the project.
 
 ## Coverage Summary
 
-- Active requirements: 7
-- Mapped to slices: 7
-- Validated: 2 (R001, R002)
+- Active requirements: 5
+- Mapped to slices: 5
+- Validated: 4 (R001, R002, R004, R005)
 - Unmapped active requirements: 0

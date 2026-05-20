@@ -1,0 +1,18 @@
+{
+  "id": "334ecf36-ade2-4219-ad3a-12fbc1da2910",
+  "runtime": "bash",
+  "purpose": "T01 ctest validation_api",
+  "script_chars": 78,
+  "started_at": "2026-05-20T03:05:38.607Z",
+  "finished_at": "2026-05-20T03:05:39.821Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 1214,
+  "stdout_bytes": 2112,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\334ecf36-ade2-4219-ad3a-12fbc1da2910.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\334ecf36-ade2-4219-ad3a-12fbc1da2910.stderr"
+}

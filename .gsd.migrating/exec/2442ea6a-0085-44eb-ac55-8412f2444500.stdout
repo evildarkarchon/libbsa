@@ -1,0 +1,8 @@
+tests/package-consumer/main.cpp: OK
+docs/public-api-reality-check.md: OK
+docs/coverage-audit-matrix.md: OK
+tests/unit/docs_policy_tests.cpp: OK
+docs/api-mainpage.md: OK
+docs/integration-examples.md: OK
+docs/compatibility-evidence.md: OK
+tests/unit/target_format_policy_tests.cpp: missing tokens local game, BSArchPro

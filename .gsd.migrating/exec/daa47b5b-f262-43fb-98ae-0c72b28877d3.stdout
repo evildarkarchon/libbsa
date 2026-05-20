@@ -1,0 +1,25 @@
+Test project J:/libbsa/build/windows-msvc-debug-static
+    Start  25: validation_api accepts writer-produced archives
+1/6 Test  #25: validation_api accepts writer-produced archives ...................................   Passed    0.03 sec
+    Start 209: validation_api caps extractability before reading sparse payload bytes
+2/6 Test #209: validation_api caps extractability before reading sparse payload bytes ............   Passed    0.13 sec
+    Start 218: validation_api reports compatibility_matrix malformed rows as validation errors
+3/6 Test #218: validation_api reports compatibility_matrix malformed rows as validation errors ...   Passed    0.02 sec
+    Start 283: validation_api accepts generated fixture archives
+4/6 Test #283: validation_api accepts generated fixture archives .................................   Passed    0.13 sec
+    Start 351: validation_api reports malformed archives without lenient readers
+5/6 Test #351: validation_api reports malformed archives without lenient readers .................   Passed    0.01 sec
+    Start 393: validation_api reports result-level setup errors
+6/6 Test #393: validation_api reports result-level setup errors ..................................   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 6
+
+Label Time Summary:
+compatibility_matrix    =   0.02 sec*proc (1 test)
+fixture                 =   0.30 sec*proc (4 tests)
+malformed               =   0.17 sec*proc (3 tests)
+roundtrip               =   0.03 sec*proc (1 test)
+unit                    =   0.34 sec*proc (6 tests)
+validation_api          =   0.34 sec*proc (6 tests)
+
+Total Test time (real) =   1.33 sec

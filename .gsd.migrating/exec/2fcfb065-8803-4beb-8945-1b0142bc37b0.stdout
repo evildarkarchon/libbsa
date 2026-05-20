@@ -1,0 +1,122 @@
+Test project J:/libbsa/build/windows-msvc-debug-static
+      Start  11: bounded_memory_policy public API boundary hides private BA2 writer helpers
+ 1/48 Test  #11: bounded_memory_policy public API boundary hides private BA2 writer helpers ....................................   Passed    0.02 sec
+      Start  14: public_include_boundary DX10 writer contract exposes no raw override surface
+ 2/48 Test  #14: public_include_boundary DX10 writer contract exposes no raw override surface ..................................   Passed    0.12 sec
+      Start  17: coverage_audit_matrix preserves status vocabulary and ranked gaps
+ 3/48 Test  #17: coverage_audit_matrix preserves status vocabulary and ranked gaps .............................................   Passed    0.01 sec
+      Start  23: result exposes stable error codes
+ 4/48 Test  #23: result exposes stable error codes .............................................................................   Passed    0.12 sec
+      Start  37: validation_api accepts generated fixture archives
+ 5/48 Test  #37: validation_api accepts generated fixture archives .............................................................   Passed    0.02 sec
+      Start  38: validation_api reports compatibility_matrix malformed rows as validation errors
+ 6/48 Test  #38: validation_api reports compatibility_matrix malformed rows as validation errors ...............................   Passed    0.02 sec
+      Start  46: archive_reader open rejects empty host paths
+ 7/48 Test  #46: archive_reader open rejects empty host paths ..................................................................   Passed    0.01 sec
+      Start  77: coverage_audit_matrix names compatibility matrix as malformed submatrix only
+ 8/48 Test  #77: coverage_audit_matrix names compatibility matrix as malformed submatrix only ..................................   Passed    0.01 sec
+      Start  98: validation_api accepts writer-produced archives
+ 9/48 Test  #98: validation_api accepts writer-produced archives ...............................................................   Passed    0.15 sec
+      Start 101: docs_policy mainpage links audited API proof and consumer sharp edges
+10/48 Test #101: docs_policy mainpage links audited API proof and consumer sharp edges .........................................   Passed    0.01 sec
+      Start 106: writer_hotspot_policy keeps public BA2 DX10 writer declaration shape stable
+11/48 Test #106: writer_hotspot_policy keeps public BA2 DX10 writer declaration shape stable ...................................   Passed    0.01 sec
+      Start 117: target_format_policy guide covers every supported target format and compression route
+12/48 Test #117: target_format_policy guide covers every supported target format and compression route .........................   Passed    0.01 sec
+      Start 125: coverage_audit_matrix stays free of internal planning identifiers
+13/48 Test #125: coverage_audit_matrix stays free of internal planning identifiers .............................................   Passed    0.13 sec
+      Start 133: result error access reports success misuse as a logic error
+14/48 Test #133: result error access reports success misuse as a logic error ...................................................   Passed    0.01 sec
+      Start 141: target_format_policy package consumer examples have docs and CTest smoke gates
+15/48 Test #141: target_format_policy package consumer examples have docs and CTest smoke gates ................................   Passed    0.02 sec
+      Start 151: validation_policy CI and presets preserve static shared and TES5Edit build boundaries
+16/48 Test #151: validation_policy CI and presets preserve static shared and TES5Edit build boundaries .........................   Passed    0.01 sec
+      Start 163: coverage_audit_matrix is discoverable from compatibility evidence catalog
+17/48 Test #163: coverage_audit_matrix is discoverable from compatibility evidence catalog .....................................   Passed    0.01 sec
+      Start 176: docs_policy integration examples document the full consumer journey
+18/48 Test #176: docs_policy integration examples document the full consumer journey ...........................................   Passed    0.01 sec
+      Start 187: archive_reader open reports I/O errors for missing host files
+19/48 Test #187: archive_reader open reports I/O errors for missing host files .................................................   Passed    0.13 sec
+      Start 199: export_surface root CMake installs export header and disables auto export
+20/48 Test #199: export_surface root CMake installs export header and disables auto export .....................................   Passed    0.12 sec
+      Start 204: export_surface public export header documents macro modes
+21/48 Test #204: export_surface public export header documents macro modes .....................................................   Passed    0.01 sec
+      Start 209: void result represents success
+22/48 Test #209: void result represents success ................................................................................   Passed    0.01 sec
+      Start 223: docs_policy public API audit is discoverable and routes proof gaps
+23/48 Test #223: docs_policy public API audit is discoverable and routes proof gaps ............................................   Passed    0.02 sec
+      Start 238: target_format_policy guide documents writer output publication safety
+24/48 Test #238: target_format_policy guide documents writer output publication safety .........................................   Passed    0.13 sec
+      Start 265: public_include_boundary excludes private Phase 2 implementation names
+25/48 Test #265: public_include_boundary excludes private Phase 2 implementation names .........................................   Passed    0.06 sec
+      Start 270: coverage_audit_matrix preserves every required support axis
+26/48 Test #270: coverage_audit_matrix preserves every required support axis ...................................................   Passed    0.01 sec
+      Start 271: coverage_audit_matrix lists every current archive family
+27/48 Test #271: coverage_audit_matrix lists every current archive family ......................................................   Passed    0.01 sec
+      Start 272: public_include_boundary writer execution options stay dependency-light
+28/48 Test #272: public_include_boundary writer execution options stay dependency-light ........................................   Passed    0.01 sec
+      Start 275: export_surface public emitted APIs are explicitly annotated
+29/48 Test #275: export_surface public emitted APIs are explicitly annotated ...................................................   Passed    0.02 sec
+      Start 282: target_format_policy guide preserves legal evidence and reference boundaries
+30/48 Test #282: target_format_policy guide preserves legal evidence and reference boundaries ..................................   Passed    0.01 sec
+      Start 285: validation_api caps extractability before reading sparse payload bytes
+31/48 Test #285: validation_api caps extractability before reading sparse payload bytes ........................................   Passed    0.12 sec
+      Start 303: bounded_memory_policy public API boundary keeps writer.hpp free of private codec and reference dependencies
+32/48 Test #303: bounded_memory_policy public API boundary keeps writer.hpp free of private codec and reference dependencies ...   Passed    0.01 sec
+      Start 320: public_include_boundary umbrella header exposes public boundary types
+33/48 Test #320: public_include_boundary umbrella header exposes public boundary types .........................................   Passed    0.01 sec
+      Start 331: validation_api reports result-level setup errors
+34/48 Test #331: validation_api reports result-level setup errors ..............................................................   Passed    0.01 sec
+      Start 334: validation_api reports malformed archives without lenient readers
+35/48 Test #334: validation_api reports malformed archives without lenient readers .............................................   Passed    0.01 sec
+      Start 336: archive_reader exposes compile-only Phase 3 reader contracts
+36/48 Test #336: archive_reader exposes compile-only Phase 3 reader contracts ..................................................   Passed    0.01 sec
+      Start 343: docs_policy public proof docs keep optional evidence and fixture boundaries explicit
+37/48 Test #343: docs_policy public proof docs keep optional evidence and fixture boundaries explicit ..........................   Passed    0.02 sec
+      Start 345: result stores successful values
+38/48 Test #345: result stores successful values ...............................................................................   Passed    0.01 sec
+      Start 351: docs_policy compatibility evidence points to audit and preserves proof boundaries
+39/48 Test #351: docs_policy compatibility evidence points to audit and preserves proof boundaries .............................   Passed    0.01 sec
+      Start 355: docs_policy Doxyfile boundary documents public headers and excludes private inputs
+40/48 Test #355: docs_policy Doxyfile boundary documents public headers and excludes private inputs ............................   Passed    0.01 sec
+      Start 357: bounded_memory_policy public API boundary hides private BSA writer helpers
+41/48 Test #357: bounded_memory_policy public API boundary hides private BSA writer helpers ....................................   Passed    0.02 sec
+      Start 364: target_format_policy guide documents public compatibility_warning_code values
+42/48 Test #364: target_format_policy guide documents public compatibility_warning_code values .................................   Passed    0.01 sec
+      Start 366: coverage_audit_matrix separates advisory local evidence from default proof
+43/48 Test #366: coverage_audit_matrix separates advisory local evidence from default proof ....................................   Passed    0.11 sec
+      Start 383: docs_policy API mainpage preserves public operation structure
+44/48 Test #383: docs_policy API mainpage preserves public operation structure .................................................   Passed    0.12 sec
+      Start 397: docs_policy public documentation surfaces hide planning identifiers
+45/48 Test #397: docs_policy public documentation surfaces hide planning identifiers ...........................................   Passed    0.13 sec
+      Start 422: docs_policy static boundary keeps public API documentation optional
+46/48 Test #422: docs_policy static boundary keeps public API documentation optional ...........................................   Passed    0.02 sec
+      Start 426: package_consumer_smoke
+47/48 Test #426: package_consumer_smoke ........................................................................................   Passed    4.81 sec
+      Start 427: package_consumer_runtime_dll_copy
+48/48 Test #427: package_consumer_runtime_dll_copy .............................................................................   Passed    0.05 sec
+
+100% tests passed, 0 tests failed out of 48
+
+Label Time Summary:
+ba2_writer_execution     =   0.03 sec*proc (2 tests)
+bounded_memory_policy    =   0.05 sec*proc (3 tests)
+compatibility_matrix     =   0.02 sec*proc (1 test)
+coverage_audit_matrix    =   0.33 sec*proc (8 tests)
+doc_structure            =   0.52 sec*proc (13 tests)
+docs_policy              =   0.67 sec*proc (16 tests)
+export_surface           =   0.15 sec*proc (3 tests)
+fixture                  =   0.19 sec*proc (5 tests)
+malformed                =   0.16 sec*proc (3 tests)
+package_consumer         =   4.88 sec*proc (3 tests)
+public-api               =   0.76 sec*proc (19 tests)
+publish                  =   0.13 sec*proc (1 test)
+roundtrip                =   0.15 sec*proc (1 test)
+static_boundary          =   0.12 sec*proc (8 tests)
+target_format_policy     =   5.05 sec*proc (7 tests)
+unit                     =   1.95 sec*proc (46 tests)
+validation_api           =   0.34 sec*proc (6 tests)
+validation_policy        =   0.01 sec*proc (1 test)
+writer_hotspot_policy    =   0.01 sec*proc (1 test)
+
+Total Test time (real) =   7.55 sec

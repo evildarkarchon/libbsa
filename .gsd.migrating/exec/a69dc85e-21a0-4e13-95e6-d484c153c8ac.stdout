@@ -1,0 +1,63 @@
+Test project J:/libbsa/build/windows-msvc-debug-static
+      Start   1: tes3_bsa_writer rejects invalid archive paths
+ 1/24 Test   #1: tes3_bsa_writer rejects invalid archive paths ................................................   Passed    0.02 sec
+      Start   8: tes3_bsa_writer rejects archive paths containing NUL bytes
+ 2/24 Test   #8: tes3_bsa_writer rejects archive paths containing NUL bytes ...................................   Passed    0.11 sec
+      Start  21: tes3_bsa_writer output reopens through reader lookup and extraction APIs
+ 3/24 Test  #21: tes3_bsa_writer output reopens through reader lookup and extraction APIs .....................   Passed    0.03 sec
+      Start  25: tes3 writer layout stage assigns raw offsets and rejects oversized spans
+ 4/24 Test  #25: tes3 writer layout stage assigns raw offsets and rejects oversized spans .....................   Passed    0.01 sec
+      Start  81: tes3 writer preparation stage reports malformed disk entries
+ 5/24 Test  #81: tes3 writer preparation stage reports malformed disk entries .................................   Passed    0.01 sec
+      Start 125: tes3_bsa_writer refuses overwrite by default and preserves existing bytes
+ 6/24 Test #125: tes3_bsa_writer refuses overwrite by default and preserves existing bytes ....................   Passed    0.02 sec
+      Start 127: tes3_bsa_writer rejects empty archives
+ 7/24 Test #127: tes3_bsa_writer rejects empty archives .......................................................   Passed    0.02 sec
+      Start 147: tes3_bsa_writer preserves caller-owned temp-name sibling files
+ 8/24 Test #147: tes3_bsa_writer preserves caller-owned temp-name sibling files ...............................   Passed    0.02 sec
+      Start 170: bsa_writer_execution TES3 worker_count streams large disk-backed source and reopens output
+ 9/24 Test #170: bsa_writer_execution TES3 worker_count streams large disk-backed source and reopens output ...   Passed    0.03 sec
+      Start 207: tes3_bsa_writer copies memory entries into writer-owned state
+10/24 Test #207: tes3_bsa_writer copies memory entries into writer-owned state ................................   Passed    0.13 sec
+      Start 213: tes3_bsa_writer rejects overwrite targets that are existing directories
+11/24 Test #213: tes3_bsa_writer rejects overwrite targets that are existing directories ......................   Passed    0.01 sec
+      Start 216: tes3_bsa_writer atomic replace helper swaps existing destinations
+12/24 Test #216: tes3_bsa_writer atomic replace helper swaps existing destinations ............................   Passed    0.02 sec
+      Start 238: tes3_bsa_writer publish helper moves output when destination is free
+13/24 Test #238: tes3_bsa_writer publish helper moves output when destination is free .........................   Passed    0.02 sec
+      Start 251: tes3_bsa_writer replaces existing output only when overwrite is enabled
+14/24 Test #251: tes3_bsa_writer replaces existing output only when overwrite is enabled ......................   Passed    0.12 sec
+      Start 254: tes3_bsa_writer committed fixture manifest records canonical writer evidence
+15/24 Test #254: tes3_bsa_writer committed fixture manifest records canonical writer evidence .................   Passed    0.02 sec
+      Start 265: tes3_bsa_writer resolves non-ASCII UTF-8 disk source and output host paths
+16/24 Test #265: tes3_bsa_writer resolves non-ASCII UTF-8 disk source and output host paths ...................   Passed    0.03 sec
+      Start 290: tes3_bsa_writer rejects output host paths containing NUL bytes
+17/24 Test #290: tes3_bsa_writer rejects output host paths containing NUL bytes ...............................   Passed    0.01 sec
+      Start 306: tes3_bsa_writer reports missing disk sources from write_to
+18/24 Test #306: tes3_bsa_writer reports missing disk sources from write_to ...................................   Passed    0.02 sec
+      Start 322: tes3_bsa_writer rejects duplicate canonical archive paths at write time
+19/24 Test #322: tes3_bsa_writer rejects duplicate canonical archive paths at write time ......................   Passed    0.02 sec
+      Start 331: tes3_bsa_writer atomic replace helper preserves output when replacement fails
+20/24 Test #331: tes3_bsa_writer atomic replace helper preserves output when replacement fails ................   Passed    0.02 sec
+      Start 335: tes3_bsa_writer rejects source host paths containing NUL bytes
+21/24 Test #335: tes3_bsa_writer rejects source host paths containing NUL bytes ...............................   Passed    0.01 sec
+      Start 367: tes3 writer preparation stage prepares and sorts minimal memory entries
+22/24 Test #367: tes3 writer preparation stage prepares and sorts minimal memory entries ......................   Passed    0.01 sec
+      Start 380: tes3_bsa_writer publish helper never replaces an existing destination
+23/24 Test #380: tes3_bsa_writer publish helper never replaces an existing destination ........................   Passed    0.02 sec
+      Start 388: tes3_bsa_writer emits byte-accurate raw TES3 tables in hash order
+24/24 Test #388: tes3_bsa_writer emits byte-accurate raw TES3 tables in hash order ............................   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 24
+
+Label Time Summary:
+bounded_memory_policy    =   0.03 sec*proc (1 test)
+bsa_writer_execution     =   0.03 sec*proc (1 test)
+fixture                  =   0.02 sec*proc (1 test)
+overwrite                =   0.01 sec*proc (1 test)
+publish                  =   0.01 sec*proc (1 test)
+tes3_bsa_writer          =   0.74 sec*proc (24 tests)
+unit                     =   0.74 sec*proc (24 tests)
+writer-stage             =   0.04 sec*proc (3 tests)
+
+Total Test time (real) =   1.70 sec

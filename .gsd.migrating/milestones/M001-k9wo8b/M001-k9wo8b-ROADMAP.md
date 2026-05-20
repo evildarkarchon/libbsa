@@ -16,13 +16,13 @@
 - [x] **S01: S01** `risk:high` `depends:[]`
   > After this: A durable matrix shows every current archive family against reader, writer, round-trip, malformed, validation, compatibility, API, and docs proof, with ranked gaps instead of vague support claims.
 
-- [ ] **S02: S02** `risk:high` `depends:[]`
+- [x] **S02: S02** `risk:high` `depends:[]`
   > After this: The package-consumer story is audited against the matrix, public headers stay dependency-light C++20, and any immediately justified helper/API/doc gaps are identified or implemented with proof.
 
-- [ ] **S03: Fixture and Round-trip Gap Closure** `risk:high` `depends:[S01]`
+- [x] **S03: S03** `risk:high` `depends:[]`
   > After this: The highest-risk generated-fixture or round-trip gaps found by the audit are fixed with durable Catch2/policy/fixture proof across the affected archive families.
 
-- [ ] **S04: Error and Validation Stabilization** `risk:medium` `depends:[S01,S03]`
+- [ ] **S04: S04** `risk:medium` `depends:[]`
   > After this: High-risk inconsistent result/error/validation behavior discovered by the audit is stabilized and covered by tests, without redesigning the public error model.
 
 - [ ] **S05: Integrated Confidence Pass** `risk:medium` `depends:[S02,S03,S04]`

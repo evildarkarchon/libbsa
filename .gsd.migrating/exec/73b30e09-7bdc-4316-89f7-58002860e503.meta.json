@@ -1,0 +1,18 @@
+{
+  "id": "73b30e09-7bdc-4316-89f7-58002860e503",
+  "runtime": "bash",
+  "purpose": "T02 ctest validate_fixture_manifests",
+  "script_chars": 90,
+  "started_at": "2026-05-20T02:41:56.290Z",
+  "finished_at": "2026-05-20T02:41:57.324Z",
+  "exit_code": 8,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 1034,
+  "stdout_bytes": 55,
+  "stderr_bytes": 1060,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\73b30e09-7bdc-4316-89f7-58002860e503.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\73b30e09-7bdc-4316-89f7-58002860e503.stderr"
+}

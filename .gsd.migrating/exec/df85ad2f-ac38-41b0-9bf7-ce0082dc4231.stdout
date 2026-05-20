@@ -1,0 +1,134 @@
+## tests/unit/archive_reader_dispatch_tests.cpp
+TEST_CASE("reader_backend_dispatch preserves reader operations across representative backends",
+"[unit][fixture][reader_backend_dispatch]")
+
+## tests/unit/tes3_bsa_writer_tests.cpp
+TEST_CASE("tes3_bsa_writer committed fixture manifest records canonical writer evidence",
+"[unit][fixture][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer emits byte-accurate raw TES3 tables in hash order", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer output reopens through reader lookup and extraction APIs", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer copies memory entries into writer-owned state", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer reports missing disk sources from write_to", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer rejects invalid archive paths", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer rejects archive paths containing NUL bytes", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer rejects source host paths containing NUL bytes", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer rejects output host paths containing NUL bytes", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer rejects duplicate canonical archive paths at write time", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer rejects empty archives", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer refuses overwrite by default and preserves existing bytes", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer resolves non-ASCII UTF-8 disk source and output host paths",
+"[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer publish helper never replaces an existing destination", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer publish helper moves output when destination is free", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer atomic replace helper swaps existing destinations", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer atomic replace helper preserves output when replacement fails", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer replaces existing output only when overwrite is enabled", "[unit][tes3_bsa_writer]")
+TEST_CASE("tes3_bsa_writer rejects overwrite targets that are existing directories",
+"[unit][tes3_bsa_writer][publish][overwrite]")
+TEST_CASE("tes3_bsa_writer preserves caller-owned temp-name sibling files", "[unit][tes3_bsa_writer]")
+
+## tests/unit/tes4_bsa_writer_tests.cpp
+TEST_CASE("TES4 BSA writer raw output reopens for every target profile", "[unit][tes4_bsa_writer]")
+TEST_CASE("TES4 BSA writer resolves non-ASCII UTF-8 output host paths", "[unit][tes4_bsa_writer]")
+TEST_CASE("TES4 BSA writer serializes derived file flags and hash-sorted tables", "[unit][tes4_bsa_writer]")
+TEST_CASE("TES4 BSA writer copies memory entries into writer-owned state", "[unit][tes4_bsa_writer]")
+TEST_CASE("TES4 BSA writer rejects duplicate canonical archive paths at write time", "[unit][tes4_bsa_writer]")
+TEST_CASE("TES4 BSA writer groups mixed-case folder spellings by canonical path", "[unit][tes4_bsa_writer]")
+TEST_CASE("TES4 BSA writer reports invalid archive paths as invalid arguments", "[unit][tes4_bsa_writer]")
+TEST_CASE("TES4 BSA writer refuses to overwrite existing output when overwrite_existing is false",
+TEST_CASE("TES4 BSA writer reports missing disk sources as I/O errors", "[unit][tes4_bsa_writer]")
+TEST_CASE("TES4 BSA writer requires explicit archive paths for disk entries", "[unit][tes4_bsa_writer]")
+TEST_CASE("TES4 BSA writer gates parseable DDS texture formats by target profile",
+TEST_CASE("TES4 BSA writer compresses inherited entries and preserves raw overrides under all-compressed policy",
+TEST_CASE("TES4 BSA writer records compressed override metadata while archive default remains raw",
+TEST_CASE("TES4 BSA writer keeps compressed disk entries byte-stable with memory entries",
+TEST_CASE("TES4 BSA writer target-default compression round-trips inherited entries", "[unit][tes4_bsa_writer]")
+TEST_CASE("TES4 BSA writer overwrites existing archives when overwrite_existing is true", "[unit][tes4_bsa_writer]")
+TEST_CASE("TES4 BSA writer rejects overwrite targets that are existing directories",
+TEST_CASE("TES4 BSA writer leaves embedded names absent by default and when explicitly disabled",
+TEST_CASE("TES4 BSA writer emits opt-in embedded name prefixes for v104 and v105 targets",
+TEST_CASE("TES4 BSA writer ignores embedded name option for v103 target compatibility",
+TEST_CASE("TES4 BSA writer leaves duplicate stored bytes at distinct offsets by default",
+TEST_CASE("TES4 BSA writer shares offsets for opt-in identical final stored bytes",
+TEST_CASE("TES4 BSA writer dedupes matching disk-backed raw payloads",
+TEST_CASE("TES4 BSA writer does not dedupe matching source bytes with different compression encodings",
+TEST_CASE("TES4 BSA writer does not dedupe matching source bytes with different embedded-name prefixes",
+
+## tests/unit/ba2_gnrl_writer_tests.cpp
+TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
+TEST_CASE("BA2 GNRL dedupe disk comparisons reject source size changes",
+TEST_CASE("BA2 GNRL writer rejects empty disk source host paths", "[unit][ba2_gnrl_writer]")
+TEST_CASE("BA2 GNRL writer reports invalid archive paths as invalid arguments", "[unit][ba2_gnrl_writer]")
+TEST_CASE("BA2 GNRL writer rejects duplicate canonical archive paths at write time", "[unit][ba2_gnrl_writer]")
+TEST_CASE("BA2 GNRL writer refuses to overwrite existing output when overwrite_existing is false",
+TEST_CASE("BA2 GNRL writer overwrites existing archives when overwrite_existing is true",
+TEST_CASE("BA2 GNRL writer preserves pre-existing deterministic temp-name siblings",
+TEST_CASE("BA2 GNRL writer rejects overwrite targets that are existing directories",
+TEST_CASE("BA2 GNRL writer reports missing disk sources as I/O errors", "[unit][ba2_gnrl_writer]")
+TEST_CASE("BA2 GNRL writer accepts explicit Fallout 4 disk archive paths", "[unit][ba2_gnrl_writer]")
+TEST_CASE("BA2 GNRL writer raw Fallout 4 output reopens with end filename table", "[unit][ba2_gnrl_writer]")
+TEST_CASE("BA2 GNRL writer resolves non-ASCII UTF-8 output host paths", "[unit][ba2_gnrl_writer]")
+TEST_CASE("BA2 GNRL writer keeps raw disk hashing byte-stable with memory entries",
+TEST_CASE("BA2 GNRL writer raw Starfield v2 and v3 defaults reopen through public metadata",
+TEST_CASE("BA2 GNRL writer preserves Starfield unknown overrides and BA2 record flags",
+TEST_CASE("BA2 GNRL writer all-compressed policy routes through target compression methods",
+TEST_CASE("BA2 GNRL writer keeps compressed disk entries byte-stable with memory entries",
+TEST_CASE("BA2 GNRL writer per-entry raw and compressed overrides affect only raw versus packed state",
+TEST_CASE("BA2 GNRL writer keeps duplicate payload offsets distinct by default", "[unit][ba2_gnrl_writer]")
+TEST_CASE("BA2 GNRL writer shares offsets for byte-identical stored payloads when dedupe is enabled",
+TEST_CASE("BA2 GNRL writer dedupes raw disk sources under non-ASCII host paths",
+TEST_CASE("BA2 GNRL writer dedupes compressed stored bytes but not raw and compressed source twins",
+
+## tests/unit/ba2_dx10_writer_tests.cpp
+TEST_CASE("BA2 DX10 writer DDS source manifest covers locked formats", "[unit][fixture][ba2_dx10_writer][dds]")
+TEST_CASE("BA2 DX10 writer DDS source manifest exposes dedicated structural cases", "[unit][fixture][ba2_dx10_writer][dds]")
+TEST_CASE("BA2 DX10 writer DDS source manifest rejects malformed and unsupported DDS sources", "[unit][fixture][ba2_dx10_writer][dds]")
+TEST_CASE("BA2 DX10 writer rejects valid non-2D DDS sources", "[unit][ba2_dx10_writer][add]")
+TEST_CASE("BA2 DX10 writer rejects Starfield-only DDS formats for Fallout 4 archives", "[unit][ba2_dx10_writer][add]")
+TEST_CASE("ba2_dx10_writer::add_file accepts a valid DDS source", "[unit][ba2_dx10_writer][add]")
+TEST_CASE("BA2 DX10 writer resolves non-ASCII UTF-8 output host paths", "[unit][ba2_dx10_writer]")
+TEST_CASE("BA2 DX10 writer records use canonical stem hash and extension metadata",
+TEST_CASE("ba2_dx10_writer::add_file rejects an empty DDS host path", "[unit][ba2_dx10_writer][add]")
+TEST_CASE("ba2_dx10_writer::add_file rejects a missing DDS host path with structured error", "[unit][ba2_dx10_writer][add]")
+TEST_CASE("ba2_dx10_writer::add_file rejects malformed DDS bytes", "[unit][ba2_dx10_writer][add]")
+TEST_CASE("ba2_dx10_writer::add_file rejects unsupported DDS formats", "[unit][ba2_dx10_writer][add]")
+TEST_CASE("ba2_dx10_writer::add_file snapshots DDS bytes before later source file changes",
+TEST_CASE("BA2 DX10 writer state removes snapshot temp directory on teardown",
+TEST_CASE("BA2 DX10 writer removes snapshot temp directories after successful write while alive",
+TEST_CASE("BA2 DX10 writer cleans snapshot directories on validation failure and consumes writer",
+TEST_CASE("BA2 DX10 writer cleans snapshot directories on missing snapshot failure",
+TEST_CASE("BA2 DX10 writer cleans snapshot directories on truncated snapshot failure and preserves destination bytes",
+TEST_CASE("BA2 DX10 writer cleans snapshot directories on output failure and preserves primary error",
+TEST_CASE("BA2 DX10 writer cleans newly reserved snapshot directory when add_file fails",
+TEST_CASE("BA2 DX10 writer is consumed after successful write attempts",
+TEST_CASE("ba2_dx10_writer::add_file accepts duplicate canonical archive paths for write-time validation",
+TEST_CASE("ba2_dx10_writer reopens fo4 deflate compression archives through archive_reader",
+TEST_CASE("ba2_dx10_writer reopens starfield method 3 raw LZ4 compression archives through archive_reader",
+TEST_CASE("ba2_dx10_writer reopens starfield method 0 deflate compression archives through archive_reader",
+TEST_CASE("ba2_dx10_writer preserves multi mip array and cubemap image payload bytes through extraction",
+TEST_CASE("BA2 DX10 writer keeps duplicate DDS chunk offsets distinct when deduplicate_payloads = false",
+TEST_CASE("BA2 DX10 writer shares duplicate DDS chunk offsets when deduplicate_payloads = true",
+TEST_CASE("BA2 DX10 writer refuses to overwrite existing output by default and preserves bytes",
+TEST_CASE("BA2 DX10 writer preserves caller-owned temp-name sibling files during unique temp publish",
+TEST_CASE("BA2 DX10 writer rejects non-regular overwrite targets without replacing them",
+TEST_CASE("BA2 DX10 writer overwrites existing archives when overwrite_existing is true",
+
+## tests/unit/validation_api_tests.cpp
+TEST_CASE("validation_api reports result-level setup errors", "[unit][validation_api]")
+TEST_CASE("validation_api caps extractability before reading sparse payload bytes",
+"[unit][fixture][malformed][validation_api]")
+TEST_CASE("validation_api accepts generated fixture archives", "[unit][fixture][validation_api]")
+TEST_CASE("validation_api accepts writer-produced archives", "[unit][roundtrip][validation_api]")
+TEST_CASE("validation_api reports malformed archives without lenient readers", "[unit][fixture][malformed][validation_api]")
+TEST_CASE("validation_api reports compatibility_matrix malformed rows as validation errors",
+"[unit][fixture][malformed][validation_api][compatibility_matrix]")
+
+## tests/unit/coverage_audit_matrix_docs_tests.cpp
+TEST_CASE("coverage_audit_matrix lists every current archive family", "[unit][coverage_audit_matrix][docs_policy]")
+TEST_CASE("coverage_audit_matrix preserves every required support axis", "[unit][coverage_audit_matrix][docs_policy]")
+TEST_CASE("coverage_audit_matrix preserves status vocabulary and ranked gaps", "[unit][coverage_audit_matrix][docs_policy]")
+TEST_CASE("coverage_audit_matrix separates advisory local evidence from default proof",
+TEST_CASE("coverage_audit_matrix names compatibility matrix as malformed submatrix only",
+TEST_CASE("coverage_audit_matrix stays free of internal planning identifiers",
+TEST_CASE("coverage_audit_matrix is discoverable from compatibility evidence catalog",
+

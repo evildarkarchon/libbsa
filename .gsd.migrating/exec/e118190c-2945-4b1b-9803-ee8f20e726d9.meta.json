@@ -1,0 +1,18 @@
+{
+  "id": "e118190c-2945-4b1b-9803-ee8f20e726d9",
+  "runtime": "node",
+  "purpose": "S02 resume final file sanity for edited artifacts",
+  "script_chars": 1460,
+  "started_at": "2026-05-20T02:26:49.535Z",
+  "finished_at": "2026-05-20T02:26:49.569Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 34,
+  "stdout_bytes": 310,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\e118190c-2945-4b1b-9803-ee8f20e726d9.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\e118190c-2945-4b1b-9803-ee8f20e726d9.stderr"
+}

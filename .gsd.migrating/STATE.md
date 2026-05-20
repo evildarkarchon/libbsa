@@ -1,19 +1,17 @@
 # GSD State
 
-**Active Milestone:** M001-k9wo8b: Audit and Stabilization Baseline
-**Active Slice:** S02: S02
-**Phase:** executing
-**Requirements Status:** 7 active · 2 validated · 4 deferred · 4 out of scope
+**Active Milestone:** None
+**Active Slice:** None
+**Phase:** pre-planning
+**Requirements Status:** 0 active · 0 validated · 0 deferred · 0 out of scope
 
 ## Milestone Registry
-- ⬜ **M001:** Audit and Stabilization Baseline
-- 🔄 **M001-k9wo8b:** Audit and Stabilization Baseline
 
 ## Recent Decisions
 - None recorded
 
 ## Blockers
-- None
+- DB unavailable — runtime markdown state derivation is disabled
 
 ## Next Action
-Execute T03: Strengthen package-consumer and policy proof in slice S02.
+Open or create the canonical GSD database before deriving workflow state.

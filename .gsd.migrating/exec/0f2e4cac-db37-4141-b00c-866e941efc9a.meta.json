@@ -1,0 +1,18 @@
+{
+  "id": "0f2e4cac-db37-4141-b00c-866e941efc9a",
+  "runtime": "bash",
+  "purpose": "T01 build libbsa_tests",
+  "script_chars": 70,
+  "started_at": "2026-05-20T03:05:30.706Z",
+  "finished_at": "2026-05-20T03:05:36.012Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 5306,
+  "stdout_bytes": 1438,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\0f2e4cac-db37-4141-b00c-866e941efc9a.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\0f2e4cac-db37-4141-b00c-866e941efc9a.stderr"
+}

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T02",
+  "unitId": "M001-k9wo8b/S03/T02",
+  "timestamp": 1779245005141,
+  "passed": true,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "cmake --preset windows-msvc-debug-static\ncmake --build --preset windows-msvc-debug-static --target generate_tes3_bsa_fixtures generate_tes3_bsa_writer_fixtures generate_tes4_bsa_fixtures generate_ba2_gnrl_fixtures generate_ba2_dx10_fixtures libbsa_tests\nctest --preset windows-msvc-debug-static -L coverage_audit_matrix --output-on-failure\nctest --preset windows-msvc-debug-static -L reader_backend_dispatch --output-on-failure\nctest --preset windows-msvc-debug-static -L tes3_bsa_writer --output-on-failure\nctest --preset windows-msvc-debug-static -L tes4_bsa_writer --output-on-failure\nctest --preset windows-msvc-debug-static -L ba2_gnrl_writer --output-on-failure\nctest --preset windows-msvc-debug-static -L ba2_dx10_writer --output-on-failure\nctest --preset windows-msvc-debug-static -L validation_api --output-on-failure\nctest --preset windows-msvc-debug-static -R validate_fixture_manifests --output-on-failure",
+      "exitCode": 0,
+      "durationMs": 748,
+      "verdict": "pass"
+    }
+  ]
+}

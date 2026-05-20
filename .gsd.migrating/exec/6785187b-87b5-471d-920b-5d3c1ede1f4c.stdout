@@ -1,0 +1,20 @@
+TEST_CASE("target_format_policy package consumer examples have docs and CTest smoke gates",
+const auto package_source = read_text_file(root / "tests/package-consumer/main.cpp");
+const auto package_cmake = read_text_file(root / "tests/package-consumer/CMakeLists.txt");
+const auto smoke_cmake = read_text_file(root / "tests/package-consumer/smoke.cmake");
+const auto runtime_copy_check = read_text_file(root / "tests/package-consumer/verify-runtime-dll-copy.cmake");
+constexpr std::array<std::string_view, 6> forbidden_fixture_dependencies{
+for (const auto token : forbidden_fixture_dependencies)
+INFO("Package-consumer smoke must not depend on ignored/local fixtures: " << token);
+REQUIRE(runtime_copy_check.find(std::string{token}) == std::string::npos);
+REQUIRE(tests_cmake.find("NAME package_consumer_runtime_dll_copy") != std::string::npos);
+TEST_CASE("target_format_policy guide covers every supported target format and compression route",
+REQUIRE(guide.find("write_execution_options::worker_count") != std::string::npos);
+TEST_CASE("target_format_policy guide documents public compatibility_warning_code values",
+TEST_CASE("target_format_policy guide documents writer output publication safety",
+TEST_CASE("target_format_policy guide preserves legal evidence and reference boundaries",
+"[unit][target_format_policy][fixture][static_boundary][doc_structure]")
+const auto fixture_policy = read_text_file(source_root() / "tests/fixtures/README.md");
+REQUIRE(guide.find("fixture workspace") != std::string::npos);
+REQUIRE(fixture_policy.find("benchmarks/README.md") != std::string::npos);
+REQUIRE(fixture_policy.find("legal synthetic data") != std::string::npos);

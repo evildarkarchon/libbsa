@@ -1,0 +1,80 @@
+Test project J:/libbsa/build/windows-msvc-debug-static
+      Start   8: TES4 BSA writer emits opt-in embedded name prefixes for v104 and v105 targets
+ 1/32 Test   #8: TES4 BSA writer emits opt-in embedded name prefixes for v104 and v105 targets ..........................   Passed    0.14 sec
+      Start  10: TES4 BSA writer ignores embedded name option for v103 target compatibility
+ 2/32 Test  #10: TES4 BSA writer ignores embedded name option for v103 target compatibility .............................   Passed    0.02 sec
+      Start  14: tes4 writer layout stage compares raw disk and memory payloads
+ 3/32 Test  #14: tes4 writer layout stage compares raw disk and memory payloads .........................................   Passed    0.12 sec
+      Start  35: TES4 BSA writer does not dedupe matching source bytes with different embedded-name prefixes
+ 4/32 Test  #35: TES4 BSA writer does not dedupe matching source bytes with different embedded-name prefixes ............   Passed    0.13 sec
+      Start  68: TES4 BSA writer reports invalid archive paths as invalid arguments
+ 5/32 Test  #68: TES4 BSA writer reports invalid archive paths as invalid arguments .....................................   Passed    0.01 sec
+      Start  79: tes4 writer layout stage toggles duplicate payload reuse
+ 6/32 Test  #79: tes4 writer layout stage toggles duplicate payload reuse ...............................................   Passed    0.01 sec
+      Start 134: tes4 writer preparation stage prepares minimal memory folders
+ 7/32 Test #134: tes4 writer preparation stage prepares minimal memory folders ..........................................   Passed    0.12 sec
+      Start 144: TES4 BSA writer rejects duplicate canonical archive paths at write time
+ 8/32 Test #144: TES4 BSA writer rejects duplicate canonical archive paths at write time ................................   Passed    0.12 sec
+      Start 152: TES4 BSA writer compresses inherited entries and preserves raw overrides under all-compressed policy
+ 9/32 Test #152: TES4 BSA writer compresses inherited entries and preserves raw overrides under all-compressed policy ...   Passed    0.04 sec
+      Start 158: TES4 BSA writer shares offsets for opt-in identical final stored bytes
+10/32 Test #158: TES4 BSA writer shares offsets for opt-in identical final stored bytes .................................   Passed    0.12 sec
+      Start 159: TES4 BSA writer serializes derived file flags and hash-sorted tables
+11/32 Test #159: TES4 BSA writer serializes derived file flags and hash-sorted tables ...................................   Passed    0.02 sec
+      Start 169: TES4 BSA writer leaves embedded names absent by default and when explicitly disabled
+12/32 Test #169: TES4 BSA writer leaves embedded names absent by default and when explicitly disabled ...................   Passed    0.14 sec
+      Start 198: TES4 BSA writer refuses to overwrite existing output when overwrite_existing is false
+13/32 Test #198: TES4 BSA writer refuses to overwrite existing output when overwrite_existing is false ..................   Passed    0.01 sec
+      Start 200: TES4 BSA writer overwrites existing archives when overwrite_existing is true
+14/32 Test #200: TES4 BSA writer overwrites existing archives when overwrite_existing is true ...........................   Passed    0.02 sec
+      Start 203: tes4 writer serialization stage rejects raw disk source size changes
+15/32 Test #203: tes4 writer serialization stage rejects raw disk source size changes ...................................   Passed    0.13 sec
+      Start 207: TES4 BSA writer records compressed override metadata while archive default remains raw
+16/32 Test #207: TES4 BSA writer records compressed override metadata while archive default remains raw .................   Passed    0.14 sec
+      Start 258: TES4 BSA writer resolves non-ASCII UTF-8 output host paths
+17/32 Test #258: TES4 BSA writer resolves non-ASCII UTF-8 output host paths .............................................   Passed    0.13 sec
+      Start 282: bsa_writer_execution TES4 worker_count preserves deflate and LZ4-frame output compatibility
+18/32 Test #282: bsa_writer_execution TES4 worker_count preserves deflate and LZ4-frame output compatibility ............   Passed    0.06 sec
+      Start 309: TES4 BSA writer leaves duplicate stored bytes at distinct offsets by default
+19/32 Test #309: TES4 BSA writer leaves duplicate stored bytes at distinct offsets by default ...........................   Passed    0.02 sec
+      Start 312: TES4 BSA writer target-default compression round-trips inherited entries
+20/32 Test #312: TES4 BSA writer target-default compression round-trips inherited entries ...............................   Passed    0.13 sec
+      Start 324: TES4 BSA writer does not dedupe matching source bytes with different compression encodings
+21/32 Test #324: TES4 BSA writer does not dedupe matching source bytes with different compression encodings .............   Passed    0.02 sec
+      Start 328: bsa_writer_execution missing disk source with worker_count preserves existing output
+22/32 Test #328: bsa_writer_execution missing disk source with worker_count preserves existing output ...................   Passed    0.02 sec
+      Start 335: TES4 BSA writer rejects overwrite targets that are existing directories
+23/32 Test #335: TES4 BSA writer rejects overwrite targets that are existing directories ................................   Passed    0.01 sec
+      Start 336: TES4 BSA writer reports missing disk sources as I/O errors
+24/32 Test #336: TES4 BSA writer reports missing disk sources as I/O errors .............................................   Passed    0.01 sec
+      Start 337: bsa_writer_execution overwrite failure with worker_count preserves readable previous archive
+25/32 Test #337: bsa_writer_execution overwrite failure with worker_count preserves readable previous archive ...........   Passed    0.02 sec
+      Start 342: TES4 BSA writer groups mixed-case folder spellings by canonical path
+26/32 Test #342: TES4 BSA writer groups mixed-case folder spellings by canonical path ...................................   Passed    0.13 sec
+      Start 356: TES4 BSA writer gates parseable DDS texture formats by target profile
+27/32 Test #356: TES4 BSA writer gates parseable DDS texture formats by target profile ..................................   Passed    0.03 sec
+      Start 376: TES4 BSA writer keeps compressed disk entries byte-stable with memory entries
+28/32 Test #376: TES4 BSA writer keeps compressed disk entries byte-stable with memory entries ..........................   Passed    0.14 sec
+      Start 378: TES4 BSA writer requires explicit archive paths for disk entries
+29/32 Test #378: TES4 BSA writer requires explicit archive paths for disk entries .......................................   Passed    0.01 sec
+      Start 380: TES4 BSA writer copies memory entries into writer-owned state
+30/32 Test #380: TES4 BSA writer copies memory entries into writer-owned state ..........................................   Passed    0.13 sec
+      Start 403: TES4 BSA writer raw output reopens for every target profile
+31/32 Test #403: TES4 BSA writer raw output reopens for every target profile ............................................   Passed    0.05 sec
+      Start 414: TES4 BSA writer dedupes matching disk-backed raw payloads
+32/32 Test #414: TES4 BSA writer dedupes matching disk-backed raw payloads ..............................................   Passed    0.13 sec
+
+100% tests passed, 0 tests failed out of 32
+
+Label Time Summary:
+bounded_memory_policy    =   0.10 sec*proc (3 tests)
+bsa_writer_execution     =   0.10 sec*proc (3 tests)
+dds                      =   0.03 sec*proc (1 test)
+overwrite                =   0.01 sec*proc (1 test)
+publish                  =   0.06 sec*proc (3 tests)
+tes4_bsa_writer          =   2.35 sec*proc (32 tests)
+unit                     =   2.35 sec*proc (32 tests)
+writer-source-io         =   0.40 sec*proc (3 tests)
+writer-stage             =   0.39 sec*proc (4 tests)
+
+Total Test time (real) =   3.23 sec

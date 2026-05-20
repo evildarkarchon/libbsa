@@ -1,0 +1,18 @@
+{
+  "id": "a1e97b17-8c14-4f81-ad20-ba05f498d140",
+  "runtime": "bash",
+  "purpose": "T02 ctest tes4_bsa_writer",
+  "script_chars": 79,
+  "started_at": "2026-05-20T02:41:56.274Z",
+  "finished_at": "2026-05-20T02:41:59.569Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 3295,
+  "stdout_bytes": 8129,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\a1e97b17-8c14-4f81-ad20-ba05f498d140.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\a1e97b17-8c14-4f81-ad20-ba05f498d140.stderr"
+}

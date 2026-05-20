@@ -1,0 +1,15 @@
+Test project J:/libbsa/build/windows-msvc-debug-static
+    Start  5: reader_backend_dispatch preserves reader operations across representative backends
+1/2 Test  #5: reader_backend_dispatch preserves reader operations across representative backends .....   Passed    0.02 sec
+    Start 66: host_path_correctness_boundary non-ASCII host path exercises reader dispatch surface
+2/2 Test #66: host_path_correctness_boundary non-ASCII host path exercises reader dispatch surface ...   Passed    0.06 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Label Time Summary:
+fixture                           =   0.09 sec*proc (2 tests)
+host_path_correctness_boundary    =   0.06 sec*proc (1 test)
+reader_backend_dispatch           =   0.09 sec*proc (2 tests)
+unit                              =   0.09 sec*proc (2 tests)
+
+Total Test time (real) =   1.02 sec

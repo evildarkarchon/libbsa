@@ -1,0 +1,18 @@
+{
+  "id": "08d47ca2-6d9a-4f50-902e-bcd97b8c6e0d",
+  "runtime": "bash",
+  "purpose": "baseline validation API focused CTest",
+  "script_chars": 278,
+  "started_at": "2026-05-20T02:50:10.703Z",
+  "finished_at": "2026-05-20T02:50:12.168Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 1465,
+  "stdout_bytes": 1197,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\08d47ca2-6d9a-4f50-902e-bcd97b8c6e0d.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\08d47ca2-6d9a-4f50-902e-bcd97b8c6e0d.stderr"
+}

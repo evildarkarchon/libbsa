@@ -1,0 +1,9 @@
+writer tests:
+tests/unit/ba2_dx10_writer_tests.cpp
+tests/unit/ba2_gnrl_writer_tests.cpp
+tests/unit/tes3_bsa_writer_tests.cpp
+tests/unit/tes4_bsa_writer_tests.cpp
+policy tests:
+tests/unit/docs_policy_tests.cpp
+tests/unit/target_format_policy_tests.cpp
+tests/unit/thread_safety_docs_policy_tests.cpp

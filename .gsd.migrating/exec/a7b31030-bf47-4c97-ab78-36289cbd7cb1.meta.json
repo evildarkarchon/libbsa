@@ -1,0 +1,18 @@
+{
+  "id": "a7b31030-bf47-4c97-ab78-36289cbd7cb1",
+  "runtime": "bash",
+  "purpose": "T02 ctest reader_backend_dispatch",
+  "script_chars": 87,
+  "started_at": "2026-05-20T02:41:56.268Z",
+  "finished_at": "2026-05-20T02:41:57.353Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 1085,
+  "stdout_bytes": 848,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\a7b31030-bf47-4c97-ab78-36289cbd7cb1.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\a7b31030-bf47-4c97-ab78-36289cbd7cb1.stderr"
+}

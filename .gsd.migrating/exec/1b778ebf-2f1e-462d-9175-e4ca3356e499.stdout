@@ -1,0 +1,94 @@
+tests/unit/docs_policy_tests.cpp
+  72:TEST_CASE("docs_policy static boundary keeps public API documentation optional", "[unit][docs_policy][static_boundary]")
+  87:TEST_CASE("docs_policy Doxyfile boundary documents public headers and excludes private inputs",
+  114:TEST_CASE("docs_policy API mainpage preserves public operation structure", "[unit][docs_policy][doc_structure]")
+  137:TEST_CASE("docs_policy mainpage links audited API proof and consumer sharp edges",
+  157:TEST_CASE("docs_policy integration examples document the full consumer journey",
+  177:TEST_CASE("docs_policy compatibility evidence points to audit and preserves proof boundaries",
+  191:TEST_CASE("docs_policy public API audit is discoverable and routes proof gaps",
+  262:TEST_CASE("docs_policy public proof docs keep optional evidence and fixture boundaries explicit",
+  301:TEST_CASE("docs_policy public documentation surfaces hide planning identifiers",
+  total TEST_CASE: 9
+tests/unit/coverage_audit_matrix_docs_tests.cpp
+  48:TEST_CASE("coverage_audit_matrix lists every current archive family", "[unit][coverage_audit_matrix][docs_policy]")
+  59:TEST_CASE("coverage_audit_matrix preserves every required support axis", "[unit][coverage_audit_matrix][docs_policy]")
+  75:TEST_CASE("coverage_audit_matrix preserves status vocabulary and ranked gaps", "[unit][coverage_audit_matrix][docs_policy]")
+  93:TEST_CASE("coverage_audit_matrix separates advisory local evidence from default proof",
+  108:TEST_CASE("coverage_audit_matrix names compatibility matrix as malformed submatrix only",
+  120:TEST_CASE("coverage_audit_matrix stays free of internal planning identifiers",
+  131:TEST_CASE("coverage_audit_matrix is discoverable from compatibility evidence catalog",
+  total TEST_CASE: 7
+tests/unit/target_format_policy_tests.cpp
+  90:TEST_CASE("target_format_policy package consumer examples have docs and CTest smoke gates",
+  174:TEST_CASE("target_format_policy guide covers every supported target format and compression route",
+  210:TEST_CASE("target_format_policy guide documents public compatibility_warning_code values",
+  227:TEST_CASE("target_format_policy guide documents writer output publication safety",
+  252:TEST_CASE("target_format_policy guide preserves legal evidence and reference boundaries",
+  total TEST_CASE: 5
+tests/unit/archive_reader_dispatch_tests.cpp
+  218:TEST_CASE("reader_backend_dispatch preserves reader operations across representative backends",
+  total TEST_CASE: 1
+tests/unit/validation_api_tests.cpp
+  282:TEST_CASE("validation_api reports result-level setup errors", "[unit][validation_api]")
+  290:TEST_CASE("validation_api caps extractability before reading sparse payload bytes",
+  352:TEST_CASE("validation_api accepts generated fixture archives", "[unit][fixture][validation_api]")
+  374:TEST_CASE("validation_api accepts writer-produced archives", "[unit][roundtrip][validation_api]")
+  391:TEST_CASE("validation_api reports malformed archives without lenient readers", "[unit][fixture][malformed][validation_api]")
+  399:TEST_CASE("validation_api reports compatibility_matrix malformed rows as validation errors",
+  total TEST_CASE: 6
+tests/unit/tes3_bsa_writer_tests.cpp
+  322:TEST_CASE("tes3_bsa_writer committed fixture manifest records canonical writer evidence",
+  387:TEST_CASE("tes3_bsa_writer emits byte-accurate raw TES3 tables in hash order", "[unit][tes3_bsa_writer]")
+  447:TEST_CASE("tes3_bsa_writer output reopens through reader lookup and extraction APIs", "[unit][tes3_bsa_writer]")
+  538:TEST_CASE("tes3_bsa_writer copies memory entries into writer-owned state", "[unit][tes3_bsa_writer]")
+  557:TEST_CASE("tes3_bsa_writer reports missing disk sources from write_to", "[unit][tes3_bsa_writer]")
+  572:TEST_CASE("tes3_bsa_writer rejects invalid archive paths", "[unit][tes3_bsa_writer]")
+  589:TEST_CASE("tes3_bsa_writer rejects archive paths containing NUL bytes", "[unit][tes3_bsa_writer]")
+  603:TEST_CASE("tes3_bsa_writer rejects source host paths containing NUL bytes", "[unit][tes3_bsa_writer]")
+  614:TEST_CASE("tes3_bsa_writer rejects output host paths containing NUL bytes", "[unit][tes3_bsa_writer]")
+  626:TEST_CASE("tes3_bsa_writer rejects duplicate canonical archive paths at write time", "[unit][tes3_bsa_writer]")
+  638:TEST_CASE("tes3_bsa_writer rejects empty archives", "[unit][tes3_bsa_writer]")
+  648:TEST_CASE("tes3_bsa_writer refuses overwrite by default and preserves existing bytes", "[unit][tes3_bsa_writer]")
+  total TEST_CASE: 20
+tests/unit/tes4_bsa_writer_tests.cpp
+  221:TEST_CASE("TES4 BSA writer raw output reopens for every target profile", "[unit][tes4_bsa_writer]")
+  323:TEST_CASE("TES4 BSA writer resolves non-ASCII UTF-8 output host paths", "[unit][tes4_bsa_writer]")
+  340:TEST_CASE("TES4 BSA writer serializes derived file flags and hash-sorted tables", "[unit][tes4_bsa_writer]")
+  417:TEST_CASE("TES4 BSA writer copies memory entries into writer-owned state", "[unit][tes4_bsa_writer]")
+  437:TEST_CASE("TES4 BSA writer rejects duplicate canonical archive paths at write time", "[unit][tes4_bsa_writer]")
+  450:TEST_CASE("TES4 BSA writer groups mixed-case folder spellings by canonical path", "[unit][tes4_bsa_writer]")
+  476:TEST_CASE("TES4 BSA writer reports invalid archive paths as invalid arguments", "[unit][tes4_bsa_writer]")
+  489:TEST_CASE("TES4 BSA writer refuses to overwrite existing output when overwrite_existing is false",
+  507:TEST_CASE("TES4 BSA writer reports missing disk sources as I/O errors", "[unit][tes4_bsa_writer]")
+  522:TEST_CASE("TES4 BSA writer requires explicit archive paths for disk entries", "[unit][tes4_bsa_writer]")
+  534:TEST_CASE("TES4 BSA writer gates parseable DDS texture formats by target profile",
+  614:TEST_CASE("TES4 BSA writer compresses inherited entries and preserves raw overrides under all-compressed policy",
+  total TEST_CASE: 25
+tests/unit/ba2_gnrl_writer_tests.cpp
+  116:  TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
+  167:  TEST_CASE("BA2 GNRL dedupe disk comparisons reject source size changes",
+  457:TEST_CASE("BA2 GNRL writer rejects empty disk source host paths", "[unit][ba2_gnrl_writer]")
+  467:TEST_CASE("BA2 GNRL writer reports invalid archive paths as invalid arguments", "[unit][ba2_gnrl_writer]")
+  480:TEST_CASE("BA2 GNRL writer rejects duplicate canonical archive paths at write time", "[unit][ba2_gnrl_writer]")
+  493:TEST_CASE("BA2 GNRL writer refuses to overwrite existing output when overwrite_existing is false",
+  511:TEST_CASE("BA2 GNRL writer overwrites existing archives when overwrite_existing is true",
+  534:TEST_CASE("BA2 GNRL writer preserves pre-existing deterministic temp-name siblings",
+  552:TEST_CASE("BA2 GNRL writer rejects overwrite targets that are existing directories",
+  570:TEST_CASE("BA2 GNRL writer reports missing disk sources as I/O errors", "[unit][ba2_gnrl_writer]")
+  585:TEST_CASE("BA2 GNRL writer accepts explicit Fallout 4 disk archive paths", "[unit][ba2_gnrl_writer]")
+  597:TEST_CASE("BA2 GNRL writer raw Fallout 4 output reopens with end filename table", "[unit][ba2_gnrl_writer]")
+  total TEST_CASE: 23
+tests/unit/ba2_dx10_writer_tests.cpp
+  595:TEST_CASE("BA2 DX10 writer DDS source manifest covers locked formats", "[unit][fixture][ba2_dx10_writer][dds]")
+  615:TEST_CASE("BA2 DX10 writer DDS source manifest exposes dedicated structural cases", "[unit][fixture][ba2_dx10_writer][dds]")
+  673:TEST_CASE("BA2 DX10 writer DDS source manifest rejects malformed and unsupported DDS sources", "[unit][fixture][ba2_dx10_writer][dds]")
+  687:TEST_CASE("BA2 DX10 writer rejects valid non-2D DDS sources", "[unit][ba2_dx10_writer][add]")
+  712:TEST_CASE("BA2 DX10 writer rejects Starfield-only DDS formats for Fallout 4 archives", "[unit][ba2_dx10_writer][add]")
+  738:TEST_CASE("ba2_dx10_writer::add_file accepts a valid DDS source", "[unit][ba2_dx10_writer][add]")
+  750:TEST_CASE("BA2 DX10 writer resolves non-ASCII UTF-8 output host paths", "[unit][ba2_dx10_writer]")
+  767:TEST_CASE("BA2 DX10 writer records use canonical stem hash and extension metadata",
+  790:TEST_CASE("ba2_dx10_writer::add_file rejects an empty DDS host path", "[unit][ba2_dx10_writer][add]")
+  800:TEST_CASE("ba2_dx10_writer::add_file rejects a missing DDS host path with structured error", "[unit][ba2_dx10_writer][add]")
+  812:TEST_CASE("ba2_dx10_writer::add_file rejects malformed DDS bytes", "[unit][ba2_dx10_writer][add]")
+  824:TEST_CASE("ba2_dx10_writer::add_file rejects unsupported DDS formats", "[unit][ba2_dx10_writer][add]")
+  total TEST_CASE: 32

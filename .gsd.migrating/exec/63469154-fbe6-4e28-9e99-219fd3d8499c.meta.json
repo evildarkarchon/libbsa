@@ -1,0 +1,18 @@
+{
+  "id": "63469154-fbe6-4e28-9e99-219fd3d8499c",
+  "runtime": "bash",
+  "purpose": "list generated fixture archive manifests for S03 planning",
+  "script_chars": 278,
+  "started_at": "2026-05-20T02:31:18.363Z",
+  "finished_at": "2026-05-20T02:31:18.452Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 89,
+  "stdout_bytes": 960,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\63469154-fbe6-4e28-9e99-219fd3d8499c.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\63469154-fbe6-4e28-9e99-219fd3d8499c.stderr"
+}

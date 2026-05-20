@@ -1,0 +1,18 @@
+{
+  "id": "1b778ebf-2f1e-462d-9175-e4ca3356e499",
+  "runtime": "bash",
+  "purpose": "list relevant test tags without truncating to long output",
+  "script_chars": 526,
+  "started_at": "2026-05-20T02:36:36.198Z",
+  "finished_at": "2026-05-20T02:36:36.595Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 397,
+  "stdout_bytes": 8554,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\1b778ebf-2f1e-462d-9175-e4ca3356e499.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\1b778ebf-2f1e-462d-9175-e4ca3356e499.stderr"
+}

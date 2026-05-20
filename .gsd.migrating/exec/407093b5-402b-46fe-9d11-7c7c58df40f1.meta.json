@@ -1,0 +1,18 @@
+{
+  "id": "407093b5-402b-46fe-9d11-7c7c58df40f1",
+  "runtime": "python",
+  "purpose": "scan result/error/validation surfaces",
+  "script_chars": 1083,
+  "started_at": "2026-05-20T02:48:54.696Z",
+  "finished_at": "2026-05-20T02:48:54.768Z",
+  "exit_code": 9009,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 72,
+  "stdout_bytes": 0,
+  "stderr_bytes": 177,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\407093b5-402b-46fe-9d11-7c7c58df40f1.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\407093b5-402b-46fe-9d11-7c7c58df40f1.stderr"
+}

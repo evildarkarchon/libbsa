@@ -1,0 +1,1 @@
+- `tests/unit/validation_api_tests.cpp` validates representative generated fixtures, writer-produced archives, and malformed matrix rows through the public validation API.

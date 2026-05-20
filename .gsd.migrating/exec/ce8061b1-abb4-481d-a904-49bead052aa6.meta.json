@@ -1,0 +1,18 @@
+{
+  "id": "ce8061b1-abb4-481d-a904-49bead052aa6",
+  "runtime": "node",
+  "purpose": "scan result/error/validation surfaces",
+  "script_chars": 1305,
+  "started_at": "2026-05-20T02:49:04.534Z",
+  "finished_at": "2026-05-20T02:49:04.612Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 78,
+  "stdout_bytes": 3616,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\ce8061b1-abb4-481d-a904-49bead052aa6.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\ce8061b1-abb4-481d-a904-49bead052aa6.stderr"
+}

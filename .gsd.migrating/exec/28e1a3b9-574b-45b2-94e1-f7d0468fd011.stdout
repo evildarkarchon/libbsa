@@ -1,0 +1,84 @@
+MSBuild version 18.6.3+84d3e95b4 for .NET Framework
+
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\ZERO_CHECK.vcxproj]
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\libbsa.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\Debug\libbsa.lib
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\generate_tes3_bsa_fixtures_tool.vcxproj]
+  Scanning sources for module dependencies...
+  generate_tes3_bsa_fixtures.cpp
+  Compiling...
+  generate_tes3_bsa_fixtures.cpp
+  generate_tes3_bsa_fixtures_tool.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\tests\Debug\generate_tes3_bsa_fixtures_tool.exe
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\generate_tes3_bsa_fixtures.vcxproj]
+  1>Generating TES3 BSA success and malformed fixtures
+  Building Custom Rule J:/libbsa/tests/CMakeLists.txt
+MSBuild version 18.6.3+84d3e95b4 for .NET Framework
+
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\ZERO_CHECK.vcxproj]
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\libbsa.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\Debug\libbsa.lib
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\generate_tes3_bsa_writer_fixtures_tool.vcxproj]
+  Scanning sources for module dependencies...
+  generate_tes3_bsa_writer_fixtures.cpp
+  Compiling...
+  generate_tes3_bsa_writer_fixtures.cpp
+  generate_tes3_bsa_writer_fixtures_tool.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\tests\Debug\generate_tes3_bsa_writer_fixtures_tool.exe
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\generate_tes3_bsa_writer_fixtures.vcxproj]
+  1>Generating TES3 public-writer BSA fixture
+  Building Custom Rule J:/libbsa/tests/CMakeLists.txt
+MSBuild version 18.6.3+84d3e95b4 for .NET Framework
+
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\ZERO_CHECK.vcxproj]
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\libbsa.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\Debug\libbsa.lib
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\generate_tes4_bsa_fixtures_tool.vcxproj]
+  Scanning sources for module dependencies...
+  generate_tes4_bsa_fixtures.cpp
+  Compiling...
+  generate_tes4_bsa_fixtures.cpp
+  generate_tes4_bsa_fixtures_tool.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\tests\Debug\generate_tes4_bsa_fixtures_tool.exe
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\generate_tes4_bsa_fixtures.vcxproj]
+  1>Generating TES4-family BSA success fixtures
+MSBuild version 18.6.3+84d3e95b4 for .NET Framework
+
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\ZERO_CHECK.vcxproj]
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\libbsa.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\Debug\libbsa.lib
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\generate_ba2_gnrl_fixtures_tool.vcxproj]
+  Scanning sources for module dependencies...
+  generate_ba2_gnrl_fixtures.cpp
+  Compiling...
+  generate_ba2_gnrl_fixtures.cpp
+  generate_ba2_gnrl_fixtures_tool.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\tests\Debug\generate_ba2_gnrl_fixtures_tool.exe
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\generate_ba2_gnrl_fixtures.vcxproj]
+  1>Generating BA2 GNRL success and malformed fixtures
+MSBuild version 18.6.3+84d3e95b4 for .NET Framework
+
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\ZERO_CHECK.vcxproj]
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\libbsa.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\Debug\libbsa.lib
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\generate_ba2_dx10_fixtures_tool.vcxproj]
+  Scanning sources for module dependencies...
+  generate_ba2_dx10_fixtures.cpp
+  Compiling...
+  generate_ba2_dx10_fixtures.cpp
+  generate_ba2_dx10_fixtures_tool.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\tests\Debug\generate_ba2_dx10_fixtures_tool.exe
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\generate_ba2_dx10_fixtures.vcxproj]
+  1>Generating BA2 DX10 texture success and malformed fixtures
+MSBuild version 18.6.3+84d3e95b4 for .NET Framework
+
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\ZERO_CHECK.vcxproj]
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\libbsa.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\Debug\libbsa.lib
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\libbsa_tests.vcxproj]
+  Scanning sources for module dependencies...
+  coverage_audit_matrix_docs_tests.cpp
+  Compiling...
+  coverage_audit_matrix_docs_tests.cpp
+  libbsa_tests.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\tests\Debug\libbsa_tests.exe

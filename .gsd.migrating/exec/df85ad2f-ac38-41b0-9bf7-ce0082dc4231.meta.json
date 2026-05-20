@@ -1,0 +1,18 @@
+{
+  "id": "df85ad2f-ac38-41b0-9bf7-ce0082dc4231",
+  "runtime": "bash",
+  "purpose": "summarize relevant Catch2 test tags and proof tokens",
+  "script_chars": 677,
+  "started_at": "2026-05-20T02:39:38.223Z",
+  "finished_at": "2026-05-20T02:39:38.309Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 86,
+  "stdout_bytes": 12015,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\df85ad2f-ac38-41b0-9bf7-ce0082dc4231.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\df85ad2f-ac38-41b0-9bf7-ce0082dc4231.stderr"
+}

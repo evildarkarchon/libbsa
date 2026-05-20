@@ -1,0 +1,18 @@
+{
+  "id": "dc0db56f-7bc2-4cec-b70c-09722a667b60",
+  "runtime": "bash",
+  "purpose": "summarize docs-policy references to compatibility evidence",
+  "script_chars": 219,
+  "started_at": "2026-05-20T02:35:36.599Z",
+  "finished_at": "2026-05-20T02:35:36.656Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 57,
+  "stdout_bytes": 8038,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\dc0db56f-7bc2-4cec-b70c-09722a667b60.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\dc0db56f-7bc2-4cec-b70c-09722a667b60.stderr"
+}

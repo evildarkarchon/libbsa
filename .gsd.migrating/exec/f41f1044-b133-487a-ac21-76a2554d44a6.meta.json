@@ -1,0 +1,18 @@
+{
+  "id": "f41f1044-b133-487a-ac21-76a2554d44a6",
+  "runtime": "bash",
+  "purpose": "summarize writer tests and docs policy names for compatibility evidence update",
+  "script_chars": 285,
+  "started_at": "2026-05-20T02:35:24.068Z",
+  "finished_at": "2026-05-20T02:35:24.187Z",
+  "exit_code": 49,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 119,
+  "stdout_bytes": 0,
+  "stderr_bytes": 177,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\f41f1044-b133-487a-ac21-76a2554d44a6.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\f41f1044-b133-487a-ac21-76a2554d44a6.stderr"
+}

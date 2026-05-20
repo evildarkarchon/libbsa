@@ -1,0 +1,17 @@
+generated archives manifests:
+ - tests/fixtures/generated/archives/ba2_dx10_fo4_manifest.json
+ - tests/fixtures/generated/archives/ba2_dx10_malformed_manifest.json
+ - tests/fixtures/generated/archives/ba2_dx10_sfv3_manifest.json
+ - tests/fixtures/generated/archives/ba2_gnrl_fo4_manifest.json
+ - tests/fixtures/generated/archives/ba2_gnrl_malformed_manifest.json
+ - tests/fixtures/generated/archives/ba2_gnrl_sfv2_manifest.json
+ - tests/fixtures/generated/archives/ba2_gnrl_sfv3_manifest.json
+ - tests/fixtures/generated/archives/malformed_manifest.json
+ - tests/fixtures/generated/archives/tes3_malformed_manifest.json
+ - tests/fixtures/generated/archives/tes3_success_manifest.json
+ - tests/fixtures/generated/archives/tes3_writer_canonical_manifest.json
+ - tests/fixtures/generated/archives/tes4_v103_manifest.json
+ - tests/fixtures/generated/archives/tes4_v104_manifest.json
+ - tests/fixtures/generated/archives/tes4_v105_manifest.json
+
+archives count: 62

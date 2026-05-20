@@ -48,7 +48,7 @@ cmake --preset windows-msvc-debug-static
 cmake --build --preset windows-msvc-debug-static --target libbsa_tests
 ctest --preset windows-msvc-debug-static -L "docs_policy|target_format_policy|coverage_audit_matrix" --output-on-failure
 
-- [ ] **T03: Strengthen package-consumer and policy proof** `est:1h30m`
+- [x] **T03: Strengthen package-consumer and policy proof** `est:1h30m`
   Why: S02 is only credible if the updated public story is enforced by installed-package compile/link smoke and docs/public-boundary policy tests rather than prose alone. Expected executor skills: `tdd`, `cpp-testing`, and `verify-before-complete`.
   - Files: `tests/package-consumer/main.cpp`, `tests/unit/docs_policy_tests.cpp`, `tests/unit/target_format_policy_tests.cpp`
   - Verify: cmake --preset windows-msvc-debug-static

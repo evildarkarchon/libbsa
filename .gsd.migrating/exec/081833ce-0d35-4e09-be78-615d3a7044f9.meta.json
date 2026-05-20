@@ -1,0 +1,18 @@
+{
+  "id": "081833ce-0d35-4e09-be78-615d3a7044f9",
+  "runtime": "bash",
+  "purpose": "T01 verification: exact optional local corpus phrase from task plan",
+  "script_chars": 69,
+  "started_at": "2026-05-20T02:38:09.249Z",
+  "finished_at": "2026-05-20T02:38:09.287Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 38,
+  "stdout_bytes": 323,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\081833ce-0d35-4e09-be78-615d3a7044f9.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\081833ce-0d35-4e09-be78-615d3a7044f9.stderr"
+}

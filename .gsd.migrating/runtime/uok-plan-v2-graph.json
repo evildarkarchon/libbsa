@@ -1,5 +1,5 @@
 {
-  "compiledAt": "2026-05-20T02:10:07.411Z",
+  "compiledAt": "2026-05-20T03:06:15.851Z",
   "milestoneId": "M001-k9wo8b",
   "pipeline": {
     "clarifyRoundLimit": 3,
@@ -74,12 +74,19 @@
       "dependsOn": [
         "execute-task:M001-k9wo8b:S02:T01"
       ],
-      "writes": [],
+      "writes": [
+        "docs/api-mainpage.md",
+        "docs/integration-examples.md",
+        "docs/compatibility-evidence.md",
+        "tests/unit/docs_policy_tests.cpp",
+        "test.cmd",
+        "grep.cmd"
+      ],
       "metadata": {
         "unitType": "execute-task",
         "unitId": "M001-k9wo8b.S02.T02",
-        "title": "Clarify consumer docs and examples",
-        "status": "pending"
+        "title": "Clarified the public API consumer docs, linked the audit/evidence boundary, and enforced the guidance with docs-policy tests.",
+        "status": "complete"
       }
     },
     {
@@ -88,12 +95,18 @@
       "dependsOn": [
         "execute-task:M001-k9wo8b:S02:T02"
       ],
-      "writes": [],
+      "writes": [
+        "tests/package-consumer/main.cpp",
+        "tests/unit/docs_policy_tests.cpp",
+        "tests/unit/target_format_policy_tests.cpp",
+        "docs/public-api-reality-check.md",
+        "docs/coverage-audit-matrix.md"
+      ],
       "metadata": {
         "unitType": "execute-task",
         "unitId": "M001-k9wo8b.S02.T03",
-        "title": "Strengthen package-consumer and policy proof",
-        "status": "pending"
+        "title": "Strengthened installed-package consumer smoke and policy tests for the audited public API story while keeping COV-GAP-003 routed to S05.",
+        "status": "complete"
       }
     },
     {
@@ -106,6 +119,90 @@
         "unitType": "complete-slice",
         "unitId": "M001-k9wo8b.S02",
         "title": "S02",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "execute-task:M001-k9wo8b:S03:T01",
+      "kind": "unit",
+      "dependsOn": [],
+      "writes": [
+        "docs/compatibility-evidence.md"
+      ],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S03.T01",
+        "title": "Documented the default generated-fixture and writer round-trip proof sweep in the compatibility evidence catalog.",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "execute-task:M001-k9wo8b:S03:T02",
+      "kind": "unit",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S03:T01"
+      ],
+      "writes": [
+        "tests/unit/coverage_audit_matrix_docs_tests.cpp"
+      ],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S03.T02",
+        "title": "Added docs-policy assertions that lock round-trip fixture evidence across TES3, TES4-family BSA, BA2 GNRL, and BA2 DX10, then verified the focused generated-fixture sweep.",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "complete-slice:M001-k9wo8b:S03",
+      "kind": "verification",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S03:T02"
+      ],
+      "metadata": {
+        "unitType": "complete-slice",
+        "unitId": "M001-k9wo8b.S03",
+        "title": "S03",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "execute-task:M001-k9wo8b:S04:T01",
+      "kind": "unit",
+      "dependsOn": [],
+      "writes": [
+        "tests/unit/validation_api_tests.cpp"
+      ],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S04.T01",
+        "title": "Extended public validation API tests to prove expanded generated success fixtures, Starfield BA2 v3 method routes, and expected-variant mismatch warnings.",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "execute-task:M001-k9wo8b:S04:T02",
+      "kind": "unit",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S04:T01"
+      ],
+      "writes": [],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S04.T02",
+        "title": "Update evidence docs and policy guards",
+        "status": "pending"
+      }
+    },
+    {
+      "id": "complete-slice:M001-k9wo8b:S04",
+      "kind": "verification",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S04:T02"
+      ],
+      "metadata": {
+        "unitType": "complete-slice",
+        "unitId": "M001-k9wo8b.S04",
+        "title": "S04",
         "status": "pending"
       }
     }

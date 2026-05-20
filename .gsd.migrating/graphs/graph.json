@@ -9,11 +9,12 @@
     },
     {
       "id": "milestone:M001",
-      "label": "M001",
+      "label": "M001: Audit and Stabilization Baseline",
       "type": "milestone",
-      "confidence": "EXTRACTED"
+      "confidence": "EXTRACTED",
+      "sourceFile": "milestones/M001/M001-ROADMAP.md"
     }
   ],
   "edges": [],
-  "builtAt": "2026-05-20T01:44:23.642Z"
+  "builtAt": "2026-05-20T02:47:17.376Z"
 }

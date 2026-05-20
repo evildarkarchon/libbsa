@@ -1,0 +1,30 @@
+Test project J:/libbsa/build/windows-msvc-debug-static
+    Start  39: validation_api reports expected variant mismatch as a valid risky warning
+1/8 Test  #39: validation_api reports expected variant mismatch as a valid risky warning .........   Passed    0.13 sec
+    Start  63: validation_api reports compatibility_matrix malformed rows as validation errors
+2/8 Test  #63: validation_api reports compatibility_matrix malformed rows as validation errors ...   Passed    0.02 sec
+    Start  68: validation_api accepts generated fixture archives
+3/8 Test  #68: validation_api accepts generated fixture archives .................................   Passed    0.02 sec
+    Start 102: validation_api reports malformed archives without lenient readers
+4/8 Test #102: validation_api reports malformed archives without lenient readers .................   Passed    0.01 sec
+    Start 135: validation_api reports result-level setup errors
+5/8 Test #135: validation_api reports result-level setup errors ..................................   Passed    0.01 sec
+    Start 140: validation_api accepts writer-produced archives
+6/8 Test #140: validation_api accepts writer-produced archives ...................................   Passed    0.03 sec
+    Start 201: validation_api accepts writer-produced Starfield BA2 v3 compression routes
+7/8 Test #201: validation_api accepts writer-produced Starfield BA2 v3 compression routes ........   Passed    0.04 sec
+    Start 290: validation_api caps extractability before reading sparse payload bytes
+8/8 Test #290: validation_api caps extractability before reading sparse payload bytes ............   Passed    0.12 sec
+
+100% tests passed, 0 tests failed out of 8
+
+Label Time Summary:
+compat                  =   0.13 sec*proc (1 test)
+compatibility_matrix    =   0.02 sec*proc (1 test)
+fixture                 =   0.18 sec*proc (4 tests)
+malformed               =   0.16 sec*proc (3 tests)
+roundtrip               =   0.07 sec*proc (2 tests)
+unit                    =   0.39 sec*proc (8 tests)
+validation_api          =   0.39 sec*proc (8 tests)
+
+Total Test time (real) =   1.16 sec

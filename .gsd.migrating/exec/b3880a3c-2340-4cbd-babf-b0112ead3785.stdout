@@ -1,0 +1,31 @@
+RUN [1]: docs file exists
+PASS [1]: docs file exists (1779245071s) log=.gsd/exec/s03-closeout-logs/docs_file_exists.log
+RUN [2]: docs proof sweep heading
+PASS [2]: docs proof sweep heading (1779245071s) log=.gsd/exec/s03-closeout-logs/docs_proof_sweep_heading.log
+RUN [3]: docs reader dispatch reference
+PASS [3]: docs reader dispatch reference (1779245071s) log=.gsd/exec/s03-closeout-logs/docs_reader_dispatch_reference.log
+RUN [4]: docs validation api reference
+PASS [4]: docs validation api reference (1779245072s) log=.gsd/exec/s03-closeout-logs/docs_validation_api_reference.log
+RUN [5]: docs optional local corpus boundary
+PASS [5]: docs optional local corpus boundary (1779245072s) log=.gsd/exec/s03-closeout-logs/docs_optional_local_corpus_boundary.log
+RUN [6]: cmake configure
+PASS [6]: cmake configure (1779245072s) log=.gsd/exec/s03-closeout-logs/cmake_configure.log
+RUN [7]: fixture generation and libbsa_tests build
+PASS [7]: fixture generation and libbsa_tests build (1779245078s) log=.gsd/exec/s03-closeout-logs/fixture_generation_and_libbsa_tests_build.log
+RUN [8]: ctest coverage_audit_matrix
+PASS [8]: ctest coverage_audit_matrix (1779245079s) log=.gsd/exec/s03-closeout-logs/ctest_coverage_audit_matrix.log
+RUN [9]: ctest reader_backend_dispatch
+PASS [9]: ctest reader_backend_dispatch (1779245079s) log=.gsd/exec/s03-closeout-logs/ctest_reader_backend_dispatch.log
+RUN [10]: ctest tes3_bsa_writer
+PASS [10]: ctest tes3_bsa_writer (1779245080s) log=.gsd/exec/s03-closeout-logs/ctest_tes3_bsa_writer.log
+RUN [11]: ctest tes4_bsa_writer
+PASS [11]: ctest tes4_bsa_writer (1779245081s) log=.gsd/exec/s03-closeout-logs/ctest_tes4_bsa_writer.log
+RUN [12]: ctest ba2_gnrl_writer
+PASS [12]: ctest ba2_gnrl_writer (1779245083s) log=.gsd/exec/s03-closeout-logs/ctest_ba2_gnrl_writer.log
+RUN [13]: ctest ba2_dx10_writer
+PASS [13]: ctest ba2_dx10_writer (1779245086s) log=.gsd/exec/s03-closeout-logs/ctest_ba2_dx10_writer.log
+RUN [14]: ctest validation_api
+PASS [14]: ctest validation_api (1779245087s) log=.gsd/exec/s03-closeout-logs/ctest_validation_api.log
+RUN [15]: ctest validate_fixture_manifests
+PASS [15]: ctest validate_fixture_manifests (1779245087s) log=.gsd/exec/s03-closeout-logs/ctest_validate_fixture_manifests.log
+S03 closeout verification passed: 15/15 checks

@@ -1,0 +1,18 @@
+{
+  "id": "c5677ac1-f893-4654-bd39-6e431fd0ad00",
+  "runtime": "node",
+  "purpose": "verify specific generated fixture archive files exist for S04 planning",
+  "script_chars": 487,
+  "started_at": "2026-05-20T02:58:25.204Z",
+  "finished_at": "2026-05-20T02:58:25.244Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 40,
+  "stdout_bytes": 390,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\c5677ac1-f893-4654-bd39-6e431fd0ad00.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\c5677ac1-f893-4654-bd39-6e431fd0ad00.stderr"
+}

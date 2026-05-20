@@ -1,0 +1,18 @@
+{
+  "id": "32ead1c3-4c7a-46d1-a9b4-f710429f00aa",
+  "runtime": "bash",
+  "purpose": "S03 closeout verification rerun with clean timing summary",
+  "script_chars": 2619,
+  "started_at": "2026-05-20T02:45:12.769Z",
+  "finished_at": "2026-05-20T02:45:27.584Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 14815,
+  "stdout_bytes": 2240,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\32ead1c3-4c7a-46d1-a9b4-f710429f00aa.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\32ead1c3-4c7a-46d1-a9b4-f710429f00aa.stderr"
+}
