@@ -1,0 +1,18 @@
+{
+  "id": "43388c75-264f-4487-876e-895f574427a6",
+  "runtime": "bash",
+  "purpose": "T02 verification: prior failed public-api reality-check smoke command passes under Windows cmd",
+  "script_chars": 251,
+  "started_at": "2026-05-20T02:15:38.667Z",
+  "finished_at": "2026-05-20T02:15:38.767Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 100,
+  "stdout_bytes": 424,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\43388c75-264f-4487-876e-895f574427a6.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\43388c75-264f-4487-876e-895f574427a6.stderr"
+}

@@ -1,0 +1,14 @@
+bulk_extraction_tests.cpp (13)
+ - bulk_extraction options default to serial extraction
+ - bulk_extraction rejects zero workers as an outer argument error
+ - bulk_extraction rejects unsupported large worker counts as an outer argument error
+ - bulk_extraction preserves request order and bytes in serial and parallel mode
+ - bulk_extraction coalesces duplicate successes in serial mode
+ - bulk_extraction coalesces duplicate successes in parallel mode
+ - bulk_extraction mirrors duplicate missing path failures without aborting siblings
+ - bulk_extraction mirrors duplicate sink factory failures without aborting siblings
+ - bulk_extraction does not pre-merge distinct request strings
+ - bulk_extraction records per-entry failures without aborting siblings
+ - bulk_extraction records partial sink writes as per-entry I/O errors
+ - bulk_extraction streams large raw archive families through bounded chunks
+ - bulk_extraction source policy documents raw chunking and compressed allocation boundaries

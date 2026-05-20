@@ -1,0 +1,35 @@
+== tests/unit/public_include_boundary_tests.cpp ==
+  135:TEST_CASE("public_include_boundary umbrella header exposes public boundary types", "[unit][public-api]")
+  175:TEST_CASE("public_include_boundary DX10 writer contract exposes no raw override surface", "[unit][public-api]")
+  205:TEST_CASE("public_include_boundary excludes private Phase 2 implementation names", "[unit][public-api]")
+  256:TEST_CASE("public_include_boundary writer execution options stay dependency-light", "[unit][public-api]")
+== tests/unit/export_surface_policy_tests.cpp ==
+  41:TEST_CASE("export_surface public export header documents macro modes", "[unit][public-api][export_surface]")
+  53:TEST_CASE("export_surface root CMake installs export header and disables auto export",
+  65:TEST_CASE("export_surface public emitted APIs are explicitly annotated", "[unit][public-api][export_surface]")
+== tests/unit/docs_policy_tests.cpp ==
+  72:TEST_CASE("docs_policy static boundary keeps public API documentation optional", "[unit][docs_policy][static_boundary]")
+  87:TEST_CASE("docs_policy Doxyfile boundary documents public headers and excludes private inputs",
+  114:TEST_CASE("docs_policy API mainpage preserves public operation structure", "[unit][docs_policy][doc_structure]")
+  137:TEST_CASE("docs_policy public documentation surfaces hide planning identifiers",
+== tests/unit/target_format_policy_tests.cpp ==
+  90:TEST_CASE("target_format_policy package consumer examples have docs and CTest smoke gates",
+  119:TEST_CASE("target_format_policy guide covers every supported target format and compression route",
+  155:TEST_CASE("target_format_policy guide documents public compatibility_warning_code values",
+  172:TEST_CASE("target_format_policy guide documents writer output publication safety",
+  197:TEST_CASE("target_format_policy guide preserves legal evidence and reference boundaries",
+== tests/unit/validation_api_tests.cpp ==
+  282:TEST_CASE("validation_api reports result-level setup errors", "[unit][validation_api]")
+  290:TEST_CASE("validation_api caps extractability before reading sparse payload bytes",
+  352:TEST_CASE("validation_api accepts generated fixture archives", "[unit][fixture][validation_api]")
+  374:TEST_CASE("validation_api accepts writer-produced archives", "[unit][roundtrip][validation_api]")
+  391:TEST_CASE("validation_api reports malformed archives without lenient readers", "[unit][fixture][malformed][validation_api]")
+  399:TEST_CASE("validation_api reports compatibility_matrix malformed rows as validation errors",
+== tests/unit/coverage_audit_matrix_docs_tests.cpp ==
+  48:TEST_CASE("coverage_audit_matrix lists every current archive family", "[unit][coverage_audit_matrix][docs_policy]")
+  59:TEST_CASE("coverage_audit_matrix preserves every required support axis", "[unit][coverage_audit_matrix][docs_policy]")
+  75:TEST_CASE("coverage_audit_matrix preserves status vocabulary and ranked gaps", "[unit][coverage_audit_matrix][docs_policy]")
+  93:TEST_CASE("coverage_audit_matrix separates advisory local evidence from default proof",
+  108:TEST_CASE("coverage_audit_matrix names compatibility matrix as malformed submatrix only",
+  120:TEST_CASE("coverage_audit_matrix stays free of internal planning identifiers",
+  131:TEST_CASE("coverage_audit_matrix is discoverable from compatibility evidence catalog",

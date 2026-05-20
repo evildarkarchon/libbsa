@@ -1,0 +1,18 @@
+{
+  "id": "a67d0218-64ac-4024-b289-683115628e77",
+  "runtime": "bash",
+  "purpose": "S02 planning consumer-story term coverage scan",
+  "script_chars": 1099,
+  "started_at": "2026-05-20T01:59:23.378Z",
+  "finished_at": "2026-05-20T01:59:25.846Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 2468,
+  "stdout_bytes": 3321,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\a67d0218-64ac-4024-b289-683115628e77.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\a67d0218-64ac-4024-b289-683115628e77.stderr"
+}

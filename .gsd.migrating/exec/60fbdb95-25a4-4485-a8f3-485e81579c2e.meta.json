@@ -1,0 +1,18 @@
+{
+  "id": "60fbdb95-25a4-4485-a8f3-485e81579c2e",
+  "runtime": "bash",
+  "purpose": "Verify coverage matrix public-doc safety and required axes",
+  "script_chars": 646,
+  "started_at": "2026-05-20T01:31:24.905Z",
+  "finished_at": "2026-05-20T01:31:25.059Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 154,
+  "stdout_bytes": 63,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\60fbdb95-25a4-4485-a8f3-485e81579c2e.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\60fbdb95-25a4-4485-a8f3-485e81579c2e.stderr"
+}

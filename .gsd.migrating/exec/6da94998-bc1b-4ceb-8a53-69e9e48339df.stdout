@@ -1,0 +1,18 @@
+--- .gsd.migrating\DECISIONS.md ---
+9: | D001 | M001-k9wo8b planning | api | How M001 should approach the public API surface | Keep archive_reader, validate_archive, bulk extraction, and family-specific writers as the stable public core; add only audit-proven small helpers or docs improvements in M001. | Existing headers already expose s
+17: | D009 | M001-k9wo8b S02 planning | public-api | S02 public API reality check execution model | Audit and harden the existing archive_reader, validation, bulk extraction, and family-specific writer core through docs, package-consumer smoke coverage, and policy tests rather than introducing a broad f
+--- .gsd\PROJECT.md ---
+51: - Public API Polish — Use M001 evidence to add ergonomic helpers or small API refinements without prematurely introducing a broad facade.
+--- .gsd\milestones\M001\M001-CONTEXT.md ---
+74: **Rationale:** The public API is richer than a minimal extraction surface, but it may still feel basic or hard to understand. M001 should improve the consumer story without prematurely committing to a broad facade or redesign.
+77: - Broad facade layer — may become valuable in a future public API polish milestone, but it is too much design risk before real consumer evidence.
+117: - API friction may be real even though public headers are already substantial — M001 should allow evidence-backed small helpers without becoming a facade redesign.
+169: - A broad public API facade or major redesign without direct audit evidence.
+--- .gsd\milestones\M001-k9wo8b\M001-k9wo8b-CONTEXT.md ---
+54: - New facade layer — may become valuable later, but too much design risk before real consumer or audit evidence.
+151: - Doing a broad facade or major API redesign without audit evidence.
+--- .gsd\milestones\M001-k9wo8b\slices\S02\S02-PLAN.md ---
+3: **Goal:** Audit and harden libbsa's existing public API story against real headers, docs, package-consumer smoke coverage, and the S01 coverage matrix without introducing a broad facade or new dependency surface.
+--- .gsd\milestones\M001-k9wo8b\slices\S02\tasks\T01-PLAN.md ---
+15: 4. Apply the D009 decision: default to docs/examples/policy proof and do not introduce a broad facade. If the audit proves a tiny public helper is unavoidable, document the evidence and either defer it or stop for replanning rather than expanding S02 implicitly.
+target_exists= False

@@ -1,0 +1,18 @@
+{
+  "id": "414ad502-4953-4fa7-849d-c6fd73e6f2aa",
+  "runtime": "node",
+  "purpose": "bulk extraction family coverage in tests",
+  "script_chars": 390,
+  "started_at": "2026-05-20T01:13:55.553Z",
+  "finished_at": "2026-05-20T01:13:55.649Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 96,
+  "stdout_bytes": 128,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\414ad502-4953-4fa7-849d-c6fd73e6f2aa.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\414ad502-4953-4fa7-849d-c6fd73e6f2aa.stderr"
+}

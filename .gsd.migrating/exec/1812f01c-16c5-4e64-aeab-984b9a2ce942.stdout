@@ -1,0 +1,22 @@
+tests/unit/compatibility_warning_tests.cpp (4)
+ - compatibility_warning reports BA2 target family mismatch
+ - compatibility_warning reports BSA embedded name compatibility risk
+ - compatibility_warning reports compressed sound payloads
+ - compatibility_warning behavior covers every public warning code
+
+tests/unit/validation_policy_tests.cpp (14)
+ - validation_policy CTest label taxonomy is documented and backed by selectable tests
+ - validation_policy requires-game-fixture label is selectable without local archives
+ - validation_policy compatibility evidence catalog documents public warning-code structure
+ - validation_policy local fixture boundary keeps game archives ignored and provenance documented
+ - validation_policy CI and presets preserve static shared and TES5Edit build boundaries
+ - validation_policy configured build profiles are Windows-only and documented
+ - validation_policy verification matrix contract keeps README truthful
+ - validation_policy verification matrix contract keeps fixture policy truthful
+ - validation_policy verification matrix contract keeps planning summaries truthful
+ - validation_policy verification matrix contract requires supported preset triads
+ - validation_policy verification matrix contract requires checked-in MSVC ASan wiring
+ - validation_policy verification matrix contract keeps release package proof inside CTest
+ - validation_policy verification matrix contract keeps the main workflow matrix truthful
+ - validation_policy verification matrix contract keeps ASan as a separate hardening job
+

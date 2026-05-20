@@ -1,0 +1,18 @@
+{
+  "id": "b58ba433-f0f7-4a33-bb3c-5025be50a08f",
+  "runtime": "bash",
+  "purpose": "family test case names for coverage matrix",
+  "script_chars": 1261,
+  "started_at": "2026-05-20T01:11:52.694Z",
+  "finished_at": "2026-05-20T01:11:52.820Z",
+  "exit_code": 49,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 126,
+  "stdout_bytes": 0,
+  "stderr_bytes": 177,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\b58ba433-f0f7-4a33-bb3c-5025be50a08f.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\b58ba433-f0f7-4a33-bb3c-5025be50a08f.stderr"
+}

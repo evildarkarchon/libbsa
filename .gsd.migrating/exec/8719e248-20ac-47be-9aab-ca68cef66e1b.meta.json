@@ -1,0 +1,18 @@
+{
+  "id": "8719e248-20ac-47be-9aab-ca68cef66e1b",
+  "runtime": "bash",
+  "purpose": "configure windows-msvc-debug-static after coverage matrix policy test addition",
+  "script_chars": 40,
+  "started_at": "2026-05-20T01:33:04.073Z",
+  "finished_at": "2026-05-20T01:33:04.452Z",
+  "exit_code": 1,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 379,
+  "stdout_bytes": 153,
+  "stderr_bytes": 434,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\8719e248-20ac-47be-9aab-ca68cef66e1b.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\8719e248-20ac-47be-9aab-ca68cef66e1b.stderr"
+}

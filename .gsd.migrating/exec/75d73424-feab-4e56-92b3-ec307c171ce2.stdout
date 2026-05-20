@@ -1,0 +1,5 @@
+MISSING docs/coverage-audit-matrix.md
+MISSING tests/unit/coverage_audit_matrix_docs_tests.cpp
+checked=36 missing=2
+docs_dir=yes
+tests_unit_dir=yes

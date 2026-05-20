@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T01",
+  "unitId": "M001-k9wo8b/S02/T01",
+  "timestamp": 1779243004953,
+  "passed": false,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "test -s docs/public-api-reality-check.md\ngrep -Fq \"archive_reader\" docs/public-api-reality-check.md\ngrep -Fq \"extract_bytes\" docs/public-api-reality-check.md\ngrep -Fq \"COV-GAP-003\" docs/public-api-reality-check.md",
+      "exitCode": 1,
+      "durationMs": 98,
+      "verdict": "fail"
+    }
+  ],
+  "retryAttempt": 1,
+  "maxRetries": 3
+}

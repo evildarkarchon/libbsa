@@ -1,0 +1,19 @@
+{
+  "nodes": [
+    {
+      "id": "concept:phase:planning",
+      "label": "Phase: planning",
+      "type": "concept",
+      "confidence": "EXTRACTED",
+      "sourceFile": "STATE.md"
+    },
+    {
+      "id": "milestone:M001",
+      "label": "M001",
+      "type": "milestone",
+      "confidence": "EXTRACTED"
+    }
+  ],
+  "edges": [],
+  "builtAt": "2026-05-20T01:44:23.642Z"
+}

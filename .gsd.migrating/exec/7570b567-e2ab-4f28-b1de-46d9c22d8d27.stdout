@@ -1,0 +1,5 @@
+rows=17
+families=tes3_bsa:4, tes4_bsa:4, ba2_gnrl:4, ba2_dx10:5
+categories=truncated_structure:4, invalid_payload_span:4, duplicate_canonical_path:2, decompression_failure:3, oversized_arithmetic:1, unsupported_route:2, dds_chunk_layout:1
+evidence=manifest, test
+phases=open, extraction

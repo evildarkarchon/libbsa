@@ -1,0 +1,8 @@
+test.bat: exists=False dir=False
+test.cmd: exists=False dir=False
+grep.bat: exists=False dir=False
+grep.cmd: exists=False dir=False
+tools: exists=False dir=False
+scripts: exists=False dir=False
+CMakePresets.json: exists=True dir=False
+CMakeLists.txt: exists=True dir=False

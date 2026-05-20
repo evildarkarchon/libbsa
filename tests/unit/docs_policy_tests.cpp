@@ -134,6 +134,170 @@ TEST_CASE("docs_policy API mainpage preserves public operation structure", "[uni
                       "target-format guide"});
 }
 
+TEST_CASE("docs_policy mainpage links audited API proof and consumer sharp edges",
+          "[unit][docs_policy][doc_structure]")
+{
+  const auto mainpage = read_text_file(source_root() / "docs" / "api-mainpage.md");
+
+  require_all_tokens(mainpage,
+                     {"docs/public-api-reality-check.md",
+                      "docs/coverage-audit-matrix.md",
+                      "docs/compatibility-evidence.md",
+                      "archive virtual paths",
+                      "find",
+                      "contains",
+                      "extract_bytes",
+                      "`worker_count` must be positive",
+                      "BA2 DX10 texture writers have a one-shot writer lifecycle",
+                      "result<T>::error().code",
+                      "error().message",
+                      "Optional corpus evidence"});
+}
+
+TEST_CASE("docs_policy integration examples document the full consumer journey",
+          "[unit][docs_policy][doc_structure]")
+{
+  const auto examples = read_text_file(source_root() / "docs" / "integration-examples.md");
+
+  require_all_tokens(examples,
+                     {"host filesystem paths and archive virtual paths separate",
+                      "find()",
+                      "contains()",
+                      "extract()",
+                      "extract_bytes()",
+                      "`worker_count == 0` is invalid",
+                      "bulk_extract_entry_result",
+                      "write_execution_options::worker_count",
+                      "BA2 DX10 has a one-shot writer lifecycle",
+                      "result<T>::error().code",
+                      "validation_report::warnings",
+                      "compatibility_warning"});
+}
+
+TEST_CASE("docs_policy compatibility evidence points to audit and preserves proof boundaries",
+          "[unit][docs_policy][doc_structure]")
+{
+  const auto catalog = read_text_file(source_root() / "docs" / "compatibility-evidence.md");
+
+  require_all_tokens(catalog,
+                     {"docs/coverage-audit-matrix.md",
+                      "docs/public-api-reality-check.md",
+                      "Optional local game or BSArchPro-derived checks",
+                      "never required for the default suite",
+                      "Optional local corpus checks are advisory evidence only",
+                      "absent local or copyrighted inputs do not block default green status"});
+}
+
+TEST_CASE("docs_policy public API audit is discoverable and routes proof gaps",
+          "[unit][docs_policy][doc_structure][coverage_audit_matrix]")
+{
+  const auto root = source_root();
+  const auto mainpage = read_text_file(root / "docs" / "api-mainpage.md");
+  const auto examples = read_text_file(root / "docs" / "integration-examples.md");
+  const auto catalog = read_text_file(root / "docs" / "compatibility-evidence.md");
+  const auto audit = read_text_file(root / "docs" / "public-api-reality-check.md");
+  const auto matrix = read_text_file(root / "docs" / "coverage-audit-matrix.md");
+
+  require_all_tokens(mainpage,
+                     {"docs/public-api-reality-check.md",
+                      "docs/coverage-audit-matrix.md",
+                      "docs/compatibility-evidence.md",
+                      "Optional corpus evidence",
+                      "not required for default support claims"});
+
+  require_all_tokens(examples,
+                     {"These examples are compile-checked by `tests/package-consumer/main.cpp`",
+                      "includes only `<libbsa/libbsa.hpp>`",
+                      "archive_reader::open",
+                      "metadata()",
+                      "entries()",
+                      "find()",
+                      "contains()",
+                      "extract()",
+                      "extract_bytes()",
+                      "extract_entries",
+                      "validate_archive",
+                      "result<T>::error().code",
+                      "tes3_bsa_writer",
+                      "tes4_bsa_writer",
+                      "ba2_gnrl_writer",
+                      "ba2_dx10_writer"});
+
+  require_all_tokens(audit,
+                     {"proof-and-routing document",
+                      "Default proof means evidence that is reproducible from the repository without local game archives or BSArchPro-generated corpus output",
+                      "Package-consumer proof: `tests/package-consumer/main.cpp`",
+                      "Public-boundary and documentation policy proof:",
+                      "archive_reader",
+                      "find",
+                      "contains",
+                      "extract",
+                      "extract_bytes",
+                      "extract_entries",
+                      "validate_archive",
+                      "result<T>",
+                      "stable `error_code`",
+                      "tes3_bsa_writer",
+                      "tes4_bsa_writer",
+                      "ba2_gnrl_writer",
+                      "ba2_dx10_writer",
+                      "No broad public facade is justified",
+                      "`COV-GAP-003`",
+                      "S05",
+                      "installed-package runtime archive creation/opening for every family is intentionally not proven by default"});
+
+  require_all_tokens(catalog,
+                     {"Optional local game or BSArchPro-derived checks",
+                      "never required for the default suite",
+                      "Optional local corpus checks are advisory evidence only",
+                      "absent local or copyrighted inputs do not block default green status"});
+
+  require_all_tokens(matrix,
+                     {"`COV-GAP-003`",
+                      "Package-consumer runtime proof for creating/opening every archive family from an installed package",
+                      "actual archive behavior is covered by always-on unit fixture tests",
+                      "S05 integrated confidence/package-release polish"});
+}
+
+TEST_CASE("docs_policy public proof docs keep optional evidence and fixture boundaries explicit",
+          "[unit][docs_policy][doc_structure][static_boundary]")
+{
+  const auto root = source_root();
+  constexpr auto proof_documents = std::array{
+      "docs/public-api-reality-check.md",
+      "docs/api-mainpage.md",
+      "docs/integration-examples.md",
+      "docs/compatibility-evidence.md",
+      "docs/coverage-audit-matrix.md",
+  };
+
+  for (const auto relative_path : proof_documents)
+  {
+    const auto text = read_text_file(root / relative_path);
+    INFO("Public proof document: " << relative_path);
+    require_no_tokens(text,
+                      {".gsd/",
+                       ".planning/",
+                       ".audits/",
+                       "TES5Edit fixture workspace",
+                       "TES5Edit/ fixture",
+                       "mutable TES5Edit",
+                       "write into `TES5Edit/`",
+                       "local copyrighted fixture directory"});
+  }
+
+  const auto audit = read_text_file(root / "docs" / "public-api-reality-check.md");
+  require_all_tokens(audit,
+                     {"Optional local game corpora and BSArchPro-derived manifests remain advisory evidence only",
+                      "`TES5Edit/` remains a read-only reference boundary"});
+
+  const auto catalog = read_text_file(root / "docs" / "compatibility-evidence.md");
+  require_all_tokens(catalog,
+                     {"Optional local corpus checks are advisory evidence only",
+                      "absent local or copyrighted inputs do not block default green status",
+                      "Treat `TES5Edit/` as read-only reference material, not a fixture workspace or output directory."});
+}
+
 TEST_CASE("docs_policy public documentation surfaces hide planning identifiers",
           "[unit][docs_policy][doc_structure]")
 {
@@ -141,6 +305,8 @@ TEST_CASE("docs_policy public documentation surfaces hide planning identifiers",
   constexpr auto public_documentation_files = std::array{
       "include/libbsa/archive.hpp",
       "include/libbsa/writer.hpp",
+      "docs/api-mainpage.md",
+      "docs/integration-examples.md",
       "docs/thread-safety.md",
       "docs/compatibility-evidence.md",
       "tests/fixtures/README.md",

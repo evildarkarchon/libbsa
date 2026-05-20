@@ -1,0 +1,18 @@
+{
+  "id": "d8ae54d3-a248-430a-98cc-a33f142e88fb",
+  "runtime": "bash",
+  "purpose": "diagnose vcpkg visual studio discovery failure",
+  "script_chars": 139,
+  "started_at": "2026-05-20T01:34:16.887Z",
+  "finished_at": "2026-05-20T01:34:16.958Z",
+  "exit_code": 1,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 71,
+  "stdout_bytes": 0,
+  "stderr_bytes": 257,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\d8ae54d3-a248-430a-98cc-a33f142e88fb.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\d8ae54d3-a248-430a-98cc-a33f142e88fb.stderr"
+}

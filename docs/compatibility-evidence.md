@@ -1,18 +1,62 @@
 # Compatibility Evidence Catalog
 
-This catalog maps public `libbsa::compatibility_warning_code` values to the
-rule they represent, the evidence that proves the rule, and the default gate
-that keeps the evidence reproducible.
+This catalog maps public `libbsa::compatibility_warning_code` values to the rule they represent, the evidence that proves the rule, and the default gate that keeps the evidence reproducible.
 
-Generated legal fixtures and writer-output archives are the mandatory evidence
-path for public compatibility warnings. Optional local game or BSArchPro-derived
-checks may add smoke/compare confidence, but they are never required for the
-default suite.
-The executable opt-in comparison harness is
-`tests/unit/local_game_fixture_tests.cpp`; it consumes
-`LIBBSA_BSARCHPRO_EXPECTED` or a local `bsarchpro_expected.json` manifest under
-`LIBBSA_GAME_FIXTURES` and compares libbsa metadata plus optional extracted
-bytes or FNV-1a payload hashes against BSArchPro-derived expectations.
+Generated legal fixtures and writer-output archives are the mandatory evidence path for public compatibility warnings. Optional local game or BSArchPro-derived checks may add smoke/compare confidence, but they are never required for the default suite and never replace committed legal fixtures, writer-output archives, package-consumer checks, or documentation policy tests.
+
+Use this catalog together with `docs/coverage-audit-matrix.md` and `docs/public-api-reality-check.md`:
+
+- `docs/coverage-audit-matrix.md` tracks the broader archive-family support matrix across reader, extraction, writer, round-trip, validation, package-consumer, and documentation axes.
+- `docs/public-api-reality-check.md` maps the current public API core to that proof and routes known public-story gaps without introducing a broader facade.
+- This file is narrower: it explains the compatibility-warning taxonomy that validation reports expose today.
+
+Default acceptance must continue to pass from repository-reproducible generated fixtures, writer-output archives, and policy tests alone. Optional local corpus checks are advisory evidence only; they may improve confidence in a developer workspace, but absent local or copyrighted inputs do not block default green status.
+
+## Default fixture and round-trip proof sweep
+
+The default proof sweep uses committed legal generated fixtures, writer-output archives produced by the public writer APIs, Catch2/CTest cases, and manifest validation only. It does not require local game archives, copied game payload bytes, or BSArchPro-derived comparison output. `LIBBSA_GAME_FIXTURES` and `LIBBSA_BSARCHPRO_EXPECTED` are optional advisory inputs for local smoke/compare confidence; unset variables must not block the default suite.
+
+The current default sweep covers four archive families:
+
+- TES3 BSA.
+- TES4-family BSA.
+- BA2 GNRL.
+- BA2 DX10.
+
+Use these public proof files together when auditing the default sweep:
+
+- `docs/coverage-audit-matrix.md` is the family/axis support matrix and is the source of truth for proof granularity.
+- `tests/fixtures/README.md` documents fixture provenance, generated-archive policy, optional local corpus rules, and test label vocabulary.
+- `tests/unit/archive_reader_dispatch_tests.cpp` reopens representative generated archives through the public `archive_reader` dispatch surface and verifies metadata, lookup, extraction, and bulk extraction behavior.
+- Family writer tests prove writer-output archive behavior: `tests/unit/tes3_bsa_writer_tests.cpp`, `tests/unit/tes4_bsa_writer_tests.cpp`, `tests/unit/ba2_gnrl_writer_tests.cpp`, and `tests/unit/ba2_dx10_writer_tests.cpp`.
+- `tests/unit/validation_api_tests.cpp` validates representative generated fixtures, writer-produced archives, and malformed matrix rows through the public validation API.
+- `tests/fixtures/generated/validate_fixture_manifests.py` keeps manifest shape, referenced malformed archives, and compatibility-matrix evidence references consistent with committed generated assets.
+
+A focused default CMake/CTest sweep can be run with repository paths and presets only:
+
+```powershell
+cmake --preset windows-msvc-debug-static
+cmake --build --preset windows-msvc-debug-static
+ctest --preset windows-msvc-debug-static -R validate_fixture_manifests
+ctest --preset windows-msvc-debug-static -L fixture
+ctest --preset windows-msvc-debug-static -L roundtrip
+ctest --preset windows-msvc-debug-static -L validation_api
+ctest --preset windows-msvc-debug-static -L docs_policy
+ctest --preset windows-msvc-debug-static -L target_format_policy
+```
+
+For a family-writer-only round-trip pass, run the writer labels directly:
+
+```powershell
+ctest --preset windows-msvc-debug-static -L tes3_bsa_writer
+ctest --preset windows-msvc-debug-static -L tes4_bsa_writer
+ctest --preset windows-msvc-debug-static -L ba2_gnrl_writer
+ctest --preset windows-msvc-debug-static -L ba2_dx10_writer
+```
+
+These commands intentionally avoid optional local corpus inputs. They should prove the public default fixture and round-trip story from committed synthetic assets while leaving per-variant validation-success granularity to `docs/coverage-audit-matrix.md` and validation API tests.
+
+The executable opt-in comparison harness is `tests/unit/local_game_fixture_tests.cpp`; it consumes `LIBBSA_BSARCHPRO_EXPECTED` or a local `bsarchpro_expected.json` manifest under `LIBBSA_GAME_FIXTURES` and compares libbsa metadata plus optional extracted bytes or FNV-1a payload hashes against BSArchPro-derived expectations.
 
 ### `compressed_sound_payload`
 
@@ -34,15 +78,11 @@ bytes or FNV-1a payload hashes against BSArchPro-derived expectations.
 
 ## Optional Local Corpus Checks
 
-Local game archives or BSArchPro-derived comparison output may supplement this
-catalog only as smoke/compare checks. The local comparison manifest is
-exercised by the `BSArchPro-derived expected fixture comparisons are opt-in`
-CTest case. Such checks must:
+Local game archives or BSArchPro-derived comparison output may supplement this catalog only as smoke/compare checks. The local comparison manifest is exercised by the `BSArchPro-derived expected fixture comparisons are opt-in` CTest case. Such checks must:
 
 - Use the `[requires-game-fixture]` tag and remain skipped when `LIBBSA_GAME_FIXTURES` is unset.
 - Read from ignored local data locations, not committed fixture directories.
 - Avoid committing copyrighted archive bytes, extracted game payloads, or BSArchPro-generated corpus output.
 - Treat `TES5Edit/` as read-only reference material, not a fixture workspace or output directory.
 
-Default acceptance must continue to pass from committed generated fixtures,
-writer-output archives, and policy tests alone.
+Default acceptance must continue to pass from committed generated fixtures, writer-output archives, and policy tests alone.

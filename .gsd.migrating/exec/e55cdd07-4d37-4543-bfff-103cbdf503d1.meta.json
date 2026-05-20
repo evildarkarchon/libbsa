@@ -1,0 +1,18 @@
+{
+  "id": "e55cdd07-4d37-4543-bfff-103cbdf503d1",
+  "runtime": "python",
+  "purpose": "summarize public libbsa headers for architecture questioning",
+  "script_chars": 521,
+  "started_at": "2026-05-19T23:19:45.334Z",
+  "finished_at": "2026-05-19T23:19:45.425Z",
+  "exit_code": 9009,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 91,
+  "stdout_bytes": 0,
+  "stderr_bytes": 177,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\e55cdd07-4d37-4543-bfff-103cbdf503d1.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\e55cdd07-4d37-4543-bfff-103cbdf503d1.stderr"
+}

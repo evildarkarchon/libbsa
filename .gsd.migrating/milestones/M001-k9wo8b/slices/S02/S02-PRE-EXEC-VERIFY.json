@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "milestoneId": "M001-k9wo8b",
+  "sliceId": "S02",
+  "timestamp": 1779242607992,
+  "status": "fail",
+  "durationMs": 3,
+  "checks": [
+    {
+      "category": "tool",
+      "target": "T02 Verify",
+      "passed": false,
+      "message": "Unsafe or non-runnable Verify command: test -s docs/api-mainpage.md\ntest -s docs/integration-examples.md\ntest -s docs/compatibility-evidence.md\ncmake --preset windows-msvc-debug-static\ncmake --build --preset windows-msvc-debug-static --target libbsa_tests\nctest --preset windows-msvc-debug-static -L \"docs_policy|target_format_policy|coverage_audit_matrix\" --output-on-failure (contains shell control syntax such as pipes, redirects, semicolons, backticks, or command substitution)",
+      "blocking": true
+    },
+    {
+      "category": "tool",
+      "target": "T03 Verify",
+      "passed": false,
+      "message": "Unsafe or non-runnable Verify command: cmake --preset windows-msvc-debug-static\ncmake --build --preset windows-msvc-debug-static --target libbsa_tests\nctest --preset windows-msvc-debug-static -L \"public-api|docs_policy|target_format_policy|package_consumer|validation_api|coverage_audit_matrix\" --output-on-failure (contains shell control syntax such as pipes, redirects, semicolons, backticks, or command substitution)",
+      "blocking": true
+    }
+  ]
+}

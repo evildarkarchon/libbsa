@@ -1,0 +1,164 @@
+roots {"include":7,"src":101,"tests":79,"CMakeLists.txt":1,"vcpkg.json":1,"vcpkg-configuration.json":1}
+file_count 190
+sample_files
+include\libbsa\archive.hpp
+include\libbsa\export.hpp
+include\libbsa\libbsa.hpp
+include\libbsa\result.hpp
+include\libbsa\validation.hpp
+include\libbsa\version.hpp
+include\libbsa\writer.hpp
+src\archive.cpp
+src\detail\archive_path.cpp
+src\detail\archive_path.hpp
+src\detail\atomic_file_ops.hpp
+src\detail\bethesda_hash.cpp
+src\detail\bethesda_hash.hpp
+src\detail\binary_io.cpp
+src\detail\binary_io.hpp
+src\detail\byte_vector.hpp
+src\detail\compression_router.cpp
+src\detail\compression_router.hpp
+src\detail\deflate_codec.cpp
+src\detail\deflate_codec.hpp
+src\detail\host_file.cpp
+src\detail\host_file.hpp
+src\detail\host_file_path.cpp
+src\detail\host_file_path.hpp
+src\detail\lz4_block_codec.cpp
+src\detail\lz4_block_codec.hpp
+src\detail\lz4_frame_codec.cpp
+src\detail\lz4_frame_codec.hpp
+src\detail\parallel_work.cpp
+src\detail\parallel_work.hpp
+src\detail\parser_primitives.cpp
+src\detail\parser_primitives.hpp
+src\detail\payload_stream.cpp
+src\detail\payload_stream.hpp
+src\detail\writer_publish.cpp
+src\detail\writer_publish.hpp
+src\formats\ba2\ba2_constants.hpp
+src\formats\ba2\ba2_dx10_chunk_assembler.cpp
+src\formats\ba2\ba2_dx10_chunk_assembler.hpp
+src\formats\ba2\ba2_dx10_layout.cpp
+src\formats\ba2\ba2_dx10_layout.hpp
+src\formats\ba2\ba2_dx10_names.cpp
+src\formats\ba2\ba2_dx10_names.hpp
+src\formats\ba2\ba2_dx10_parser.cpp
+src\formats\ba2\ba2_dx10_parser.hpp
+src\formats\ba2\ba2_dx10_prepare.cpp
+src\formats\ba2\ba2_dx10_prepare.hpp
+src\formats\ba2\ba2_dx10_reader.cpp
+src\formats\ba2\ba2_dx10_reader.hpp
+src\formats\ba2\ba2_dx10_records.cpp
+src\formats\ba2\ba2_dx10_records.hpp
+src\formats\ba2\ba2_dx10_serialize.cpp
+src\formats\ba2\ba2_dx10_serialize.hpp
+src\formats\ba2\ba2_dx10_snapshot_builder.cpp
+src\formats\ba2\ba2_dx10_snapshot_builder.hpp
+src\formats\ba2\ba2_dx10_writer.cpp
+src\formats\ba2\ba2_dx10_writer.hpp
+src\formats\ba2\ba2_format_detector.cpp
+src\formats\ba2\ba2_format_detector.hpp
+src\formats\ba2\ba2_gnrl_layout.cpp
+src\formats\ba2\ba2_gnrl_layout.hpp
+src\formats\ba2\ba2_gnrl_parser.cpp
+src\formats\ba2\ba2_gnrl_parser.hpp
+src\formats\ba2\ba2_gnrl_prepare.cpp
+src\formats\ba2\ba2_gnrl_prepare.hpp
+src\formats\ba2\ba2_gnrl_reader.cpp
+src\formats\ba2\ba2_gnrl_reader.hpp
+src\formats\ba2\ba2_gnrl_serialize.cpp
+src\formats\ba2\ba2_gnrl_serialize.hpp
+src\formats\ba2\ba2_gnrl_writer.cpp
+src\formats\ba2\ba2_gnrl_writer.hpp
+src\formats\bsa\bsa_format_detector.cpp
+src\formats\bsa\bsa_format_detector.hpp
+src\formats\bsa\tes3_bsa_layout.cpp
+src\formats\bsa\tes3_bsa_layout.hpp
+src\formats\bsa\tes3_bsa_parser.cpp
+src\formats\bsa\tes3_bsa_parser.hpp
+src\formats\bsa\tes3_bsa_prepare.cpp
+src\formats\bsa\tes3_bsa_prepare.hpp
+src\formats\bsa\tes3_bsa_reader.cpp
+keyword_matches
+include\libbsa\archive.hpp:12: #include <libbsa/export.hpp>
+include\libbsa\archive.hpp:13: #include <libbsa/result.hpp>
+include\libbsa\archive.hpp:15: namespace libbsa
+include\libbsa\archive.hpp:21: bsa,
+include\libbsa\archive.hpp:22: ba2,
+include\libbsa\archive.hpp:25: /// Public archive variants known to libbsa.
+include\libbsa\archive.hpp:27: /// The same metadata field represents supported BSA and BA2 format families
+include\libbsa\archive.hpp:28: /// without changing the public reader shape as archive coverage expands.
+include\libbsa\archive.hpp:31: tes3,
+include\libbsa\archive.hpp:32: tes4,
+include\libbsa\archive.hpp:34: starfield,
+include\libbsa\archive.hpp:44: deflate,
+include\libbsa\archive.hpp:45: lz4_frame,
+include\libbsa\archive.hpp:46: lz4_block,
+include\libbsa\archive.hpp:49: /// BA2-specific archive-level metadata exposed when `archive_metadata::type` is `archive_type::ba2`.
+include\libbsa\archive.hpp:51: /// Starfield BA2 revisions append raw header fields after the common `BTDX`/subtype header.
+include\libbsa\archive.hpp:53: /// "field absent" from a Starfield field that is present with a zero value.
+include\libbsa\archive.hpp:54: struct ba2_archive_metadata
+include\libbsa\archive.hpp:56: /// Raw Starfield v2+ header field conventionally named `Unknown1` in current references.
+include\libbsa\archive.hpp:57: std::optional<std::uint32_t> starfield_unknown1;
+include\libbsa\archive.hpp:59: /// Raw Starfield v2+ header field conventionally named `Unknown2` in current references.
+include\libbsa\archive.hpp:60: std::optional<std::uint32_t> starfield_unknown2;
+include\libbsa\archive.hpp:62: /// Raw Starfield v3 compression method field; method `3` selects raw LZ4 block payloads.
+include\libbsa\archive.hpp:66: /// Per-chunk BA2 texture payload metadata exposed for dependency-light inspection.
+include\libbsa\archive.hpp:69: /// payload bytes. The compression route is a libbsa-owned value so callers never depend on
+include\libbsa\archive.hpp:92: /// Dependency-light BA2 texture metadata attached only to texture archive entries.
+include\libbsa\archive.hpp:115: /// True when the BA2 record represents cubemap texture data.
+include\libbsa\archive.hpp:118: /// Raw BA2 texture record byte with currently unknown Bethesda-specific semantics.
+include\libbsa\archive.hpp:121: /// Raw BA2 cubemap/array field preserved for compatibility evidence.
+include\libbsa\archive.hpp:128: /// Archive-level metadata exposed by an opened reader.
+include\libbsa\archive.hpp:142: std::optional<ba2_archive_metadata> ba2;
+include\libbsa\archive.hpp:145: /// Entry-level metadata exposed for lookup, listing, and extraction.
+include\libbsa\archive.hpp:164: /// Optional texture metadata populated only for BA2 DX10 texture entries.
+include\libbsa\archive.hpp:168: /// Synchronous sink used by archive extraction APIs.
+include\libbsa\archive.hpp:171: /// extractor treats partial acceptance as `error_code::io_error` so callers
+include\libbsa\archive.hpp:172: /// never observe ambiguous partial-success extraction.
+include\libbsa\archive.hpp:174: /// Thread-safety: sinks are caller-owned; concurrent extraction requires
+include\libbsa\archive.hpp:177: class LIBBSA_API payload_sink
+include\libbsa\archive.hpp:182: /// Writes a chunk of payload bytes and returns the accepted byte count.
+include\libbsa\archive.hpp:183: virtual result<std::size_t> write(std::span<const std::byte> bytes) = 0;
+include\libbsa\archive.hpp:186: /// Options controlling a bulk extraction call.
+include\libbsa\archive.hpp:189: /// to opt into parallel extraction of independent entries.
+include\libbsa\archive.hpp:191: /// Thread-safety: options are copied into the extraction call; see
+include\libbsa\archive.hpp:193: struct bulk_extract_options
+include\libbsa\archive.hpp:199: /// A single archive path requested from `archive_reader::extract_entries`.
+include\libbsa\archive.hpp:200: struct bulk_extract_request
+include\libbsa\archive.hpp:202: /// Archive path to extract, using the same lookup rules as `archive_reader::extract`.
+include\libbsa\archive.hpp:206: /// Factory used by bulk extraction to create sinks for unique requested paths.
+include\libbsa\archive.hpp:209: /// call. `archive_reader::extract_entries` coalesces duplicate exact request
+include\libbsa\archive.hpp:210: /// paths before extraction, so duplicate result records mirror the first
+include\libbsa\archive.hpp:212: /// `bulk_extract_options::worker_count` is greater than one, `create` may be
+include\libbsa\archive.hpp:214: /// be written on worker threads. libbsa does not call user factory or sink
+include\libbsa\archive.hpp:218: /// distinct sinks for concurrent unique-path extraction.
+include\libbsa\archive.hpp:219: class LIBBSA_API bulk_extract_sink_factory
+include\libbsa\archive.hpp:222: virtual ~bulk_extract_sink_factory() = default;
+include\libbsa\archive.hpp:231: /// Per-request result record returned by `archive_reader::extract_entries`.
+include\libbsa\archive.hpp:235: struct bulk_extract_entry_result
+include\libbsa\archive.hpp:240: /// Entry metadata when lookup succeeded before extraction.
+include\libbsa\archive.hpp:243: /// Per-entry failure, if lookup, sink creation, or extraction failed.
+include\libbsa\archive.hpp:250: /// Public archive reader for supported Bethesda archive files.
+include\libbsa\archive.hpp:252: /// Use `open()` for fallible construction. A successfully opened reader exposes
+include\libbsa\archive.hpp:254: /// synchronous extraction for the archive variants implemented by libbsa.
+include\libbsa\archive.hpp:256: /// Thread-safety: independently opened readers may be used concurrently; one
+include\libbsa\archive.hpp:257: /// reader may run concurrent const extraction calls only with distinct sinks as
+include\libbsa\archive.hpp:259: class archive_reader
+include\libbsa\archive.hpp:268: static LIBBSA_API result<archive_reader> open(std::string_view host_path);
+include\libbsa\archive.hpp:271: [[nodiscard]] LIBBSA_API result<archive_metadata> metadata() const;
+include\libbsa\archive.hpp:274: [[nodiscard]] LIBBSA_API result<std::vector<entry_metadata>> entries() const;
+include\libbsa\archive.hpp:281: [[nodiscard]] LIBBSA_API result<std::optional<entry_metadata>> find(std::string_view path) const;
+include\libbsa\archive.hpp:284: [[nodiscard]] LIBBSA_API result<bool> contains(std::string_view path) const;
+include\libbsa\archive.hpp:286: /// Extracts an entry by archive path into a synchronous caller-owned sink.
+include\libbsa\archive.hpp:287: [[nodiscard]] LIBBSA_API result<void> extract(std::string_view path, payload_sink &sink) const;
+include\libbsa\archive.hpp:289: /// Extracts an entry into a bounded in-memory byte vector convenience result.
+include\libbsa\archive.hpp:290: [[nodiscard]] LIBBSA_API result<std::vector<std::byte>> extract_bytes(std::string_view path) const;
+include\libbsa\archive.hpp:292: /// Extracts multiple request records into caller-created unique-path sinks.
+include\libbsa\archive.hpp:294: /// Setup failures such as an unopened reader or `worker_count == 0` fail the
+include\libbsa\archive.hpp:295: /// outer result. Lookup, sink-creation, and extraction failures are recorded
+include\libbsa\archive.hpp:298: /// the first occurrence owns lookup, sink creation, and extraction, while
+include\libbsa\archive.hpp:301: [[nodiscard]] LIBBSA_API result<std::vector<bulk_extract_entry_result>> extract_entries(
+include\libbsa\archive.hpp:302: std::span<const bulk_extract_request> requests,

@@ -1,0 +1,18 @@
+{
+  "id": "24ebed80-8b94-4fef-9d1e-52a538d0f6b7",
+  "runtime": "bash",
+  "purpose": "rerun exact configure preset after cache stabilization",
+  "script_chars": 181,
+  "started_at": "2026-05-20T01:35:42.928Z",
+  "finished_at": "2026-05-20T01:35:43.719Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 791,
+  "stdout_bytes": 208,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\24ebed80-8b94-4fef-9d1e-52a538d0f6b7.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\24ebed80-8b94-4fef-9d1e-52a538d0f6b7.stderr"
+}

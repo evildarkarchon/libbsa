@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T01",
+  "unitId": "M001-k9wo8b/S01/T01",
+  "timestamp": 1779240722583,
+  "passed": false,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "test -s docs/coverage-audit-matrix.md\ngrep -q \"TES3 BSA\" docs/coverage-audit-matrix.md\ngrep -q \"TES4-family BSA\" docs/coverage-audit-matrix.md\ngrep -q \"BA2 GNRL\" docs/coverage-audit-matrix.md\ngrep -q \"BA2 DX10\" docs/coverage-audit-matrix.md\ngrep -q \"Ranked gap list\" docs/coverage-audit-matrix.md\ngrep -q \"coverage-audit-matrix.md\" docs/compatibility-evidence.md",
+      "exitCode": 1,
+      "durationMs": 148,
+      "verdict": "fail"
+    }
+  ],
+  "retryAttempt": 1,
+  "maxRetries": 3
+}

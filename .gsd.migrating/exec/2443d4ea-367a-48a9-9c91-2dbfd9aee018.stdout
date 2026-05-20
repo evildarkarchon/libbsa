@@ -1,0 +1,4 @@
+TES3 BSA: missing_axes=none; nongreen=[["Compatibility warnings","N/A",false,true,true]]
+TES4-family BSA: missing_axes=none; nongreen=[["Validation API behavior","Partial",true,true,true]]
+BA2 GNRL: missing_axes=none; nongreen=[["Validation API behavior","Partial",true,true,true]]
+BA2 DX10: missing_axes=none; nongreen=[["Validation API behavior","Partial",true,true,true],["Compatibility warnings","N/A",false,true,true]]

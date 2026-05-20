@@ -1,0 +1,18 @@
+{
+  "id": "240972cc-0591-4bd3-b388-ed9fe8f6850b",
+  "runtime": "bash",
+  "purpose": "Run doc token smoke checks before C++ build",
+  "script_chars": 1434,
+  "started_at": "2026-05-20T02:14:27.224Z",
+  "finished_at": "2026-05-20T02:14:27.306Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 82,
+  "stdout_bytes": 25,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\240972cc-0591-4bd3-b388-ed9fe8f6850b.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\240972cc-0591-4bd3-b388-ed9fe8f6850b.stderr"
+}

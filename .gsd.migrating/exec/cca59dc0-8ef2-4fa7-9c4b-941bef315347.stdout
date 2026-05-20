@@ -1,0 +1,3 @@
+local_game_fixture_tests.cpp (2)
+ - local game fixtures are opt-in
+ - BSArchPro-derived expected fixture comparisons are opt-in

@@ -1,0 +1,6 @@
+writer_hotspot_policy_tests.cpp (5)
+ - writer_hotspot_policy requires TES4 dedupe candidate narrowing before exact equality
+ - writer_hotspot_policy requires BA2 GNRL staged dedupe identity before exact equality
+ - writer_hotspot_policy requires BA2 GNRL disk-source change diagnostics
+ - writer_hotspot_policy requires truthful BA2 DX10 lifecycle docs
+ - writer_hotspot_policy keeps public BA2 DX10 writer declaration shape stable

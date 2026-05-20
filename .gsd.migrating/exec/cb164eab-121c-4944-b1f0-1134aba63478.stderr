@@ -1,0 +1,9 @@
+CMake Error at C:/vcpkg/scripts/buildsystems/vcpkg.cmake:953 (message):
+  vcpkg install failed.  See logs for more information:
+  J:\libbsa\build\windows-msvc-debug-static\vcpkg-manifest-install.log
+Call Stack (most recent call first):
+  build/windows-msvc-debug-static/CMakeFiles/4.3.2/CMakeSystem.cmake:6 (include)
+  CMakeLists.txt:3 (project)
+
+
+CMake Configure step failed.  Build files cannot be regenerated correctly.

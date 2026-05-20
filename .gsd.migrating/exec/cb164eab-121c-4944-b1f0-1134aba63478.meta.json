@@ -1,0 +1,18 @@
+{
+  "id": "cb164eab-121c-4944-b1f0-1134aba63478",
+  "runtime": "bash",
+  "purpose": "build libbsa_tests after coverage matrix policy test addition",
+  "script_chars": 211,
+  "started_at": "2026-05-20T01:34:10.943Z",
+  "finished_at": "2026-05-20T01:34:11.254Z",
+  "exit_code": 127,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 311,
+  "stdout_bytes": 617,
+  "stderr_bytes": 423,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\cb164eab-121c-4944-b1f0-1134aba63478.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\cb164eab-121c-4944-b1f0-1134aba63478.stderr"
+}

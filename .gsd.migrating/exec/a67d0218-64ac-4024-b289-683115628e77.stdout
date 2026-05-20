@@ -1,0 +1,35 @@
+BA2 DX10 => 20 docs/integration-examples.md(2) docs/target-format-guide.md(7) docs/coverage-audit-matrix.md(10) tests/unit/target_format_policy_tests.cpp(1)
+finalize => 2 docs/integration-examples.md(2)
+worker_count => 15 docs/integration-examples.md(1) docs/target-format-guide.md(1) docs/thread-safety.md(2) tests/package-consumer/main.cpp(5) tests/unit/target_format_policy_tests.cpp(1) tests/unit/public_include_boundary_tests.cpp(5)
+result< => 38 docs/integration-examples.md(7) docs/target-format-guide.md(1) tests/package-consumer/main.cpp(9) tests/unit/public_include_boundary_tests.cpp(21)
+error_code => 8 tests/package-consumer/main.cpp(5) tests/unit/public_include_boundary_tests.cpp(3)
+archive path => 3 docs/thread-safety.md(1) docs/compatibility-evidence.md(1) tests/package-consumer/main.cpp(1)
+virtual path => 4 docs/integration-examples.md(4)
+filesystem => 18 docs/integration-examples.md(1) docs/target-format-guide.md(2) docs/thread-safety.md(1) tests/unit/docs_policy_tests.cpp(4) tests/unit/target_format_policy_tests.cpp(5) tests/unit/public_include_boundary_tests.cpp(5)
+compatibility warning => 14 docs/api-mainpage.md(1) docs/integration-examples.md(1) docs/target-format-guide.md(2) docs/compatibility-evidence.md(2) docs/coverage-audit-matrix.md(7) tests/unit/target_format_policy_tests.cpp(1)
+package-consumer => 12 docs/integration-examples.md(1) docs/compatibility-evidence.md(1) docs/coverage-audit-matrix.md(10)
+COV-GAP-003 => 2 docs/coverage-audit-matrix.md(2)
+COV-GAP-001 => 4 docs/coverage-audit-matrix.md(4)
+
+package consumer symbols:
+      libbsa::result<std::size_t> write(std::span<const std::byte> bytes) override
+      libbsa::result<std::unique_ptr<libbsa::payload_sink>> create(std::string_view path,
+    libbsa::result<void> example_open_list_extract(std::string_view archive_host_path,
+      auto opened = libbsa::archive_reader::open(archive_host_path);
+        return libbsa::error{libbsa::error_code::not_found, "archive path is not present"};
+    libbsa::result<std::vector<libbsa::bulk_extract_entry_result>> example_bulk_extract(
+      auto opened = libbsa::archive_reader::open(archive_host_path);
+    libbsa::result<void> example_create_tes3_bsa(std::string_view source_host_path, std::string_view output_host_path)
+    libbsa::result<void> example_create_tes4_bsa(std::string_view source_host_path, std::string_view output_host_path)
+    libbsa::result<void> example_create_ba2_gnrl(std::string_view source_host_path, std::string_view output_host_path)
+    libbsa::result<void> example_create_ba2_dx10(std::string_view dds_host_path, std::string_view output_host_path)
+      auto opened = libbsa::archive_reader::open(archive_host_path);
+      if (code == libbsa::error_code::io_error)
+      if (code == libbsa::error_code::format_error)
+      if (code == libbsa::error_code::unsupported)
+    libbsa::result<libbsa::validation_report> example_validate_archive(std::string_view archive_host_path)
+      auto report = libbsa::validate_archive(archive_host_path, options);
+      auto opened = libbsa::archive_reader::open("consumer-smoke-missing.bsa");
+      auto validated = libbsa::validate_archive("consumer-smoke-missing.bsa");
+    auto result = libbsa::validate_archive("consumer-smoke.bsa");
+    return result.error().code == libbsa::error_code::io_error ? 0 : 1;

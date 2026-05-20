@@ -1,0 +1,18 @@
+{
+  "id": "a770763b-6524-4cd8-9a09-afa5f11c6f7d",
+  "runtime": "bash",
+  "purpose": "configure windows-msvc-debug-static with manifest install disabled for local verification",
+  "script_chars": 210,
+  "started_at": "2026-05-20T01:34:23.825Z",
+  "finished_at": "2026-05-20T01:34:27.159Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 3334,
+  "stdout_bytes": 572,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\a770763b-6524-4cd8-9a09-afa5f11c6f7d.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\a770763b-6524-4cd8-9a09-afa5f11c6f7d.stderr"
+}

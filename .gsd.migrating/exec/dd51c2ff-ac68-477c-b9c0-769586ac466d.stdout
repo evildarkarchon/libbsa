@@ -1,0 +1,55 @@
+OK include/libbsa/libbsa.hpp size=172
+OK include/libbsa/archive.hpp size=12779
+OK include/libbsa/writer.hpp size=23506
+OK include/libbsa/validation.hpp size=5053
+OK include/libbsa/result.hpp size=4150
+OK docs/api-mainpage.md size=1361
+OK docs/integration-examples.md size=4596
+OK docs/target-format-guide.md size=9552
+OK docs/thread-safety.md size=4733
+OK docs/compatibility-evidence.md size=4324
+OK docs/coverage-audit-matrix.md size=22692
+OK tests/package-consumer/main.cpp size=9067
+OK tests/package-consumer/smoke.cmake size=3967
+OK tests/package-consumer/verify-runtime-dll-copy.cmake size=2966
+OK tests/unit/public_include_boundary_tests.cpp size=17078
+OK tests/unit/export_surface_policy_tests.cpp size=3962
+OK tests/unit/docs_policy_tests.cpp size=5468
+OK tests/unit/target_format_policy_tests.cpp size=7412
+OK tests/unit/validation_api_tests.cpp size=16391
+OK tests/CMakeLists.txt size=14705
+
+policy test refs:
+public_include_boundary_tests.cpp: registered
+export_surface_policy_tests.cpp: registered
+docs_policy_tests.cpp: registered
+target_format_policy_tests.cpp: registered
+validation_api_tests.cpp: registered
+coverage_audit_matrix_docs_tests.cpp: registered
+
+doc top headings:
+docs/api-mainpage.md
+  # @mainpage libbsa Public API
+docs/integration-examples.md
+  # Integration Examples
+  ## `example_open_list_extract`
+  ## `example_bulk_extract`
+  ## `example_create_tes3_bsa`
+  ## `example_create_tes4_bsa`
+  ## `example_create_ba2_gnrl`
+  ## `example_create_ba2_dx10`
+  ## `example_handle_result_errors`
+  ## `example_validate_archive`
+docs/coverage-audit-matrix.md
+  # Coverage Audit Matrix
+  ## Scope and evidence policy
+  ### Status vocabulary
+  ### Default evidence sources
+  ## Family/axis matrix
+  ### TES3 BSA
+  ### TES4-family BSA
+  ### BA2 GNRL
+  ### BA2 DX10
+  ## What `compatibility_matrix.json` is and is not
+  ## Advisory local evidence
+  ## Ranked gap list

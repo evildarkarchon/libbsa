@@ -1,0 +1,18 @@
+{
+  "id": "46e73de5-12da-4fb0-9a3b-2fc1ffe56634",
+  "runtime": "bash",
+  "purpose": "rerun exact libbsa_tests build after exact configure preset",
+  "script_chars": 211,
+  "started_at": "2026-05-20T01:35:48.835Z",
+  "finished_at": "2026-05-20T01:35:49.957Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 1122,
+  "stdout_bytes": 1442,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\46e73de5-12da-4fb0-9a3b-2fc1ffe56634.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\46e73de5-12da-4fb0-9a3b-2fc1ffe56634.stderr"
+}

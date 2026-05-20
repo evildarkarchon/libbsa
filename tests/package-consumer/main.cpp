@@ -85,6 +85,23 @@ namespace
       return libbsa::error{libbsa::error_code::not_found, "archive path is not present"};
     }
 
+    auto present = reader.contains(archive_virtual_path);
+    if (!present)
+    {
+      return present.error();
+    }
+    if (!present.value())
+    {
+      return libbsa::error{libbsa::error_code::not_found, "archive path is not present"};
+    }
+
+    auto buffered_payload = reader.extract_bytes(archive_virtual_path);
+    if (!buffered_payload)
+    {
+      return buffered_payload.error();
+    }
+    [[maybe_unused]] const auto buffered_payload_size = buffered_payload.value().size();
+
     return reader.extract(archive_virtual_path, sink);
   }
 

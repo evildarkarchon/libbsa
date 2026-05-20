@@ -1,0 +1,18 @@
+{
+  "id": "4e893992-a5b2-4621-b8d2-6fd4d08b4e82",
+  "runtime": "bash",
+  "purpose": "configure windows-msvc-debug-static with Windows appdata env for vcpkg",
+  "script_chars": 139,
+  "started_at": "2026-05-20T01:33:22.902Z",
+  "finished_at": "2026-05-20T01:33:23.322Z",
+  "exit_code": 1,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 420,
+  "stdout_bytes": 360,
+  "stderr_bytes": 348,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\4e893992-a5b2-4621-b8d2-6fd4d08b4e82.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\4e893992-a5b2-4621-b8d2-6fd4d08b4e82.stderr"
+}

@@ -1,0 +1,18 @@
+EXISTS CMakePresets.json
+MISSING tests/unit/CMakeLists.txt
+EXISTS CMakeLists.txt
+10:      "name": "windows-msvc-debug-static",
+23:      "name": "windows-msvc-debug-shared",
+36:      "name": "windows-msvc-release-static",
+49:      "name": "windows-msvc-release-shared",
+62:      "name": "windows-msvc-asan-static",
+78:      "name": "windows-msvc-debug-static",
+83:      "name": "windows-msvc-debug-shared",
+88:      "name": "windows-msvc-release-static",
+93:      "name": "windows-msvc-release-shared",
+98:      "name": "windows-msvc-asan-static",
+105:      "name": "windows-msvc-debug-static",
+113:      "name": "windows-msvc-debug-shared",
+121:      "name": "windows-msvc-release-static",
+129:      "name": "windows-msvc-release-shared",
+137:      "name": "windows-msvc-asan-static",

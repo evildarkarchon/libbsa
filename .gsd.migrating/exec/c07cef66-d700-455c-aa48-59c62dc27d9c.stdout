@@ -1,0 +1,43 @@
+== S01 docs matrix smoke checks ==
+docs matrix smoke checks: PASS
+== CMake configure ==
+-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+-- Configuring done (0.6s)
+-- Generating done (0.1s)
+-- Build files have been written to: J:/libbsa/build/windows-msvc-debug-static
+== Build libbsa_tests ==
+MSBuild version 18.6.3+84d3e95b4 for .NET Framework
+
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\ZERO_CHECK.vcxproj]
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\libbsa.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\Debug\libbsa.lib
+C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Microsoft\VC\v180\Microsoft.CppBuild.targets(561,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [J:\libbsa\build\windows-msvc-debug-static\tests\libbsa_tests.vcxproj]
+  Scanning sources for module dependencies...
+  libbsa_tests.vcxproj -> J:\libbsa\build\windows-msvc-debug-static\tests\Debug\libbsa_tests.exe
+== CTest coverage_audit_matrix ==
+Test project J:/libbsa/build/windows-msvc-debug-static
+    Start  62: coverage_audit_matrix preserves status vocabulary and ranked gaps
+1/7 Test  #62: coverage_audit_matrix preserves status vocabulary and ranked gaps ..............   Passed    0.13 sec
+    Start  92: coverage_audit_matrix is discoverable from compatibility evidence catalog
+2/7 Test  #92: coverage_audit_matrix is discoverable from compatibility evidence catalog ......   Passed    0.01 sec
+    Start 116: coverage_audit_matrix preserves every required support axis
+3/7 Test #116: coverage_audit_matrix preserves every required support axis ....................   Passed    0.01 sec
+    Start 135: coverage_audit_matrix stays free of internal planning identifiers
+4/7 Test #135: coverage_audit_matrix stays free of internal planning identifiers ..............   Passed    0.02 sec
+    Start 145: coverage_audit_matrix names compatibility matrix as malformed submatrix only
+5/7 Test #145: coverage_audit_matrix names compatibility matrix as malformed submatrix only ...   Passed    0.02 sec
+    Start 243: coverage_audit_matrix separates advisory local evidence from default proof
+6/7 Test #243: coverage_audit_matrix separates advisory local evidence from default proof .....   Passed    0.01 sec
+    Start 320: coverage_audit_matrix lists every current archive family
+7/7 Test #320: coverage_audit_matrix lists every current archive family .......................   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 7
+
+Label Time Summary:
+coverage_audit_matrix    =   0.21 sec*proc (7 tests)
+docs_policy              =   0.21 sec*proc (7 tests)
+unit                     =   0.21 sec*proc (7 tests)
+
+Total Test time (real) =   0.23 sec
+S01 verification: PASS

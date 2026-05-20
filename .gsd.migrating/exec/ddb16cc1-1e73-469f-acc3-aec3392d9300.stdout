@@ -1,0 +1,2 @@
+include/libbsa/archive.hpp=yes; include/libbsa/result.hpp=yes; src/formats/ba2=yes; src/formats/bsa=yes; src/formats/tes3=no; src/compression=no; src/texture=yes; tests=yes
+Brownfield compatibility-hardening target: public API + BSA/BA2/TES3 formats + compression + texture + tests.

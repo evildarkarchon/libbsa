@@ -1,0 +1,18 @@
+{
+  "id": "da06089a-9fc0-4056-b091-9e3e77420da6",
+  "runtime": "bash",
+  "purpose": "T02 verification: Windows cmd multi-command gate compatibility for prior smoke check",
+  "script_chars": 230,
+  "started_at": "2026-05-20T02:16:10.639Z",
+  "finished_at": "2026-05-20T02:16:11.149Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 510,
+  "stdout_bytes": 0,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\da06089a-9fc0-4056-b091-9e3e77420da6.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\da06089a-9fc0-4056-b091-9e3e77420da6.stderr"
+}

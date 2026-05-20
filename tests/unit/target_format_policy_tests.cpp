@@ -92,6 +92,10 @@ TEST_CASE("target_format_policy package consumer examples have docs and CTest sm
 {
   const auto root = source_root();
   const auto docs = read_text_file(root / "docs/integration-examples.md");
+  const auto package_source = read_text_file(root / "tests/package-consumer/main.cpp");
+  const auto package_cmake = read_text_file(root / "tests/package-consumer/CMakeLists.txt");
+  const auto smoke_cmake = read_text_file(root / "tests/package-consumer/smoke.cmake");
+  const auto runtime_copy_check = read_text_file(root / "tests/package-consumer/verify-runtime-dll-copy.cmake");
   const auto tests_cmake = read_text_file(root / "tests/CMakeLists.txt");
 
   constexpr std::array<std::string_view, 8> examples{
@@ -109,6 +113,57 @@ TEST_CASE("target_format_policy package consumer examples have docs and CTest sm
   {
     INFO("Missing integration example: " << example);
     REQUIRE(docs.find("## `" + std::string{example} + "`") != std::string::npos);
+    REQUIRE(package_source.find(std::string{example}) != std::string::npos);
+  }
+
+  REQUIRE(package_source.find("#include <libbsa/libbsa.hpp>") != std::string::npos);
+  constexpr std::array<std::string_view, 4> forbidden_direct_public_includes{
+      "#include <libbsa/archive.hpp>",
+      "#include <libbsa/writer.hpp>",
+      "#include <libbsa/validation.hpp>",
+      "#include <libbsa/result.hpp>",
+  };
+  for (const auto include : forbidden_direct_public_includes)
+  {
+    INFO("Package consumer must use umbrella header only: " << include);
+    REQUIRE(package_source.find(std::string{include}) == std::string::npos);
+  }
+
+  constexpr std::array<std::pair<std::string_view, std::string_view>, 4> helper_flows{
+      std::pair{"find()", "reader.find("},
+      std::pair{"contains()", "reader.contains("},
+      std::pair{"extract()", "reader.extract("},
+      std::pair{"extract_bytes()", "reader.extract_bytes("},
+  };
+  for (const auto &[doc_token, source_token] : helper_flows)
+  {
+    INFO("Missing documented lookup/extraction helper flow: " << doc_token);
+    REQUIRE(docs.find(std::string{doc_token}) != std::string::npos);
+    REQUIRE(package_source.find(std::string{source_token}) != std::string::npos);
+  }
+
+  REQUIRE(package_cmake.find("find_package(libbsa CONFIG REQUIRED)") != std::string::npos);
+  REQUIRE(package_cmake.find("target_link_libraries(libbsa_package_consumer PRIVATE libbsa::libbsa)") !=
+          std::string::npos);
+  REQUIRE(package_cmake.find("add_test(NAME libbsa_package_consumer_run") != std::string::npos);
+  REQUIRE(package_source.find("consumer-smoke.bsa") != std::string::npos);
+  REQUIRE(package_source.find("libbsa::error_code::io_error") != std::string::npos);
+
+  constexpr std::array<std::string_view, 6> forbidden_fixture_dependencies{
+      ".gsd/",
+      ".planning/",
+      ".audits/",
+      "TES5Edit/",
+      "LIBBSA_GAME_FIXTURES",
+      "LIBBSA_BSARCHPRO_EXPECTED",
+  };
+  for (const auto token : forbidden_fixture_dependencies)
+  {
+    INFO("Package-consumer smoke must not depend on ignored/local fixtures: " << token);
+    REQUIRE(package_source.find(std::string{token}) == std::string::npos);
+    REQUIRE(package_cmake.find(std::string{token}) == std::string::npos);
+    REQUIRE(smoke_cmake.find(std::string{token}) == std::string::npos);
+    REQUIRE(runtime_copy_check.find(std::string{token}) == std::string::npos);
   }
 
   REQUIRE(tests_cmake.find("NAME package_consumer_smoke") != std::string::npos);

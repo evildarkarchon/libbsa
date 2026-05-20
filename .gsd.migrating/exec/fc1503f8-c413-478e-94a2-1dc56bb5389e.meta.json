@@ -1,0 +1,18 @@
+{
+  "id": "fc1503f8-c413-478e-94a2-1dc56bb5389e",
+  "runtime": "bash",
+  "purpose": "subagent-check",
+  "script_chars": 16,
+  "started_at": "2026-05-20T01:46:47.146Z",
+  "finished_at": "2026-05-20T01:46:47.178Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 32,
+  "stdout_bytes": 12,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\fc1503f8-c413-478e-94a2-1dc56bb5389e.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\fc1503f8-c413-478e-94a2-1dc56bb5389e.stderr"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "0389aa39-8ef6-4010-aee1-cff62410548c",
+  "runtime": "bash",
+  "purpose": "Summarize repository root files relevant to adding command wrappers",
+  "script_chars": 227,
+  "started_at": "2026-05-20T02:11:18.204Z",
+  "finished_at": "2026-05-20T02:11:18.285Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 81,
+  "stdout_bytes": 281,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\0389aa39-8ef6-4010-aee1-cff62410548c.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\0389aa39-8ef6-4010-aee1-cff62410548c.stderr"
+}

@@ -1,0 +1,3 @@
+test=test
+grep=/usr/bin/grep
+cmake=/c/Program Files/CMake/bin/cmake

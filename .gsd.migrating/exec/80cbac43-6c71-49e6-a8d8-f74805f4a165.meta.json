@@ -1,0 +1,18 @@
+{
+  "id": "80cbac43-6c71-49e6-a8d8-f74805f4a165",
+  "runtime": "python",
+  "purpose": "summarize coverage matrix axes/statuses",
+  "script_chars": 1112,
+  "started_at": "2026-05-20T01:40:34.839Z",
+  "finished_at": "2026-05-20T01:40:34.913Z",
+  "exit_code": 9009,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 74,
+  "stdout_bytes": 0,
+  "stderr_bytes": 177,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\80cbac43-6c71-49e6-a8d8-f74805f4a165.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\80cbac43-6c71-49e6-a8d8-f74805f4a165.stderr"
+}

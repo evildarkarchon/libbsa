@@ -1,0 +1,113 @@
+{
+  "compiledAt": "2026-05-20T02:10:07.411Z",
+  "milestoneId": "M001-k9wo8b",
+  "pipeline": {
+    "clarifyRoundLimit": 3,
+    "researchSynthesized": true,
+    "draftContextIncluded": false,
+    "finalizedContextIncluded": true,
+    "sourcePhase": "executing"
+  },
+  "nodes": [
+    {
+      "id": "execute-task:M001-k9wo8b:S01:T01",
+      "kind": "unit",
+      "dependsOn": [],
+      "writes": [
+        "docs/coverage-audit-matrix.md",
+        "docs/compatibility-evidence.md"
+      ],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S01.T01",
+        "title": "Added a public coverage audit matrix that maps current TES3 BSA, TES4-family BSA, BA2 GNRL, and BA2 DX10 support claims to default evidence and ranked gaps.",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "execute-task:M001-k9wo8b:S01:T02",
+      "kind": "unit",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S01:T01"
+      ],
+      "writes": [
+        "tests/unit/coverage_audit_matrix_docs_tests.cpp",
+        "tests/CMakeLists.txt"
+      ],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S01.T02",
+        "title": "Added Catch2 policy coverage that locks the coverage audit matrix contract into the default test suite.",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "complete-slice:M001-k9wo8b:S01",
+      "kind": "verification",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S01:T02"
+      ],
+      "metadata": {
+        "unitType": "complete-slice",
+        "unitId": "M001-k9wo8b.S01",
+        "title": "S01",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "execute-task:M001-k9wo8b:S02:T01",
+      "kind": "unit",
+      "dependsOn": [],
+      "writes": [
+        "docs/public-api-reality-check.md"
+      ],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S02.T01",
+        "title": "Created a public API reality-check audit that maps libbsa's real reader, validation, extraction, result, and writer surfaces to existing proof and routed follow-up gaps without adding a facade.",
+        "status": "complete"
+      }
+    },
+    {
+      "id": "execute-task:M001-k9wo8b:S02:T02",
+      "kind": "unit",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S02:T01"
+      ],
+      "writes": [],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S02.T02",
+        "title": "Clarify consumer docs and examples",
+        "status": "pending"
+      }
+    },
+    {
+      "id": "execute-task:M001-k9wo8b:S02:T03",
+      "kind": "unit",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S02:T02"
+      ],
+      "writes": [],
+      "metadata": {
+        "unitType": "execute-task",
+        "unitId": "M001-k9wo8b.S02.T03",
+        "title": "Strengthen package-consumer and policy proof",
+        "status": "pending"
+      }
+    },
+    {
+      "id": "complete-slice:M001-k9wo8b:S02",
+      "kind": "verification",
+      "dependsOn": [
+        "execute-task:M001-k9wo8b:S02:T03"
+      ],
+      "metadata": {
+        "unitType": "complete-slice",
+        "unitId": "M001-k9wo8b.S02",
+        "title": "S02",
+        "status": "pending"
+      }
+    }
+  ]
+}

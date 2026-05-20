@@ -1,0 +1,18 @@
+{
+  "id": "6da94998-bc1b-4ceb-8a53-69e9e48339df",
+  "runtime": "bash",
+  "purpose": "Locate D009 decision text and audit target existence",
+  "script_chars": 642,
+  "started_at": "2026-05-20T02:05:52.278Z",
+  "finished_at": "2026-05-20T02:05:52.506Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 228,
+  "stdout_bytes": 2392,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\6da94998-bc1b-4ceb-8a53-69e9e48339df.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\6da94998-bc1b-4ceb-8a53-69e9e48339df.stderr"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "1e36d8c2-c6f5-4490-bf22-ce47bd8c478a",
+  "runtime": "bash",
+  "purpose": "inspect appdata env vars for vcpkg configure failure",
+  "script_chars": 96,
+  "started_at": "2026-05-20T01:33:17.080Z",
+  "finished_at": "2026-05-20T01:33:17.111Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 31,
+  "stdout_bytes": 50,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\1e36d8c2-c6f5-4490-bf22-ce47bd8c478a.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\1e36d8c2-c6f5-4490-bf22-ce47bd8c478a.stderr"
+}

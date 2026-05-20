@@ -1,0 +1,18 @@
+{
+  "id": "60c6aa5a-a075-43b4-87d9-bc0a5f5f49dd",
+  "runtime": "python",
+  "purpose": "Validate S01 planning paths and summarize existing proof files",
+  "script_chars": 1747,
+  "started_at": "2026-05-20T01:22:06.551Z",
+  "finished_at": "2026-05-20T01:22:06.619Z",
+  "exit_code": 9009,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 68,
+  "stdout_bytes": 0,
+  "stderr_bytes": 177,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\60c6aa5a-a075-43b4-87d9-bc0a5f5f49dd.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\60c6aa5a-a075-43b4-87d9-bc0a5f5f49dd.stderr"
+}

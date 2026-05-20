@@ -1,0 +1,4 @@
+-- Running vcpkg install
+both %LOCALAPPDATA% and %APPDATA% were unreadable
+-- Running vcpkg install - failed
+-- Configuring incomplete, errors occurred!

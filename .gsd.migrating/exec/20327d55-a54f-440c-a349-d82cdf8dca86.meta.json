@@ -1,0 +1,18 @@
+{
+  "id": "20327d55-a54f-440c-a349-d82cdf8dca86",
+  "runtime": "bash",
+  "purpose": "test-subagent-call",
+  "script_chars": 10,
+  "started_at": "2026-05-20T01:50:38.152Z",
+  "finished_at": "2026-05-20T01:50:38.184Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 32,
+  "stdout_bytes": 6,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\20327d55-a54f-440c-a349-d82cdf8dca86.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\20327d55-a54f-440c-a349-d82cdf8dca86.stderr"
+}

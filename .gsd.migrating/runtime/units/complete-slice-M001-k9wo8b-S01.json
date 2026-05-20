@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "unitType": "complete-slice",
+  "unitId": "M001-k9wo8b/S01",
+  "startedAt": 1779241005658,
+  "updatedAt": 1779241467159,
+  "phase": "finalized",
+  "wrapupWarningSent": false,
+  "continueHereFired": false,
+  "timeoutAt": null,
+  "lastProgressAt": 1779241467158,
+  "progressCount": 0,
+  "lastProgressKind": "finalize-success",
+  "recoveryAttempts": 0
+}

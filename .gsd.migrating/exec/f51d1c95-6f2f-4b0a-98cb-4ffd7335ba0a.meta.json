@@ -1,0 +1,18 @@
+{
+  "id": "f51d1c95-6f2f-4b0a-98cb-4ffd7335ba0a",
+  "runtime": "bash",
+  "purpose": "windows-safe slice-level docs matrix presence check",
+  "script_chars": 524,
+  "started_at": "2026-05-20T01:35:32.979Z",
+  "finished_at": "2026-05-20T01:35:33.061Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 82,
+  "stdout_bytes": 41,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\f51d1c95-6f2f-4b0a-98cb-4ffd7335ba0a.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\f51d1c95-6f2f-4b0a-98cb-4ffd7335ba0a.stderr"
+}

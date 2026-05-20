@@ -1,0 +1,18 @@
+{
+  "id": "2443d4ea-367a-48a9-9c91-2dbfd9aee018",
+  "runtime": "node",
+  "purpose": "summarize coverage matrix axes/statuses",
+  "script_chars": 1151,
+  "started_at": "2026-05-20T01:40:44.580Z",
+  "finished_at": "2026-05-20T01:40:44.614Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 34,
+  "stdout_bytes": 424,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\2443d4ea-367a-48a9-9c91-2dbfd9aee018.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\2443d4ea-367a-48a9-9c91-2dbfd9aee018.stderr"
+}

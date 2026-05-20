@@ -1,0 +1,18 @@
+{
+  "id": "2274e4b4-6905-4a8f-9795-b2f8558212f1",
+  "runtime": "bash",
+  "purpose": "Check Windows command availability for task verification tools",
+  "script_chars": 52,
+  "started_at": "2026-05-20T02:10:57.066Z",
+  "finished_at": "2026-05-20T02:10:57.127Z",
+  "exit_code": 0,
+  "signal": null,
+  "timed_out": false,
+  "duration_ms": 61,
+  "stdout_bytes": 106,
+  "stderr_bytes": 0,
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "stdout_path": "J:\\libbsa\\.gsd\\exec\\2274e4b4-6905-4a8f-9795-b2f8558212f1.stdout",
+  "stderr_path": "J:\\libbsa\\.gsd\\exec\\2274e4b4-6905-4a8f-9795-b2f8558212f1.stderr"
+}
