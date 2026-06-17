@@ -1,0 +1,1 @@
+{"nodes": [], "edges": [{"source": "libbsa_tes4_bsa_writer", "target": "detail_bethesda_hash_hash_tes4", "relation": "calls", "confidence": "INFERRED", "confidence_score": 0.95, "source_file": "src/formats/bsa/tes4_bsa_prepare.cpp", "source_location": null, "weight": 1.0}], "hyperedges": []}
