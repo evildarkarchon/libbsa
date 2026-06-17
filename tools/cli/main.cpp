@@ -1451,7 +1451,9 @@ namespace
       requests.reserve(entries.value().size());
       for (const auto &entry : entries.value())
       {
-        requests.push_back(libbsa::bulk_extract_request{entry.path});
+        // Preserve archive spelling for destination paths; extract_entries still
+        // normalizes the request for lookup.
+        requests.push_back(libbsa::bulk_extract_request{entry.original_path});
       }
     }
 

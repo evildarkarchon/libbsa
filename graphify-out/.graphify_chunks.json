@@ -3,7 +3,6 @@
     "D:\\repos\\libbsa\\AGENTS.md",
     "D:\\repos\\libbsa\\CLAUDE.md",
     "D:\\repos\\libbsa\\CMakeLists.txt",
-    "D:\\repos\\libbsa\\CONCERNS.md",
     "D:\\repos\\libbsa\\README.md",
     "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\SKILL.md",
     "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\add-watch.md",
@@ -21,10 +20,10 @@
     "D:\\repos\\libbsa\\.pi\\skills\\openspec-continue-change\\SKILL.md",
     "D:\\repos\\libbsa\\.pi\\skills\\openspec-explore\\SKILL.md",
     "D:\\repos\\libbsa\\.pi\\skills\\openspec-ff-change\\SKILL.md",
-    "D:\\repos\\libbsa\\.pi\\skills\\openspec-new-change\\SKILL.md"
+    "D:\\repos\\libbsa\\.pi\\skills\\openspec-new-change\\SKILL.md",
+    "D:\\repos\\libbsa\\.pi\\skills\\openspec-onboard\\SKILL.md"
   ],
   [
-    "D:\\repos\\libbsa\\.pi\\skills\\openspec-onboard\\SKILL.md",
     "D:\\repos\\libbsa\\.pi\\skills\\openspec-propose\\SKILL.md",
     "D:\\repos\\libbsa\\.pi\\skills\\openspec-sync-specs\\SKILL.md",
     "D:\\repos\\libbsa\\.pi\\skills\\openspec-verify-change\\SKILL.md",
@@ -45,10 +44,10 @@
     "D:\\repos\\libbsa\\openspec\\specs\\cli-archive-extraction\\spec.md",
     "D:\\repos\\libbsa\\openspec\\specs\\cli-archive-inspection\\spec.md",
     "D:\\repos\\libbsa\\openspec\\specs\\cli-archive-packing\\spec.md",
-    "D:\\repos\\libbsa\\openspec\\specs\\cli-foundation\\spec.md"
+    "D:\\repos\\libbsa\\openspec\\specs\\cli-foundation\\spec.md",
+    "D:\\repos\\libbsa\\openspec\\specs\\compressed-extraction-memory-bounds\\spec.md"
   ],
   [
-    "D:\\repos\\libbsa\\openspec\\specs\\compressed-extraction-memory-bounds\\spec.md",
     "D:\\repos\\libbsa\\openspec\\specs\\dx10-snapshot-read-efficiency\\spec.md",
     "D:\\repos\\libbsa\\openspec\\specs\\dx10-snapshot-temp-directory-hardening\\spec.md",
     "D:\\repos\\libbsa\\openspec\\specs\\format-compatibility-constants\\spec.md",
