@@ -12,6 +12,7 @@ find_package(directxtex CONFIG REQUIRED)
 
 option(LIBBSA_BUILD_TESTS "Build libbsa tests" ${BUILD_TESTING})
 option(LIBBSA_BUILD_BENCHMARKS "Build libbsa benchmark tools" ON)
+option(LIBBSA_BUILD_CLI "Build the libbsa command-line tool (enabled by default for first-party smoke coverage)" ON)
 option(LIBBSA_ENABLE_MSVC_ASAN "Build targets with MSVC AddressSanitizer instrumentation" OFF)
 
 function(libbsa_enable_msvc_asan target_name)
@@ -177,6 +178,28 @@ target_sources(libbsa
   PRIVATE
     ${libbsa_library_sources}
 )
+
+if(LIBBSA_BUILD_CLI)
+  add_executable(bsa
+    tools/cli/main.cpp
+  )
+
+  target_link_libraries(bsa
+    PRIVATE
+      libbsa::libbsa
+  )
+
+  target_compile_features(bsa PRIVATE cxx_std_20)
+
+  target_compile_options(bsa
+    PRIVATE
+      $<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus>
+      $<$<CXX_COMPILER_ID:MSVC>:/W4>
+      $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
+  )
+
+  libbsa_enable_msvc_asan(bsa)
+endif()
 
 if(LIBBSA_BUILD_BENCHMARKS)
   add_executable(libbsa_benchmarks

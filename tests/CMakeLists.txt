@@ -331,6 +331,23 @@ set_tests_properties(package_consumer_smoke package_consumer_runtime_dll_copy PR
   LABELS "package_consumer;target_format_policy"
 )
 
+if(LIBBSA_BUILD_CLI AND TARGET bsa)
+  add_test(
+    NAME cli_integration
+    COMMAND ${CMAKE_COMMAND}
+      -DLIBBSA_CLI=$<TARGET_FILE:bsa>
+      -DLIBBSA_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+      -DLIBBSA_BINARY_DIR=${CMAKE_BINARY_DIR}
+      -DCONFIG=$<CONFIG>
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/cli/cli_integration.cmake
+  )
+
+  set_tests_properties(cli_integration PROPERTIES
+    LABELS "cli;fixture;roundtrip;malformed"
+    ENVIRONMENT "PATH=$<TARGET_FILE_DIR:bsa>;$<TARGET_FILE_DIR:libbsa>;$ENV{PATH}"
+  )
+endif()
+
 if(WIN32 AND BUILD_SHARED_LIBS)
   add_test(
     NAME shared_export_surface
