@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <span>
@@ -27,6 +28,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <shellapi.h>
 #endif
 
 namespace
@@ -296,7 +298,7 @@ namespace
   const option_spec *find_option_spec(std::span<const option_spec> specs, std::string_view name)
   {
     const auto found = std::find_if(specs.begin(), specs.end(), [name](const option_spec &spec)
-                                   { return spec.name == name; });
+                                    { return spec.name == name; });
     return found == specs.end() ? nullptr : &*found;
   }
 
@@ -428,7 +430,7 @@ namespace
   const format_descriptor *find_format(std::string_view token)
   {
     const auto found = std::find_if(format_table.begin(), format_table.end(), [token](const format_descriptor &descriptor)
-                                   { return descriptor.token == token; });
+                                    { return descriptor.token == token; });
     return found == format_table.end() ? nullptr : &*found;
   }
 
@@ -456,6 +458,238 @@ namespace
   {
     const auto text = path.generic_u8string();
     return {reinterpret_cast<const char *>(text.data()), text.size()};
+  }
+
+  libbsa::result<std::filesystem::path> path_from_utf8(std::string_view utf8_path)
+  {
+    if (utf8_path.find('\0') != std::string_view::npos)
+    {
+      return make_error(libbsa::error_code::invalid_argument, "path contains embedded NUL bytes");
+    }
+    if (utf8_path.empty())
+    {
+      return std::filesystem::path{};
+    }
+
+#if defined(_WIN32)
+    if (utf8_path.size() > static_cast<std::size_t>((std::numeric_limits<int>::max)()))
+    {
+      return make_error(libbsa::error_code::invalid_argument, "path is too long to decode as UTF-8");
+    }
+
+    // MSVC decodes narrow filesystem paths through the active ANSI code page, but archive paths are UTF-8.
+    const auto source_size = static_cast<int>(utf8_path.size());
+    const auto wide_size = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8_path.data(), source_size,
+                                                 nullptr, 0);
+    if (wide_size <= 0)
+    {
+      return make_error(libbsa::error_code::invalid_argument, "path is not valid UTF-8");
+    }
+
+    std::wstring wide_path(static_cast<std::size_t>(wide_size), L'\0');
+    const auto converted = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8_path.data(), source_size,
+                                                 wide_path.data(), wide_size);
+    if (converted != wide_size)
+    {
+      return make_error(libbsa::error_code::invalid_argument, "path is not valid UTF-8");
+    }
+
+    return std::filesystem::path{std::move(wide_path)};
+#else
+    std::u8string path;
+    path.reserve(utf8_path.size());
+    for (const unsigned char ch : utf8_path)
+    {
+      path.push_back(static_cast<char8_t>(ch));
+    }
+    return std::filesystem::path{std::move(path)};
+#endif
+  }
+
+#if defined(_WIN32)
+  char lower_ascii(char value) noexcept
+  {
+    if (value >= 'A' && value <= 'Z')
+    {
+      return static_cast<char>(value - 'A' + 'a');
+    }
+    return value;
+  }
+
+  bool ascii_iequals(std::string_view lhs, std::string_view rhs) noexcept
+  {
+    if (lhs.size() != rhs.size())
+    {
+      return false;
+    }
+    for (std::size_t index = 0; index < lhs.size(); ++index)
+    {
+      if (lower_ascii(lhs[index]) != rhs[index])
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  std::string_view windows_reserved_device_stem(std::string_view component) noexcept
+  {
+    auto stem = component.substr(0U, component.find('.'));
+    while (!stem.empty() && (stem.back() == ' ' || stem.back() == '.'))
+    {
+      stem.remove_suffix(1U);
+    }
+    return stem;
+  }
+
+  bool is_windows_reserved_device_name(std::string_view component) noexcept
+  {
+    const auto stem = windows_reserved_device_stem(component);
+    if (ascii_iequals(stem, "con") || ascii_iequals(stem, "prn") || ascii_iequals(stem, "aux") ||
+        ascii_iequals(stem, "nul") || ascii_iequals(stem, "conin$") || ascii_iequals(stem, "conout$"))
+    {
+      return true;
+    }
+    if (stem.size() >= 4U)
+    {
+      const auto prefix = stem.substr(0U, 3U);
+      if (!ascii_iequals(prefix, "com") && !ascii_iequals(prefix, "lpt"))
+      {
+        return false;
+      }
+
+      const auto suffix = stem.substr(3U);
+      // Win32 also treats superscript 1/2/3 as reserved COM/LPT suffixes.
+      return (suffix.size() == 1U && suffix.front() >= '1' && suffix.front() <= '9') ||
+             suffix == std::string_view{"\xC2\xB9", 2U} || suffix == std::string_view{"\xC2\xB2", 2U} ||
+             suffix == std::string_view{"\xC2\xB3", 2U};
+    }
+    return false;
+  }
+
+  libbsa::result<void> reject_windows_unsafe_destination_components(std::string_view normalized_entry)
+  {
+    for (std::size_t start = 0U; start <= normalized_entry.size();)
+    {
+      const auto slash = normalized_entry.find('/', start);
+      const auto end = slash == std::string_view::npos ? normalized_entry.size() : slash;
+      const auto component = normalized_entry.substr(start, end - start);
+
+      if (component.find(':') != std::string_view::npos)
+      {
+        return make_error(libbsa::error_code::invalid_argument,
+                          "refusing colon in archive entry path component: " + std::string{normalized_entry});
+      }
+      if (!component.empty() && (component.back() == '.' || component.back() == ' '))
+      {
+        return make_error(libbsa::error_code::invalid_argument,
+                          "refusing trailing dot or space in archive entry path component '" +
+                              std::string{component} + "': " + std::string{normalized_entry});
+      }
+      // Win32 resolves DOS device names as special files even when an extension is present, such as NUL.txt.
+      if (is_windows_reserved_device_name(component))
+      {
+        return make_error(libbsa::error_code::invalid_argument,
+                          "refusing Windows-reserved archive entry path component '" + std::string{component} +
+                              "': " + std::string{normalized_entry});
+      }
+
+      if (slash == std::string_view::npos)
+      {
+        break;
+      }
+      start = slash + 1U;
+    }
+    return {};
+  }
+#endif
+
+#if defined(_WIN32)
+  struct local_command_line_argv
+  {
+    wchar_t **value{};
+
+    explicit local_command_line_argv(wchar_t **argv) noexcept : value(argv) {}
+    local_command_line_argv(const local_command_line_argv &) = delete;
+    local_command_line_argv &operator=(const local_command_line_argv &) = delete;
+    ~local_command_line_argv()
+    {
+      if (value != nullptr)
+      {
+        ::LocalFree(value);
+      }
+    }
+  };
+
+  libbsa::result<std::string> wide_argument_to_utf8(std::wstring_view argument)
+  {
+    if (argument.empty())
+    {
+      return std::string{};
+    }
+    if (argument.size() > static_cast<std::size_t>((std::numeric_limits<int>::max)()))
+    {
+      return make_error(libbsa::error_code::invalid_argument,
+                        "Windows command-line argument is too long to encode as UTF-8");
+    }
+
+    // Windows exposes the authoritative process command line as UTF-16; encode it once to honor
+    // the CLI/library UTF-8 host-path contract instead of using CRT ANSI-code-page argv bytes.
+    const auto source_size = static_cast<int>(argument.size());
+    const auto utf8_size = ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, argument.data(), source_size,
+                                                 nullptr, 0, nullptr, nullptr);
+    if (utf8_size <= 0)
+    {
+      return make_error(libbsa::error_code::invalid_argument,
+                        "Windows command-line argument is not valid Unicode");
+    }
+
+    std::string utf8_argument(static_cast<std::size_t>(utf8_size), '\0');
+    const auto converted = ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, argument.data(), source_size,
+                                                 utf8_argument.data(), utf8_size, nullptr, nullptr);
+    if (converted != utf8_size)
+    {
+      return make_error(libbsa::error_code::invalid_argument,
+                        "Windows command-line argument is not valid Unicode");
+    }
+    return utf8_argument;
+  }
+#endif
+
+  libbsa::result<std::vector<std::string>> command_line_arguments(int argc, char **argv)
+  {
+    std::vector<std::string> arguments;
+
+#if defined(_WIN32)
+    (void)argc;
+    (void)argv;
+
+    int wide_argc = 0;
+    local_command_line_argv wide_argv{::CommandLineToArgvW(::GetCommandLineW(), &wide_argc)};
+    if (wide_argv.value == nullptr)
+    {
+      return make_error(libbsa::error_code::invalid_argument, "cannot parse Windows command line");
+    }
+
+    arguments.reserve(wide_argc > 1 ? static_cast<std::size_t>(wide_argc - 1) : 0U);
+    for (int index = 1; index < wide_argc; ++index)
+    {
+      auto utf8_argument = wide_argument_to_utf8(wide_argv.value[index]);
+      if (!utf8_argument)
+      {
+        return utf8_argument.error();
+      }
+      arguments.push_back(std::move(utf8_argument).value());
+    }
+#else
+    arguments.reserve(argc > 1 ? static_cast<std::size_t>(argc - 1) : 0U);
+    for (int index = 1; index < argc; ++index)
+    {
+      arguments.emplace_back(argv[index]);
+    }
+#endif
+
+    return arguments;
   }
 
   void print_format_table(std::ostream &output)
@@ -654,8 +888,8 @@ namespace
 
     std::vector<input_file> files;
     std::filesystem::recursive_directory_iterator iterator{root,
-                                                          std::filesystem::directory_options::skip_permission_denied,
-                                                          fs_error};
+                                                           std::filesystem::directory_options::none,
+                                                           fs_error};
     if (fs_error)
     {
       return make_error(libbsa::error_code::io_error,
@@ -663,13 +897,8 @@ namespace
     }
 
     const std::filesystem::recursive_directory_iterator end;
-    for (; iterator != end; iterator.increment(fs_error))
+    for (; iterator != end;)
     {
-      if (fs_error)
-      {
-        return make_error(libbsa::error_code::io_error, "directory enumeration failed: " + fs_error.message());
-      }
-
       const auto &entry = *iterator;
       auto input_reparse = reject_reparse_point(entry.path(), "input path");
       if (!input_reparse)
@@ -683,19 +912,23 @@ namespace
         return make_error(libbsa::error_code::io_error,
                           "cannot inspect input path '" + entry.path().string() + "': " + fs_error.message());
       }
-      if (!regular)
+      if (regular)
       {
-        continue;
+        const auto relative = entry.path().lexically_normal().lexically_relative(root);
+        const auto archive_path = generic_utf8_path(relative);
+        if (archive_path.empty() || archive_path == ".")
+        {
+          return make_error(libbsa::error_code::io_error,
+                            "cannot derive archive path for input file: " + entry.path().string());
+        }
+        files.push_back(input_file{entry.path(), archive_path});
       }
 
-      const auto relative = entry.path().lexically_normal().lexically_relative(root);
-      const auto archive_path = generic_utf8_path(relative);
-      if (archive_path.empty() || archive_path == ".")
+      iterator.increment(fs_error);
+      if (fs_error)
       {
-        return make_error(libbsa::error_code::io_error,
-                          "cannot derive archive path for input file: " + entry.path().string());
+        return make_error(libbsa::error_code::io_error, "directory enumeration failed: " + fs_error.message());
       }
-      files.push_back(input_file{entry.path(), archive_path});
     }
 
     std::sort(files.begin(), files.end(), [](const input_file &lhs, const input_file &rhs)
@@ -888,9 +1121,20 @@ namespace
       return usage_failure(make_usage_error("selected --format does not support compressed payloads"), print_pack_usage);
     }
 
-    const std::filesystem::path input_dir{parsed.value().positionals[0]};
-    const std::filesystem::path output_path{parsed.value().positionals[1]};
-    auto files = collect_input_files(input_dir);
+    auto input_dir = path_from_utf8(parsed.value().positionals[0]);
+    if (!input_dir)
+    {
+      render_error(input_dir.error(), parsed.value().positionals[0]);
+      return static_cast<int>(process_exit::operational_failure);
+    }
+    auto output_path = path_from_utf8(parsed.value().positionals[1]);
+    if (!output_path)
+    {
+      render_error(output_path.error(), parsed.value().positionals[1]);
+      return static_cast<int>(process_exit::operational_failure);
+    }
+
+    auto files = collect_input_files(input_dir.value());
     if (!files)
     {
       render_error(files.error());
@@ -902,22 +1146,22 @@ namespace
     switch (format->family)
     {
     case writer_family::tes3_bsa:
-      exit_code = pack_tes3(files.value(), output_path, overwrite);
+      exit_code = pack_tes3(files.value(), output_path.value(), overwrite);
       break;
     case writer_family::tes4_bsa:
-      exit_code = pack_tes4(*format, files.value(), output_path, overwrite, compression);
+      exit_code = pack_tes4(*format, files.value(), output_path.value(), overwrite, compression);
       break;
     case writer_family::ba2_gnrl:
-      exit_code = pack_ba2_gnrl(*format, files.value(), output_path, overwrite, compression);
+      exit_code = pack_ba2_gnrl(*format, files.value(), output_path.value(), overwrite, compression);
       break;
     case writer_family::ba2_dx10:
-      exit_code = pack_ba2_dx10(*format, files.value(), output_path, overwrite);
+      exit_code = pack_ba2_dx10(*format, files.value(), output_path.value(), overwrite);
       break;
     }
 
     if (exit_code == static_cast<int>(process_exit::success))
     {
-      std::cout << "packed " << files.value().size() << " file(s) into " << output_path.string() << '\n';
+      std::cout << "packed " << files.value().size() << " file(s) into " << output_path.value().string() << '\n';
     }
     return exit_code;
   }
@@ -972,7 +1216,12 @@ namespace
       return make_error(libbsa::error_code::invalid_argument, "empty archive entry path");
     }
 
-    const std::filesystem::path relative{normalized_entry};
+    auto decoded_relative = path_from_utf8(normalized_entry);
+    if (!decoded_relative)
+    {
+      return decoded_relative.error();
+    }
+    const std::filesystem::path relative = std::move(decoded_relative).value();
     if (relative.is_absolute() || relative.has_root_name() || relative.has_root_directory())
     {
       return make_error(libbsa::error_code::invalid_argument,
@@ -986,6 +1235,14 @@ namespace
                           "refusing parent-directory traversal in archive entry path: " + normalized_entry);
       }
     }
+
+#if defined(_WIN32)
+    auto windows_destination_path = reject_windows_unsafe_destination_components(normalized_entry);
+    if (!windows_destination_path)
+    {
+      return windows_destination_path.error();
+    }
+#endif
 
     const auto destination = (output_root / relative).lexically_normal();
     if (!is_within_root(output_root, destination))
@@ -1119,7 +1376,7 @@ namespace
       if (fs_error)
       {
         return make_error(libbsa::error_code::io_error,
-          "cannot create output directory '" + root.string() + "': " + fs_error.message());
+                          "cannot create output directory '" + root.string() + "': " + fs_error.message());
       }
     }
     return root;
@@ -1159,7 +1416,14 @@ namespace
       return static_cast<int>(process_exit::operational_failure);
     }
 
-    auto output_root = prepare_output_root(std::filesystem::path{parsed.value().positionals[1]});
+    auto output_dir = path_from_utf8(parsed.value().positionals[1]);
+    if (!output_dir)
+    {
+      render_error(output_dir.error(), parsed.value().positionals[1]);
+      return static_cast<int>(process_exit::operational_failure);
+    }
+
+    auto output_root = prepare_output_root(output_dir.value());
     if (!output_root)
     {
       render_error(output_root.error());
@@ -1271,8 +1535,7 @@ namespace
 
   int run_info(std::span<const std::string_view> args)
   {
-    constexpr std::array<option_spec, 0> specs{};
-    auto parsed = parse_options(args, specs);
+    auto parsed = parse_options(args, std::span<const option_spec>{});
     if (!parsed)
     {
       return usage_failure(parsed.error(), print_info_usage);
@@ -1447,11 +1710,18 @@ int main(int argc, char **argv)
 {
   try
   {
-    std::vector<std::string_view> args;
-    args.reserve(argc > 1 ? static_cast<std::size_t>(argc - 1) : 0U);
-    for (int index = 1; index < argc; ++index)
+    auto owned_args = command_line_arguments(argc, argv);
+    if (!owned_args)
     {
-      args.emplace_back(argv[index]);
+      render_error(owned_args.error());
+      return static_cast<int>(process_exit::operational_failure);
+    }
+
+    std::vector<std::string_view> args;
+    args.reserve(owned_args.value().size());
+    for (const auto &argument : owned_args.value())
+    {
+      args.emplace_back(argument);
     }
     return dispatch(args);
   }

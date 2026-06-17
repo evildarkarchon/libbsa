@@ -590,14 +590,19 @@
     "semantic_hash": "24c6b3e83596cef64aa1c53b1734c6d3"
   },
   "tests/fixtures/generated/archives/tes3_malformed_manifest.json": {
-    "mtime": 1779261969.0677125,
+    "mtime": 1781700858.507029,
     "ast_hash": "f3a90861acccbfd4c63ce41adce03da4",
     "semantic_hash": "f3a90861acccbfd4c63ce41adce03da4"
   },
   "tests/fixtures/generated/archives/tes3_success_manifest.json": {
-    "mtime": 1779261969.0642054,
+    "mtime": 1781700858.5025315,
     "ast_hash": "7962b22c6a953f0a28c20f112068a2b8",
     "semantic_hash": "7962b22c6a953f0a28c20f112068a2b8"
+  },
+  "tests/fixtures/generated/archives/tes3_windows_unsafe_names_manifest.json": {
+    "mtime": 1781700858.5035298,
+    "ast_hash": "0d627c347b9f007ddad62e5363710ffe",
+    "semantic_hash": ""
   },
   "tests/fixtures/generated/archives/tes3_writer_canonical_manifest.json": {
     "mtime": 1779261970.1498535,
@@ -635,9 +640,9 @@
     "semantic_hash": "7bf7f3a18ac7b59d520abd348c79d5a7"
   },
   "tests/fixtures/generated/generate_tes3_bsa_fixtures.cpp": {
-    "mtime": 1779177361.577196,
-    "ast_hash": "35fe9175b6d3fd8826a6a548178a44c3",
-    "semantic_hash": "35fe9175b6d3fd8826a6a548178a44c3"
+    "mtime": 1781700666.390195,
+    "ast_hash": "f52da267c15aba2bdfd81cfbb98ecb1e",
+    "semantic_hash": ""
   },
   "tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp": {
     "mtime": 1779177361.577696,
@@ -895,9 +900,9 @@
     "semantic_hash": "9854c6802225e32c35e993073d7ccb46"
   },
   "tests/unit/validation_policy_tests.cpp": {
-    "mtime": 1779177361.5942023,
-    "ast_hash": "54345b6f2e92f7c49306cfc2b6cc4204",
-    "semantic_hash": "54345b6f2e92f7c49306cfc2b6cc4204"
+    "mtime": 1781693284.6182916,
+    "ast_hash": "fc5632cb7d0c9e4d1ac0919f2d137d4a",
+    "semantic_hash": "fc5632cb7d0c9e4d1ac0919f2d137d4a"
   },
   "tests/unit/writer_execution_options_tests.cpp": {
     "mtime": 1779177361.5942023,
@@ -923,6 +928,11 @@
     "mtime": 1779177361.5947022,
     "ast_hash": "816361a6c4ea118c9e6b78e84517bb75",
     "semantic_hash": "816361a6c4ea118c9e6b78e84517bb75"
+  },
+  "tools/cli/main.cpp": {
+    "mtime": 1781700812.380862,
+    "ast_hash": "80b179a435e903746a4dfeb936e5c032",
+    "semantic_hash": ""
   },
   "vcpkg-configuration.json": {
     "mtime": 1779177361.5957048,
@@ -984,30 +994,80 @@
     "ast_hash": "c5b76d86918b27cb37902a5878e704d1",
     "semantic_hash": "c5b76d86918b27cb37902a5878e704d1"
   },
+  ".pi/skills/openspec-apply-change/SKILL.md": {
+    "mtime": 1781687924.2982845,
+    "ast_hash": "0c644086b9d1191f7639324aa9d90557",
+    "semantic_hash": "0c644086b9d1191f7639324aa9d90557"
+  },
+  ".pi/skills/openspec-archive-change/SKILL.md": {
+    "mtime": 1781687924.299781,
+    "ast_hash": "a853b3ce25149061a7f13f05b127350c",
+    "semantic_hash": "a853b3ce25149061a7f13f05b127350c"
+  },
+  ".pi/skills/openspec-bulk-archive-change/SKILL.md": {
+    "mtime": 1781687924.299781,
+    "ast_hash": "4c4243b11da830e2a11e06fb236397a7",
+    "semantic_hash": "4c4243b11da830e2a11e06fb236397a7"
+  },
+  ".pi/skills/openspec-continue-change/SKILL.md": {
+    "mtime": 1781687924.2977805,
+    "ast_hash": "2f94797a9d8e395b9beeba7ea9a43288",
+    "semantic_hash": "2f94797a9d8e395b9beeba7ea9a43288"
+  },
+  ".pi/skills/openspec-explore/SKILL.md": {
+    "mtime": 1781687924.2967803,
+    "ast_hash": "b50d65377c6c7fe4c9591e114ff77f5f",
+    "semantic_hash": "b50d65377c6c7fe4c9591e114ff77f5f"
+  },
+  ".pi/skills/openspec-ff-change/SKILL.md": {
+    "mtime": 1781687924.2987835,
+    "ast_hash": "472d58bb9fa8dc01f0a93956ef153f48",
+    "semantic_hash": "472d58bb9fa8dc01f0a93956ef153f48"
+  },
+  ".pi/skills/openspec-new-change/SKILL.md": {
+    "mtime": 1781687924.2972815,
+    "ast_hash": "a391aba5d8946da580904fe3782e190d",
+    "semantic_hash": "a391aba5d8946da580904fe3782e190d"
+  },
+  ".pi/skills/openspec-onboard/SKILL.md": {
+    "mtime": 1781687924.3002825,
+    "ast_hash": "230b8a8e316d76ffcc4f972ef8ea1425",
+    "semantic_hash": "230b8a8e316d76ffcc4f972ef8ea1425"
+  },
+  ".pi/skills/openspec-propose/SKILL.md": {
+    "mtime": 1781687924.301289,
+    "ast_hash": "40b0eb2c1f2d14397b5ad856cd9cbc23",
+    "semantic_hash": "40b0eb2c1f2d14397b5ad856cd9cbc23"
+  },
+  ".pi/skills/openspec-sync-specs/SKILL.md": {
+    "mtime": 1781687924.2992826,
+    "ast_hash": "211bc14ef7cb2d1e24b6b73e878d8509",
+    "semantic_hash": "211bc14ef7cb2d1e24b6b73e878d8509"
+  },
+  ".pi/skills/openspec-verify-change/SKILL.md": {
+    "mtime": 1781687924.3002825,
+    "ast_hash": "2baab6b815515578795441106d2d5abd",
+    "semantic_hash": "2baab6b815515578795441106d2d5abd"
+  },
   "AGENTS.md": {
     "mtime": 1781684747.9519565,
     "ast_hash": "c421608b77a9c5ddf10891b9b2aadf37",
     "semantic_hash": "c421608b77a9c5ddf10891b9b2aadf37"
   },
   "CLAUDE.md": {
-    "mtime": 1781684811.7594166,
-    "ast_hash": "201db6f8409d4189b451cc18dd9f96e4",
-    "semantic_hash": "201db6f8409d4189b451cc18dd9f96e4"
+    "mtime": 1781693324.0279202,
+    "ast_hash": "1e3d3cea13d7c2b5eac0fcd86462eeaf",
+    "semantic_hash": "1e3d3cea13d7c2b5eac0fcd86462eeaf"
   },
   "CMakeLists.txt": {
-    "mtime": 1781689559.8423426,
-    "ast_hash": "2e828bbc277cca383a06b58be51676b7",
-    "semantic_hash": ""
-  },
-  "CONCERNS.md": {
-    "mtime": 1779177361.462559,
-    "ast_hash": "c1b357b1328979d179b79c4c41a8a9bd",
-    "semantic_hash": "c1b357b1328979d179b79c4c41a8a9bd"
+    "mtime": 1781696445.6117363,
+    "ast_hash": "35a92f425cec26ac03a1d83115468fe8",
+    "semantic_hash": "35a92f425cec26ac03a1d83115468fe8"
   },
   "README.md": {
     "mtime": 1781689639.7476656,
     "ast_hash": "c8929d3f4b413f1632495b72fe84925c",
-    "semantic_hash": ""
+    "semantic_hash": "c8929d3f4b413f1632495b72fe84925c"
   },
   "benchmarks/README.md": {
     "mtime": 1779177361.4700868,
@@ -1079,6 +1139,26 @@
     "ast_hash": "e1307f359f7808d18a35f053f95e1a75",
     "semantic_hash": "e1307f359f7808d18a35f053f95e1a75"
   },
+  "openspec/specs/cli-archive-extraction/spec.md": {
+    "mtime": 1781690455.9606974,
+    "ast_hash": "9620bffd042c568aac583e3fc2f5dd06",
+    "semantic_hash": "9620bffd042c568aac583e3fc2f5dd06"
+  },
+  "openspec/specs/cli-archive-inspection/spec.md": {
+    "mtime": 1781690455.9611971,
+    "ast_hash": "0dae7491f2cbe751a507f4fb31df66ef",
+    "semantic_hash": "0dae7491f2cbe751a507f4fb31df66ef"
+  },
+  "openspec/specs/cli-archive-packing/spec.md": {
+    "mtime": 1781690455.9601972,
+    "ast_hash": "8d004fbf9c753e4d05ce712965695b41",
+    "semantic_hash": "8d004fbf9c753e4d05ce712965695b41"
+  },
+  "openspec/specs/cli-foundation/spec.md": {
+    "mtime": 1781690455.959197,
+    "ast_hash": "af3f3e1ef0df91acbe62862635a09fbb",
+    "semantic_hash": "af3f3e1ef0df91acbe62862635a09fbb"
+  },
   "openspec/specs/compressed-extraction-memory-bounds/spec.md": {
     "mtime": 1779177361.5421474,
     "ast_hash": "4e5b002a641b2b25aa162401cd80f98c",
@@ -1135,9 +1215,9 @@
     "semantic_hash": "87f53f8dc8140e9e5fcce2892cf78955"
   },
   "tests/CMakeLists.txt": {
-    "mtime": 1781689625.714249,
-    "ast_hash": "59d98ddf4122ee2285b96cad44b34272",
-    "semantic_hash": ""
+    "mtime": 1781697934.414878,
+    "ast_hash": "f3473610f73f962c2dbf073bf9ae1060",
+    "semantic_hash": "f3473610f73f962c2dbf073bf9ae1060"
   },
   "tests/fixtures/README.md": {
     "mtime": 1779177361.565683,
@@ -1148,66 +1228,6 @@
     "mtime": 1779177361.5826962,
     "ast_hash": "8da6206ba5ffe0bea7999f264b6ebc84",
     "semantic_hash": "8da6206ba5ffe0bea7999f264b6ebc84"
-  },
-  "tools/cli/main.cpp": {
-    "mtime": 1781689547.2374547,
-    "ast_hash": "a4f40970444c038105b1498758e14374",
-    "semantic_hash": ""
-  },
-  ".pi/skills/openspec-apply-change/SKILL.md": {
-    "mtime": 1781687924.2982845,
-    "ast_hash": "0c644086b9d1191f7639324aa9d90557",
-    "semantic_hash": ""
-  },
-  ".pi/skills/openspec-archive-change/SKILL.md": {
-    "mtime": 1781687924.299781,
-    "ast_hash": "a853b3ce25149061a7f13f05b127350c",
-    "semantic_hash": ""
-  },
-  ".pi/skills/openspec-bulk-archive-change/SKILL.md": {
-    "mtime": 1781687924.299781,
-    "ast_hash": "4c4243b11da830e2a11e06fb236397a7",
-    "semantic_hash": ""
-  },
-  ".pi/skills/openspec-continue-change/SKILL.md": {
-    "mtime": 1781687924.2977805,
-    "ast_hash": "2f94797a9d8e395b9beeba7ea9a43288",
-    "semantic_hash": ""
-  },
-  ".pi/skills/openspec-explore/SKILL.md": {
-    "mtime": 1781687924.2967803,
-    "ast_hash": "b50d65377c6c7fe4c9591e114ff77f5f",
-    "semantic_hash": ""
-  },
-  ".pi/skills/openspec-ff-change/SKILL.md": {
-    "mtime": 1781687924.2987835,
-    "ast_hash": "472d58bb9fa8dc01f0a93956ef153f48",
-    "semantic_hash": ""
-  },
-  ".pi/skills/openspec-new-change/SKILL.md": {
-    "mtime": 1781687924.2972815,
-    "ast_hash": "a391aba5d8946da580904fe3782e190d",
-    "semantic_hash": ""
-  },
-  ".pi/skills/openspec-onboard/SKILL.md": {
-    "mtime": 1781687924.3002825,
-    "ast_hash": "230b8a8e316d76ffcc4f972ef8ea1425",
-    "semantic_hash": ""
-  },
-  ".pi/skills/openspec-propose/SKILL.md": {
-    "mtime": 1781687924.301289,
-    "ast_hash": "40b0eb2c1f2d14397b5ad856cd9cbc23",
-    "semantic_hash": ""
-  },
-  ".pi/skills/openspec-sync-specs/SKILL.md": {
-    "mtime": 1781687924.2992826,
-    "ast_hash": "211bc14ef7cb2d1e24b6b73e878d8509",
-    "semantic_hash": ""
-  },
-  ".pi/skills/openspec-verify-change/SKILL.md": {
-    "mtime": 1781687924.3002825,
-    "ast_hash": "2baab6b815515578795441106d2d5abd",
-    "semantic_hash": ""
   },
   "D:\\repos\\libbsa\\CMakePresets.json": {
     "mtime": 1779177361.4620588,
@@ -1800,14 +1820,19 @@
     "semantic_hash": "24c6b3e83596cef64aa1c53b1734c6d3"
   },
   "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes3_malformed_manifest.json": {
-    "mtime": 1779261969.0677125,
+    "mtime": 1781700858.507029,
     "ast_hash": "f3a90861acccbfd4c63ce41adce03da4",
     "semantic_hash": "f3a90861acccbfd4c63ce41adce03da4"
   },
   "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes3_success_manifest.json": {
-    "mtime": 1779261969.0642054,
+    "mtime": 1781700858.5025315,
     "ast_hash": "7962b22c6a953f0a28c20f112068a2b8",
     "semantic_hash": "7962b22c6a953f0a28c20f112068a2b8"
+  },
+  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes3_windows_unsafe_names_manifest.json": {
+    "mtime": 1781700858.5035298,
+    "ast_hash": "0d627c347b9f007ddad62e5363710ffe",
+    "semantic_hash": "0d627c347b9f007ddad62e5363710ffe"
   },
   "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes3_writer_canonical_manifest.json": {
     "mtime": 1779261970.1498535,
@@ -1845,9 +1870,9 @@
     "semantic_hash": "7bf7f3a18ac7b59d520abd348c79d5a7"
   },
   "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_tes3_bsa_fixtures.cpp": {
-    "mtime": 1779177361.577196,
-    "ast_hash": "35fe9175b6d3fd8826a6a548178a44c3",
-    "semantic_hash": "35fe9175b6d3fd8826a6a548178a44c3"
+    "mtime": 1781700666.390195,
+    "ast_hash": "f52da267c15aba2bdfd81cfbb98ecb1e",
+    "semantic_hash": "f52da267c15aba2bdfd81cfbb98ecb1e"
   },
   "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_tes3_bsa_writer_fixtures.cpp": {
     "mtime": 1779177361.577696,
@@ -2105,9 +2130,9 @@
     "semantic_hash": "9854c6802225e32c35e993073d7ccb46"
   },
   "D:\\repos\\libbsa\\tests\\unit\\validation_policy_tests.cpp": {
-    "mtime": 1779177361.5942023,
-    "ast_hash": "54345b6f2e92f7c49306cfc2b6cc4204",
-    "semantic_hash": "54345b6f2e92f7c49306cfc2b6cc4204"
+    "mtime": 1781693284.6182916,
+    "ast_hash": "fc5632cb7d0c9e4d1ac0919f2d137d4a",
+    "semantic_hash": "fc5632cb7d0c9e4d1ac0919f2d137d4a"
   },
   "D:\\repos\\libbsa\\tests\\unit\\writer_execution_options_tests.cpp": {
     "mtime": 1779177361.5942023,
@@ -2135,9 +2160,9 @@
     "semantic_hash": "816361a6c4ea118c9e6b78e84517bb75"
   },
   "D:\\repos\\libbsa\\tools\\cli\\main.cpp": {
-    "mtime": 1781691562.3450656,
-    "ast_hash": "d0896e0c49d139bb9fa00641c2568fd7",
-    "semantic_hash": "d0896e0c49d139bb9fa00641c2568fd7"
+    "mtime": 1781700812.380862,
+    "ast_hash": "80b179a435e903746a4dfeb936e5c032",
+    "semantic_hash": "80b179a435e903746a4dfeb936e5c032"
   },
   "D:\\repos\\libbsa\\vcpkg-configuration.json": {
     "mtime": 1779177361.5957048,
@@ -2260,19 +2285,14 @@
     "semantic_hash": "c421608b77a9c5ddf10891b9b2aadf37"
   },
   "D:\\repos\\libbsa\\CLAUDE.md": {
-    "mtime": 1781684811.7594166,
-    "ast_hash": "201db6f8409d4189b451cc18dd9f96e4",
-    "semantic_hash": "201db6f8409d4189b451cc18dd9f96e4"
+    "mtime": 1781693324.0279202,
+    "ast_hash": "1e3d3cea13d7c2b5eac0fcd86462eeaf",
+    "semantic_hash": "1e3d3cea13d7c2b5eac0fcd86462eeaf"
   },
   "D:\\repos\\libbsa\\CMakeLists.txt": {
-    "mtime": 1781689559.8423426,
-    "ast_hash": "2e828bbc277cca383a06b58be51676b7",
-    "semantic_hash": "2e828bbc277cca383a06b58be51676b7"
-  },
-  "D:\\repos\\libbsa\\CONCERNS.md": {
-    "mtime": 1779177361.462559,
-    "ast_hash": "c1b357b1328979d179b79c4c41a8a9bd",
-    "semantic_hash": "c1b357b1328979d179b79c4c41a8a9bd"
+    "mtime": 1781696445.6117363,
+    "ast_hash": "35a92f425cec26ac03a1d83115468fe8",
+    "semantic_hash": "35a92f425cec26ac03a1d83115468fe8"
   },
   "D:\\repos\\libbsa\\README.md": {
     "mtime": 1781689639.7476656,
@@ -2425,9 +2445,9 @@
     "semantic_hash": "87f53f8dc8140e9e5fcce2892cf78955"
   },
   "D:\\repos\\libbsa\\tests\\CMakeLists.txt": {
-    "mtime": 1781689625.714249,
-    "ast_hash": "59d98ddf4122ee2285b96cad44b34272",
-    "semantic_hash": "59d98ddf4122ee2285b96cad44b34272"
+    "mtime": 1781697934.414878,
+    "ast_hash": "f3473610f73f962c2dbf073bf9ae1060",
+    "semantic_hash": "f3473610f73f962c2dbf073bf9ae1060"
   },
   "D:\\repos\\libbsa\\tests\\fixtures\\README.md": {
     "mtime": 1779177361.565683,

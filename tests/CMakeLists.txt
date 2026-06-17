@@ -223,6 +223,8 @@ add_custom_target(generate_tes3_bsa_fixtures
   BYPRODUCTS
     ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_success.bsa
     ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_success_manifest.json
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_windows_unsafe_names.bsa
+    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_windows_unsafe_names_manifest.json
     ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_malformed_manifest.json
     ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_truncated_header.bsa
     ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/archives/tes3_truncated_records.bsa

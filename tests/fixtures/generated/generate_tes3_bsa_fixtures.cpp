@@ -133,6 +133,23 @@ std::vector<entry_spec> success_entries() {
   return entries;
 }
 
+std::vector<entry_spec> windows_unsafe_name_entries() {
+  std::vector<entry_spec> entries{
+      {.path = "NUL", .payload = bytes_from_string("reserved NUL payload\n")},
+      {.path = "CON.txt", .payload = bytes_from_string("reserved CON payload\n")},
+      {.path = "COM\xC2\xB9", .payload = bytes_from_string("reserved COM superscript payload\n")},
+      {.path = "textures/file.txt.", .payload = bytes_from_string("trailing dot payload\n")},
+      {.path = "textures/file.txt ", .payload = bytes_from_string("trailing space payload\n")},
+      {.path = "textures/file.txt:stream", .payload = bytes_from_string("ADS-style stream payload\n")},
+  };
+  for (auto& entry : entries) {
+    entry.canonical_path = canonicalize(entry.path);
+    entry.archive_hash = libbsa::detail::hash_tes3(entry.path);
+  }
+  std::sort(entries.begin(), entries.end(), tes3_hash_less);
+  return entries;
+}
+
 std::vector<std::byte> build_tes3_archive(std::vector<entry_spec>& entries) {
   std::uint32_t name_table_size = 0;
   for (const auto& entry : entries) {
@@ -279,6 +296,11 @@ void generate_success(const std::filesystem::path& output_dir) {
   const auto bytes = build_tes3_archive(entries);
   write_file(output_dir / "tes3_success.bsa", bytes);
   write_text(output_dir / "tes3_success_manifest.json", success_manifest(entries));
+
+  auto windows_unsafe_entries = windows_unsafe_name_entries();
+  const auto windows_unsafe_bytes = build_tes3_archive(windows_unsafe_entries);
+  write_file(output_dir / "tes3_windows_unsafe_names.bsa", windows_unsafe_bytes);
+  write_text(output_dir / "tes3_windows_unsafe_names_manifest.json", success_manifest(windows_unsafe_entries));
 }
 
 void generate_malformed(const std::filesystem::path& output_dir) {

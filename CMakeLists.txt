@@ -187,6 +187,7 @@ if(LIBBSA_BUILD_CLI)
   target_link_libraries(bsa
     PRIVATE
       libbsa::libbsa
+      $<$<PLATFORM_ID:Windows>:shell32>
   )
 
   target_compile_features(bsa PRIVATE cxx_std_20)

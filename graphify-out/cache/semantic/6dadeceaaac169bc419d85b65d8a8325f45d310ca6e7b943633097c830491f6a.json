@@ -1,1 +1,0 @@
-{"nodes": [{"id": "tes4_bsa_layout_hpp", "label": "tes4_bsa_layout.hpp", "file_type": "code", "source_file": "src/formats/bsa/tes4_bsa_layout.hpp"}], "edges": [{"source": "tes4_bsa_layout_hpp", "target": "tes4_bsa_prepare_hpp", "relation": "references", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/formats/bsa/tes4_bsa_layout.hpp"}], "hyperedges": []}
