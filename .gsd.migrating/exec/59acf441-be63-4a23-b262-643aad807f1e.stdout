@@ -1,3 +1,0 @@
-tests/CMakeLists.txt:349:  NAME validate_fixture_manifests
-tests/CMakeLists.txt:351:    ${PROJECT_SOURCE_DIR}/tests/fixtures/generated/validate_fixture_manifests.py
-tests/CMakeLists.txt:355:set_tests_properties(validate_fixture_manifests PROPERTIES

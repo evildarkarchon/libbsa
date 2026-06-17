@@ -1,8 +1,0 @@
-bounded_memory_policy_tests.cpp (7)
- - bounded_memory_policy static boundary keeps BSA writer implementations independent of TES5Edit
- - bounded_memory_policy static boundary keeps BA2 writer implementations independent of TES5Edit
- - bounded_memory_policy public API boundary hides private BSA writer helpers
- - bounded_memory_policy public API boundary hides private BA2 writer helpers
- - bounded_memory_policy public API boundary keeps writer.hpp free of private codec and reference dependencies
- - bounded_memory_policy targeted writer stages avoid byte-at-a-time disk source accumulation
- - bounded_memory_policy BA2 DX10 snapshot temp directories use hardened reservation

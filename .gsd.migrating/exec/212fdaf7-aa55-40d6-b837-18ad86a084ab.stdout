@@ -1,6 +1,0 @@
--- Running vcpkg install
-both %LOCALAPPDATA% and %APPDATA% were unreadable
--- Running vcpkg install - failed
--- Configuring incomplete, errors occurred!
-
-[T03] command=cmake --preset windows-msvc-release-static && cmake --build --preset windows-msvc-release-static && ctest --preset windows-msvc-release-static -L package_consumer --output-on-failure exit=1 duration=1s

@@ -1,8 +1,0 @@
-[debug full CTest]
-100% tests passed, 0 tests failed out of 438
-Total Test time (real) =  26.17 sec
-
-[debug package_consumer CTest]
-100% tests passed, 0 tests failed out of 4
-Total Test time (real) =   5.99 sec
-

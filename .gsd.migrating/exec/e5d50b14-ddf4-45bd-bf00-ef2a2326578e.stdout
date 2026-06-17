@@ -1,8 +1,0 @@
-tests/package-consumer/main.cpp: 
-tests/unit/docs_policy_tests.cpp: public-api-reality-check.md, contains, extract_bytes, Optional local, BSArchPro-derived
-tests/unit/target_format_policy_tests.cpp: TES5Edit/
-docs/api-mainpage.md: public-api-reality-check.md, contains, extract_bytes, BSArchPro-derived
-docs/integration-examples.md: contains, extract_bytes
-docs/compatibility-evidence.md: public-api-reality-check.md, Optional local, BSArchPro-derived, TES5Edit/
-docs/public-api-reality-check.md: contains, extract_bytes, COV-GAP-003, Optional local, BSArchPro-derived, TES5Edit/, DirectXTex
-docs/coverage-audit-matrix.md: extract_bytes, COV-GAP-003, Optional local, BSArchPro-derived, DirectXTex

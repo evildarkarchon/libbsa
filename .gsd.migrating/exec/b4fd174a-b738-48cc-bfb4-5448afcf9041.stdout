@@ -1,2 +1,0 @@
-257:TEST_CASE("local game fixtures are opt-in", "[requires-game-fixture][unit]")
-268:TEST_CASE("BSArchPro-derived expected fixture comparisons are opt-in",

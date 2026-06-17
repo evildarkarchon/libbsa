@@ -1,11 +1,3 @@
 {
-  "$schema": "https://app.kilo.ai/config.json",
-  "permission": {
-    "read": {
-      "J:/libbsa/.kilo/get-shit-done/*": "allow"
-    },
-    "external_directory": {
-      "J:/libbsa/.kilo/get-shit-done/*": "allow"
-    }
-  }
+  "$schema": "https://app.kilo.ai/config.json"
 }

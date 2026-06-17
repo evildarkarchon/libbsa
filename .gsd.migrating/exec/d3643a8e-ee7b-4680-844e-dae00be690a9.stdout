@@ -1,7 +1,0 @@
-current_branch=main
-integration_ref=main
-merge_base=cedd387d9aed0e6e45be0ec89ce7055f0338e58a
-head=cedd387d9aed0e6e45be0ec89ce7055f0338e58a
-head_equals_merge_base=true
-milestone_commit_count=0
-milestone_commit_non_gsd_touches=0

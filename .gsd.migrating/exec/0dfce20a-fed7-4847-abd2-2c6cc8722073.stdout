@@ -1,7 +1,0 @@
-CMakeCache.txt: True
-build.ninja: False
-libbsa_tests.exe: False
-tests/libbsa_tests.exe: False
-tests/Debug/libbsa_tests.exe: True
-CMAKE_GENERATOR:INTERNAL=Visual Studio 18 2026
-VCPKG_TARGET_TRIPLET:STRING=x64-windows

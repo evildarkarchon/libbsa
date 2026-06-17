@@ -1,5 +1,0 @@
-Microsoft Windows [Version 10.0.26200.8457]
-(c) Microsoft Corporation. All rights reserved.
-
-J:\libbsa>
-[T03] command=cmd env where cmake && cmake --version exit=0

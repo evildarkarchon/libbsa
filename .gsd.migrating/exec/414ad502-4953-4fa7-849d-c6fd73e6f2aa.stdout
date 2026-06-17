@@ -1,6 +1,0 @@
-tes3_bsa_writer: 4
-tes4_bsa_writer: 2
-ba2_gnrl_writer: 2
-ba2_dx10_writer: 0
-archive_reader::extract_entries: 0
-worker_count: 12

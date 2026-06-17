@@ -1,2 +1,0 @@
-
-[T03] command=pwsh explicit-cmake release-static configure+build+package_consumer exit=0 duration=1s

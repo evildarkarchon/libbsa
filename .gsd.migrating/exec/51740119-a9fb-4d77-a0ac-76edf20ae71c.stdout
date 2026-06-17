@@ -1,8 +1,0 @@
-S01-ASSESSMENT: present verdict_ok=True
-S02-ASSESSMENT: present verdict_ok=True
-S03-ASSESSMENT: present verdict_ok=True
-S04-ASSESSMENT: present verdict_ok=True
-S05-ASSESSMENT: present verdict_ok=True
-s05_boundary_clarification=True
-s05_uat_class=True
-attention_fix_verification=pass

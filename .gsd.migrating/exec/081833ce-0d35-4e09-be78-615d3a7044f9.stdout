@@ -1,1 +1,0 @@
-Default acceptance must continue to pass from repository-reproducible generated fixtures, writer-output archives, and policy tests alone. Optional local corpus checks are advisory evidence only; they may improve confidence in a developer workspace, but absent local or copyrighted inputs do not block default green status.

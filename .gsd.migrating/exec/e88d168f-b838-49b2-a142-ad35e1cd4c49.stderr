@@ -1,4 +1,0 @@
-  File "<stdin>", line 25
-    files=sorted(str(x).replace('\','/') for x in p.rglob('*') if x.is_file())
-                                                            ^
-SyntaxError: unterminated string literal (detected at line 25)
