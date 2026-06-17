@@ -446,28 +446,20 @@ TEST_CASE("validation_policy verification matrix contract keeps planning summari
           "[unit][validation_policy][doc_structure]")
 {
   const auto root = source_root();
-  const auto project = read_text_file(root / ".planning/PROJECT.md");
-  const auto roadmap = read_text_file(root / ".planning/ROADMAP.md");
-  const auto state = read_text_file(root / ".planning/STATE.md");
+  const auto claude = read_text_file(root / "CLAUDE.md");
 
-  require_all_tokens(project,
-                     {"debug",
+  require_lane_names(claude);
+  require_all_tokens(claude,
+                     {"Debug quick path",
+                      "Debug inner-loop lane",
                       "Release package-proof lanes",
                       "MSVC AddressSanitizer hardening lane",
-                      "Windows-only"});
-  REQUIRE(project.find("cmake --preset") == std::string::npos);
+                      "Windows-only",
+                      "CMakePresets.json"});
 
-  require_all_tokens(roadmap,
-                     {"debug",
-                      "Release package-proof",
-                      "MSVC AddressSanitizer"});
-  REQUIRE(roadmap.find("cmake --preset") == std::string::npos);
-
-  require_all_tokens(state,
-                     {"debug",
-                      "Release package proof",
-                      "MSVC AddressSanitizer"});
-  REQUIRE(state.find("cmake --preset") == std::string::npos);
+  REQUIRE(claude.find(".planning/") == std::string::npos);
+  REQUIRE(claude.find(".gsd/") == std::string::npos);
+  REQUIRE(claude.find("cmake --preset") == std::string::npos);
 }
 
 TEST_CASE("validation_policy verification matrix contract requires supported preset triads",
