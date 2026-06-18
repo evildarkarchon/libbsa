@@ -930,9 +930,9 @@
     "semantic_hash": "816361a6c4ea118c9e6b78e84517bb75"
   },
   "tools/cli/main.cpp": {
-    "mtime": 1781738638.7719636,
-    "ast_hash": "b571e55f1f1fbf441c9fd296138ac3b7",
-    "semantic_hash": "b571e55f1f1fbf441c9fd296138ac3b7"
+    "mtime": 1781745468.1451604,
+    "ast_hash": "5421277d01942d4813fdfc6f0a0d6c0a",
+    "semantic_hash": ""
   },
   "vcpkg-configuration.json": {
     "mtime": 1779177361.5957048,
@@ -1215,8 +1215,8 @@
     "semantic_hash": "87f53f8dc8140e9e5fcce2892cf78955"
   },
   "tests/CMakeLists.txt": {
-    "mtime": 1781743743.6373396,
-    "ast_hash": "10510e409d4fa06e1269e361a015cdee",
+    "mtime": 1781744802.2887547,
+    "ast_hash": "f46020871231e1d4ca6f2b4bba603b09",
     "semantic_hash": ""
   },
   "tests/fixtures/README.md": {

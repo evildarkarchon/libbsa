@@ -1262,10 +1262,10 @@ namespace
     {
     }
 
-    libbsa::result<std::unique_ptr<libbsa::payload_sink>> create(std::string_view path,
-                                                                 const libbsa::entry_metadata &) override
+    libbsa::result<std::unique_ptr<libbsa::payload_sink>> create(std::string_view,
+                                                                 const libbsa::entry_metadata &entry) override
     {
-      auto destination = safe_destination_path(output_root_, path);
+      auto destination = safe_destination_path(output_root_, entry.original_path);
       if (!destination)
       {
         return destination.error();

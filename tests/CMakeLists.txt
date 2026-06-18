@@ -332,7 +332,11 @@ if(LIBBSA_BUILD_CLI AND TARGET bsa)
 
   set_tests_properties(cli_integration PROPERTIES
     LABELS "cli;fixture;roundtrip;malformed"
-    ENVIRONMENT "PATH=$<TARGET_FILE_DIR:bsa>;$<TARGET_FILE_DIR:libbsa>;$ENV{PATH}"
+  )
+
+  set_property(TEST cli_integration PROPERTY ENVIRONMENT_MODIFICATION
+    "PATH=path_list_prepend:$<TARGET_FILE_DIR:libbsa>"
+    "PATH=path_list_prepend:$<TARGET_FILE_DIR:bsa>"
   )
 endif()
 

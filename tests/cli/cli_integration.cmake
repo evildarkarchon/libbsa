@@ -344,6 +344,13 @@ require_child_name("${mixed_case_entry_output}" "Meshes")
 require_child_name("${mixed_case_entry_output}/Meshes" "Tiny")
 require_child_name("${mixed_case_entry_output}/Meshes/Tiny" "Probe.nif")
 
+set(mixed_case_selective_output "${mixed_case_entry_root}/selective-output")
+run_cli(0 stdout stderr unpack "${mixed_case_entry_archive}" "${mixed_case_selective_output}" --path meshes/tiny/probe.nif)
+require_file_text("${mixed_case_selective_output}/${mixed_case_entry_path}" "mixed case mesh payload\n")
+require_child_name("${mixed_case_selective_output}" "Meshes")
+require_child_name("${mixed_case_selective_output}/Meshes" "Tiny")
+require_child_name("${mixed_case_selective_output}/Meshes/Tiny" "Probe.nif")
+
 set(selective_archive "${work_root}/roundtrip-bsa-tes3/packed.bsa")
 set(selective_output "${work_root}/selective-output")
 if(WIN32)
