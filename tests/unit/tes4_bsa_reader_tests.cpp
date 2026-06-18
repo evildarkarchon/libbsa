@@ -305,10 +305,8 @@ TEST_CASE("tes4_bsa_malformed_open rejects folder record counts before allocatio
     REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE(
-    "tes4_bsa_malformed_open rejects matched oversized file counts "
-    "before allocation",
-    "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
+TEST_CASE(R"(tes4_bsa_malformed_open rejects matched oversized file counts before allocation)",
+          "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     overwrite_u32_le(bytes, 20U, 0xFFFF'FFFFU);
     overwrite_u32_le(bytes, 44U, 0xFFFF'FFFFU);

@@ -21,17 +21,29 @@ std::string read_text_file(const std::filesystem::path& path) {
     return buffer.str();
 }
 
-std::string function_body(std::string_view source, std::string_view signature,
-                          std::string_view next_signature) {
+std::string function_body(std::string_view source, std::string_view signature) {
     const auto start = source.find(signature);
     REQUIRE(start != std::string_view::npos);
 
     const auto body_start = source.find('{', start);
     REQUIRE(body_start != std::string_view::npos);
 
-    const auto end = source.find(next_signature, body_start);
-    REQUIRE(end != std::string_view::npos);
-    return std::string{source.substr(body_start, end - body_start)};
+    std::size_t depth = 0;
+    for (std::size_t cursor = body_start; cursor < source.size(); ++cursor) {
+        if (source[cursor] == '{') {
+            ++depth;
+        }
+        if (source[cursor] == '}') {
+            REQUIRE(depth > 0U);
+            --depth;
+            if (depth == 0U) {
+                return std::string{source.substr(body_start, cursor - body_start + 1U)};
+            }
+        }
+    }
+
+    FAIL("function body was not closed");
+    return {};
 }
 
 void require_all_tokens(std::string_view text, std::span<const std::string_view> tokens) {
@@ -84,12 +96,13 @@ TEST_CASE("parser_preparer_seam_policy requires dedicated TES4 parser seams",
         "tes4_bsa_stored_payload_size",
         "embedded_prefix_size",
         "raw_size",
-        "payload spans outside the archive or overlapping metadata",
+        "payload spans outside the archive or",
+        "overlapping metadata",
     });
     require_all_tokens(payload_header, payload_role_evidence);
 
-    const auto parse_body = function_body(
-        parser, "result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(", "} // namespace");
+    const auto parse_body =
+        function_body(parser, "result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(");
     constexpr auto collapsed_table_and_payload_tokens = std::to_array<std::string_view>({
         "detail::binary_reader",
         "read_file_names",
@@ -127,7 +140,8 @@ TEST_CASE("parser_preparer_seam_policy requires dedicated BA2 DX10 parser seams"
         "ba2_dx10_record",
         "ba2_dx10_chunk_record",
         "fixed BA2 DX10 header",
-        "texture record and chunk tables without materializing public entries",
+        "texture record and chunk tables without",
+        "materializing public entries",
     });
     require_all_tokens(records_header, records_role_evidence);
 
@@ -135,12 +149,13 @@ TEST_CASE("parser_preparer_seam_policy requires dedicated BA2 DX10 parser seams"
         "read_ba2_dx10_names_from_file",
         "read_ba2_dx10_names",
         "count-delimited BA2 DX10 filename-table bytes",
-        "exact byte count consumed by the encoded names",
+        "exact byte count consumed",
+        "by the encoded names",
     });
     require_all_tokens(names_header, names_role_evidence);
 
-    const auto parse_body = function_body(
-        parser, "result<ba2_dx10_archive> parse_ba2_dx10_archive_impl(", "  } // namespace");
+    const auto parse_body =
+        function_body(parser, "result<ba2_dx10_archive> parse_ba2_dx10_archive_impl(");
     constexpr auto collapsed_record_and_name_tokens = std::to_array<std::string_view>({
         "read_u32_le",
         "read_u64_le",
@@ -174,7 +189,8 @@ TEST_CASE("parser_preparer_seam_policy requires dedicated BA2 DX10 preparer seam
         "ba2_dx10_validate_texture_format_for_target",
         "ba2_dx10_ensure_snapshot_directory",
         "ba2_dx10_build_writer_entry_snapshot",
-        "loading, validating, and snapshotting DDS source bytes",
+        "loading, validating, and snapshotting DDS",
+        "source bytes. Snapshot files intentionally outlive",
         "Snapshot files intentionally outlive the source path",
     });
     require_all_tokens(snapshot_header, snapshot_role_evidence);
@@ -182,20 +198,19 @@ TEST_CASE("parser_preparer_seam_policy requires dedicated BA2 DX10 preparer seam
     constexpr auto chunk_role_evidence = std::to_array<std::string_view>({
         "ba2_dx10_assemble_chunk",
         "ba2_dx10_assemble_planned_entry",
-        "Snapshot bytes are streamed into only the current chunk buffer",
-        "indexed work-result placement",
+        "Snapshot bytes are streamed into only the current chunk",
+        "buffer to preserve bounded-memory staging",
+        "indexed",
+        "work-result placement",
     });
     require_all_tokens(chunk_header, chunk_role_evidence);
 
     const auto make_entry_body =
-        function_body(prepare, "result<ba2_dx10_writer_entry> ba2_dx10_make_writer_entry(",
-                      "std::uint32_t ba2_dx10_version_for");
+        function_body(prepare, "result<ba2_dx10_writer_entry> ba2_dx10_make_writer_entry(");
     const auto prepare_chunk_body =
-        function_body(prepare, "result<ba2_dx10_prepared_chunk> ba2_dx10_prepare_chunk(",
-                      "result<std::vector<ba2_dx10_prepared_entry>> ba2_dx10_prepare_entries(");
+        function_body(prepare, "result<ba2_dx10_prepared_chunk> ba2_dx10_prepare_chunk(");
     const auto prepare_entries_body = function_body(
-        prepare, "result<std::vector<ba2_dx10_prepared_entry>> ba2_dx10_prepare_entries(",
-        "} // namespace libbsa::formats::ba2");
+        prepare, "result<std::vector<ba2_dx10_prepared_entry>> ba2_dx10_prepare_entries(");
 
     constexpr auto snapshot_collapse_tokens = std::to_array<std::string_view>({
         "resolve_host_file_path",

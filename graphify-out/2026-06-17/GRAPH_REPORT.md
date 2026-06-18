@@ -1,16 +1,16 @@
 # Graph Report - libbsa  (2026-06-17)
 
 ## Corpus Check
-- 241 files · ~165,769 words
+- 243 files · ~165,228 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4464 nodes · 8584 edges · 264 communities (245 shown, 19 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 186 edges (avg confidence: 0.82)
+- 4470 nodes · 8593 edges · 270 communities (251 shown, 19 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 187 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `63e56c31`
+- Built from commit: `2fa152dc`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -208,7 +208,6 @@
 - [[_COMMUNITY_resolve host file path|resolve host file path]]
 - [[_COMMUNITY_bounded memory policy tests cpp|bounded memory policy tests cpp]]
 - [[_COMMUNITY_export surface policy tests cpp|export surface policy tests cpp]]
-- [[_COMMUNITY_Existing Public Core|Existing Public Core]]
 - [[_COMMUNITY_archive path key|archive path key]]
 - [[_COMMUNITY_host file path|host file path]]
 - [[_COMMUNITY_Internal TES4 BSA Constants Header|Internal TES4 BSA Constants Header]]
@@ -240,6 +239,12 @@
 - [[_COMMUNITY_libbsa docs|libbsa docs]]
 - [[_COMMUNITY_Compressed Extraction Memory Bounds|Compressed Extraction Memory Bounds]]
 - [[_COMMUNITY_Sharp Edge Guidance|Sharp Edge Guidance]]
+- [[_COMMUNITY_Community 264|Community 264]]
+- [[_COMMUNITY_Community 265|Community 265]]
+- [[_COMMUNITY_Community 266|Community 266]]
+- [[_COMMUNITY_Community 267|Community 267]]
+- [[_COMMUNITY_Community 268|Community 268]]
+- [[_COMMUNITY_Community 269|Community 269]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `string_view` - 25 edges
@@ -250,8 +255,8 @@
 6. `run_pack()` - 24 edges
 7. `archive_spec` - 23 edges
 8. `ba2_dx10_prepared_entry` - 22 edges
-9. `make_byte_vector()` - 21 edges
-10. `prepare_one_entry()` - 21 edges
+9. `fail()` - 22 edges
+10. `make_byte_vector()` - 21 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Supported Presets` --semantically_similar_to--> `README Build Verification Lanes`  [INFERRED] [semantically similar]
@@ -273,27 +278,27 @@
 - **Generated Fixture Pipeline** — tests_cmakelists_generate_tes4_bsa_fixtures_tool, tests_cmakelists_generate_tes3_bsa_fixtures_tool, tests_cmakelists_generate_tes3_bsa_writer_fixtures_tool, tests_cmakelists_generate_ba2_gnrl_fixtures_tool, tests_cmakelists_generate_ba2_dx10_fixtures_tool, tests_cmakelists_generate_tes4_bsa_fixtures, tests_cmakelists_generate_tes3_bsa_fixtures, tests_cmakelists_generate_tes3_bsa_writer_fixtures, tests_cmakelists_generate_ba2_gnrl_fixtures, tests_cmakelists_generate_ba2_dx10_fixtures, tests_cmakelists_validate_fixture_manifests [EXTRACTED 1.00]
 - **Package Consumer Validation** — cmakelists_libbsa_install_package, tests_cmakelists_package_consumer_smoke, tests_cmakelists_package_consumer_runtime_dll_copy [INFERRED 0.85]
 
-## Communities (264 total, 19 thin omitted)
+## Communities (270 total, 19 thin omitted)
 
 ### Community 0 - "main cpp"
 Cohesion: 0.05
 Nodes (114): archive_policy_from(), archive_type_name(), archive_variant_name(), ascii_iequals(), collect_input_files(), command_line_arguments(), compression_name(), dispatch() (+106 more)
 
 ### Community 1 - "tes4 bsa prepare cpp"
-Cohesion: 0.05
-Nodes (97): append_u32_le(), checked_name_size(), checked_size_flags_payload_size(), checked_u32(), compression_method_for_target(), disk_payload_size(), encode_stored_payload(), extension_of() (+89 more)
+Cohesion: 0.07
+Nodes (76): append_u32_le(), checked_name_size(), checked_size_flags_payload_size(), checked_u32(), compression_method_for_target(), disk_payload_size(), encode_stored_payload(), extension_of() (+68 more)
 
 ### Community 2 - "payload sink"
-Cohesion: 0.05
-Nodes (75): payload_sink, bulk_extract_sink_factory, byte, result, size_t, span, vector, archive_reader (+67 more)
+Cohesion: 0.06
+Nodes (67): bulk_extract_sink_factory, archive_reader, array, bulk_extract_entry_result, bulk_extract_request, byte, entry_metadata, map (+59 more)
 
 ### Community 3 - "ba2 dx10 writer tests cpp"
 Cohesion: 0.07
 Nodes (77): set, archive_reader, array, ba2_dx10_target, ba2_dx10_writer, byte, dds_source_analysis, entry_compression (+69 more)
 
 ### Community 4 - "main cpp"
-Cohesion: 0.06
-Nodes (68): archive_runtime_case, archive_host_path, archive_virtual_path, expect_texture_metadata, expected_ba2_compression_method, expected_default_compression, expected_payload, expected_type (+60 more)
+Cohesion: 0.05
+Nodes (77): archive_runtime_case, archive_host_path, archive_virtual_path, expect_texture_metadata, expected_ba2_compression_method, expected_default_compression, expected_payload, expected_type (+69 more)
 
 ### Community 5 - "libbsa benchmarks cpp"
 Cohesion: 0.08
@@ -312,8 +317,8 @@ Cohesion: 0.06
 Nodes (64): add_fits_u64(), checked_add_u32(), checked_mul_u32(), checked_u32(), tes3_assign_raw_offsets(), checked_u32(), disk_payload_size(), preserved_archive_path() (+56 more)
 
 ### Community 9 - "ba2 dx10 parser cpp"
-Cohesion: 0.07
-Nodes (60): append_u16_le(), read_ba2_dx10_names(), read_ba2_dx10_names_from_file(), ascii_lower_byte(), compression_for(), extension_fourcc_for_extension(), extension_fourcc_matches(), first_payload_offset_for() (+52 more)
+Cohesion: 0.18
+Nodes (24): ascii_lower_byte(), compression_for(), extension_fourcc_for_extension(), extension_fourcc_matches(), first_payload_offset_for(), inferred_array_size(), is_ascii_extension_byte(), materialize_entries() (+16 more)
 
 ### Community 10 - "host path correctness boundary tests"
 Cohesion: 0.08
@@ -352,8 +357,8 @@ Cohesion: 0.05
 Nodes (48): archive_compression_policy, entry_compression_policy, LIBBSA_API, optional, state, uint32_t, unique_ptr, ba2_dx10_writer (+40 more)
 
 ### Community 19 - "archive cpp"
-Cohesion: 0.11
-Nodes (43): bulk_extract_options, archive_file_size(), archive_open_host_context(), archive_reader(), archive_reader::state, backend_table, entries, host_path (+35 more)
+Cohesion: 0.05
+Nodes (71): bulk_extract_options, detail::payload_sink, detail::payload_source, payload_sink, archive_file_size(), archive_open_host_context(), archive_reader(), archive_reader::state (+63 more)
 
 ### Community 20 - "generate tes3 bsa fixtures cpp"
 Cohesion: 0.13
@@ -408,8 +413,8 @@ Cohesion: 0.07
 Nodes (33): ba2_dx10_prepared_chunk, compression, end_mip, owns_payload_bytes, packed_size, payload_offset, raw_size, start_mip (+25 more)
 
 ### Community 33 - "parse tes3 bsa archive impl"
-Cohesion: 0.16
-Nodes (33): file_record, raw_offset, size, header_fields, file_count, hash_offset_minus_header, version, materialize_entries() (+25 more)
+Cohesion: 0.15
+Nodes (36): file_record, raw_offset, size, header_fields, file_count, hash_offset_minus_header, version, materialize_entries() (+28 more)
 
 ### Community 34 - "validation cpp"
 Cohesion: 0.14
@@ -420,16 +425,16 @@ Cohesion: 0.08
 Nodes (31): tes4_bsa_file_record, hash, offset, size_flags, tes4_bsa_folder_block, files, name, tes4_bsa_folder_record (+23 more)
 
 ### Community 36 - "read tes4 bsa raw table"
-Cohesion: 0.18
-Nodes (30): read_bsa_name(), read_file_names(), read_folder_blocks(), read_folder_records(), read_header(), read_tes4_bsa_header(), read_tes4_bsa_raw_table(), skip_checked() (+22 more)
+Cohesion: 0.19
+Nodes (28): read_bsa_name(), read_file_names(), read_folder_blocks(), read_folder_records(), read_header(), read_tes4_bsa_header(), read_tes4_bsa_raw_table(), skip_checked() (+20 more)
 
 ### Community 37 - "Complete Open Spec Workflow Cycle"
 Cohesion: 0.06
 Nodes (31): Apply Instructions JSON, Apply Change Selection, OpenSpec Apply Change Skill, Implementation Task Loop, Workspace Planning Apply Guard, Archive Directory Move, Archive Artifact Completion Check, Delta Spec Sync Assessment (+23 more)
 
 ### Community 38 - "memory source"
-Cohesion: 0.15
-Nodes (20): detail::payload_sink, detail::payload_source, byte, path, result, size_t, span, vector (+12 more)
+Cohesion: 0.19
+Nodes (21): checked_name_size(), checked_u32(), stream_disk_payload_to_output(), tes4_write_archive_bytes(), write_folder_name(), write_span_to_stream(), write_string_terminated(), binary_writer (+13 more)
 
 ### Community 39 - "validation report"
 Cohesion: 0.09
@@ -488,8 +493,8 @@ Cohesion: 0.09
 Nodes (24): ba2_gnrl_prepared_entry, archive_path_canonical, archive_path_original, directory_hash, extension, final_stored_dedupe_hash, name_hash, owns_payload_bytes (+16 more)
 
 ### Community 53 - "unordered set"
-Cohesion: 0.13
-Nodes (21): Allocator, metadata_allocation_error(), reserve_metadata_set(), reserve_metadata_vector(), Hash, Key, KeyEqual, error (+13 more)
+Cohesion: 0.24
+Nodes (13): Allocator, metadata_allocation_error(), reserve_metadata_set(), reserve_metadata_vector(), Hash, Key, KeyEqual, error (+5 more)
 
 ### Community 54 - "ba2 dx10 write archive bytes"
 Cohesion: 0.21
@@ -504,8 +509,8 @@ Cohesion: 0.29
 Nodes (23): checked_buffer_size(), for_each_host_file_chunk(), inspect_host_file_size(), io_error(), open_host_file(), read_exact_bytes(), read_host_file_exact(), read_host_file_prefix() (+15 more)
 
 ### Community 57 - "libbsa link internal test support"
-Cohesion: 0.12
-Nodes (23): LZ4 Frame and Raw Block Separation, bcrypt dependency, bsa CLI target, cmake/copy-runtime-dlls.cmake, DirectXTex dependency, libbsa target, libbsa_benchmark_report target, libbsa_benchmarks target (+15 more)
+Cohesion: 0.13
+Nodes (22): bcrypt dependency, bsa CLI target, cmake/copy-runtime-dlls.cmake, DirectXTex dependency, libbsa target, libbsa_benchmark_report target, libbsa_benchmarks target, LIBBSA_BUILD_BENCHMARKS (+14 more)
 
 ### Community 58 - "write ba2 gnrl archive"
 Cohesion: 0.16
@@ -580,8 +585,8 @@ Cohesion: 0.10
 Nodes (19): Purpose, Requirement: BA2 DX10 snapshot cleanup ownership remains unchanged, Requirement: BA2 DX10 snapshot directory names use hardened uniqueness, Requirement: BA2 DX10 snapshot directory reservation remains atomic, Requirements, Scenario: Existing archive behavior remains stable, Scenario: Existing candidate path is not reused, Scenario: Reservation failure preserves result semantics (+11 more)
 
 ### Community 76 - "texture spec"
-Cohesion: 0.13
-Nodes (15): texture_spec, array_size, chunks, cube_maps_raw, directory_hash, dxgi_format, ext, height (+7 more)
+Cohesion: 0.11
+Nodes (20): bytes(), decoded_payload_bytes(), source_dds_valid_specs(), texture_spec, array_size, chunks, cube_maps_raw, directory_hash (+12 more)
 
 ### Community 77 - "SKILL md"
 Cohesion: 0.10
@@ -608,8 +613,8 @@ Cohesion: 0.29
 Nodes (10): build_archive(), build_source_dds(), byte_buffer, bytes, overwrite_u64(), record_table_size(), write_header(), write_records() (+2 more)
 
 ### Community 83 - "chunk spec"
-Cohesion: 0.10
-Nodes (22): bytes(), chunk_spec, compression, decoded_payload, end_mip, packed_size, payload_offset, raw_size (+14 more)
+Cohesion: 0.11
+Nodes (19): chunk_spec, compression, decoded_payload, end_mip, packed_size, payload_offset, raw_size, segment (+11 more)
 
 ### Community 84 - "writer publish tests cpp"
 Cohesion: 0.20
@@ -628,8 +633,8 @@ Cohesion: 0.29
 Nodes (16): cleanup_writer_publish_directory(), path_exists_noexcept(), path_is_reparse_point_noexcept(), prefixed_message(), publish_completed_writer_output(), publish_writer_output(), reserve_writer_publish_directory(), validate_writer_output_path_before_publish() (+8 more)
 
 ### Community 88 - "generate ba2 dx10 fixtures cpp"
-Cohesion: 0.19
-Nodes (23): canonicalize(), checked_u32(), compression_route_name(), decoded_payload_bytes(), extension_fourcc(), filename_stem(), hash_folder(), header_size_for() (+15 more)
+Cohesion: 0.22
+Nodes (20): canonicalize(), checked_u32(), compression_route_name(), extension_fourcc(), filename_stem(), hash_folder(), json_escape(), malformed_manifest() (+12 more)
 
 ### Community 89 - "validate compatibility matrix"
 Cohesion: 0.24
@@ -676,8 +681,8 @@ Cohesion: 0.18
 Nodes (13): codec_error(), compress_deflate(), compressor_deleter, decompress_deflate_exact(), decompressor_deleter, libdeflate_compressor, libdeflate_decompressor, byte (+5 more)
 
 ### Community 100 - "read file bytes at"
-Cohesion: 0.19
-Nodes (16): add_fits(), add_fits_u64(), archive_string_from_bytes(), normalize_display_separators(), read_file_bytes_at(), span_fits_u64(), spans_overlap_u64(), validate_metadata_count() (+8 more)
+Cohesion: 0.21
+Nodes (15): add_fits_u64(), archive_string_from_bytes(), normalize_display_separators(), read_file_bytes_at(), span_fits_u64(), spans_overlap_u64(), validate_metadata_count(), byte (+7 more)
 
 ### Community 101 - "analyze dds source"
 Cohesion: 0.23
@@ -888,12 +893,12 @@ Cohesion: 0.42
 Nodes (9): path, string, host_file_path_header_path(), host_file_path_source_path(), malformed_utf8_host_path(), project_root(), read_text_file(), unique_non_ascii_host_path() (+1 more)
 
 ### Community 153 - "parser preparer seam policy tests"
-Cohesion: 0.38
-Nodes (9): path, span, string, string_view, function_body(), read_text_file(), require_absent_tokens(), require_all_tokens() (+1 more)
+Cohesion: 0.23
+Nodes (13): append_u16_le(), read_ba2_dx10_names(), read_ba2_dx10_names_from_file(), byte, ifstream, result, size_t, span (+5 more)
 
 ### Community 154 - "Required Runtime Libraries"
-Cohesion: 0.22
-Nodes (9): Core Technologies, Development and Validation Tools, DirectXTex Internal Adapter Policy, DirectXTex GitHub Releases, Minimal Dependency Policy, Public API Boundary, Recommended Stack, Required Runtime Libraries (+1 more)
+Cohesion: 0.20
+Nodes (10): Core Technologies, Development and Validation Tools, DirectXTex Internal Adapter Policy, DirectXTex GitHub Releases, LZ4 Frame and Raw Block Separation, Minimal Dependency Policy, Public API Boundary, Recommended Stack (+2 more)
 
 ### Community 155 - "README Build Verification Lanes"
 Cohesion: 0.31
@@ -912,8 +917,8 @@ Cohesion: 0.25
 Nodes (9): libbsa install and package export, Windows-Only Platform Policy, libbsa_package_consumer Project, libbsa_package_consumer_run, libbsa_package_consumer Target, Package Consumer Runtime DLL Copy, MSVC ASan Runtime DLL Copying, package_consumer_runtime_dll_copy (+1 more)
 
 ### Community 159 - "archive spec"
-Cohesion: 0.25
-Nodes (8): archive_spec, compression_method, starfield_unknown1, starfield_unknown2, stem, textures, variant, version
+Cohesion: 0.22
+Nodes (9): archive_spec, compression_method, starfield_unknown1, starfield_unknown2, stem, textures, variant, version (+1 more)
 
 ### Community 160 - "graphify Cluster"
 Cohesion: 0.22
@@ -1047,10 +1052,6 @@ Nodes (4): path, string, read_text_file(), source_root()
 Cohesion: 0.60
 Nodes (4): path, string, read_text_file(), source_root()
 
-### Community 193 - "Existing Public Core"
-Cohesion: 0.43
-Nodes (7): bytes_per_block(), dds_mip_size(), is_block_compressed(), mip_dimension(), overwrite_u32(), size_t, uint32_t
-
 ### Community 194 - "archive path key"
 Cohesion: 0.67
 Nodes (3): archive_path_key, value, string
@@ -1099,6 +1100,30 @@ Nodes (3): Delta Specs, Intelligent Merging, OpenSpec Sync Specs
 Cohesion: 0.67
 Nodes (3): Completeness Correctness Coherence, OpenSpec Verify Change, Verification Report
 
+### Community 264 - "Community 264"
+Cohesion: 0.21
+Nodes (11): ba2_dx10_fixed_header_size_for(), read_ba2_dx10_header(), read_ba2_dx10_records(), ba2_dx10_header_fields, ba2_dx10_record, binary_reader, result, size_t (+3 more)
+
+### Community 265 - "Community 265"
+Cohesion: 0.27
+Nodes (8): path, size_t, impossible_set_capacity(), impossible_string_size(), impossible_vector_capacity(), temp_file_cleanup, path_, unordered_set
+
+### Community 266 - "Community 266"
+Cohesion: 0.42
+Nodes (9): parse_ba2_dx10_archive(), parse_ba2_dx10_archive_file(), parse_ba2_dx10_archive_impl(), ba2_dx10_archive, detected_ba2_format, host_file_path, result, size_t (+1 more)
+
+### Community 267 - "Community 267"
+Cohesion: 0.43
+Nodes (7): bytes_per_block(), dds_mip_size(), is_block_compressed(), mip_dimension(), overwrite_u32(), size_t, uint32_t
+
+### Community 268 - "Community 268"
+Cohesion: 0.80
+Nodes (4): path, find_source_root_from(), is_source_root(), source_root()
+
+### Community 269 - "Community 269"
+Cohesion: 0.67
+Nodes (3): stored_chunk_span, offset, uint64_t
+
 ## Knowledge Gaps
 - **1517 isolated node(s):** `scenario`, `worker_count`, `elapsed_ms`, `bytes_processed`, `correctness_passed` (+1512 more)
   These have ≤1 connection - possible missing edges or undocumented components.
@@ -1107,17 +1132,17 @@ Nodes (3): Completeness Correctness Coherence, OpenSpec Verify Change, Verificat
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `unordered_set` connect `unordered set` to `parse tes3 bsa archive impl`, `parse tes4 bsa archive impl`, `tes4 bsa prepare cpp`, `tes3 write archive bytes`, `ba2 dx10 parser cpp`, `ba2 dx10 prepare cpp`, `ba2 gnrl parser cpp`, `ba2 gnrl prepare cpp`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **Why does `unordered_set` connect `Community 265` to `parse tes3 bsa archive impl`, `parse tes4 bsa archive impl`, `tes4 bsa prepare cpp`, `tes3 write archive bytes`, `ba2 dx10 parser cpp`, `ba2 dx10 prepare cpp`, `ba2 gnrl parser cpp`, `unordered set`, `ba2 gnrl prepare cpp`?**
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
 - **Why does `fail()` connect `main cpp` to `compatibility warning tests cpp`, `ba2 dx10 writer tests cpp`, `validation api tests cpp`, `tes3 bsa writer tests cpp`, `ba2 gnrl reader tests cpp`, `tes3 bsa reader tests cpp`, `ba2 dx10 malformed tests cpp`, `writer hotspot policy tests cpp`, `tes4 bsa reader tests cpp`, `local game fixture tests cpp`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
-- **Why does `read_file_bytes_at()` connect `read file bytes at` to `make byte vector`, `parse tes4 bsa archive impl`, `parse tes3 bsa archive impl`, `read tes4 bsa raw table`, `ba2 dx10 parser cpp`, `ba2 gnrl parser cpp`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
+- **Why does `discard_payload_sink` connect `validation cpp` to `archive cpp`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **What connects `scenario`, `worker_count`, `elapsed_ms` to the rest of the system?**
   _1577 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `main cpp` be split into smaller, more focused modules?**
   _Cohesion score 0.05420168067226891 - nodes in this community are weakly interconnected._
 - **Should `tes4 bsa prepare cpp` be split into smaller, more focused modules?**
-  _Cohesion score 0.050505050505050504 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06793206793206794 - nodes in this community are weakly interconnected._
 - **Should `payload sink` be split into smaller, more focused modules?**
-  _Cohesion score 0.05263157894736842 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.060784313725490195 - nodes in this community are weakly interconnected._

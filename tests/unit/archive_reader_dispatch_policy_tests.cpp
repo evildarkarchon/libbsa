@@ -75,23 +75,13 @@ TEST_CASE(
     "[unit][archive_reader_dispatch_policy]") {
     const auto archive_text = read_text_file(source_root() / "src/archive.cpp");
 
-    const auto entries_body = function_body(
-        archive_text, "result<std::vector<entry_metadata>> archive_reader::entries() const");
-    const auto find_body = function_body(archive_text,
-                                         "result<std::optional<entry_metadata>> "
-                                         "archive_reader::find(std::string_view path) const");
-    const auto contains_body = function_body(
-        archive_text, "result<bool> archive_reader::contains(std::string_view path) const");
-    const auto extract_body = function_body(archive_text,
-                                            "result<void> archive_reader::extract(std::string_view "
-                                            "path, payload_sink &sink) const");
-    const auto extract_bytes_body =
-        function_body(archive_text,
-                      "result<std::vector<std::byte>> "
-                      "archive_reader::extract_bytes(std::string_view path) const");
-    const auto extract_entries_body = function_body(archive_text,
-                                                    "result<std::vector<bulk_extract_entry_"
-                                                    "result>> archive_reader::extract_entries(");
+    const auto entries_body = function_body(archive_text, "archive_reader::entries() const");
+    const auto find_body = function_body(archive_text, "archive_reader::find(");
+    const auto contains_body = function_body(archive_text, "archive_reader::contains(");
+    const auto extract_body = function_body(archive_text, "archive_reader::extract(");
+    const auto extract_bytes_body = function_body(archive_text, "archive_reader::extract_bytes(");
+    const auto extract_entries_body =
+        function_body(archive_text, "archive_reader::extract_entries(");
 
     constexpr auto forbidden_dispatch_tokens = std::to_array<std::string_view>({
         "metadata.variant",

@@ -191,7 +191,7 @@ TEST_CASE("writer_hotspot_policy requires BA2 GNRL disk-source change diagnostic
         "compare_disk_payload_to_bytes",
         "compare_disk_payloads",
         "BA2 GNRL disk source changed during dedupe preparation",
-        "A file that grew after preparation can otherwise compare equal for the "
+        "A file that grew after preparation can otherwise compare equal for the",
         "prepared prefix and corrupt offsets.",
         "error_code::io_error",
     });
@@ -210,7 +210,8 @@ TEST_CASE("writer_hotspot_policy requires truthful BA2 DX10 lifecycle docs",
         "BA2 DX10 writer",
         "write_to` consumes",
         "ordinary write attempt",
-        "best-effort snapshot cleanup",
+        "best-effort",
+        "snapshot cleanup",
         "error_code::invalid_argument",
     });
     require_all_tokens(public_header, public_lifecycle_terms);
@@ -285,18 +286,18 @@ TEST_CASE(
         "LIBBSA_API explicit ba2_dx10_writer(ba2_dx10_target target, "
         "ba2_dx10_writer_options options);",
         "LIBBSA_API ~ba2_dx10_writer();",
-        "ba2_dx10_writer(const ba2_dx10_writer &) = delete;",
-        "ba2_dx10_writer &operator=(const ba2_dx10_writer &) = delete;",
-        "LIBBSA_API ba2_dx10_writer(ba2_dx10_writer &&other) noexcept;",
-        "LIBBSA_API ba2_dx10_writer &operator=(ba2_dx10_writer &&other) "
+        "ba2_dx10_writer(const ba2_dx10_writer&) = delete;",
+        "ba2_dx10_writer& operator=(const ba2_dx10_writer&) = delete;",
+        "LIBBSA_API ba2_dx10_writer(ba2_dx10_writer&& other) noexcept;",
+        "LIBBSA_API ba2_dx10_writer& operator=(ba2_dx10_writer&& other) "
         "noexcept;",
         "[[nodiscard]] LIBBSA_API ba2_dx10_target target() const noexcept;",
-        "[[nodiscard]] LIBBSA_API const ba2_dx10_writer_options &options() const "
+        "[[nodiscard]] LIBBSA_API const ba2_dx10_writer_options& options() const "
         "noexcept;",
         "LIBBSA_API result<void> add_file(std::string_view archive_path, "
         "std::string_view dds_host_path);",
         "LIBBSA_API result<void> write_to(std::string_view host_path) const;",
-        "LIBBSA_API result<void> write_to(std::string_view host_path, "
+        "LIBBSA_API result<void> write_to(std::string_view host_path,",
         "write_execution_options execution) const;",
     });
     require_all_tokens(writer_public_block, writer_declarations);

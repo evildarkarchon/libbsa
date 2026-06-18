@@ -603,7 +603,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "payload_sink",
-      "community": 2,
+      "community": 19,
       "norm_label": "payload_sink"
     },
     {
@@ -5413,7 +5413,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "unordered_set",
-      "community": 53,
+      "community": 265,
       "norm_label": "unordered_set"
     },
     {
@@ -6513,7 +6513,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_names_cpp_ba2_ba2_dx10_names",
-      "community": 9,
+      "community": 153,
       "norm_label": "ba2_dx10_names.cpp"
     },
     {
@@ -6523,7 +6523,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "ba2_ba2_dx10_names_append_u16_le",
-      "community": 9,
+      "community": 153,
       "norm_label": "append_u16_le()"
     },
     {
@@ -6533,7 +6533,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_names_cpp_result",
-      "community": 9,
+      "community": 153,
       "norm_label": "result"
     },
     {
@@ -6543,7 +6543,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_names_cpp_vector",
-      "community": 9,
+      "community": 153,
       "norm_label": "vector"
     },
     {
@@ -6553,7 +6553,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_names_cpp_byte",
-      "community": 9,
+      "community": 153,
       "norm_label": "byte"
     },
     {
@@ -6563,7 +6563,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_names_cpp_uint16_t",
-      "community": 9,
+      "community": 153,
       "norm_label": "uint16_t"
     },
     {
@@ -6573,7 +6573,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "ba2_ba2_dx10_names_read_ba2_dx10_names_from_file",
-      "community": 9,
+      "community": 153,
       "norm_label": "read_ba2_dx10_names_from_file()"
     },
     {
@@ -6583,7 +6583,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_names_cpp_ifstream",
-      "community": 9,
+      "community": 153,
       "norm_label": "ifstream"
     },
     {
@@ -6593,7 +6593,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_names_cpp_uint64_t",
-      "community": 9,
+      "community": 153,
       "norm_label": "uint64_t"
     },
     {
@@ -6603,7 +6603,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_names_cpp_uint32_t",
-      "community": 9,
+      "community": 153,
       "norm_label": "uint32_t"
     },
     {
@@ -6613,7 +6613,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "ba2_ba2_dx10_names_read_ba2_dx10_names",
-      "community": 9,
+      "community": 153,
       "norm_label": "read_ba2_dx10_names()"
     },
     {
@@ -6623,7 +6623,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_names_cpp_string",
-      "community": 9,
+      "community": 153,
       "norm_label": "string"
     },
     {
@@ -6633,7 +6633,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_names_cpp_span",
-      "community": 9,
+      "community": 153,
       "norm_label": "span"
     },
     {
@@ -6643,7 +6643,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_names_cpp_size_t",
-      "community": 9,
+      "community": 153,
       "norm_label": "size_t"
     },
     {
@@ -6673,7 +6673,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "ba2_ba2_dx10_parser_stored_chunk_span",
-      "community": 9,
+      "community": 269,
       "norm_label": "stored_chunk_span"
     },
     {
@@ -6683,7 +6683,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_parser_cpp_uint64_t",
-      "community": 9,
+      "community": 269,
       "norm_label": "uint64_t"
     },
     {
@@ -6693,7 +6693,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "ba2_ba2_dx10_parser_stored_chunk_span_offset",
-      "community": 9,
+      "community": 269,
       "norm_label": "offset"
     },
     {
@@ -6813,7 +6813,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_parser_cpp_result",
-      "community": 9,
+      "community": 266,
       "norm_label": "result"
     },
     {
@@ -6853,7 +6853,7 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_parser_cpp_detected_ba2_format",
-      "community": 9,
+      "community": 266,
       "norm_label": "detected_ba2_format"
     },
     {
@@ -6873,7 +6873,7 @@
       "source_location": "L112",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_parser_cpp_span",
-      "community": 9,
+      "community": 266,
       "norm_label": "span"
     },
     {
@@ -6963,7 +6963,7 @@
       "source_location": "L225",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_parser_cpp_size_t",
-      "community": 9,
+      "community": 266,
       "norm_label": "size_t"
     },
     {
@@ -6983,7 +6983,7 @@
       "source_location": "L354",
       "_origin": "ast",
       "id": "ba2_ba2_dx10_parser_parse_ba2_dx10_archive_impl",
-      "community": 9,
+      "community": 266,
       "norm_label": "parse_ba2_dx10_archive_impl()"
     },
     {
@@ -6993,7 +6993,7 @@
       "source_location": "L354",
       "_origin": "ast",
       "id": "ba2_dx10_archive",
-      "community": 9,
+      "community": 266,
       "norm_label": "ba2_dx10_archive"
     },
     {
@@ -7003,7 +7003,7 @@
       "source_location": "L416",
       "_origin": "ast",
       "id": "ba2_ba2_dx10_parser_parse_ba2_dx10_archive",
-      "community": 9,
+      "community": 266,
       "norm_label": "parse_ba2_dx10_archive()"
     },
     {
@@ -7013,7 +7013,7 @@
       "source_location": "L421",
       "_origin": "ast",
       "id": "ba2_ba2_dx10_parser_parse_ba2_dx10_archive_file",
-      "community": 9,
+      "community": 266,
       "norm_label": "parse_ba2_dx10_archive_file()"
     },
     {
@@ -7023,7 +7023,7 @@
       "source_location": "L421",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_parser_cpp_host_file_path",
-      "community": 9,
+      "community": 266,
       "norm_label": "host_file_path"
     },
     {
@@ -7943,7 +7943,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_records_cpp_ba2_ba2_dx10_records",
-      "community": 9,
+      "community": 264,
       "norm_label": "ba2_dx10_records.cpp"
     },
     {
@@ -7953,7 +7953,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "ba2_ba2_dx10_records_ba2_dx10_fixed_header_size_for",
-      "community": 9,
+      "community": 264,
       "norm_label": "ba2_dx10_fixed_header_size_for()"
     },
     {
@@ -7963,7 +7963,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_records_cpp_size_t",
-      "community": 9,
+      "community": 264,
       "norm_label": "size_t"
     },
     {
@@ -7973,7 +7973,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_records_cpp_uint32_t",
-      "community": 9,
+      "community": 264,
       "norm_label": "uint32_t"
     },
     {
@@ -7983,7 +7983,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "ba2_ba2_dx10_records_read_ba2_dx10_header",
-      "community": 9,
+      "community": 264,
       "norm_label": "read_ba2_dx10_header()"
     },
     {
@@ -7993,7 +7993,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_records_cpp_result",
-      "community": 9,
+      "community": 264,
       "norm_label": "result"
     },
     {
@@ -8003,7 +8003,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "ba2_dx10_header_fields",
-      "community": 9,
+      "community": 264,
       "norm_label": "ba2_dx10_header_fields"
     },
     {
@@ -8013,7 +8013,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_records_cpp_binary_reader",
-      "community": 9,
+      "community": 264,
       "norm_label": "binary_reader"
     },
     {
@@ -8023,7 +8023,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "ba2_ba2_dx10_records_read_ba2_dx10_records",
-      "community": 9,
+      "community": 264,
       "norm_label": "read_ba2_dx10_records()"
     },
     {
@@ -8033,7 +8033,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_records_cpp_vector",
-      "community": 9,
+      "community": 264,
       "norm_label": "vector"
     },
     {
@@ -8043,7 +8043,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_records_cpp_ba2_dx10_record",
-      "community": 9,
+      "community": 264,
       "norm_label": "ba2_dx10_record"
     },
     {
@@ -8053,7 +8053,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "src_formats_ba2_ba2_dx10_records_cpp_uint64_t",
-      "community": 9,
+      "community": 264,
       "norm_label": "uint64_t"
     },
     {
@@ -15623,7 +15623,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_bsa_tes4_bsa_serialize",
-      "community": 1,
+      "community": 38,
       "norm_label": "tes4_bsa_serialize.cpp"
     },
     {
@@ -15633,7 +15633,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "bsa_tes4_bsa_serialize_checked_u32",
-      "community": 1,
+      "community": 38,
       "norm_label": "checked_u32()"
     },
     {
@@ -15643,7 +15643,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_result",
-      "community": 1,
+      "community": 38,
       "norm_label": "result"
     },
     {
@@ -15653,7 +15653,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_uint32_t",
-      "community": 1,
+      "community": 38,
       "norm_label": "uint32_t"
     },
     {
@@ -15663,7 +15663,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_uint64_t",
-      "community": 1,
+      "community": 38,
       "norm_label": "uint64_t"
     },
     {
@@ -15673,7 +15673,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_string_view",
-      "community": 1,
+      "community": 38,
       "norm_label": "string_view"
     },
     {
@@ -15683,7 +15683,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "bsa_tes4_bsa_serialize_checked_name_size",
-      "community": 1,
+      "community": 38,
       "norm_label": "checked_name_size()"
     },
     {
@@ -15693,7 +15693,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_uint8_t",
-      "community": 1,
+      "community": 38,
       "norm_label": "uint8_t"
     },
     {
@@ -15703,7 +15703,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_size_t",
-      "community": 1,
+      "community": 38,
       "norm_label": "size_t"
     },
     {
@@ -15713,7 +15713,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "bsa_tes4_bsa_serialize_write_string_terminated",
-      "community": 1,
+      "community": 38,
       "norm_label": "write_string_terminated()"
     },
     {
@@ -15723,7 +15723,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_binary_writer",
-      "community": 1,
+      "community": 38,
       "norm_label": "binary_writer"
     },
     {
@@ -15733,7 +15733,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "bsa_tes4_bsa_serialize_write_folder_name",
-      "community": 1,
+      "community": 38,
       "norm_label": "write_folder_name()"
     },
     {
@@ -15743,7 +15743,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "bsa_tes4_bsa_serialize_write_span_to_stream",
-      "community": 1,
+      "community": 38,
       "norm_label": "write_span_to_stream()"
     },
     {
@@ -15753,7 +15753,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_ofstream",
-      "community": 1,
+      "community": 38,
       "norm_label": "ofstream"
     },
     {
@@ -15763,7 +15763,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_span",
-      "community": 1,
+      "community": 38,
       "norm_label": "span"
     },
     {
@@ -15773,7 +15773,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_byte",
-      "community": 1,
+      "community": 38,
       "norm_label": "byte"
     },
     {
@@ -15783,7 +15783,7 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "bsa_tes4_bsa_serialize_stream_disk_payload_to_output",
-      "community": 1,
+      "community": 38,
       "norm_label": "stream_disk_payload_to_output()"
     },
     {
@@ -15793,7 +15793,7 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_host_file_path",
-      "community": 1,
+      "community": 38,
       "norm_label": "host_file_path"
     },
     {
@@ -15803,7 +15803,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "bsa_tes4_bsa_serialize_tes4_write_archive_bytes",
-      "community": 1,
+      "community": 38,
       "norm_label": "tes4_write_archive_bytes()"
     },
     {
@@ -15813,7 +15813,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_tes4_prepared_folder",
-      "community": 1,
+      "community": 38,
       "norm_label": "tes4_prepared_folder"
     },
     {
@@ -15823,7 +15823,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_tes4_layout_result",
-      "community": 1,
+      "community": 38,
       "norm_label": "tes4_layout_result"
     },
     {
@@ -15833,7 +15833,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "src_formats_bsa_tes4_bsa_serialize_cpp_path",
-      "community": 1,
+      "community": 38,
       "norm_label": "path"
     },
     {
@@ -19053,7 +19053,7 @@
       "source_location": "L518",
       "_origin": "ast",
       "id": "generated_generate_ba2_dx10_fixtures_header_size_for",
-      "community": 159,
+      "community": 88,
       "norm_label": "header_size_for()"
     },
     {
@@ -22983,7 +22983,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "unit_archive_reader_tests",
-      "community": 2,
+      "community": 19,
       "norm_label": "archive_reader_tests.cpp"
     },
     {
@@ -22993,7 +22993,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "unit_archive_reader_tests_collecting_sink",
-      "community": 2,
+      "community": 19,
       "norm_label": "collecting_sink"
     },
     {
@@ -23003,7 +23003,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "unit_archive_reader_tests_collecting_sink_write",
-      "community": 2,
+      "community": 19,
       "norm_label": ".write()"
     },
     {
@@ -23013,7 +23013,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_unit_archive_reader_tests_cpp_result",
-      "community": 2,
+      "community": 19,
       "norm_label": "result"
     },
     {
@@ -23023,7 +23023,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_unit_archive_reader_tests_cpp_size_t",
-      "community": 2,
+      "community": 19,
       "norm_label": "size_t"
     },
     {
@@ -23033,7 +23033,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_unit_archive_reader_tests_cpp_span",
-      "community": 2,
+      "community": 19,
       "norm_label": "span"
     },
     {
@@ -23043,7 +23043,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_unit_archive_reader_tests_cpp_byte",
-      "community": 2,
+      "community": 19,
       "norm_label": "byte"
     },
     {
@@ -23053,7 +23053,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "tests_unit_archive_reader_tests_cpp_vector",
-      "community": 2,
+      "community": 19,
       "norm_label": "vector"
     },
     {
@@ -23063,7 +23063,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "unit_archive_reader_tests_collecting_sink_bytes",
-      "community": 2,
+      "community": 19,
       "norm_label": "bytes_"
     },
     {
@@ -30143,7 +30143,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "unit_parser_preparer_seam_policy_tests",
-      "community": 153,
+      "community": 4,
       "norm_label": "parser_preparer_seam_policy_tests.cpp"
     },
     {
@@ -30153,7 +30153,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "unit_parser_preparer_seam_policy_tests_source_root",
-      "community": 153,
+      "community": 4,
       "norm_label": "source_root()"
     },
     {
@@ -30163,7 +30163,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_unit_parser_preparer_seam_policy_tests_cpp_path",
-      "community": 153,
+      "community": 4,
       "norm_label": "path"
     },
     {
@@ -30173,7 +30173,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "unit_parser_preparer_seam_policy_tests_read_text_file",
-      "community": 153,
+      "community": 4,
       "norm_label": "read_text_file()"
     },
     {
@@ -30183,7 +30183,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "tests_unit_parser_preparer_seam_policy_tests_cpp_string",
-      "community": 153,
+      "community": 4,
       "norm_label": "string"
     },
     {
@@ -30193,7 +30193,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "unit_parser_preparer_seam_policy_tests_function_body",
-      "community": 153,
+      "community": 4,
       "norm_label": "function_body()"
     },
     {
@@ -30203,37 +30203,37 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "tests_unit_parser_preparer_seam_policy_tests_cpp_string_view",
-      "community": 153,
+      "community": 4,
       "norm_label": "string_view"
     },
     {
       "label": "require_all_tokens()",
       "file_type": "code",
       "source_file": "tests/unit/parser_preparer_seam_policy_tests.cpp",
-      "source_location": "L37",
+      "source_location": "L49",
       "_origin": "ast",
       "id": "unit_parser_preparer_seam_policy_tests_require_all_tokens",
-      "community": 153,
+      "community": 4,
       "norm_label": "require_all_tokens()"
     },
     {
       "label": "span",
       "file_type": "code",
       "source_file": "tests/unit/parser_preparer_seam_policy_tests.cpp",
-      "source_location": "L37",
+      "source_location": "L49",
       "_origin": "ast",
       "id": "tests_unit_parser_preparer_seam_policy_tests_cpp_span",
-      "community": 153,
+      "community": 4,
       "norm_label": "span"
     },
     {
       "label": "require_absent_tokens()",
       "file_type": "code",
       "source_file": "tests/unit/parser_preparer_seam_policy_tests.cpp",
-      "source_location": "L44",
+      "source_location": "L56",
       "_origin": "ast",
       "id": "unit_parser_preparer_seam_policy_tests_require_absent_tokens",
-      "community": 153,
+      "community": 4,
       "norm_label": "require_absent_tokens()"
     },
     {
@@ -30243,7 +30243,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "unit_parser_primitives_tests",
-      "community": 53,
+      "community": 265,
       "norm_label": "parser_primitives_tests.cpp"
     },
     {
@@ -30253,7 +30253,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "unit_parser_primitives_tests_impossible_string_size",
-      "community": 53,
+      "community": 265,
       "norm_label": "impossible_string_size()"
     },
     {
@@ -30263,7 +30263,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_unit_parser_primitives_tests_cpp_size_t",
-      "community": 53,
+      "community": 265,
       "norm_label": "size_t"
     },
     {
@@ -30273,7 +30273,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "unit_parser_primitives_tests_impossible_vector_capacity",
-      "community": 53,
+      "community": 265,
       "norm_label": "impossible_vector_capacity()"
     },
     {
@@ -30283,7 +30283,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "unit_parser_primitives_tests_impossible_set_capacity",
-      "community": 53,
+      "community": 265,
       "norm_label": "impossible_set_capacity()"
     },
     {
@@ -30293,7 +30293,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "unit_parser_primitives_tests_temp_file_cleanup",
-      "community": 53,
+      "community": 265,
       "norm_label": "temp_file_cleanup"
     },
     {
@@ -30303,7 +30303,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "unit_parser_primitives_tests_temp_file_cleanup_temp_file_cleanup",
-      "community": 53,
+      "community": 265,
       "norm_label": ".temp_file_cleanup()"
     },
     {
@@ -30313,7 +30313,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "tests_unit_parser_primitives_tests_cpp_path",
-      "community": 53,
+      "community": 265,
       "norm_label": "path"
     },
     {
@@ -30323,7 +30323,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "unit_parser_primitives_tests_temp_file_cleanup_path",
-      "community": 53,
+      "community": 265,
       "norm_label": "path_"
     },
     {
@@ -30333,7 +30333,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "unit_payload_stream_tests",
-      "community": 38,
+      "community": 19,
       "norm_label": "payload_stream_tests.cpp"
     },
     {
@@ -30343,7 +30343,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_memory_source",
-      "community": 38,
+      "community": 19,
       "norm_label": "memory_source"
     },
     {
@@ -30353,7 +30353,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "detail_payload_source",
-      "community": 38,
+      "community": 19,
       "norm_label": "detail::payload_source"
     },
     {
@@ -30363,7 +30363,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_memory_source_memory_source",
-      "community": 38,
+      "community": 19,
       "norm_label": ".memory_source()"
     },
     {
@@ -30373,7 +30373,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "tests_unit_payload_stream_tests_cpp_vector",
-      "community": 38,
+      "community": 19,
       "norm_label": "vector"
     },
     {
@@ -30383,7 +30383,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "tests_unit_payload_stream_tests_cpp_byte",
-      "community": 38,
+      "community": 19,
       "norm_label": "byte"
     },
     {
@@ -30393,7 +30393,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_memory_source_read",
-      "community": 38,
+      "community": 19,
       "norm_label": ".read()"
     },
     {
@@ -30403,7 +30403,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "tests_unit_payload_stream_tests_cpp_result",
-      "community": 38,
+      "community": 19,
       "norm_label": "result"
     },
     {
@@ -30413,7 +30413,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "tests_unit_payload_stream_tests_cpp_size_t",
-      "community": 38,
+      "community": 19,
       "norm_label": "size_t"
     },
     {
@@ -30423,7 +30423,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "tests_unit_payload_stream_tests_cpp_span",
-      "community": 38,
+      "community": 19,
       "norm_label": "span"
     },
     {
@@ -30433,7 +30433,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_memory_source_remaining",
-      "community": 38,
+      "community": 19,
       "norm_label": ".remaining()"
     },
     {
@@ -30443,7 +30443,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_memory_source_bytes",
-      "community": 38,
+      "community": 19,
       "norm_label": "bytes_"
     },
     {
@@ -30453,7 +30453,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_memory_source_position",
-      "community": 38,
+      "community": 19,
       "norm_label": "position_"
     },
     {
@@ -30463,7 +30463,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_failing_source",
-      "community": 38,
+      "community": 19,
       "norm_label": "failing_source"
     },
     {
@@ -30473,7 +30473,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_failing_source_read",
-      "community": 38,
+      "community": 19,
       "norm_label": ".read()"
     },
     {
@@ -30483,7 +30483,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_failing_source_remaining",
-      "community": 38,
+      "community": 19,
       "norm_label": ".remaining()"
     },
     {
@@ -30493,7 +30493,7 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_memory_sink",
-      "community": 38,
+      "community": 19,
       "norm_label": "memory_sink"
     },
     {
@@ -30503,7 +30503,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "detail_payload_sink",
-      "community": 38,
+      "community": 19,
       "norm_label": "detail::payload_sink"
     },
     {
@@ -30513,7 +30513,7 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_memory_sink_write",
-      "community": 38,
+      "community": 19,
       "norm_label": ".write()"
     },
     {
@@ -30523,7 +30523,7 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_memory_sink_bytes",
-      "community": 38,
+      "community": 19,
       "norm_label": "bytes_"
     },
     {
@@ -30533,7 +30533,7 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_memory_sink_write_sizes",
-      "community": 38,
+      "community": 19,
       "norm_label": "write_sizes_"
     },
     {
@@ -30543,7 +30543,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_failing_sink",
-      "community": 38,
+      "community": 19,
       "norm_label": "failing_sink"
     },
     {
@@ -30553,7 +30553,7 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_failing_sink_write",
-      "community": 38,
+      "community": 19,
       "norm_label": ".write()"
     },
     {
@@ -30563,7 +30563,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_partial_sink",
-      "community": 38,
+      "community": 19,
       "norm_label": "partial_sink"
     },
     {
@@ -30573,7 +30573,7 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_partial_sink_write",
-      "community": 38,
+      "community": 19,
       "norm_label": ".write()"
     },
     {
@@ -30583,7 +30583,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_temporary_payload_file",
-      "community": 38,
+      "community": 19,
       "norm_label": "temporary_payload_file"
     },
     {
@@ -30593,7 +30593,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_temporary_payload_file_temporary_payload_file",
-      "community": 38,
+      "community": 19,
       "norm_label": ".temporary_payload_file()"
     },
     {
@@ -30603,7 +30603,7 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "tests_unit_payload_stream_tests_cpp_path",
-      "community": 38,
+      "community": 19,
       "norm_label": "path"
     },
     {
@@ -30613,7 +30613,7 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_temporary_payload_file_path",
-      "community": 38,
+      "community": 19,
       "norm_label": "path_"
     },
     {
@@ -30623,7 +30623,7 @@
       "source_location": "L112",
       "_origin": "ast",
       "id": "unit_payload_stream_tests_payload_bytes",
-      "community": 38,
+      "community": 19,
       "norm_label": "payload_bytes()"
     },
     {
@@ -32735,6 +32735,56 @@
       "id": "unit_tes4_bsa_writer_tests_require_extracted_bytes",
       "community": 26,
       "norm_label": "require_extracted_bytes()"
+    },
+    {
+      "label": "test_source_root.hpp",
+      "file_type": "code",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "unit_test_source_root",
+      "community": 268,
+      "norm_label": "test_source_root.hpp"
+    },
+    {
+      "label": "is_source_root()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "unit_test_source_root_is_source_root",
+      "community": 268,
+      "norm_label": "is_source_root()"
+    },
+    {
+      "label": "path",
+      "file_type": "code",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "tests_unit_test_source_root_hpp_path",
+      "community": 268,
+      "norm_label": "path"
+    },
+    {
+      "label": "find_source_root_from()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L17",
+      "_origin": "ast",
+      "id": "unit_test_source_root_find_source_root_from",
+      "community": 268,
+      "norm_label": "find_source_root_from()"
+    },
+    {
+      "label": "source_root()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "unit_test_source_root_source_root",
+      "community": 268,
+      "norm_label": "source_root()"
     },
     {
       "label": "thread_safety_docs_policy_tests.cpp",
@@ -41564,7 +41614,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 57,
+      "community": 154,
       "norm_label": "lz4 frame and raw block separation",
       "id": "agents_lz4_api_separation"
     },
@@ -95649,6 +95699,17 @@
       "context": "call",
       "confidence": "INFERRED",
       "confidence_score": 0.8,
+      "source_file": "tests/unit/parser_preparer_seam_policy_tests.cpp",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "unit_parser_preparer_seam_policy_tests_function_body",
+      "target": "package_consumer_main_fail"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
       "source_file": "tests/unit/tes3_bsa_reader_tests.cpp",
       "source_location": "L68",
       "weight": 1.0,
@@ -119921,6 +119982,91 @@
       "target": "tests_unit_tes4_bsa_writer_tests_cpp_archive_reader"
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_source_root",
+      "target": "unit_test_source_root_find_source_root_from"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_source_root",
+      "target": "unit_test_source_root_is_source_root"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L38",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_source_root",
+      "target": "unit_test_source_root_source_root"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L24",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_source_root_find_source_root_from",
+      "target": "unit_test_source_root_is_source_root"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L10",
+      "weight": 1.0,
+      "context": "parameter_type",
+      "confidence_score": 1.0,
+      "source": "unit_test_source_root_is_source_root",
+      "target": "tests_unit_test_source_root_hpp_path"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L16",
+      "weight": 1.0,
+      "context": "parameter_type",
+      "confidence_score": 1.0,
+      "source": "unit_test_source_root_find_source_root_from",
+      "target": "tests_unit_test_source_root_hpp_path"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L38",
+      "weight": 1.0,
+      "context": "return_type",
+      "confidence_score": 1.0,
+      "source": "unit_test_source_root_source_root",
+      "target": "tests_unit_test_source_root_hpp_path"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_source_root.hpp",
+      "source_location": "L40",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_source_root_source_root",
+      "target": "unit_test_source_root_find_source_root_from"
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -137731,5 +137877,5 @@
       "source_file": "tests/CMakeLists.txt"
     }
   ],
-  "built_at_commit": "63e56c317d364b6a6471c0b97a3983b042274658"
+  "built_at_commit": "2fa152dc3f9e52d7b3c82ef517c262d536d72530"
 }

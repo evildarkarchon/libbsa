@@ -119,9 +119,11 @@ target_include_directories(libbsa_tests
     ${PROJECT_SOURCE_DIR}/src
 )
 
-target_compile_definitions(libbsa_tests
+target_compile_options(libbsa_tests
   PRIVATE
-    LIBBSA_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+    $<$<CXX_COMPILER_ID:MSVC>:/FI${CMAKE_CURRENT_SOURCE_DIR}/unit/test_source_root.hpp>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-include>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:${CMAKE_CURRENT_SOURCE_DIR}/unit/test_source_root.hpp>
 )
 
 add_executable(generate_tes4_bsa_fixtures_tool

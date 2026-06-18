@@ -675,8 +675,8 @@
     "semantic_hash": ""
   },
   "tests/unit/archive_reader_dispatch_policy_tests.cpp": {
-    "mtime": 1781748190.6081004,
-    "ast_hash": "1a19c04a8dfd82db2b9dc3c606a1e7b0",
+    "mtime": 1781755110.7852879,
+    "ast_hash": "06922f7f1c8b1cb89286f86bc665d0a3",
     "semantic_hash": ""
   },
   "tests/unit/archive_reader_dispatch_tests.cpp": {
@@ -835,8 +835,8 @@
     "semantic_hash": ""
   },
   "tests/unit/parser_preparer_seam_policy_tests.cpp": {
-    "mtime": 1781748191.4837284,
-    "ast_hash": "fd03cdb4e93bb353c0a2fa97618e391d",
+    "mtime": 1781755110.7897875,
+    "ast_hash": "f481a72b32278181ada6d1e3413e463f",
     "semantic_hash": ""
   },
   "tests/unit/parser_primitives_tests.cpp": {
@@ -880,8 +880,8 @@
     "semantic_hash": ""
   },
   "tests/unit/tes4_bsa_reader_tests.cpp": {
-    "mtime": 1781748191.7207763,
-    "ast_hash": "78a7a40dc4e2a082b98b2a65598acf4c",
+    "mtime": 1781755110.804805,
+    "ast_hash": "365a9daa60a01fe07da97d925b45205c",
     "semantic_hash": ""
   },
   "tests/unit/tes4_bsa_writer_tests.cpp": {
@@ -910,8 +910,8 @@
     "semantic_hash": ""
   },
   "tests/unit/writer_hotspot_policy_tests.cpp": {
-    "mtime": 1781748191.8702931,
-    "ast_hash": "75f4b6719e276123de3984fb3cf02a0b",
+    "mtime": 1781755110.811314,
+    "ast_hash": "f30f41a9fcc6be114450236b2f460117",
     "semantic_hash": ""
   },
   "tests/unit/writer_ownership_tests.cpp": {
@@ -1215,9 +1215,9 @@
     "semantic_hash": "87f53f8dc8140e9e5fcce2892cf78955"
   },
   "tests/CMakeLists.txt": {
-    "mtime": 1781744802.2887547,
-    "ast_hash": "f46020871231e1d4ca6f2b4bba603b09",
-    "semantic_hash": "f46020871231e1d4ca6f2b4bba603b09"
+    "mtime": 1781754760.7109072,
+    "ast_hash": "a3a3f562bc31e87bbc04f0362fe91ffd",
+    "semantic_hash": ""
   },
   "tests/fixtures/README.md": {
     "mtime": 1779177361.565683,
@@ -1230,8 +1230,13 @@
     "semantic_hash": "8da6206ba5ffe0bea7999f264b6ebc84"
   },
   "Format-Cpp.ps1": {
-    "mtime": 1781752348.1252015,
-    "ast_hash": "f387ae88d4a0772a1e86fbaecdf17661",
+    "mtime": 1781754017.3777246,
+    "ast_hash": "7dedc0327dd29588b752812315f22b0d",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_source_root.hpp": {
+    "mtime": 1781755110.780276,
+    "ast_hash": "32d18ad5a4430a9b4d9ce84d74e17a27",
     "semantic_hash": ""
   }
 }
