@@ -1,8 +1,8 @@
 #include <libbsa/archive.hpp>
 
-#include "formats/ba2/ba2_format_detector.hpp"
 #include "formats/ba2/ba2_dx10_parser.hpp"
 #include "formats/ba2/ba2_dx10_reader.hpp"
+#include "formats/ba2/ba2_format_detector.hpp"
 #include "formats/ba2/ba2_gnrl_parser.hpp"
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 #include "formats/bsa/bsa_format_detector.hpp"
@@ -25,457 +25,390 @@
 #include <utility>
 #include <vector>
 
-namespace libbsa
-{
+namespace libbsa {
 
-  archive_reader::archive_reader(archive_metadata metadata)
-      : state_(nullptr)
-  {
-    (void)metadata;
-  }
+archive_reader::archive_reader(archive_metadata metadata) : state_(nullptr) { (void)metadata; }
 
-  namespace
-  {
+namespace {
 
-    enum class reader_backend_identity
-    {
-      tes3_bsa,
-      tes4_bsa,
-      ba2_gnrl,
-      ba2_dx10,
-    };
+enum class reader_backend_identity {
+    tes3_bsa,
+    tes4_bsa,
+    ba2_gnrl,
+    ba2_dx10,
+};
 
-    /// File-local reader callbacks selected once at open time so public reader methods share one dispatch seam.
-    struct reader_backend
-    {
-      result<std::vector<entry_metadata>> (*entries)(std::span<const entry_metadata> entries);
-      result<std::optional<entry_metadata>> (*find)(std::span<const entry_metadata> entries, std::string_view path);
-      result<void> (*extract)(const detail::host_file_path &host_path, const entry_metadata &entry, payload_sink &sink);
-    };
+/// File-local reader callbacks selected once at open time so public reader
+/// methods share one dispatch seam.
+struct reader_backend {
+    result<std::vector<entry_metadata>> (*entries)(std::span<const entry_metadata> entries);
+    result<std::optional<entry_metadata>> (*find)(std::span<const entry_metadata> entries,
+                                                  std::string_view path);
+    result<void> (*extract)(const detail::host_file_path& host_path, const entry_metadata& entry,
+                            payload_sink& sink);
+};
 
-    constexpr reader_backend tes3_bsa_backend{formats::bsa::tes3_bsa_entries,
-                                              formats::bsa::find_tes3_bsa_entry,
-                                              formats::bsa::extract_tes3_bsa_payload};
-    constexpr reader_backend tes4_bsa_backend{formats::bsa::tes4_bsa_entries,
-                                              formats::bsa::find_tes4_bsa_entry,
-                                              formats::bsa::extract_tes4_bsa_payload_from_file};
-    constexpr reader_backend ba2_gnrl_backend{formats::ba2::ba2_gnrl_entries,
-                                              formats::ba2::find_ba2_gnrl_entry,
-                                              formats::ba2::extract_ba2_gnrl_payload};
-    constexpr reader_backend ba2_dx10_backend{formats::ba2::ba2_dx10_entries,
-                                              formats::ba2::find_ba2_dx10_entry,
-                                              formats::ba2::extract_ba2_dx10_payload};
+constexpr reader_backend tes3_bsa_backend{formats::bsa::tes3_bsa_entries,
+                                          formats::bsa::find_tes3_bsa_entry,
+                                          formats::bsa::extract_tes3_bsa_payload};
+constexpr reader_backend tes4_bsa_backend{formats::bsa::tes4_bsa_entries,
+                                          formats::bsa::find_tes4_bsa_entry,
+                                          formats::bsa::extract_tes4_bsa_payload_from_file};
+constexpr reader_backend ba2_gnrl_backend{formats::ba2::ba2_gnrl_entries,
+                                          formats::ba2::find_ba2_gnrl_entry,
+                                          formats::ba2::extract_ba2_gnrl_payload};
+constexpr reader_backend ba2_dx10_backend{formats::ba2::ba2_dx10_entries,
+                                          formats::ba2::find_ba2_dx10_entry,
+                                          formats::ba2::extract_ba2_dx10_payload};
 
-    const reader_backend &reader_backend_table(reader_backend_identity identity)
-    {
-      switch (identity)
-      {
-      case reader_backend_identity::tes3_bsa:
-        return tes3_bsa_backend;
-      case reader_backend_identity::tes4_bsa:
-        return tes4_bsa_backend;
-      case reader_backend_identity::ba2_gnrl:
-        return ba2_gnrl_backend;
-      case reader_backend_identity::ba2_dx10:
-        return ba2_dx10_backend;
-      }
-
-      return tes4_bsa_backend;
+const reader_backend& reader_backend_table(reader_backend_identity identity) {
+    switch (identity) {
+        case reader_backend_identity::tes3_bsa:
+            return tes3_bsa_backend;
+        case reader_backend_identity::tes4_bsa:
+            return tes4_bsa_backend;
+        case reader_backend_identity::ba2_gnrl:
+            return ba2_gnrl_backend;
+        case reader_backend_identity::ba2_dx10:
+            return ba2_dx10_backend;
     }
 
-  } // namespace
+    return tes4_bsa_backend;
+}
 
-  struct archive_reader::state
-  {
+}  // namespace
+
+struct archive_reader::state {
     archive_metadata metadata;
     std::vector<entry_metadata> entries;
     /// Reuses the resolved host-file path for post-open payload reads.
     detail::host_file_path host_path;
-    const reader_backend *backend_table;
-  };
+    const reader_backend* backend_table;
+};
 
-  namespace
-  {
+namespace {
 
-    class vector_payload_sink final : public payload_sink
-    {
-    public:
-      explicit vector_payload_sink(std::uint64_t expected_size)
-      {
-        if (expected_size <= static_cast<std::uint64_t>(std::vector<std::byte>{}.max_size()))
-        {
-          auto reserved = detail::reserve_byte_vector(bytes_, static_cast<std::size_t>(expected_size), "extracted payload");
-          if (!reserved)
-          {
-            allocation_error_ = reserved.error();
-          }
+class vector_payload_sink final : public payload_sink {
+   public:
+    explicit vector_payload_sink(std::uint64_t expected_size) {
+        if (expected_size <= static_cast<std::uint64_t>(std::vector<std::byte>{}.max_size())) {
+            auto reserved = detail::reserve_byte_vector(
+                bytes_, static_cast<std::size_t>(expected_size), "extracted payload");
+            if (!reserved) {
+                allocation_error_ = reserved.error();
+            }
+        } else {
+            allocation_error_ = detail::byte_vector_allocation_error("extracted payload");
         }
-        else
-        {
-          allocation_error_ = detail::byte_vector_allocation_error("extracted payload");
-        }
-      }
+    }
 
-      result<std::size_t> write(std::span<const std::byte> bytes) override
-      {
-        if (allocation_error_.has_value())
-        {
-          return *allocation_error_;
+    result<std::size_t> write(std::span<const std::byte> bytes) override {
+        if (allocation_error_.has_value()) {
+            return *allocation_error_;
         }
         auto appended = detail::append_byte_vector(bytes_, bytes, "extracted payload");
-        if (!appended)
-        {
-          return appended.error();
+        if (!appended) {
+            return appended.error();
         }
         return bytes.size();
-      }
-
-      [[nodiscard]] std::vector<std::byte> finish() && { return std::move(bytes_); }
-
-    private:
-      std::vector<std::byte> bytes_;
-      std::optional<error> allocation_error_;
-    };
-
-    detail::host_file_context archive_open_host_context() noexcept
-    {
-      return detail::host_file_context{"failed to open archive host path",
-                                       "failed to determine archive host path size",
-                                       "failed while reading archive host path",
-                                       "archive host path changed while reading",
-                                       "archive host path bytes"};
     }
 
-    result<std::vector<std::byte>> read_detection_prefix(const detail::host_file_path &host_path)
-    {
-      return detail::read_host_file_prefix(host_path, 36U, archive_open_host_context());
-    }
+    [[nodiscard]] std::vector<std::byte> finish() && { return std::move(bytes_); }
 
-    result<std::uint64_t> archive_file_size(const detail::host_file_path &host_path)
-    {
-      return detail::inspect_host_file_size(host_path, archive_open_host_context());
-    }
+   private:
+    std::vector<std::byte> bytes_;
+    std::optional<error> allocation_error_;
+};
 
-    result<void> extract_entry_payload(const reader_backend &backend,
-                                       const detail::host_file_path &host_path,
-                                       const entry_metadata &entry,
-                                       payload_sink &sink)
-    {
-      // Phase 13 locked reopened payload reads to the resolved host path captured at open time, never raw caller UTF-8 text.
-      return backend.extract(host_path, entry, sink);
-    }
+detail::host_file_context archive_open_host_context() noexcept {
+    return detail::host_file_context{
+        "failed to open archive host path", "failed to determine archive host path size",
+        "failed while reading archive host path", "archive host path changed while reading",
+        "archive host path bytes"};
+}
 
-    result<std::optional<entry_metadata>> find_entry_metadata(const reader_backend &backend,
-                                                              std::span<const entry_metadata> entries,
-                                                              std::string_view path)
-    {
-      return backend.find(entries, path);
-    }
+result<std::vector<std::byte>> read_detection_prefix(const detail::host_file_path& host_path) {
+    return detail::read_host_file_prefix(host_path, 36U, archive_open_host_context());
+}
 
-    struct bulk_request_group
-    {
-      std::string path;
-      std::vector<std::size_t> result_indices;
-    };
+result<std::uint64_t> archive_file_size(const detail::host_file_path& host_path) {
+    return detail::inspect_host_file_size(host_path, archive_open_host_context());
+}
 
-  } // namespace
+result<void> extract_entry_payload(const reader_backend& backend,
+                                   const detail::host_file_path& host_path,
+                                   const entry_metadata& entry, payload_sink& sink) {
+    // Phase 13 locked reopened payload reads to the resolved host path captured
+    // at open time, never raw caller UTF-8 text.
+    return backend.extract(host_path, entry, sink);
+}
 
-  result<archive_reader> archive_reader::open(std::string_view host_path)
-  {
-    if (host_path.empty())
-    {
-      return error{error_code::invalid_argument, "archive path must not be empty"};
+result<std::optional<entry_metadata>> find_entry_metadata(const reader_backend& backend,
+                                                          std::span<const entry_metadata> entries,
+                                                          std::string_view path) {
+    return backend.find(entries, path);
+}
+
+struct bulk_request_group {
+    std::string path;
+    std::vector<std::size_t> result_indices;
+};
+
+}  // namespace
+
+result<archive_reader> archive_reader::open(std::string_view host_path) {
+    if (host_path.empty()) {
+        return error{error_code::invalid_argument, "archive path must not be empty"};
     }
 
     auto resolved_host_path = detail::resolve_host_file_path(host_path);
-    if (!resolved_host_path)
-    {
-      return resolved_host_path.error();
+    if (!resolved_host_path) {
+        return resolved_host_path.error();
     }
-    // Once the public UTF-8 text resolves successfully, this shared path object is the only open/parser I/O route.
+    // Once the public UTF-8 text resolves successfully, this shared path object
+    // is the only open/parser I/O route.
 
     auto prefix = read_detection_prefix(resolved_host_path.value());
-    if (!prefix)
-    {
-      return prefix.error();
+    if (!prefix) {
+        return prefix.error();
     }
 
     const auto make_opened_reader = [&](archive_metadata metadata,
                                         std::vector<entry_metadata> entries,
-                                        reader_backend_identity backend_identity)
-    {
-      // Open already proved the archive family, so later reader calls only need the selected callbacks plus the
-      // resolved host path for payload reopens.
-      archive_reader reader{metadata};
-      reader.state_ = std::make_shared<state>(state{std::move(metadata),
-                                                    std::move(entries),
-                                                    std::move(resolved_host_path).value(),
-                                                    &reader_backend_table(backend_identity)});
-      return reader;
+                                        reader_backend_identity backend_identity) {
+        // Open already proved the archive family, so later reader calls only
+        // need the selected callbacks plus the resolved host path for payload
+        // reopens.
+        archive_reader reader{metadata};
+        reader.state_ = std::make_shared<state>(state{std::move(metadata), std::move(entries),
+                                                      std::move(resolved_host_path).value(),
+                                                      &reader_backend_table(backend_identity)});
+        return reader;
     };
 
-    if (prefix.value().size() >= 4U && prefix.value()[0] == static_cast<std::byte>(static_cast<unsigned char>('B')) &&
+    if (prefix.value().size() >= 4U &&
+        prefix.value()[0] == static_cast<std::byte>(static_cast<unsigned char>('B')) &&
         prefix.value()[1] == static_cast<std::byte>(static_cast<unsigned char>('T')) &&
         prefix.value()[2] == static_cast<std::byte>(static_cast<unsigned char>('D')) &&
-        prefix.value()[3] == static_cast<std::byte>(static_cast<unsigned char>('X')))
-    {
-      auto detected_ba2 = formats::ba2::detect_ba2_format(prefix.value());
-      if (!detected_ba2)
-      {
-        return detected_ba2.error();
-      }
-
-      auto archive_size = archive_file_size(resolved_host_path.value());
-      if (!archive_size)
-      {
-        return archive_size.error();
-      }
-      if (detected_ba2.value().is_dx10)
-      {
-        auto ba2_archive = formats::ba2::parse_ba2_dx10_archive_file(resolved_host_path.value(),
-                                                                     archive_size.value(),
-                                                                     detected_ba2.value());
-        if (!ba2_archive)
-        {
-          return ba2_archive.error();
+        prefix.value()[3] == static_cast<std::byte>(static_cast<unsigned char>('X'))) {
+        auto detected_ba2 = formats::ba2::detect_ba2_format(prefix.value());
+        if (!detected_ba2) {
+            return detected_ba2.error();
         }
 
+        auto archive_size = archive_file_size(resolved_host_path.value());
+        if (!archive_size) {
+            return archive_size.error();
+        }
+        if (detected_ba2.value().is_dx10) {
+            auto ba2_archive = formats::ba2::parse_ba2_dx10_archive_file(
+                resolved_host_path.value(), archive_size.value(), detected_ba2.value());
+            if (!ba2_archive) {
+                return ba2_archive.error();
+            }
+
+            return make_opened_reader(ba2_archive.value().metadata,
+                                      std::move(ba2_archive.value().entries),
+                                      reader_backend_identity::ba2_dx10);
+        }
+
+        auto ba2_archive = formats::ba2::parse_ba2_gnrl_archive_file(
+            resolved_host_path.value(), archive_size.value(), detected_ba2.value());
+        if (!ba2_archive) {
+            return ba2_archive.error();
+        }
         return make_opened_reader(ba2_archive.value().metadata,
                                   std::move(ba2_archive.value().entries),
-                                  reader_backend_identity::ba2_dx10);
-      }
-
-      auto ba2_archive = formats::ba2::parse_ba2_gnrl_archive_file(resolved_host_path.value(),
-                                                                   archive_size.value(),
-                                                                   detected_ba2.value());
-      if (!ba2_archive)
-      {
-        return ba2_archive.error();
-      }
-      return make_opened_reader(ba2_archive.value().metadata,
-                                std::move(ba2_archive.value().entries),
-                                reader_backend_identity::ba2_gnrl);
+                                  reader_backend_identity::ba2_gnrl);
     }
 
     auto detected = formats::bsa::detect_bsa_format(prefix.value());
-    if (!detected)
-    {
-      return detected.error();
+    if (!detected) {
+        return detected.error();
     }
 
     auto archive_size = archive_file_size(resolved_host_path.value());
-    if (!archive_size)
-    {
-      return archive_size.error();
+    if (!archive_size) {
+        return archive_size.error();
     }
-    if (detected.value().variant == archive_variant::tes3)
-    {
-      auto tes3_archive =
-          formats::bsa::parse_tes3_bsa_archive_file(resolved_host_path.value(), archive_size.value(), detected.value());
-      if (!tes3_archive)
-      {
-        return tes3_archive.error();
-      }
+    if (detected.value().variant == archive_variant::tes3) {
+        auto tes3_archive = formats::bsa::parse_tes3_bsa_archive_file(
+            resolved_host_path.value(), archive_size.value(), detected.value());
+        if (!tes3_archive) {
+            return tes3_archive.error();
+        }
 
-      return make_opened_reader(tes3_archive.value().metadata,
-                                std::move(tes3_archive.value().entries),
-                                reader_backend_identity::tes3_bsa);
+        return make_opened_reader(tes3_archive.value().metadata,
+                                  std::move(tes3_archive.value().entries),
+                                  reader_backend_identity::tes3_bsa);
     }
 
-    auto tes4_archive =
-        formats::bsa::parse_tes4_bsa_archive_file(resolved_host_path.value(), archive_size.value(), detected.value());
-    if (!tes4_archive)
-    {
-      return tes4_archive.error();
+    auto tes4_archive = formats::bsa::parse_tes4_bsa_archive_file(
+        resolved_host_path.value(), archive_size.value(), detected.value());
+    if (!tes4_archive) {
+        return tes4_archive.error();
     }
 
     return make_opened_reader(tes4_archive.value().metadata,
                               std::move(tes4_archive.value().entries),
                               reader_backend_identity::tes4_bsa);
-  }
+}
 
-  result<archive_metadata> archive_reader::metadata() const
-  {
-    if (!state_)
-    {
-      return error{error_code::unsupported, "archive reader is not open"};
+result<archive_metadata> archive_reader::metadata() const {
+    if (!state_) {
+        return error{error_code::unsupported, "archive reader is not open"};
     }
     return state_->metadata;
-  }
+}
 
-  result<std::vector<entry_metadata>> archive_reader::entries() const
-  {
-    if (!state_)
-    {
-      return error{error_code::unsupported, "archive reader is not open"};
+result<std::vector<entry_metadata>> archive_reader::entries() const {
+    if (!state_) {
+        return error{error_code::unsupported, "archive reader is not open"};
     }
     return state_->backend_table->entries(state_->entries);
-  }
+}
 
-  result<std::optional<entry_metadata>> archive_reader::find(std::string_view path) const
-  {
-    if (!state_)
-    {
-      return error{error_code::unsupported, "archive reader is not open"};
+result<std::optional<entry_metadata>> archive_reader::find(std::string_view path) const {
+    if (!state_) {
+        return error{error_code::unsupported, "archive reader is not open"};
     }
     return find_entry_metadata(*state_->backend_table, state_->entries, path);
-  }
+}
 
-  result<bool> archive_reader::contains(std::string_view path) const
-  {
-    if (!state_)
-    {
-      return error{error_code::unsupported, "archive reader is not open"};
+result<bool> archive_reader::contains(std::string_view path) const {
+    if (!state_) {
+        return error{error_code::unsupported, "archive reader is not open"};
     }
     auto found = find(path);
-    if (!found)
-    {
-      return found.error();
+    if (!found) {
+        return found.error();
     }
     return found.value().has_value();
-  }
+}
 
-  result<void> archive_reader::extract(std::string_view path, payload_sink &sink) const
-  {
-    if (!state_)
-    {
-      return error{error_code::unsupported, "archive reader is not open"};
+result<void> archive_reader::extract(std::string_view path, payload_sink& sink) const {
+    if (!state_) {
+        return error{error_code::unsupported, "archive reader is not open"};
     }
     auto found = find(path);
-    if (!found)
-    {
-      return found.error();
+    if (!found) {
+        return found.error();
     }
-    if (!found.value())
-    {
-      return error{error_code::not_found, "archive path was not found"};
+    if (!found.value()) {
+        return error{error_code::not_found, "archive path was not found"};
     }
     return extract_entry_payload(*state_->backend_table, state_->host_path, *found.value(), sink);
-  }
+}
 
-  result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view path) const
-  {
-    if (!state_)
-    {
-      return error{error_code::unsupported, "archive reader is not open"};
+result<std::vector<std::byte>> archive_reader::extract_bytes(std::string_view path) const {
+    if (!state_) {
+        return error{error_code::unsupported, "archive reader is not open"};
     }
 
     auto found = find(path);
-    if (!found)
-    {
-      return found.error();
+    if (!found) {
+        return found.error();
     }
-    if (!found.value())
-    {
-      return error{error_code::not_found, "archive path was not found"};
+    if (!found.value()) {
+        return error{error_code::not_found, "archive path was not found"};
     }
 
-    auto materialized_size = detail::checked_materialized_payload_size(found.value()->raw_size, "extracted payload");
-    if (!materialized_size)
-    {
-      return materialized_size.error();
+    auto materialized_size =
+        detail::checked_materialized_payload_size(found.value()->raw_size, "extracted payload");
+    if (!materialized_size) {
+        return materialized_size.error();
     }
 
-    // Keep the convenience API bounded by the parser-derived size for exactly one entry.
+    // Keep the convenience API bounded by the parser-derived size for exactly one
+    // entry.
     vector_payload_sink sink{found.value()->raw_size};
-    auto extracted = extract_entry_payload(*state_->backend_table, state_->host_path, *found.value(), sink);
-    if (!extracted)
-    {
-      return extracted.error();
+    auto extracted =
+        extract_entry_payload(*state_->backend_table, state_->host_path, *found.value(), sink);
+    if (!extracted) {
+        return extracted.error();
     }
     return std::move(sink).finish();
-  }
+}
 
-  result<std::vector<bulk_extract_entry_result>> archive_reader::extract_entries(
-      std::span<const bulk_extract_request> requests,
-      bulk_extract_sink_factory &sink_factory,
-      bulk_extract_options options) const
-  {
-    if (!state_)
-    {
-      return error{error_code::unsupported, "archive reader is not open"};
+result<std::vector<bulk_extract_entry_result>> archive_reader::extract_entries(
+    std::span<const bulk_extract_request> requests, bulk_extract_sink_factory& sink_factory,
+    bulk_extract_options options) const {
+    if (!state_) {
+        return error{error_code::unsupported, "archive reader is not open"};
     }
-    if (options.worker_count == 0U)
-    {
-      return error{error_code::invalid_argument, "worker_count must be greater than zero"};
+    if (options.worker_count == 0U) {
+        return error{error_code::invalid_argument, "worker_count must be greater than zero"};
     }
 
     std::vector<bulk_extract_entry_result> results(requests.size());
     std::vector<bulk_request_group> groups;
     groups.reserve(requests.size());
     std::map<std::string, std::size_t> group_by_path;
-    for (std::size_t index = 0; index < requests.size(); ++index)
-    {
-      const auto &request = requests[index];
-      // Coalesce only caller-supplied exact strings; archive-specific normalization remains inside find().
-      const auto [group, inserted] = group_by_path.emplace(request.path, groups.size());
-      if (inserted)
-      {
-        groups.push_back(bulk_request_group{request.path, std::vector<std::size_t>{index}});
-        continue;
-      }
-      groups[group->second].result_indices.push_back(index);
+    for (std::size_t index = 0; index < requests.size(); ++index) {
+        const auto& request = requests[index];
+        // Coalesce only caller-supplied exact strings; archive-specific
+        // normalization remains inside find().
+        const auto [group, inserted] = group_by_path.emplace(request.path, groups.size());
+        if (inserted) {
+            groups.push_back(bulk_request_group{request.path, std::vector<std::size_t>{index}});
+            continue;
+        }
+        groups[group->second].result_indices.push_back(index);
     }
 
-    const auto copy_group_result = [&](const bulk_request_group &group, const bulk_extract_entry_result &record)
-    {
-      for (const auto result_index : group.result_indices)
-      {
-        results[result_index] = record;
-        results[result_index].path = requests[result_index].path;
-      }
+    const auto copy_group_result = [&](const bulk_request_group& group,
+                                       const bulk_extract_entry_result& record) {
+        for (const auto result_index : group.result_indices) {
+            results[result_index] = record;
+            results[result_index].path = requests[result_index].path;
+        }
     };
 
-    const auto work = [&](std::size_t group_index) -> result<void>
-    {
-      const auto &group = groups[group_index];
-      bulk_extract_entry_result record;
-      record.path = group.path;
+    const auto work = [&](std::size_t group_index) -> result<void> {
+        const auto& group = groups[group_index];
+        bulk_extract_entry_result record;
+        record.path = group.path;
 
-      auto found = find(group.path);
-      if (!found)
-      {
-        record.failure = found.error();
-        copy_group_result(group, record);
-        return {};
-      }
-      if (!found.value())
-      {
-        record.failure = error{error_code::not_found, "archive path was not found"};
-        copy_group_result(group, record);
-        return {};
-      }
+        auto found = find(group.path);
+        if (!found) {
+            record.failure = found.error();
+            copy_group_result(group, record);
+            return {};
+        }
+        if (!found.value()) {
+            record.failure = error{error_code::not_found, "archive path was not found"};
+            copy_group_result(group, record);
+            return {};
+        }
 
-      record.entry = *found.value();
-      auto sink = sink_factory.create(group.path, *record.entry);
-      if (!sink)
-      {
-        record.failure = sink.error();
-        copy_group_result(group, record);
-        return {};
-      }
-      if (!sink.value())
-      {
-        record.failure = error{error_code::invalid_argument, "bulk extraction sink factory returned no sink"};
-        copy_group_result(group, record);
-        return {};
-      }
+        record.entry = *found.value();
+        auto sink = sink_factory.create(group.path, *record.entry);
+        if (!sink) {
+            record.failure = sink.error();
+            copy_group_result(group, record);
+            return {};
+        }
+        if (!sink.value()) {
+            record.failure = error{error_code::invalid_argument,
+                                   "bulk extraction sink factory returned no sink"};
+            copy_group_result(group, record);
+            return {};
+        }
 
-      auto extracted = extract_entry_payload(*state_->backend_table, state_->host_path, *record.entry, *sink.value());
-      if (!extracted)
-      {
-        record.failure = extracted.error();
-      }
-      copy_group_result(group, record);
-      return {};
+        auto extracted = extract_entry_payload(*state_->backend_table, state_->host_path,
+                                               *record.entry, *sink.value());
+        if (!extracted) {
+            record.failure = extracted.error();
+        }
+        copy_group_result(group, record);
+        return {};
     };
 
     auto worked = detail::run_indexed_work(groups.size(), options.worker_count, work);
-    if (!worked)
-    {
-      return worked.error();
+    if (!worked) {
+        return worked.error();
     }
     return results;
-  }
+}
 
-} // namespace libbsa
+}  // namespace libbsa

@@ -7,16 +7,14 @@
 #include <span>
 #include <vector>
 
-namespace libbsa::detail
-{
+namespace libbsa::detail {
 
-  /// Reads fixed-width little-endian archive fields from a bounded byte span.
-  ///
-  /// The reader never advances after failed reads, which lets format parsers report
-  /// truncation without losing the offset that caused the failure.
-  class binary_reader
-  {
-  public:
+/// Reads fixed-width little-endian archive fields from a bounded byte span.
+///
+/// The reader never advances after failed reads, which lets format parsers
+/// report truncation without losing the offset that caused the failure.
+class binary_reader {
+   public:
     /// Creates a reader over immutable archive bytes owned by the caller.
     explicit binary_reader(std::span<const std::byte> bytes) noexcept;
 
@@ -44,17 +42,16 @@ namespace libbsa::detail
     /// Skips `count` bytes without exposing them and advances on success.
     result<void> skip(std::size_t count);
 
-  private:
+   private:
     [[nodiscard]] bool can_read(std::size_t count) const noexcept;
 
     std::span<const std::byte> bytes_;
     std::size_t position_{0};
-  };
+};
 
-  /// Writes little-endian archive fields into an owned byte buffer.
-  class binary_writer
-  {
-  public:
+/// Writes little-endian archive fields into an owned byte buffer.
+class binary_writer {
+   public:
     /// Appends an unsigned 8-bit value.
     result<void> write_u8(std::uint8_t value);
 
@@ -73,8 +70,8 @@ namespace libbsa::detail
     /// Returns all bytes written so far.
     [[nodiscard]] std::span<const std::byte> bytes() const noexcept;
 
-  private:
+   private:
     std::vector<std::byte> bytes_;
-  };
+};
 
-} // namespace libbsa::detail
+}  // namespace libbsa::detail

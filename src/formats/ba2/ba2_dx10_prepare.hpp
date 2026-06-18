@@ -13,16 +13,13 @@
 #include <string_view>
 #include <vector>
 
-namespace libbsa::texture
-{
-  struct planned_texture_chunk;
+namespace libbsa::texture {
+struct planned_texture_chunk;
 }
 
-namespace libbsa::formats::ba2
-{
+namespace libbsa::formats::ba2 {
 
-  struct ba2_dx10_prepared_chunk
-  {
+struct ba2_dx10_prepared_chunk {
     std::uint64_t payload_offset{};
     std::uint32_t packed_size{};
     std::uint32_t raw_size{};
@@ -31,10 +28,9 @@ namespace libbsa::formats::ba2
     detail::compression_method compression{};
     bool owns_payload_bytes{true};
     std::vector<std::byte> stored_payload;
-  };
+};
 
-  struct ba2_dx10_prepared_entry
-  {
+struct ba2_dx10_prepared_entry {
     std::string archive_path_original;
     std::string archive_path_canonical;
     std::array<std::byte, 4> extension{};
@@ -48,43 +44,48 @@ namespace libbsa::formats::ba2
     std::uint8_t dxgi_format{};
     std::uint16_t cube_maps_raw{};
     std::vector<ba2_dx10_prepared_chunk> chunks;
-  };
+};
 
-  /// Validates target-specific DDS DXGI format compatibility before archive serialization.
-  result<void> ba2_dx10_validate_texture_format_for_target(ba2_dx10_target target, std::uint32_t dxgi_format);
+/// Validates target-specific DDS DXGI format compatibility before archive
+/// serialization.
+result<void> ba2_dx10_validate_texture_format_for_target(ba2_dx10_target target,
+                                                         std::uint32_t dxgi_format);
 
-  /// Ensures the writer has a temporary snapshot directory for add-time DDS ownership.
-  result<void> ba2_dx10_ensure_snapshot_directory(std::filesystem::path &snapshot_dir_path);
+/// Ensures the writer has a temporary snapshot directory for add-time DDS
+/// ownership.
+result<void> ba2_dx10_ensure_snapshot_directory(std::filesystem::path& snapshot_dir_path);
 
-  /// Builds a BA2 DX10 writer entry by parsing DDS metadata and snapshotting subresource bytes.
-  result<ba2_dx10_writer_entry> ba2_dx10_make_writer_entry(std::string_view archive_path,
-                                                           std::string_view dds_host_path,
-                                                           ba2_dx10_target target,
-                                                           const std::filesystem::path &snapshot_dir,
-                                                           std::size_t entry_index);
+/// Builds a BA2 DX10 writer entry by parsing DDS metadata and snapshotting
+/// subresource bytes.
+result<ba2_dx10_writer_entry> ba2_dx10_make_writer_entry(std::string_view archive_path,
+                                                         std::string_view dds_host_path,
+                                                         ba2_dx10_target target,
+                                                         const std::filesystem::path& snapshot_dir,
+                                                         std::size_t entry_index);
 
-  /// Returns the BA2 DX10 archive version for a target profile.
-  std::uint32_t ba2_dx10_version_for(ba2_dx10_target target) noexcept;
+/// Returns the BA2 DX10 archive version for a target profile.
+std::uint32_t ba2_dx10_version_for(ba2_dx10_target target) noexcept;
 
-  /// Returns the BA2 DX10 header byte size for the archive version.
-  std::size_t ba2_dx10_header_size_for(std::uint32_t version) noexcept;
+/// Returns the BA2 DX10 header byte size for the archive version.
+std::size_t ba2_dx10_header_size_for(std::uint32_t version) noexcept;
 
-  /// Validates BA2 DX10 target-specific writer options before preparation.
-  result<void> ba2_dx10_validate_target_options(ba2_dx10_target target, const ba2_dx10_writer_options &options);
+/// Validates BA2 DX10 target-specific writer options before preparation.
+result<void> ba2_dx10_validate_target_options(ba2_dx10_target target,
+                                              const ba2_dx10_writer_options& options);
 
-  /// Validates BA2 DX10 writer entries before chunk preparation.
-  result<void> ba2_dx10_validate_entries(ba2_dx10_target target, std::span<const ba2_dx10_writer_entry> entries);
+/// Validates BA2 DX10 writer entries before chunk preparation.
+result<void> ba2_dx10_validate_entries(ba2_dx10_target target,
+                                       std::span<const ba2_dx10_writer_entry> entries);
 
-  /// Prepares a single BA2 DX10 texture chunk from planned DDS subresources.
-  result<ba2_dx10_prepared_chunk> ba2_dx10_prepare_chunk(ba2_dx10_target target,
-                                                         const ba2_dx10_writer_options &options,
-                                                         const ba2_dx10_writer_entry &source,
-                                                         const texture::planned_texture_chunk &planned);
+/// Prepares a single BA2 DX10 texture chunk from planned DDS subresources.
+result<ba2_dx10_prepared_chunk> ba2_dx10_prepare_chunk(
+    ba2_dx10_target target, const ba2_dx10_writer_options& options,
+    const ba2_dx10_writer_entry& source, const texture::planned_texture_chunk& planned);
 
-  /// Prepares BA2 DX10 entries by planning chunks, compressing payloads, hashing names, and sorting records.
-  result<std::vector<ba2_dx10_prepared_entry>> ba2_dx10_prepare_entries(ba2_dx10_target target,
-                                                                        const ba2_dx10_writer_options &options,
-                                                                        std::span<const ba2_dx10_writer_entry> entries,
-                                                                        std::uint32_t worker_count);
+/// Prepares BA2 DX10 entries by planning chunks, compressing payloads, hashing
+/// names, and sorting records.
+result<std::vector<ba2_dx10_prepared_entry>> ba2_dx10_prepare_entries(
+    ba2_dx10_target target, const ba2_dx10_writer_options& options,
+    std::span<const ba2_dx10_writer_entry> entries, std::uint32_t worker_count);
 
-} // namespace libbsa::formats::ba2
+}  // namespace libbsa::formats::ba2

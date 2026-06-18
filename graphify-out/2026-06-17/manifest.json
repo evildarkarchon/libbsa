@@ -1,1230 +1,1230 @@
 {
-  "D:\\repos\\libbsa\\CMakePresets.json": {
+  "CMakePresets.json": {
     "mtime": 1779177361.4620588,
     "ast_hash": "a25340f5d0f73242473292236f7ab6a4",
     "semantic_hash": "a25340f5d0f73242473292236f7ab6a4"
   },
-  "D:\\repos\\libbsa\\benchmarks\\libbsa_benchmarks.cpp": {
-    "mtime": 1779177361.4700868,
-    "ast_hash": "f777f2a6c3d2e0cb0eaea7648c0b039a",
-    "semantic_hash": "f777f2a6c3d2e0cb0eaea7648c0b039a"
+  "benchmarks/libbsa_benchmarks.cpp": {
+    "mtime": 1781746243.784493,
+    "ast_hash": "82ac338cd0028eb999075967cb949259",
+    "semantic_hash": "82ac338cd0028eb999075967cb949259"
   },
-  "D:\\repos\\libbsa\\include\\libbsa\\archive.hpp": {
-    "mtime": 1779177361.5126202,
-    "ast_hash": "ffd1e71b5e6074b373fd62eaa2befbc4",
-    "semantic_hash": "ffd1e71b5e6074b373fd62eaa2befbc4"
+  "include/libbsa/archive.hpp": {
+    "mtime": 1781746500.659449,
+    "ast_hash": "c3af0574b25676ff4ce9717ee5239ab4",
+    "semantic_hash": "c3af0574b25676ff4ce9717ee5239ab4"
   },
-  "D:\\repos\\libbsa\\include\\libbsa\\export.hpp": {
+  "include/libbsa/export.hpp": {
     "mtime": 1779177361.5131202,
     "ast_hash": "a478ddca3e5dc88f56a719c4ef6f4a76",
     "semantic_hash": "a478ddca3e5dc88f56a719c4ef6f4a76"
   },
-  "D:\\repos\\libbsa\\include\\libbsa\\libbsa.hpp": {
+  "include/libbsa/libbsa.hpp": {
     "mtime": 1779177361.5131202,
     "ast_hash": "0f1477e13645a66955a8f010dcd94699",
     "semantic_hash": "0f1477e13645a66955a8f010dcd94699"
   },
-  "D:\\repos\\libbsa\\include\\libbsa\\result.hpp": {
-    "mtime": 1779177361.5131202,
-    "ast_hash": "10016220a6d039aa5f068472605de52e",
-    "semantic_hash": "10016220a6d039aa5f068472605de52e"
-  },
-  "D:\\repos\\libbsa\\include\\libbsa\\validation.hpp": {
-    "mtime": 1779177361.51362,
-    "ast_hash": "7d6562c95bf1723cb141cb168fadd1c4",
-    "semantic_hash": "7d6562c95bf1723cb141cb168fadd1c4"
-  },
-  "D:\\repos\\libbsa\\include\\libbsa\\version.hpp": {
-    "mtime": 1779177361.51362,
-    "ast_hash": "80c8dad5a148b255301b1e6b26fe3d12",
-    "semantic_hash": "80c8dad5a148b255301b1e6b26fe3d12"
-  },
-  "D:\\repos\\libbsa\\include\\libbsa\\writer.hpp": {
-    "mtime": 1779177361.51412,
-    "ast_hash": "c85b7173a9d26bb5b5f7d270cfa78c62",
-    "semantic_hash": "c85b7173a9d26bb5b5f7d270cfa78c62"
-  },
-  "D:\\repos\\libbsa\\src\\archive.cpp": {
-    "mtime": 1779177361.544647,
-    "ast_hash": "a870b198761b0acd657f3cfce66d1b88",
-    "semantic_hash": "a870b198761b0acd657f3cfce66d1b88"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\archive_path.cpp": {
-    "mtime": 1779177361.544647,
-    "ast_hash": "e121c22b89af1f76d4cad60819ae6d61",
-    "semantic_hash": "e121c22b89af1f76d4cad60819ae6d61"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\archive_path.hpp": {
-    "mtime": 1779177361.544647,
-    "ast_hash": "13345948982d478a8100785dcc3fd472",
-    "semantic_hash": "13345948982d478a8100785dcc3fd472"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\atomic_file_ops.hpp": {
-    "mtime": 1779177361.54565,
-    "ast_hash": "41e4e39df7bf613349542d55c0bff281",
-    "semantic_hash": "41e4e39df7bf613349542d55c0bff281"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\bethesda_hash.cpp": {
-    "mtime": 1779177361.54565,
-    "ast_hash": "4859d67d44a4e0244783f04ce7cc377d",
-    "semantic_hash": "4859d67d44a4e0244783f04ce7cc377d"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\bethesda_hash.hpp": {
-    "mtime": 1779177361.54565,
-    "ast_hash": "ac0d58c16d82bb0a3b8a2fe9539da385",
-    "semantic_hash": "ac0d58c16d82bb0a3b8a2fe9539da385"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\binary_io.cpp": {
-    "mtime": 1779177361.5461545,
-    "ast_hash": "41df2238a2a92be8f5157472f267f5c6",
-    "semantic_hash": "41df2238a2a92be8f5157472f267f5c6"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\binary_io.hpp": {
-    "mtime": 1779177361.5461545,
-    "ast_hash": "63d810fd17eb7dfada394b51312abd58",
-    "semantic_hash": "63d810fd17eb7dfada394b51312abd58"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\byte_vector.hpp": {
-    "mtime": 1779177361.5461545,
-    "ast_hash": "d0d496a417b033e83e9cd368caefa865",
-    "semantic_hash": "d0d496a417b033e83e9cd368caefa865"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\compression_router.cpp": {
-    "mtime": 1779177361.5466547,
-    "ast_hash": "d3e5a9b93db502078d320969fdd9b013",
-    "semantic_hash": "d3e5a9b93db502078d320969fdd9b013"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\compression_router.hpp": {
-    "mtime": 1779177361.5466547,
-    "ast_hash": "9bfd249cff7019694c030072128efe1e",
-    "semantic_hash": "9bfd249cff7019694c030072128efe1e"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\deflate_codec.cpp": {
-    "mtime": 1779177361.5466547,
-    "ast_hash": "df2da844791737805bdd18dcb77644b7",
-    "semantic_hash": "df2da844791737805bdd18dcb77644b7"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\deflate_codec.hpp": {
-    "mtime": 1779177361.5471547,
-    "ast_hash": "1f4d9b99a5ef1e819564d1d4017fa78f",
-    "semantic_hash": "1f4d9b99a5ef1e819564d1d4017fa78f"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\host_file.cpp": {
-    "mtime": 1779177361.5471547,
-    "ast_hash": "8c3eae5e6bf34e7a9926d51605e52395",
-    "semantic_hash": "8c3eae5e6bf34e7a9926d51605e52395"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\host_file.hpp": {
-    "mtime": 1779177361.5471547,
-    "ast_hash": "b8c67cc2c45e2f9f4d56b8ea626aeb5f",
-    "semantic_hash": "b8c67cc2c45e2f9f4d56b8ea626aeb5f"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\host_file_path.cpp": {
-    "mtime": 1779177361.5476556,
-    "ast_hash": "05fa1735ae771f34c3ccfad79f212129",
-    "semantic_hash": "05fa1735ae771f34c3ccfad79f212129"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\host_file_path.hpp": {
-    "mtime": 1779177361.5476556,
-    "ast_hash": "5e234fe04cc89c6385dbfe819c7bb40a",
-    "semantic_hash": "5e234fe04cc89c6385dbfe819c7bb40a"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\lz4_block_codec.cpp": {
-    "mtime": 1779177361.5476556,
-    "ast_hash": "d5be644d14cece3dbd8499804883a93f",
-    "semantic_hash": "d5be644d14cece3dbd8499804883a93f"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\lz4_block_codec.hpp": {
-    "mtime": 1779177361.5481553,
-    "ast_hash": "d5986cbe5034595b8ac0ef1bf0b82149",
-    "semantic_hash": "d5986cbe5034595b8ac0ef1bf0b82149"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\lz4_frame_codec.cpp": {
-    "mtime": 1779177361.5481553,
-    "ast_hash": "fcbb2c93ed1557467dadff548789691d",
-    "semantic_hash": "fcbb2c93ed1557467dadff548789691d"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\lz4_frame_codec.hpp": {
-    "mtime": 1779177361.5486543,
-    "ast_hash": "8c14f4b22c84e4309149c92cd8406fdc",
-    "semantic_hash": "8c14f4b22c84e4309149c92cd8406fdc"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\parallel_work.cpp": {
-    "mtime": 1779177361.5486543,
-    "ast_hash": "8d6e97b9255381285236030de7d89f71",
-    "semantic_hash": "8d6e97b9255381285236030de7d89f71"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\parallel_work.hpp": {
-    "mtime": 1779177361.5486543,
-    "ast_hash": "3ec05e239a6d065143fcad503a6cbb96",
-    "semantic_hash": "3ec05e239a6d065143fcad503a6cbb96"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\parser_primitives.cpp": {
-    "mtime": 1779177361.5491548,
-    "ast_hash": "4fd41f5d59c07c6f108409826525655d",
-    "semantic_hash": "4fd41f5d59c07c6f108409826525655d"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\parser_primitives.hpp": {
-    "mtime": 1779177361.5491548,
-    "ast_hash": "6d9f86037af179929f6fd0faa5cd74ff",
-    "semantic_hash": "6d9f86037af179929f6fd0faa5cd74ff"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\payload_stream.cpp": {
-    "mtime": 1779177361.5496542,
-    "ast_hash": "f21a7fb668fb6987bfe5fa8a075069af",
-    "semantic_hash": "f21a7fb668fb6987bfe5fa8a075069af"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\payload_stream.hpp": {
-    "mtime": 1779177361.5496542,
-    "ast_hash": "33e4d60c96b5401ce0f087d3221be5a5",
-    "semantic_hash": "33e4d60c96b5401ce0f087d3221be5a5"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\writer_publish.cpp": {
-    "mtime": 1779177361.5496542,
-    "ast_hash": "ad47b8c0e1a6df7b2efec5bebaa17cf9",
-    "semantic_hash": "ad47b8c0e1a6df7b2efec5bebaa17cf9"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\writer_publish.hpp": {
-    "mtime": 1779177361.5501542,
-    "ast_hash": "432e18e14218c31c558819d6857d3574",
-    "semantic_hash": "432e18e14218c31c558819d6857d3574"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_constants.hpp": {
-    "mtime": 1779177361.5501542,
-    "ast_hash": "5c4725ea685e85c2d79d8d735a9e57a3",
-    "semantic_hash": "5c4725ea685e85c2d79d8d735a9e57a3"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_chunk_assembler.cpp": {
-    "mtime": 1779177361.5506546,
-    "ast_hash": "0aa6d948488e657cc4cc01ef9391e37a",
-    "semantic_hash": "0aa6d948488e657cc4cc01ef9391e37a"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_chunk_assembler.hpp": {
-    "mtime": 1779177361.5506546,
-    "ast_hash": "ee17318b5880c000d9a3a9c5cdf9f5a8",
-    "semantic_hash": "ee17318b5880c000d9a3a9c5cdf9f5a8"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_layout.cpp": {
-    "mtime": 1779177361.5511544,
-    "ast_hash": "ab45e640638ef10ea91c2a7f54308565",
-    "semantic_hash": "ab45e640638ef10ea91c2a7f54308565"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_layout.hpp": {
-    "mtime": 1779177361.5511544,
-    "ast_hash": "b6c196447d31af705ff71528907e0ffa",
-    "semantic_hash": "b6c196447d31af705ff71528907e0ffa"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_names.cpp": {
-    "mtime": 1779177361.551654,
-    "ast_hash": "6abc86696491228f4830c96b264b954a",
-    "semantic_hash": "6abc86696491228f4830c96b264b954a"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_names.hpp": {
-    "mtime": 1779177361.5521538,
-    "ast_hash": "592747b42c3e7fe9473be9cb66a14038",
-    "semantic_hash": "592747b42c3e7fe9473be9cb66a14038"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_parser.cpp": {
-    "mtime": 1779177361.5521538,
-    "ast_hash": "87fc8c42c8f42cafe22fe571f04ddf52",
-    "semantic_hash": "87fc8c42c8f42cafe22fe571f04ddf52"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_parser.hpp": {
-    "mtime": 1779177361.552655,
-    "ast_hash": "bdbbf91a91de80b3ad4236407c88573b",
-    "semantic_hash": "bdbbf91a91de80b3ad4236407c88573b"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_prepare.cpp": {
-    "mtime": 1779177361.552655,
-    "ast_hash": "7bf5b29cc6442e909ea4a335b04ccd00",
-    "semantic_hash": "7bf5b29cc6442e909ea4a335b04ccd00"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_prepare.hpp": {
-    "mtime": 1779177361.552655,
-    "ast_hash": "74dd0c98a199b93835f76b7c0760f1ca",
-    "semantic_hash": "74dd0c98a199b93835f76b7c0760f1ca"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_reader.cpp": {
-    "mtime": 1779177361.5531545,
-    "ast_hash": "a5829283c4844e904d52daf5992353bf",
-    "semantic_hash": "a5829283c4844e904d52daf5992353bf"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_reader.hpp": {
-    "mtime": 1779177361.5531545,
-    "ast_hash": "ebf810c5febab3d7e3ed9300aac443f6",
-    "semantic_hash": "ebf810c5febab3d7e3ed9300aac443f6"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_records.cpp": {
-    "mtime": 1779177361.553654,
-    "ast_hash": "7f9c419300e972e8778d6669f5eb2f2e",
-    "semantic_hash": "7f9c419300e972e8778d6669f5eb2f2e"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_records.hpp": {
-    "mtime": 1779177361.553654,
-    "ast_hash": "74aa9106e5da0d9db219ae823264c891",
-    "semantic_hash": "74aa9106e5da0d9db219ae823264c891"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_serialize.cpp": {
-    "mtime": 1779177361.553654,
-    "ast_hash": "b345b2e5f3a5bff3944990f761b15364",
-    "semantic_hash": "b345b2e5f3a5bff3944990f761b15364"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_serialize.hpp": {
-    "mtime": 1779177361.5541544,
-    "ast_hash": "338865dc2b636ed03841411c862e86da",
-    "semantic_hash": "338865dc2b636ed03841411c862e86da"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_snapshot_builder.cpp": {
-    "mtime": 1779177361.5541544,
-    "ast_hash": "f27723a707559ae37b8d1a61756e71de",
-    "semantic_hash": "f27723a707559ae37b8d1a61756e71de"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_snapshot_builder.hpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "0ad40d1163a0d3b0aa2ef7df17d50f0e",
-    "semantic_hash": "0ad40d1163a0d3b0aa2ef7df17d50f0e"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_writer.cpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "46efa4513db5168a6f4e39b60ddd5cff",
-    "semantic_hash": "46efa4513db5168a6f4e39b60ddd5cff"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_writer.hpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "ad4b40706e62840d2258b374b4e961eb",
-    "semantic_hash": "ad4b40706e62840d2258b374b4e961eb"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_format_detector.cpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "0b97482c4569fbcbc71f08247b4faa5b",
-    "semantic_hash": "0b97482c4569fbcbc71f08247b4faa5b"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_format_detector.hpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "47c8e79990e38dafc789ff0eb02871f4",
-    "semantic_hash": "47c8e79990e38dafc789ff0eb02871f4"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_layout.cpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "4d458eb811b2a6180784147b674b9cf4",
-    "semantic_hash": "4d458eb811b2a6180784147b674b9cf4"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_layout.hpp": {
-    "mtime": 1779177361.5556579,
-    "ast_hash": "88f80219bc73e25ea0928bfeb4ad034c",
-    "semantic_hash": "88f80219bc73e25ea0928bfeb4ad034c"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_parser.cpp": {
-    "mtime": 1779177361.5556579,
-    "ast_hash": "564765e5be9d70da1c6b4c93e3274b62",
-    "semantic_hash": "564765e5be9d70da1c6b4c93e3274b62"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_parser.hpp": {
-    "mtime": 1779177361.5556579,
-    "ast_hash": "f22bff159ee1d8c9408828ff8caa794d",
-    "semantic_hash": "f22bff159ee1d8c9408828ff8caa794d"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_prepare.cpp": {
-    "mtime": 1779177361.5561638,
-    "ast_hash": "1fb6326c7b6861e04aa515e8d5899d04",
-    "semantic_hash": "1fb6326c7b6861e04aa515e8d5899d04"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_prepare.hpp": {
-    "mtime": 1779177361.5561638,
-    "ast_hash": "4fc354bea6b6e7cccf3619b63dac3b4f",
-    "semantic_hash": "4fc354bea6b6e7cccf3619b63dac3b4f"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_reader.cpp": {
-    "mtime": 1779177361.5561638,
-    "ast_hash": "cc48d99d25a99ca9f1ed68f9c3ce21d7",
-    "semantic_hash": "cc48d99d25a99ca9f1ed68f9c3ce21d7"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_reader.hpp": {
-    "mtime": 1779177361.5566618,
-    "ast_hash": "2f62548820382cd0e2f63ee4cf318765",
-    "semantic_hash": "2f62548820382cd0e2f63ee4cf318765"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_serialize.cpp": {
-    "mtime": 1779177361.5566618,
-    "ast_hash": "5fa36673f9e7dbbe28ffe9d4c150ae51",
-    "semantic_hash": "5fa36673f9e7dbbe28ffe9d4c150ae51"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_serialize.hpp": {
-    "mtime": 1779177361.5571618,
-    "ast_hash": "abec3fd978230b3e556616fc6f3274be",
-    "semantic_hash": "abec3fd978230b3e556616fc6f3274be"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_writer.cpp": {
-    "mtime": 1779177361.5571618,
-    "ast_hash": "c52b93c8cf475723b98b4a18fb7590cc",
-    "semantic_hash": "c52b93c8cf475723b98b4a18fb7590cc"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_writer.hpp": {
-    "mtime": 1779177361.5571618,
-    "ast_hash": "18c83fa51930bc5ab8614a8294bd1bc0",
-    "semantic_hash": "18c83fa51930bc5ab8614a8294bd1bc0"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\bsa_format_detector.cpp": {
-    "mtime": 1779177361.5576637,
-    "ast_hash": "9bad6768bb4344aceca4859b7691f404",
-    "semantic_hash": "9bad6768bb4344aceca4859b7691f404"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\bsa_format_detector.hpp": {
-    "mtime": 1779177361.5576637,
-    "ast_hash": "e0db3c2fb1edb3ce970d5d89b24668c5",
-    "semantic_hash": "e0db3c2fb1edb3ce970d5d89b24668c5"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_layout.cpp": {
-    "mtime": 1779177361.5581622,
-    "ast_hash": "28bf36f74870a068aece0f36389e05ed",
-    "semantic_hash": "28bf36f74870a068aece0f36389e05ed"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_layout.hpp": {
-    "mtime": 1779177361.5581622,
-    "ast_hash": "837f2a301f4a25df9d8ef12a9c416d6d",
-    "semantic_hash": "837f2a301f4a25df9d8ef12a9c416d6d"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_parser.cpp": {
-    "mtime": 1779177361.5586622,
-    "ast_hash": "343e9d65f2630d798a9f438a1d9a82a8",
-    "semantic_hash": "343e9d65f2630d798a9f438a1d9a82a8"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_parser.hpp": {
-    "mtime": 1779177361.5586622,
-    "ast_hash": "6b94e9a7575a22d74334bbad83274201",
-    "semantic_hash": "6b94e9a7575a22d74334bbad83274201"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_prepare.cpp": {
-    "mtime": 1779177361.559162,
-    "ast_hash": "e5b15f7f2e1d99e5d29311c3479553c5",
-    "semantic_hash": "e5b15f7f2e1d99e5d29311c3479553c5"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_prepare.hpp": {
-    "mtime": 1779177361.559162,
-    "ast_hash": "0f8ff4cc8be2ecac9e2bfe78ff68f0a4",
-    "semantic_hash": "0f8ff4cc8be2ecac9e2bfe78ff68f0a4"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_reader.cpp": {
-    "mtime": 1779177361.559662,
-    "ast_hash": "7d0601617167c93d858794d485832efe",
-    "semantic_hash": "7d0601617167c93d858794d485832efe"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_reader.hpp": {
-    "mtime": 1779177361.559662,
-    "ast_hash": "0114420d01c026bb4192cafd8f5e6bed",
-    "semantic_hash": "0114420d01c026bb4192cafd8f5e6bed"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_serialize.cpp": {
-    "mtime": 1779177361.559662,
-    "ast_hash": "d958a8c44bf5186075a3a5e0030bee00",
-    "semantic_hash": "d958a8c44bf5186075a3a5e0030bee00"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_serialize.hpp": {
-    "mtime": 1779177361.5601633,
-    "ast_hash": "32beb377d1163b57290dc39af3046edc",
-    "semantic_hash": "32beb377d1163b57290dc39af3046edc"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_writer.cpp": {
-    "mtime": 1779177361.5601633,
-    "ast_hash": "d2384b99508651875e2a0288dda07801",
-    "semantic_hash": "d2384b99508651875e2a0288dda07801"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_writer.hpp": {
-    "mtime": 1779177361.5601633,
-    "ast_hash": "ba5935a5eb751fd22e5c256487528feb",
-    "semantic_hash": "ba5935a5eb751fd22e5c256487528feb"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_constants.hpp": {
-    "mtime": 1779177361.560662,
-    "ast_hash": "af6af27245d085f8b95d20c0141c12b2",
-    "semantic_hash": "af6af27245d085f8b95d20c0141c12b2"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_layout.cpp": {
-    "mtime": 1779177361.560662,
-    "ast_hash": "9b0afb3eea8737e46eb251e4bc6f0c09",
-    "semantic_hash": "9b0afb3eea8737e46eb251e4bc6f0c09"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_layout.hpp": {
-    "mtime": 1779177361.5611622,
-    "ast_hash": "54c251808d0a275a41a43c6069ed8d75",
-    "semantic_hash": "54c251808d0a275a41a43c6069ed8d75"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_parser.cpp": {
-    "mtime": 1779177361.5611622,
-    "ast_hash": "67200627a46e1fd7a63a5f45c6eb41bf",
-    "semantic_hash": "67200627a46e1fd7a63a5f45c6eb41bf"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_parser.hpp": {
-    "mtime": 1779177361.5611622,
-    "ast_hash": "b9e5ef0761f3a5f1518ac0beb64bef40",
-    "semantic_hash": "b9e5ef0761f3a5f1518ac0beb64bef40"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_payload_descriptor.cpp": {
-    "mtime": 1779177361.561663,
-    "ast_hash": "7839cde61f41c61fa7591b05dad3cf25",
-    "semantic_hash": "7839cde61f41c61fa7591b05dad3cf25"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_payload_descriptor.hpp": {
-    "mtime": 1779177361.561663,
-    "ast_hash": "f1ead52638bb2da2c7ba50c80035ddf7",
-    "semantic_hash": "f1ead52638bb2da2c7ba50c80035ddf7"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_prepare.cpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "1310b777009233996ad9fd72b39af21c",
-    "semantic_hash": "1310b777009233996ad9fd72b39af21c"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_prepare.hpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "e448771f374ecd80ba9f2ff860ff5324",
-    "semantic_hash": "e448771f374ecd80ba9f2ff860ff5324"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_reader.cpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "bbb94117bbf695f82162b0f892543653",
-    "semantic_hash": "bbb94117bbf695f82162b0f892543653"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_reader.hpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "bcdcc620552f0b1aae3b303aaf9fa3d7",
-    "semantic_hash": "bcdcc620552f0b1aae3b303aaf9fa3d7"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_serialize.cpp": {
-    "mtime": 1779177361.5626624,
-    "ast_hash": "5bc0a46924db10b83a34922c7a847ebb",
-    "semantic_hash": "5bc0a46924db10b83a34922c7a847ebb"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_serialize.hpp": {
-    "mtime": 1779177361.5626624,
-    "ast_hash": "1138454c1ee4663413717b0015c97bfc",
-    "semantic_hash": "1138454c1ee4663413717b0015c97bfc"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_table.cpp": {
-    "mtime": 1779177361.5631638,
-    "ast_hash": "177807c69584519e392f2a10ab8985bb",
-    "semantic_hash": "177807c69584519e392f2a10ab8985bb"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_table.hpp": {
-    "mtime": 1779177361.5631638,
-    "ast_hash": "441ebc32a53538262c960ac0eb7a8621",
-    "semantic_hash": "441ebc32a53538262c960ac0eb7a8621"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_writer.cpp": {
-    "mtime": 1779177361.5631638,
-    "ast_hash": "f10a64ee2ad592fc48f718226b9a45d2",
-    "semantic_hash": "f10a64ee2ad592fc48f718226b9a45d2"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_writer.hpp": {
-    "mtime": 1779177361.5636632,
-    "ast_hash": "f7dd67f27902dbf01bf6218a5883c68c",
-    "semantic_hash": "f7dd67f27902dbf01bf6218a5883c68c"
-  },
-  "D:\\repos\\libbsa\\src\\libbsa.cpp": {
+  "include/libbsa/result.hpp": {
+    "mtime": 1781746500.734042,
+    "ast_hash": "a10eb1f4686826c874ea4ce4259c5365",
+    "semantic_hash": "a10eb1f4686826c874ea4ce4259c5365"
+  },
+  "include/libbsa/validation.hpp": {
+    "mtime": 1781746500.7515764,
+    "ast_hash": "6db112652896cbe784628e041e5dc317",
+    "semantic_hash": "6db112652896cbe784628e041e5dc317"
+  },
+  "include/libbsa/version.hpp": {
+    "mtime": 1781746500.7836137,
+    "ast_hash": "5e39364d299bea04e8cdfef251e28368",
+    "semantic_hash": "5e39364d299bea04e8cdfef251e28368"
+  },
+  "include/libbsa/writer.hpp": {
+    "mtime": 1781746500.8151443,
+    "ast_hash": "01a63850e570db18d3297e17a08d4959",
+    "semantic_hash": "01a63850e570db18d3297e17a08d4959"
+  },
+  "src/archive.cpp": {
+    "mtime": 1781746503.6231174,
+    "ast_hash": "95c8f9925f2c4b30fd66a0f217b68cb6",
+    "semantic_hash": "95c8f9925f2c4b30fd66a0f217b68cb6"
+  },
+  "src/detail/archive_path.cpp": {
+    "mtime": 1781746500.8922918,
+    "ast_hash": "6e41069742ecea0c4f6dd266dab3a3ed",
+    "semantic_hash": "6e41069742ecea0c4f6dd266dab3a3ed"
+  },
+  "src/detail/archive_path.hpp": {
+    "mtime": 1781746500.9223304,
+    "ast_hash": "9e3305df9675ea8856e6cdf896878855",
+    "semantic_hash": "9e3305df9675ea8856e6cdf896878855"
+  },
+  "src/detail/atomic_file_ops.hpp": {
+    "mtime": 1781746500.939365,
+    "ast_hash": "c38bdb59fdd1aa9f4433e9c8872298ae",
+    "semantic_hash": "c38bdb59fdd1aa9f4433e9c8872298ae"
+  },
+  "src/detail/bethesda_hash.cpp": {
+    "mtime": 1781746500.9704254,
+    "ast_hash": "08a27997beac173cf6b6cbfe85899a37",
+    "semantic_hash": "08a27997beac173cf6b6cbfe85899a37"
+  },
+  "src/detail/bethesda_hash.hpp": {
+    "mtime": 1781746501.0004575,
+    "ast_hash": "fb1ea9d4d5db2652131fd214dddcf03c",
+    "semantic_hash": "fb1ea9d4d5db2652131fd214dddcf03c"
+  },
+  "src/detail/binary_io.cpp": {
+    "mtime": 1781746501.0325086,
+    "ast_hash": "db76b20914476a23e719a65fcbc434c1",
+    "semantic_hash": "db76b20914476a23e719a65fcbc434c1"
+  },
+  "src/detail/binary_io.hpp": {
+    "mtime": 1781746501.1101189,
+    "ast_hash": "eeaeaede9f32bd5f57ebd29e44a3aec4",
+    "semantic_hash": "eeaeaede9f32bd5f57ebd29e44a3aec4"
+  },
+  "src/detail/byte_vector.hpp": {
+    "mtime": 1781746501.1396625,
+    "ast_hash": "885920bf81a83992c8f947f450947d63",
+    "semantic_hash": "885920bf81a83992c8f947f450947d63"
+  },
+  "src/detail/compression_router.cpp": {
+    "mtime": 1781746501.1717243,
+    "ast_hash": "cda53cb00b877a45109e2fc12bab75f9",
+    "semantic_hash": "cda53cb00b877a45109e2fc12bab75f9"
+  },
+  "src/detail/compression_router.hpp": {
+    "mtime": 1781746501.2027538,
+    "ast_hash": "1e5a9bc6af4a3c30a13d7175a2fd54b4",
+    "semantic_hash": "1e5a9bc6af4a3c30a13d7175a2fd54b4"
+  },
+  "src/detail/deflate_codec.cpp": {
+    "mtime": 1781746501.23329,
+    "ast_hash": "a1dfd48fa42813742f8ea96fbf571f1e",
+    "semantic_hash": "a1dfd48fa42813742f8ea96fbf571f1e"
+  },
+  "src/detail/deflate_codec.hpp": {
+    "mtime": 1781746501.249815,
+    "ast_hash": "035d13040b933799f9c20ba932fd8fd3",
+    "semantic_hash": "035d13040b933799f9c20ba932fd8fd3"
+  },
+  "src/detail/host_file.cpp": {
+    "mtime": 1781746501.3449788,
+    "ast_hash": "5b1055ccd7abb8fbf3b00794ecc780ff",
+    "semantic_hash": "5b1055ccd7abb8fbf3b00794ecc780ff"
+  },
+  "src/detail/host_file.hpp": {
+    "mtime": 1781746501.371038,
+    "ast_hash": "459a025208007c90bc8e552362d89b2e",
+    "semantic_hash": "459a025208007c90bc8e552362d89b2e"
+  },
+  "src/detail/host_file_path.cpp": {
+    "mtime": 1781746501.2828734,
+    "ast_hash": "2d84b0b5c0199efbb52fc4990c09ff23",
+    "semantic_hash": "2d84b0b5c0199efbb52fc4990c09ff23"
+  },
+  "src/detail/host_file_path.hpp": {
+    "mtime": 1781746501.3194463,
+    "ast_hash": "f951404e1d86ed2bd7d1b86250ad73fc",
+    "semantic_hash": "f951404e1d86ed2bd7d1b86250ad73fc"
+  },
+  "src/detail/lz4_block_codec.cpp": {
+    "mtime": 1781746501.3930612,
+    "ast_hash": "66c8d7bccf54640d88deee57daabf031",
+    "semantic_hash": "66c8d7bccf54640d88deee57daabf031"
+  },
+  "src/detail/lz4_block_codec.hpp": {
+    "mtime": 1781746501.41209,
+    "ast_hash": "7610931812b7d8c945c2d45286d4a1a1",
+    "semantic_hash": "7610931812b7d8c945c2d45286d4a1a1"
+  },
+  "src/detail/lz4_frame_codec.cpp": {
+    "mtime": 1781746501.4341185,
+    "ast_hash": "2e857dccf64bcb600b6db2737e46d91f",
+    "semantic_hash": "2e857dccf64bcb600b6db2737e46d91f"
+  },
+  "src/detail/lz4_frame_codec.hpp": {
+    "mtime": 1781746501.4531515,
+    "ast_hash": "e7b5d0bb2743d9ad5912506e3142560f",
+    "semantic_hash": "e7b5d0bb2743d9ad5912506e3142560f"
+  },
+  "src/detail/parallel_work.cpp": {
+    "mtime": 1781746501.4877138,
+    "ast_hash": "cf6cee040533417aba6cba6f8687b622",
+    "semantic_hash": "cf6cee040533417aba6cba6f8687b622"
+  },
+  "src/detail/parallel_work.hpp": {
+    "mtime": 1781746501.5077477,
+    "ast_hash": "14b49205b76069a165142b7f9f6ebc87",
+    "semantic_hash": "14b49205b76069a165142b7f9f6ebc87"
+  },
+  "src/detail/parser_primitives.cpp": {
+    "mtime": 1781746501.530789,
+    "ast_hash": "cbab1138818fa364b3460590765dc891",
+    "semantic_hash": "cbab1138818fa364b3460590765dc891"
+  },
+  "src/detail/parser_primitives.hpp": {
+    "mtime": 1781746501.5668538,
+    "ast_hash": "6ef70e068a7a003e572daaf6b485314b",
+    "semantic_hash": "6ef70e068a7a003e572daaf6b485314b"
+  },
+  "src/detail/payload_stream.cpp": {
+    "mtime": 1781746501.5898776,
+    "ast_hash": "ef30035be5313e4b20b27c6549aa89f5",
+    "semantic_hash": "ef30035be5313e4b20b27c6549aa89f5"
+  },
+  "src/detail/payload_stream.hpp": {
+    "mtime": 1781746501.6249115,
+    "ast_hash": "f3f02d6fa66ee597c08c89d9b0f5b151",
+    "semantic_hash": "f3f02d6fa66ee597c08c89d9b0f5b151"
+  },
+  "src/detail/writer_publish.cpp": {
+    "mtime": 1781746501.6464484,
+    "ast_hash": "2a4b4c0b0a8f2b680021c3bd730ee3e5",
+    "semantic_hash": "2a4b4c0b0a8f2b680021c3bd730ee3e5"
+  },
+  "src/detail/writer_publish.hpp": {
+    "mtime": 1781746501.6664817,
+    "ast_hash": "c0ef6878b0b15bc7eb2198de79147fda",
+    "semantic_hash": "c0ef6878b0b15bc7eb2198de79147fda"
+  },
+  "src/formats/ba2/ba2_constants.hpp": {
+    "mtime": 1781746501.7000346,
+    "ast_hash": "1a055305e611507b705d478d4ec005bf",
+    "semantic_hash": "1a055305e611507b705d478d4ec005bf"
+  },
+  "src/formats/ba2/ba2_dx10_chunk_assembler.cpp": {
+    "mtime": 1781746501.7350836,
+    "ast_hash": "b9cd68980cd528ebabf6bae75089b8d6",
+    "semantic_hash": "b9cd68980cd528ebabf6bae75089b8d6"
+  },
+  "src/formats/ba2/ba2_dx10_chunk_assembler.hpp": {
+    "mtime": 1781746501.7546225,
+    "ast_hash": "331e3a6aeea264ecb6cb90338f3b1d28",
+    "semantic_hash": "331e3a6aeea264ecb6cb90338f3b1d28"
+  },
+  "src/formats/ba2/ba2_dx10_layout.cpp": {
+    "mtime": 1781746501.773657,
+    "ast_hash": "ea97bb8d2bd0fcdbee1d3b13a42fdf93",
+    "semantic_hash": "ea97bb8d2bd0fcdbee1d3b13a42fdf93"
+  },
+  "src/formats/ba2/ba2_dx10_layout.hpp": {
+    "mtime": 1781746501.7916834,
+    "ast_hash": "3f90456baa07159deed3d75040647fa4",
+    "semantic_hash": "3f90456baa07159deed3d75040647fa4"
+  },
+  "src/formats/ba2/ba2_dx10_names.cpp": {
+    "mtime": 1781746501.811212,
+    "ast_hash": "a8b8e3ef0d12f432ded371445122e98c",
+    "semantic_hash": "a8b8e3ef0d12f432ded371445122e98c"
+  },
+  "src/formats/ba2/ba2_dx10_names.hpp": {
+    "mtime": 1781746501.8397357,
+    "ast_hash": "c6d45555d861af8c94948f232656b25f",
+    "semantic_hash": "c6d45555d861af8c94948f232656b25f"
+  },
+  "src/formats/ba2/ba2_dx10_parser.cpp": {
+    "mtime": 1781746501.8647778,
+    "ast_hash": "14afc6b8fe2b29d48cf40242976d4374",
+    "semantic_hash": "14afc6b8fe2b29d48cf40242976d4374"
+  },
+  "src/formats/ba2/ba2_dx10_parser.hpp": {
+    "mtime": 1781746501.8828056,
+    "ast_hash": "10e3e5f55a1393943422da2aa894f6bf",
+    "semantic_hash": "10e3e5f55a1393943422da2aa894f6bf"
+  },
+  "src/formats/ba2/ba2_dx10_prepare.cpp": {
+    "mtime": 1781746501.9038293,
+    "ast_hash": "990f0ae25b6c69e9becb38dca760d028",
+    "semantic_hash": "990f0ae25b6c69e9becb38dca760d028"
+  },
+  "src/formats/ba2/ba2_dx10_prepare.hpp": {
+    "mtime": 1781746501.9343877,
+    "ast_hash": "a10096ca411c758a9511fbe2bb631b29",
+    "semantic_hash": "a10096ca411c758a9511fbe2bb631b29"
+  },
+  "src/formats/ba2/ba2_dx10_reader.cpp": {
+    "mtime": 1781746501.9681077,
+    "ast_hash": "dbf1b69848c60f3a844f391304cf6fff",
+    "semantic_hash": "dbf1b69848c60f3a844f391304cf6fff"
+  },
+  "src/formats/ba2/ba2_dx10_reader.hpp": {
+    "mtime": 1781746501.9871354,
+    "ast_hash": "96619643c1830533272c2f3000b7b26d",
+    "semantic_hash": "96619643c1830533272c2f3000b7b26d"
+  },
+  "src/formats/ba2/ba2_dx10_records.cpp": {
+    "mtime": 1781746502.008163,
+    "ast_hash": "4e11ec286889b3d199968d68adab01ed",
+    "semantic_hash": "4e11ec286889b3d199968d68adab01ed"
+  },
+  "src/formats/ba2/ba2_dx10_records.hpp": {
+    "mtime": 1781746502.0271857,
+    "ast_hash": "15bdb888a00628014b7ce35051bdb072",
+    "semantic_hash": "15bdb888a00628014b7ce35051bdb072"
+  },
+  "src/formats/ba2/ba2_dx10_serialize.cpp": {
+    "mtime": 1781746502.0612643,
+    "ast_hash": "59effc881ce7f56b7007694bd7e413ff",
+    "semantic_hash": "59effc881ce7f56b7007694bd7e413ff"
+  },
+  "src/formats/ba2/ba2_dx10_serialize.hpp": {
+    "mtime": 1781746502.0912983,
+    "ast_hash": "a6c25c4efbb77ceddb57981d6c5111c3",
+    "semantic_hash": "a6c25c4efbb77ceddb57981d6c5111c3"
+  },
+  "src/formats/ba2/ba2_dx10_snapshot_builder.cpp": {
+    "mtime": 1781746502.1238348,
+    "ast_hash": "cf720d20423783a36519a0b65bd39b6e",
+    "semantic_hash": "cf720d20423783a36519a0b65bd39b6e"
+  },
+  "src/formats/ba2/ba2_dx10_snapshot_builder.hpp": {
+    "mtime": 1781746502.143157,
+    "ast_hash": "dd5b7b2e34b2444907a35fc1a0455760",
+    "semantic_hash": "dd5b7b2e34b2444907a35fc1a0455760"
+  },
+  "src/formats/ba2/ba2_dx10_writer.cpp": {
+    "mtime": 1781746502.165231,
+    "ast_hash": "53e23d793381a0dbcfaf830fddcad54a",
+    "semantic_hash": "53e23d793381a0dbcfaf830fddcad54a"
+  },
+  "src/formats/ba2/ba2_dx10_writer.hpp": {
+    "mtime": 1781746502.1827564,
+    "ast_hash": "df4ad56e6c35b7b4768c5c53534603a3",
+    "semantic_hash": "df4ad56e6c35b7b4768c5c53534603a3"
+  },
+  "src/formats/ba2/ba2_format_detector.cpp": {
+    "mtime": 1781746502.2163062,
+    "ast_hash": "f338f482ae5698972c6677b7d47dbfbb",
+    "semantic_hash": "f338f482ae5698972c6677b7d47dbfbb"
+  },
+  "src/formats/ba2/ba2_format_detector.hpp": {
+    "mtime": 1781746502.2834096,
+    "ast_hash": "423f3eac5374524e984637fcb9625c74",
+    "semantic_hash": "423f3eac5374524e984637fcb9625c74"
+  },
+  "src/formats/ba2/ba2_gnrl_layout.cpp": {
+    "mtime": 1781746502.3049383,
+    "ast_hash": "de1abe57f2b9b00ad3e8ae945e4e0259",
+    "semantic_hash": "de1abe57f2b9b00ad3e8ae945e4e0259"
+  },
+  "src/formats/ba2/ba2_gnrl_layout.hpp": {
+    "mtime": 1781746502.3219779,
+    "ast_hash": "7b116836f1922d698f4129a8616233b4",
+    "semantic_hash": "7b116836f1922d698f4129a8616233b4"
+  },
+  "src/formats/ba2/ba2_gnrl_parser.cpp": {
+    "mtime": 1781746502.3485184,
+    "ast_hash": "b31c2990796340b003bed58c8b7837d7",
+    "semantic_hash": "b31c2990796340b003bed58c8b7837d7"
+  },
+  "src/formats/ba2/ba2_gnrl_parser.hpp": {
+    "mtime": 1781746502.367544,
+    "ast_hash": "357d6efd65096d96727c8af3980cc3b2",
+    "semantic_hash": "357d6efd65096d96727c8af3980cc3b2"
+  },
+  "src/formats/ba2/ba2_gnrl_prepare.cpp": {
+    "mtime": 1781746502.404589,
+    "ast_hash": "cf2eaaff3602323c2c716830f2c8a249",
+    "semantic_hash": "cf2eaaff3602323c2c716830f2c8a249"
+  },
+  "src/formats/ba2/ba2_gnrl_prepare.hpp": {
+    "mtime": 1781746502.4231184,
+    "ast_hash": "63ba9da43af4a43bcbf12d812109433a",
+    "semantic_hash": "63ba9da43af4a43bcbf12d812109433a"
+  },
+  "src/formats/ba2/ba2_gnrl_reader.cpp": {
+    "mtime": 1781746502.442648,
+    "ast_hash": "2d0dc3136962a80c26ff8399f6c4889f",
+    "semantic_hash": "2d0dc3136962a80c26ff8399f6c4889f"
+  },
+  "src/formats/ba2/ba2_gnrl_reader.hpp": {
+    "mtime": 1781746502.4626825,
+    "ast_hash": "210c95b6b86547526f156da685ac8764",
+    "semantic_hash": "210c95b6b86547526f156da685ac8764"
+  },
+  "src/formats/ba2/ba2_gnrl_serialize.cpp": {
+    "mtime": 1781746502.4832072,
+    "ast_hash": "966c46577e6cb4d44d8f77eb866c2dc6",
+    "semantic_hash": "966c46577e6cb4d44d8f77eb866c2dc6"
+  },
+  "src/formats/ba2/ba2_gnrl_serialize.hpp": {
+    "mtime": 1781746502.5037417,
+    "ast_hash": "4a543ee5cc0050670735f05d94b51454",
+    "semantic_hash": "4a543ee5cc0050670735f05d94b51454"
+  },
+  "src/formats/ba2/ba2_gnrl_writer.cpp": {
+    "mtime": 1781746502.5473306,
+    "ast_hash": "89a95ced7d14cc039571b6bff8bd50a7",
+    "semantic_hash": "89a95ced7d14cc039571b6bff8bd50a7"
+  },
+  "src/formats/ba2/ba2_gnrl_writer.hpp": {
+    "mtime": 1781746502.5798783,
+    "ast_hash": "96b3e486236083009f4cb03f8b0e6e6e",
+    "semantic_hash": "96b3e486236083009f4cb03f8b0e6e6e"
+  },
+  "src/formats/bsa/bsa_format_detector.cpp": {
+    "mtime": 1781746502.6064255,
+    "ast_hash": "e8ce5b79acfe40e6ff5818d0217399b2",
+    "semantic_hash": "e8ce5b79acfe40e6ff5818d0217399b2"
+  },
+  "src/formats/bsa/bsa_format_detector.hpp": {
+    "mtime": 1781746502.6319563,
+    "ast_hash": "34f1a51207e3928d3886ea751e303518",
+    "semantic_hash": "34f1a51207e3928d3886ea751e303518"
+  },
+  "src/formats/bsa/tes3_bsa_layout.cpp": {
+    "mtime": 1781746502.6710503,
+    "ast_hash": "28e218d8c9d69a8efaded10b357fdfd3",
+    "semantic_hash": "28e218d8c9d69a8efaded10b357fdfd3"
+  },
+  "src/formats/bsa/tes3_bsa_layout.hpp": {
+    "mtime": 1781746502.6945868,
+    "ast_hash": "935a484a85bede18acc8f7268901fded",
+    "semantic_hash": "935a484a85bede18acc8f7268901fded"
+  },
+  "src/formats/bsa/tes3_bsa_parser.cpp": {
+    "mtime": 1781746502.7226453,
+    "ast_hash": "0b8c1a5ab89c8db14ec4e44c839d3b0d",
+    "semantic_hash": "0b8c1a5ab89c8db14ec4e44c839d3b0d"
+  },
+  "src/formats/bsa/tes3_bsa_parser.hpp": {
+    "mtime": 1781746502.7436883,
+    "ast_hash": "1b694260389203d24758d0a3b9ce73c3",
+    "semantic_hash": "1b694260389203d24758d0a3b9ce73c3"
+  },
+  "src/formats/bsa/tes3_bsa_prepare.cpp": {
+    "mtime": 1781746502.7782345,
+    "ast_hash": "1392a9681d35dfd6f517679fed0d8eae",
+    "semantic_hash": "1392a9681d35dfd6f517679fed0d8eae"
+  },
+  "src/formats/bsa/tes3_bsa_prepare.hpp": {
+    "mtime": 1781746502.7977595,
+    "ast_hash": "c429549937d145a85c8bb072f8710324",
+    "semantic_hash": "c429549937d145a85c8bb072f8710324"
+  },
+  "src/formats/bsa/tes3_bsa_reader.cpp": {
+    "mtime": 1781746502.8192868,
+    "ast_hash": "62ae4e8760f4d100fdc54902b7d20f54",
+    "semantic_hash": "62ae4e8760f4d100fdc54902b7d20f54"
+  },
+  "src/formats/bsa/tes3_bsa_reader.hpp": {
+    "mtime": 1781746502.8498397,
+    "ast_hash": "846d84966ad8377bcb865b4586ffaa87",
+    "semantic_hash": "846d84966ad8377bcb865b4586ffaa87"
+  },
+  "src/formats/bsa/tes3_bsa_serialize.cpp": {
+    "mtime": 1781746502.884893,
+    "ast_hash": "c1b696e3e70c77b583b9469e4e5740ea",
+    "semantic_hash": "c1b696e3e70c77b583b9469e4e5740ea"
+  },
+  "src/formats/bsa/tes3_bsa_serialize.hpp": {
+    "mtime": 1781746502.9049273,
+    "ast_hash": "d07d123511fc7f3afed22f0e50525c1d",
+    "semantic_hash": "d07d123511fc7f3afed22f0e50525c1d"
+  },
+  "src/formats/bsa/tes3_bsa_writer.cpp": {
+    "mtime": 1781746502.9274774,
+    "ast_hash": "c68b3501fef60e7f7de488046457f21f",
+    "semantic_hash": "c68b3501fef60e7f7de488046457f21f"
+  },
+  "src/formats/bsa/tes3_bsa_writer.hpp": {
+    "mtime": 1781746502.946549,
+    "ast_hash": "9c4f858967fba9e188d7a2c584bb3940",
+    "semantic_hash": "9c4f858967fba9e188d7a2c584bb3940"
+  },
+  "src/formats/bsa/tes4_bsa_constants.hpp": {
+    "mtime": 1781746502.9796062,
+    "ast_hash": "414c3f7ed6061bbf77063f587c9adf76",
+    "semantic_hash": "414c3f7ed6061bbf77063f587c9adf76"
+  },
+  "src/formats/bsa/tes4_bsa_layout.cpp": {
+    "mtime": 1781746503.0046303,
+    "ast_hash": "d00dc16b08247fcd756df324d36f4dad",
+    "semantic_hash": "d00dc16b08247fcd756df324d36f4dad"
+  },
+  "src/formats/bsa/tes4_bsa_layout.hpp": {
+    "mtime": 1781746503.0512109,
+    "ast_hash": "47d8037ce3eca0f927350334468c6cb9",
+    "semantic_hash": "47d8037ce3eca0f927350334468c6cb9"
+  },
+  "src/formats/bsa/tes4_bsa_parser.cpp": {
+    "mtime": 1781746503.0942702,
+    "ast_hash": "ebcf29956abd349053d7fe6d4506687b",
+    "semantic_hash": "ebcf29956abd349053d7fe6d4506687b"
+  },
+  "src/formats/bsa/tes4_bsa_parser.hpp": {
+    "mtime": 1781746503.1168063,
+    "ast_hash": "65074249ff60d42b87e76766d722a458",
+    "semantic_hash": "65074249ff60d42b87e76766d722a458"
+  },
+  "src/formats/bsa/tes4_bsa_payload_descriptor.cpp": {
+    "mtime": 1781746503.148363,
+    "ast_hash": "467a045be5c77a57521efccde4af1e99",
+    "semantic_hash": "467a045be5c77a57521efccde4af1e99"
+  },
+  "src/formats/bsa/tes4_bsa_payload_descriptor.hpp": {
+    "mtime": 1781746503.18294,
+    "ast_hash": "5f06708cd1a5b35cd09a7cb73e8724e7",
+    "semantic_hash": "5f06708cd1a5b35cd09a7cb73e8724e7"
+  },
+  "src/formats/bsa/tes4_bsa_prepare.cpp": {
+    "mtime": 1781746503.2089696,
+    "ast_hash": "f4701e7735f90d27efcb538f0a4937c6",
+    "semantic_hash": "f4701e7735f90d27efcb538f0a4937c6"
+  },
+  "src/formats/bsa/tes4_bsa_prepare.hpp": {
+    "mtime": 1781746503.2395265,
+    "ast_hash": "3f47fed6f97fb6e239cde1fafd545381",
+    "semantic_hash": "3f47fed6f97fb6e239cde1fafd545381"
+  },
+  "src/formats/bsa/tes4_bsa_reader.cpp": {
+    "mtime": 1781746503.2740629,
+    "ast_hash": "c2b06892180607382088cddba751ee59",
+    "semantic_hash": "c2b06892180607382088cddba751ee59"
+  },
+  "src/formats/bsa/tes4_bsa_reader.hpp": {
+    "mtime": 1781746503.3065984,
+    "ast_hash": "2b4dcf679507cc4ddd8b28d3f469c6d7",
+    "semantic_hash": "2b4dcf679507cc4ddd8b28d3f469c6d7"
+  },
+  "src/formats/bsa/tes4_bsa_serialize.cpp": {
+    "mtime": 1781746503.3306482,
+    "ast_hash": "55c3e60be9aa8c9382dbdc8482ee755f",
+    "semantic_hash": "55c3e60be9aa8c9382dbdc8482ee755f"
+  },
+  "src/formats/bsa/tes4_bsa_serialize.hpp": {
+    "mtime": 1781746503.3486917,
+    "ast_hash": "25c7a3b3d28e1067e7019ec8b2ca96fe",
+    "semantic_hash": "25c7a3b3d28e1067e7019ec8b2ca96fe"
+  },
+  "src/formats/bsa/tes4_bsa_table.cpp": {
+    "mtime": 1781746503.3712678,
+    "ast_hash": "0fb5ba3feef0dd744f766f343024359b",
+    "semantic_hash": "0fb5ba3feef0dd744f766f343024359b"
+  },
+  "src/formats/bsa/tes4_bsa_table.hpp": {
+    "mtime": 1781746503.389801,
+    "ast_hash": "0d0008f6f07bd639402f149b39dbf415",
+    "semantic_hash": "0d0008f6f07bd639402f149b39dbf415"
+  },
+  "src/formats/bsa/tes4_bsa_writer.cpp": {
+    "mtime": 1781746503.4098206,
+    "ast_hash": "a3d4385aebb72db4cd3d0332a4f5fb7c",
+    "semantic_hash": "a3d4385aebb72db4cd3d0332a4f5fb7c"
+  },
+  "src/formats/bsa/tes4_bsa_writer.hpp": {
+    "mtime": 1781746503.4273436,
+    "ast_hash": "5238d526ba349f16bba4fe30a8ac3cb7",
+    "semantic_hash": "5238d526ba349f16bba4fe30a8ac3cb7"
+  },
+  "src/libbsa.cpp": {
     "mtime": 1779177361.5636632,
     "ast_hash": "a804e58ac27e122d4ed2ed2d8ac91262",
     "semantic_hash": "a804e58ac27e122d4ed2ed2d8ac91262"
   },
-  "D:\\repos\\libbsa\\src\\texture\\dds_layout.cpp": {
-    "mtime": 1779177361.5636632,
-    "ast_hash": "2856052593ccfeaf0b400c6b75d5beec",
-    "semantic_hash": "2856052593ccfeaf0b400c6b75d5beec"
+  "src/texture/dds_layout.cpp": {
+    "mtime": 1781746503.5134404,
+    "ast_hash": "e2dbd883d48e6b31c5dbbb92d6c3092b",
+    "semantic_hash": "e2dbd883d48e6b31c5dbbb92d6c3092b"
   },
-  "D:\\repos\\libbsa\\src\\texture\\dds_layout.hpp": {
-    "mtime": 1779177361.5636632,
-    "ast_hash": "222ee38dbb6f5500eca3609345b6a011",
-    "semantic_hash": "222ee38dbb6f5500eca3609345b6a011"
+  "src/texture/dds_layout.hpp": {
+    "mtime": 1781746503.5324862,
+    "ast_hash": "1a72363cb8454f563493e140c8555956",
+    "semantic_hash": "1a72363cb8454f563493e140c8555956"
   },
-  "D:\\repos\\libbsa\\src\\texture\\directxtex_analyzer.cpp": {
-    "mtime": 1779177361.5646667,
-    "ast_hash": "b8a5491851995f6f91740236ab8b1fbd",
-    "semantic_hash": "b8a5491851995f6f91740236ab8b1fbd"
+  "src/texture/directxtex_analyzer.cpp": {
+    "mtime": 1781746503.5525253,
+    "ast_hash": "7eb4bcf5c7d7a76e8a7fdd235a8ed32d",
+    "semantic_hash": "7eb4bcf5c7d7a76e8a7fdd235a8ed32d"
   },
-  "D:\\repos\\libbsa\\src\\texture\\directxtex_analyzer.hpp": {
-    "mtime": 1779177361.5646667,
-    "ast_hash": "4773c31751fc4334a7fa79a04782e3c4",
-    "semantic_hash": "4773c31751fc4334a7fa79a04782e3c4"
+  "src/texture/directxtex_analyzer.hpp": {
+    "mtime": 1781746503.583578,
+    "ast_hash": "f9ea2540e2832065e737fe323d36fc5f",
+    "semantic_hash": "f9ea2540e2832065e737fe323d36fc5f"
   },
-  "D:\\repos\\libbsa\\src\\validation.cpp": {
-    "mtime": 1779177361.5646667,
-    "ast_hash": "8e4d04be50b348d40116a0796f31bcd2",
-    "semantic_hash": "8e4d04be50b348d40116a0796f31bcd2"
+  "src/validation.cpp": {
+    "mtime": 1781746503.668212,
+    "ast_hash": "554a33036cc923d265359709401c98fd",
+    "semantic_hash": "554a33036cc923d265359709401c98fd"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_dx10_fo4_manifest.json": {
+  "tests/fixtures/generated/archives/ba2_dx10_fo4_manifest.json": {
     "mtime": 1779261973.6912448,
     "ast_hash": "63458804e57bccef689051cf0748f024",
     "semantic_hash": "63458804e57bccef689051cf0748f024"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_dx10_malformed_manifest.json": {
+  "tests/fixtures/generated/archives/ba2_dx10_malformed_manifest.json": {
     "mtime": 1779261973.6962516,
     "ast_hash": "dd863fb753280d5bf74ad5cac0619bf9",
     "semantic_hash": "dd863fb753280d5bf74ad5cac0619bf9"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_dx10_sfv3_manifest.json": {
+  "tests/fixtures/generated/archives/ba2_dx10_sfv3_manifest.json": {
     "mtime": 1779261973.692245,
     "ast_hash": "905922021b773954086d09a1db62eab9",
     "semantic_hash": "905922021b773954086d09a1db62eab9"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_gnrl_fo4_manifest.json": {
+  "tests/fixtures/generated/archives/ba2_gnrl_fo4_manifest.json": {
     "mtime": 1779261972.4484286,
     "ast_hash": "9634e52ab4e1828b0f77723fa22bcf44",
     "semantic_hash": "9634e52ab4e1828b0f77723fa22bcf44"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_gnrl_malformed_manifest.json": {
+  "tests/fixtures/generated/archives/ba2_gnrl_malformed_manifest.json": {
     "mtime": 1779261972.4529302,
     "ast_hash": "9e5c564bcef8942dfe15d47c41f13bfc",
     "semantic_hash": "9e5c564bcef8942dfe15d47c41f13bfc"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_gnrl_sfv2_manifest.json": {
+  "tests/fixtures/generated/archives/ba2_gnrl_sfv2_manifest.json": {
     "mtime": 1779261972.4489293,
     "ast_hash": "7a051f08ca5577e8e3b5a004beadfd12",
     "semantic_hash": "7a051f08ca5577e8e3b5a004beadfd12"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_gnrl_sfv3_manifest.json": {
+  "tests/fixtures/generated/archives/ba2_gnrl_sfv3_manifest.json": {
     "mtime": 1779261972.4499292,
     "ast_hash": "70c22b4666f03abdb6bd596ce4aebe25",
     "semantic_hash": "70c22b4666f03abdb6bd596ce4aebe25"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\malformed_manifest.json": {
+  "tests/fixtures/generated/archives/malformed_manifest.json": {
     "mtime": 1779177361.5721874,
     "ast_hash": "24c6b3e83596cef64aa1c53b1734c6d3",
     "semantic_hash": "24c6b3e83596cef64aa1c53b1734c6d3"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes3_malformed_manifest.json": {
+  "tests/fixtures/generated/archives/tes3_malformed_manifest.json": {
     "mtime": 1781700858.507029,
     "ast_hash": "f3a90861acccbfd4c63ce41adce03da4",
     "semantic_hash": "f3a90861acccbfd4c63ce41adce03da4"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes3_success_manifest.json": {
+  "tests/fixtures/generated/archives/tes3_success_manifest.json": {
     "mtime": 1781700858.5025315,
     "ast_hash": "7962b22c6a953f0a28c20f112068a2b8",
     "semantic_hash": "7962b22c6a953f0a28c20f112068a2b8"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes3_windows_unsafe_names_manifest.json": {
+  "tests/fixtures/generated/archives/tes3_windows_unsafe_names_manifest.json": {
     "mtime": 1781700858.5035298,
     "ast_hash": "0d627c347b9f007ddad62e5363710ffe",
     "semantic_hash": "0d627c347b9f007ddad62e5363710ffe"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes3_writer_canonical_manifest.json": {
+  "tests/fixtures/generated/archives/tes3_writer_canonical_manifest.json": {
     "mtime": 1779261970.1498535,
     "ast_hash": "f80ebf3d791fe07b087e6a3585bf2619",
     "semantic_hash": "f80ebf3d791fe07b087e6a3585bf2619"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes4_v103_manifest.json": {
+  "tests/fixtures/generated/archives/tes4_v103_manifest.json": {
     "mtime": 1779261971.2925792,
     "ast_hash": "54d0909fe669c0f8b3005dbf5a74a059",
     "semantic_hash": "54d0909fe669c0f8b3005dbf5a74a059"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes4_v104_manifest.json": {
+  "tests/fixtures/generated/archives/tes4_v104_manifest.json": {
     "mtime": 1779261971.293079,
     "ast_hash": "1e2db449cf7e49bef0e674d1256719cc",
     "semantic_hash": "1e2db449cf7e49bef0e674d1256719cc"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes4_v105_manifest.json": {
+  "tests/fixtures/generated/archives/tes4_v105_manifest.json": {
     "mtime": 1779261971.2940817,
     "ast_hash": "82dc59cf6cf0fe1053eb72f7b081ac21",
     "semantic_hash": "82dc59cf6cf0fe1053eb72f7b081ac21"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\compatibility_matrix.json": {
+  "tests/fixtures/generated/compatibility_matrix.json": {
     "mtime": 1779177361.5766964,
     "ast_hash": "3fabad65014f58d9f7eda00640fdd6b7",
     "semantic_hash": "3fabad65014f58d9f7eda00640fdd6b7"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_ba2_dx10_fixtures.cpp": {
-    "mtime": 1779177361.5766964,
-    "ast_hash": "1935664ce1c809ea17edddbd94afaa1c",
-    "semantic_hash": "1935664ce1c809ea17edddbd94afaa1c"
+  "tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp": {
+    "mtime": 1781746504.0342555,
+    "ast_hash": "c29e9b00bcdc27335653dd2c9663dd4b",
+    "semantic_hash": "c29e9b00bcdc27335653dd2c9663dd4b"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_ba2_gnrl_fixtures.cpp": {
-    "mtime": 1779177361.577196,
-    "ast_hash": "7bf7f3a18ac7b59d520abd348c79d5a7",
-    "semantic_hash": "7bf7f3a18ac7b59d520abd348c79d5a7"
+  "tests/fixtures/generated/generate_ba2_gnrl_fixtures.cpp": {
+    "mtime": 1781746504.071338,
+    "ast_hash": "af4e4f929fc4f9da774a48a9f0e5dd90",
+    "semantic_hash": "af4e4f929fc4f9da774a48a9f0e5dd90"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_tes3_bsa_fixtures.cpp": {
-    "mtime": 1781700666.390195,
-    "ast_hash": "f52da267c15aba2bdfd81cfbb98ecb1e",
-    "semantic_hash": "f52da267c15aba2bdfd81cfbb98ecb1e"
+  "tests/fixtures/generated/generate_tes3_bsa_fixtures.cpp": {
+    "mtime": 1781746504.0973806,
+    "ast_hash": "c19178ad1563dd18e096a573ac0ab005",
+    "semantic_hash": "c19178ad1563dd18e096a573ac0ab005"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_tes3_bsa_writer_fixtures.cpp": {
-    "mtime": 1779177361.577696,
-    "ast_hash": "6874521e6ce1e23fd750bf05fd0f4f4c",
-    "semantic_hash": "6874521e6ce1e23fd750bf05fd0f4f4c"
+  "tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp": {
+    "mtime": 1781746504.1349196,
+    "ast_hash": "bb68c6c347adf27aa1b0111a22711c00",
+    "semantic_hash": "bb68c6c347adf27aa1b0111a22711c00"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_tes4_bsa_fixtures.cpp": {
-    "mtime": 1779177361.5781958,
-    "ast_hash": "c5b839423fae96e1015f0f8106a3fad1",
-    "semantic_hash": "c5b839423fae96e1015f0f8106a3fad1"
+  "tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp": {
+    "mtime": 1781746504.165999,
+    "ast_hash": "9a94ec21937d177299281fb96d07c544",
+    "semantic_hash": "9a94ec21937d177299281fb96d07c544"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\source\\ba2_dx10_writer_sources_manifest.json": {
+  "tests/fixtures/generated/source/ba2_dx10_writer_sources_manifest.json": {
     "mtime": 1779261973.7052588,
     "ast_hash": "3f836bd63abc899bf9f3de1ae3e588fc",
     "semantic_hash": "3f836bd63abc899bf9f3de1ae3e588fc"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\validate_fixture_manifests.py": {
+  "tests/fixtures/generated/validate_fixture_manifests.py": {
     "mtime": 1779177361.5821962,
     "ast_hash": "e3266e973a3cd7028c20273b32e52860",
     "semantic_hash": "e3266e973a3cd7028c20273b32e52860"
   },
-  "D:\\repos\\libbsa\\tests\\package-consumer\\main.cpp": {
-    "mtime": 1779248425.5015626,
-    "ast_hash": "af9287c5daf969b345ffa6a9ad146092",
-    "semantic_hash": "af9287c5daf969b345ffa6a9ad146092"
+  "tests/package-consumer/main.cpp": {
+    "mtime": 1781746504.2005494,
+    "ast_hash": "50bb313bdf0bb0587b74dc3e273f2917",
+    "semantic_hash": "50bb313bdf0bb0587b74dc3e273f2917"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\archive_path_tests.cpp": {
-    "mtime": 1779177361.5836961,
-    "ast_hash": "fc069c07ca86adcf821564d9cfb3427f",
-    "semantic_hash": "fc069c07ca86adcf821564d9cfb3427f"
+  "tests/unit/archive_path_tests.cpp": {
+    "mtime": 1781746504.2210634,
+    "ast_hash": "c0c4bd2e1b23a606975772450f9eeedc",
+    "semantic_hash": "c0c4bd2e1b23a606975772450f9eeedc"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\archive_reader_dispatch_policy_tests.cpp": {
-    "mtime": 1779177361.5836961,
-    "ast_hash": "44208d2b58335fd209ba0118d60f6ea1",
-    "semantic_hash": "44208d2b58335fd209ba0118d60f6ea1"
+  "tests/unit/archive_reader_dispatch_policy_tests.cpp": {
+    "mtime": 1781746504.2536151,
+    "ast_hash": "73a5a3e14b577998b5cc8a714e89989f",
+    "semantic_hash": "73a5a3e14b577998b5cc8a714e89989f"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\archive_reader_dispatch_tests.cpp": {
-    "mtime": 1779177361.5836961,
-    "ast_hash": "34010e1c10b03f12aa10a66aefd1e318",
-    "semantic_hash": "34010e1c10b03f12aa10a66aefd1e318"
+  "tests/unit/archive_reader_dispatch_tests.cpp": {
+    "mtime": 1781746504.290166,
+    "ast_hash": "1c1dd7daf6c1ef36c508faf0eb6eb90b",
+    "semantic_hash": "1c1dd7daf6c1ef36c508faf0eb6eb90b"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\archive_reader_tests.cpp": {
-    "mtime": 1779177361.584196,
-    "ast_hash": "ea034484873f00f92cee08e0b504489f",
-    "semantic_hash": "ea034484873f00f92cee08e0b504489f"
+  "tests/unit/archive_reader_tests.cpp": {
+    "mtime": 1781746504.3096921,
+    "ast_hash": "9e14798ffa499a90a2bbb58d124b1c28",
+    "semantic_hash": "9e14798ffa499a90a2bbb58d124b1c28"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_extraction_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "9b095ca8002f2fd55cb4bfe44c9211d0",
-    "semantic_hash": "9b095ca8002f2fd55cb4bfe44c9211d0"
+  "tests/unit/ba2_dx10_extraction_tests.cpp": {
+    "mtime": 1781746504.3342228,
+    "ast_hash": "7de5a8dfb7e9878caa6d946c4d6653b2",
+    "semantic_hash": "7de5a8dfb7e9878caa6d946c4d6653b2"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_malformed_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "fb5e38c8d7937e5a53632830c0e4fdf0",
-    "semantic_hash": "fb5e38c8d7937e5a53632830c0e4fdf0"
+  "tests/unit/ba2_dx10_malformed_tests.cpp": {
+    "mtime": 1781746504.353776,
+    "ast_hash": "6f025867cd663c9214f43752fbad3436",
+    "semantic_hash": "6f025867cd663c9214f43752fbad3436"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_metadata_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "b75f0a46ad563540d89613e2a917ee52",
-    "semantic_hash": "b75f0a46ad563540d89613e2a917ee52"
+  "tests/unit/ba2_dx10_metadata_tests.cpp": {
+    "mtime": 1781746504.42037,
+    "ast_hash": "1a14034046893426555dbd5cf53037a6",
+    "semantic_hash": "1a14034046893426555dbd5cf53037a6"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_parser_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "3754b2e7d20d3d9f5022dfa4dc353dcc",
-    "semantic_hash": "3754b2e7d20d3d9f5022dfa4dc353dcc"
+  "tests/unit/ba2_dx10_parser_tests.cpp": {
+    "mtime": 1781746504.467955,
+    "ast_hash": "4a9fc57d91c6edfcc8468e6319e42a7c",
+    "semantic_hash": "4a9fc57d91c6edfcc8468e6319e42a7c"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_preparer_seam_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "4f855c19ad6d595217be7a57efd3aa82",
-    "semantic_hash": "4f855c19ad6d595217be7a57efd3aa82"
+  "tests/unit/ba2_dx10_preparer_seam_tests.cpp": {
+    "mtime": 1781746504.5070033,
+    "ast_hash": "4182b149b5746c462860944d1dcdf64c",
+    "semantic_hash": "4182b149b5746c462860944d1dcdf64c"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_writer_tests.cpp": {
-    "mtime": 1779177361.5856993,
-    "ast_hash": "8851781afab1d98bef981e7bf789d59a",
-    "semantic_hash": "8851781afab1d98bef981e7bf789d59a"
+  "tests/unit/ba2_dx10_writer_tests.cpp": {
+    "mtime": 1781746504.5550945,
+    "ast_hash": "c9a0d43f86dd8a2b4ec553c6cd391ea8",
+    "semantic_hash": "c9a0d43f86dd8a2b4ec553c6cd391ea8"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_gnrl_reader_tests.cpp": {
-    "mtime": 1779177361.5862036,
-    "ast_hash": "56c6520f2fc10d77ea5c8b669c68b334",
-    "semantic_hash": "56c6520f2fc10d77ea5c8b669c68b334"
+  "tests/unit/ba2_gnrl_reader_tests.cpp": {
+    "mtime": 1781746504.5926492,
+    "ast_hash": "3f1854c59953bef7edfb96a5cd9e5f57",
+    "semantic_hash": "3f1854c59953bef7edfb96a5cd9e5f57"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_gnrl_writer_tests.cpp": {
-    "mtime": 1779177361.5862036,
-    "ast_hash": "1e5eb0aa952c3ad8beba63ac70d14b94",
-    "semantic_hash": "1e5eb0aa952c3ad8beba63ac70d14b94"
+  "tests/unit/ba2_gnrl_writer_tests.cpp": {
+    "mtime": 1781746504.644242,
+    "ast_hash": "30c899cb05762460008468ebdc36c4ea",
+    "semantic_hash": "30c899cb05762460008468ebdc36c4ea"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_writer_execution_tests.cpp": {
-    "mtime": 1779177361.5867033,
-    "ast_hash": "54241d246b4f7c55d6a0b1ad9fbba195",
-    "semantic_hash": "54241d246b4f7c55d6a0b1ad9fbba195"
+  "tests/unit/ba2_writer_execution_tests.cpp": {
+    "mtime": 1781746504.6727881,
+    "ast_hash": "0c63c3b9751e0271a50faccb86c59f23",
+    "semantic_hash": "0c63c3b9751e0271a50faccb86c59f23"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\benchmark_policy_tests.cpp": {
-    "mtime": 1779177361.5867033,
-    "ast_hash": "f4cdbc71827bf8351fe6e9e27578fae5",
-    "semantic_hash": "f4cdbc71827bf8351fe6e9e27578fae5"
+  "tests/unit/benchmark_policy_tests.cpp": {
+    "mtime": 1781746504.7113464,
+    "ast_hash": "2712a343df913bb64945b03f03a09958",
+    "semantic_hash": "2712a343df913bb64945b03f03a09958"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\bethesda_hash_tests.cpp": {
-    "mtime": 1779177361.5872042,
-    "ast_hash": "e18846a15c2e6d30ae9ad6557728badf",
-    "semantic_hash": "e18846a15c2e6d30ae9ad6557728badf"
+  "tests/unit/bethesda_hash_tests.cpp": {
+    "mtime": 1781746504.737406,
+    "ast_hash": "e29324e241ea07d137b033717ab5b0f3",
+    "semantic_hash": "e29324e241ea07d137b033717ab5b0f3"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\binary_io_tests.cpp": {
-    "mtime": 1779177361.5872042,
-    "ast_hash": "e9f2089c53e3f6832ed23ba9360254da",
-    "semantic_hash": "e9f2089c53e3f6832ed23ba9360254da"
+  "tests/unit/binary_io_tests.cpp": {
+    "mtime": 1781746504.7634604,
+    "ast_hash": "f3d84212f19e2e0c1f0cf6cf3ed90ad3",
+    "semantic_hash": "f3d84212f19e2e0c1f0cf6cf3ed90ad3"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\bounded_memory_policy_tests.cpp": {
-    "mtime": 1779177361.5872042,
-    "ast_hash": "20d864a885de4daec834bc974966461a",
-    "semantic_hash": "20d864a885de4daec834bc974966461a"
+  "tests/unit/bounded_memory_policy_tests.cpp": {
+    "mtime": 1781746504.8005304,
+    "ast_hash": "ebb82618bbf6f95604c39b1acf4f5422",
+    "semantic_hash": "ebb82618bbf6f95604c39b1acf4f5422"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\bsa_writer_execution_tests.cpp": {
-    "mtime": 1779177361.587703,
-    "ast_hash": "3caf717b562f451ec9db7309880cf7f7",
-    "semantic_hash": "3caf717b562f451ec9db7309880cf7f7"
+  "tests/unit/bsa_writer_execution_tests.cpp": {
+    "mtime": 1781746504.8290818,
+    "ast_hash": "b77cca2f25988fa0f79f5364bb4690a2",
+    "semantic_hash": "b77cca2f25988fa0f79f5364bb4690a2"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\bulk_extraction_tests.cpp": {
-    "mtime": 1779177361.587703,
-    "ast_hash": "cde11192802ce43ef8a17704bdc9a8a1",
-    "semantic_hash": "cde11192802ce43ef8a17704bdc9a8a1"
+  "tests/unit/bulk_extraction_tests.cpp": {
+    "mtime": 1781746504.8786862,
+    "ast_hash": "32fa3db75e864dd4343e3f46033cfba3",
+    "semantic_hash": "32fa3db75e864dd4343e3f46033cfba3"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\compatibility_matrix_tests.cpp": {
-    "mtime": 1779177361.5882034,
-    "ast_hash": "44db003ad58cf9d38f6799041df251cc",
-    "semantic_hash": "44db003ad58cf9d38f6799041df251cc"
+  "tests/unit/compatibility_matrix_tests.cpp": {
+    "mtime": 1781746504.9022167,
+    "ast_hash": "a4b39662f5042b6b3428356c0daf6ad3",
+    "semantic_hash": "a4b39662f5042b6b3428356c0daf6ad3"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\compatibility_warning_tests.cpp": {
-    "mtime": 1779177361.5882034,
-    "ast_hash": "8ad9dd2b01453828a6c8cc55264ff58c",
-    "semantic_hash": "8ad9dd2b01453828a6c8cc55264ff58c"
+  "tests/unit/compatibility_warning_tests.cpp": {
+    "mtime": 1781746504.9267757,
+    "ast_hash": "af9c17ba5a4f8509e936804fe6e6cc88",
+    "semantic_hash": "af9c17ba5a4f8509e936804fe6e6cc88"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\compression_router_tests.cpp": {
-    "mtime": 1779177361.5887034,
-    "ast_hash": "702c4bdcb93c534930db5e4652d3d503",
-    "semantic_hash": "702c4bdcb93c534930db5e4652d3d503"
+  "tests/unit/compression_router_tests.cpp": {
+    "mtime": 1781746504.950327,
+    "ast_hash": "78255481d3625771531fae81d2a74430",
+    "semantic_hash": "78255481d3625771531fae81d2a74430"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\coverage_audit_matrix_docs_tests.cpp": {
-    "mtime": 1779258956.1031854,
-    "ast_hash": "72bc9f22ad7fbe2d100ebee07c4e039e",
-    "semantic_hash": "72bc9f22ad7fbe2d100ebee07c4e039e"
+  "tests/unit/coverage_audit_matrix_docs_tests.cpp": {
+    "mtime": 1781746504.9748664,
+    "ast_hash": "3d00b01deeaff8d1b6e7f84980d25903",
+    "semantic_hash": "3d00b01deeaff8d1b6e7f84980d25903"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\dds_layout_tests.cpp": {
-    "mtime": 1779177361.5887034,
-    "ast_hash": "a217a3a1b4876d6f265281ea34ed8517",
-    "semantic_hash": "a217a3a1b4876d6f265281ea34ed8517"
+  "tests/unit/dds_layout_tests.cpp": {
+    "mtime": 1781746505.0034165,
+    "ast_hash": "15075c5dda5eff82327e81b5e44d6e1e",
+    "semantic_hash": "15075c5dda5eff82327e81b5e44d6e1e"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\deflate_codec_tests.cpp": {
-    "mtime": 1779177361.5892034,
-    "ast_hash": "d417996ad5a46b1999eb967387af86d2",
-    "semantic_hash": "d417996ad5a46b1999eb967387af86d2"
+  "tests/unit/deflate_codec_tests.cpp": {
+    "mtime": 1781746505.027961,
+    "ast_hash": "a834ea7becfee9488e64ee3a039b83c4",
+    "semantic_hash": "a834ea7becfee9488e64ee3a039b83c4"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\docs_policy_tests.cpp": {
-    "mtime": 1779258906.571265,
-    "ast_hash": "8dc4a282ccc37354be3e51877c443fea",
-    "semantic_hash": "8dc4a282ccc37354be3e51877c443fea"
+  "tests/unit/docs_policy_tests.cpp": {
+    "mtime": 1781746505.071559,
+    "ast_hash": "fa1c30e2c91301dadbdf8ca81ccdd19e",
+    "semantic_hash": "fa1c30e2c91301dadbdf8ca81ccdd19e"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\export_surface_policy_tests.cpp": {
-    "mtime": 1779261667.7670329,
-    "ast_hash": "550db87e0ff9dacb311f89c1bea2c5c6",
-    "semantic_hash": "550db87e0ff9dacb311f89c1bea2c5c6"
+  "tests/unit/export_surface_policy_tests.cpp": {
+    "mtime": 1781746505.0930948,
+    "ast_hash": "96b4b409d8fab970daa7ac13f6a830b3",
+    "semantic_hash": "96b4b409d8fab970daa7ac13f6a830b3"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\host_file_path_tests.cpp": {
-    "mtime": 1779177361.5897033,
-    "ast_hash": "97571098c5cc40ea0f6d58edd29422ff",
-    "semantic_hash": "97571098c5cc40ea0f6d58edd29422ff"
+  "tests/unit/host_file_path_tests.cpp": {
+    "mtime": 1781746505.1261544,
+    "ast_hash": "f6226679ec85710fba52e86d64d21a7f",
+    "semantic_hash": "f6226679ec85710fba52e86d64d21a7f"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\host_file_tests.cpp": {
-    "mtime": 1779177361.5897033,
-    "ast_hash": "44c11b4b40d85ea89b311108f2d4cde8",
-    "semantic_hash": "44c11b4b40d85ea89b311108f2d4cde8"
+  "tests/unit/host_file_tests.cpp": {
+    "mtime": 1781746505.1592388,
+    "ast_hash": "79b2f3586273b7b5ed0cfc96e0d70fd9",
+    "semantic_hash": "79b2f3586273b7b5ed0cfc96e0d70fd9"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\host_file_writer_name_tests.cpp": {
-    "mtime": 1779177361.5902038,
-    "ast_hash": "9e04e4f408cc8114aa46e80cbad59353",
-    "semantic_hash": "9e04e4f408cc8114aa46e80cbad59353"
+  "tests/unit/host_file_writer_name_tests.cpp": {
+    "mtime": 1781746505.1847718,
+    "ast_hash": "3a4ecdbefccc64ec4a486818ecd736a4",
+    "semantic_hash": "3a4ecdbefccc64ec4a486818ecd736a4"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\host_path_correctness_boundary_tests.cpp": {
-    "mtime": 1779177361.5902038,
-    "ast_hash": "62a245588fdad35d4344e31416d31c48",
-    "semantic_hash": "62a245588fdad35d4344e31416d31c48"
+  "tests/unit/host_path_correctness_boundary_tests.cpp": {
+    "mtime": 1781746505.2108152,
+    "ast_hash": "8d634554494ce4499ec4bcc8464e37bc",
+    "semantic_hash": "8d634554494ce4499ec4bcc8464e37bc"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\local_game_fixture_tests.cpp": {
-    "mtime": 1779177361.5907035,
-    "ast_hash": "a8f2034be482115624ae9761736deb09",
-    "semantic_hash": "a8f2034be482115624ae9761736deb09"
+  "tests/unit/local_game_fixture_tests.cpp": {
+    "mtime": 1781746505.2343514,
+    "ast_hash": "038659d074c2a8fa9e3060538a946364",
+    "semantic_hash": "038659d074c2a8fa9e3060538a946364"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\lz4_codec_tests.cpp": {
-    "mtime": 1779177361.5907035,
-    "ast_hash": "3c23430dadb82edcc62ae5cad67d628f",
-    "semantic_hash": "3c23430dadb82edcc62ae5cad67d628f"
+  "tests/unit/lz4_codec_tests.cpp": {
+    "mtime": 1781746505.2699103,
+    "ast_hash": "979351d3d3379819a95bda42a1f90405",
+    "semantic_hash": "979351d3d3379819a95bda42a1f90405"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\parser_preparer_seam_policy_tests.cpp": {
-    "mtime": 1779177361.5912032,
-    "ast_hash": "31385f1b32e7bac09210dcb33fdd4c8c",
-    "semantic_hash": "31385f1b32e7bac09210dcb33fdd4c8c"
+  "tests/unit/parser_preparer_seam_policy_tests.cpp": {
+    "mtime": 1781746505.2904418,
+    "ast_hash": "dbcce04db35e9c972dfc88afb2443c90",
+    "semantic_hash": "dbcce04db35e9c972dfc88afb2443c90"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\parser_primitives_tests.cpp": {
-    "mtime": 1779177361.5912032,
-    "ast_hash": "9603b470926ed7f88ad8ba81cc3c85d5",
-    "semantic_hash": "9603b470926ed7f88ad8ba81cc3c85d5"
+  "tests/unit/parser_primitives_tests.cpp": {
+    "mtime": 1781746505.309975,
+    "ast_hash": "15b6aea905f0f82a1a68026d4a01b9f5",
+    "semantic_hash": "15b6aea905f0f82a1a68026d4a01b9f5"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\payload_stream_tests.cpp": {
-    "mtime": 1779177361.5917032,
-    "ast_hash": "bafb3ccce51b4f146492386b770a2c83",
-    "semantic_hash": "bafb3ccce51b4f146492386b770a2c83"
+  "tests/unit/payload_stream_tests.cpp": {
+    "mtime": 1781746505.342525,
+    "ast_hash": "5da3fb948d12dac3294960dca2961d27",
+    "semantic_hash": "5da3fb948d12dac3294960dca2961d27"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\public_include_boundary_tests.cpp": {
-    "mtime": 1779261457.4555204,
-    "ast_hash": "74774d46350a23b516c2cf37c6f6043c",
-    "semantic_hash": "74774d46350a23b516c2cf37c6f6043c"
+  "tests/unit/public_include_boundary_tests.cpp": {
+    "mtime": 1781746505.3770883,
+    "ast_hash": "97d333b10dea13547a00bfb9fedff349",
+    "semantic_hash": "97d333b10dea13547a00bfb9fedff349"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\result_tests.cpp": {
-    "mtime": 1779177361.5917032,
-    "ast_hash": "37d5bf31ec08d646e29c6826e5cfdcc8",
-    "semantic_hash": "37d5bf31ec08d646e29c6826e5cfdcc8"
+  "tests/unit/result_tests.cpp": {
+    "mtime": 1781746505.3951013,
+    "ast_hash": "e26512f4616f4099f691f42acbb918ee",
+    "semantic_hash": "e26512f4616f4099f691f42acbb918ee"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\target_format_policy_tests.cpp": {
-    "mtime": 1779248926.5657184,
-    "ast_hash": "e9f67da709caf1d74659739f2ddcf289",
-    "semantic_hash": "e9f67da709caf1d74659739f2ddcf289"
+  "tests/unit/target_format_policy_tests.cpp": {
+    "mtime": 1781746505.419135,
+    "ast_hash": "89fdaa105e8c378fa307055eb33afb44",
+    "semantic_hash": "89fdaa105e8c378fa307055eb33afb44"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\tes3_bsa_reader_tests.cpp": {
-    "mtime": 1779177361.5922022,
-    "ast_hash": "6a78f2fcb8a4ff0e8a7e14096f904734",
-    "semantic_hash": "6a78f2fcb8a4ff0e8a7e14096f904734"
+  "tests/unit/tes3_bsa_reader_tests.cpp": {
+    "mtime": 1781746505.4667335,
+    "ast_hash": "1639bf544e74429ea3e41e75578b1e3a",
+    "semantic_hash": "1639bf544e74429ea3e41e75578b1e3a"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\tes3_bsa_writer_tests.cpp": {
-    "mtime": 1779177361.5927024,
-    "ast_hash": "adda047b022ed21681f938a0ae1583c9",
-    "semantic_hash": "adda047b022ed21681f938a0ae1583c9"
+  "tests/unit/tes3_bsa_writer_tests.cpp": {
+    "mtime": 1781746505.5132937,
+    "ast_hash": "5f35dfc371bdd79cb4a8aec59654edfe",
+    "semantic_hash": "5f35dfc371bdd79cb4a8aec59654edfe"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\tes4_bsa_parser_seam_tests.cpp": {
-    "mtime": 1779177361.5927024,
-    "ast_hash": "d6d1168dd080d1ef99ef7ac27196f19e",
-    "semantic_hash": "d6d1168dd080d1ef99ef7ac27196f19e"
+  "tests/unit/tes4_bsa_parser_seam_tests.cpp": {
+    "mtime": 1781746505.549358,
+    "ast_hash": "cebe288ab31461a5408141dd0cba3566",
+    "semantic_hash": "cebe288ab31461a5408141dd0cba3566"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\tes4_bsa_reader_tests.cpp": {
-    "mtime": 1779177361.593202,
-    "ast_hash": "7e5dbc65aab5cae31f03b7f71802dbe0",
-    "semantic_hash": "7e5dbc65aab5cae31f03b7f71802dbe0"
+  "tests/unit/tes4_bsa_reader_tests.cpp": {
+    "mtime": 1781746505.5798888,
+    "ast_hash": "2d03f30a7ec63d394c3a0b3b7a566aea",
+    "semantic_hash": "2d03f30a7ec63d394c3a0b3b7a566aea"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\tes4_bsa_writer_tests.cpp": {
-    "mtime": 1779177361.593202,
-    "ast_hash": "cdabeb03e8bfd9e50f373329eabaf792",
-    "semantic_hash": "cdabeb03e8bfd9e50f373329eabaf792"
+  "tests/unit/tes4_bsa_writer_tests.cpp": {
+    "mtime": 1781746505.6629977,
+    "ast_hash": "e7476f60d979b069b3b1efdc65477b51",
+    "semantic_hash": "e7476f60d979b069b3b1efdc65477b51"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\thread_safety_docs_policy_tests.cpp": {
-    "mtime": 1779177361.5937023,
-    "ast_hash": "9f0a391752252b3f446e4603137cd25e",
-    "semantic_hash": "9f0a391752252b3f446e4603137cd25e"
+  "tests/unit/thread_safety_docs_policy_tests.cpp": {
+    "mtime": 1781746505.6815133,
+    "ast_hash": "97ab45c31b3a26f07683554f74f595f2",
+    "semantic_hash": "97ab45c31b3a26f07683554f74f595f2"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\validation_api_tests.cpp": {
-    "mtime": 1779246308.807443,
-    "ast_hash": "9854c6802225e32c35e993073d7ccb46",
-    "semantic_hash": "9854c6802225e32c35e993073d7ccb46"
+  "tests/unit/validation_api_tests.cpp": {
+    "mtime": 1781746505.7105591,
+    "ast_hash": "7610fa7781c3f730813ffdc1237127af",
+    "semantic_hash": "7610fa7781c3f730813ffdc1237127af"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\validation_policy_tests.cpp": {
-    "mtime": 1781693284.6182916,
-    "ast_hash": "fc5632cb7d0c9e4d1ac0919f2d137d4a",
-    "semantic_hash": "fc5632cb7d0c9e4d1ac0919f2d137d4a"
+  "tests/unit/validation_policy_tests.cpp": {
+    "mtime": 1781746505.73711,
+    "ast_hash": "d3593e11d165c9fe165fe33c669c554a",
+    "semantic_hash": "d3593e11d165c9fe165fe33c669c554a"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\writer_execution_options_tests.cpp": {
-    "mtime": 1779177361.5942023,
-    "ast_hash": "49f24da329ed5a16942c6d4b7bb3bd25",
-    "semantic_hash": "49f24da329ed5a16942c6d4b7bb3bd25"
+  "tests/unit/writer_execution_options_tests.cpp": {
+    "mtime": 1781746505.7601626,
+    "ast_hash": "0533b2cf1f52330622a91471eeb18c9b",
+    "semantic_hash": "0533b2cf1f52330622a91471eeb18c9b"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\writer_hotspot_policy_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "1856af823fc9f2e4f5c5f76e45a5ddee",
-    "semantic_hash": "1856af823fc9f2e4f5c5f76e45a5ddee"
+  "tests/unit/writer_hotspot_policy_tests.cpp": {
+    "mtime": 1781746505.795209,
+    "ast_hash": "fdbd80106c7690126d739eec4bbeac31",
+    "semantic_hash": "fdbd80106c7690126d739eec4bbeac31"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\writer_ownership_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "fd58d9a58d4efb995603b205438206b0",
-    "semantic_hash": "fd58d9a58d4efb995603b205438206b0"
+  "tests/unit/writer_ownership_tests.cpp": {
+    "mtime": 1781746505.8267474,
+    "ast_hash": "4935d8d79e80c29381b57c488d347db2",
+    "semantic_hash": "4935d8d79e80c29381b57c488d347db2"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\writer_publish_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "d39966ce815de64d87dc6aa0df3dd469",
-    "semantic_hash": "d39966ce815de64d87dc6aa0df3dd469"
+  "tests/unit/writer_publish_tests.cpp": {
+    "mtime": 1781746505.8543656,
+    "ast_hash": "f9d8223fcac8e1d189561d418b873d71",
+    "semantic_hash": "f9d8223fcac8e1d189561d418b873d71"
   },
-  "D:\\repos\\libbsa\\tests\\unit\\writer_stage_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "816361a6c4ea118c9e6b78e84517bb75",
-    "semantic_hash": "816361a6c4ea118c9e6b78e84517bb75"
+  "tests/unit/writer_stage_tests.cpp": {
+    "mtime": 1781746505.901445,
+    "ast_hash": "03bdc960191613d25d50a054eaa3834d",
+    "semantic_hash": "03bdc960191613d25d50a054eaa3834d"
   },
-  "D:\\repos\\libbsa\\tools\\cli\\main.cpp": {
-    "mtime": 1781738638.7719636,
-    "ast_hash": "b571e55f1f1fbf441c9fd296138ac3b7",
-    "semantic_hash": "b571e55f1f1fbf441c9fd296138ac3b7"
+  "tools/cli/main.cpp": {
+    "mtime": 1781747373.1717508,
+    "ast_hash": "88ad524ed79a308fb1cb5a234659d0e3",
+    "semantic_hash": ""
   },
-  "D:\\repos\\libbsa\\vcpkg-configuration.json": {
+  "vcpkg-configuration.json": {
     "mtime": 1779177361.5957048,
     "ast_hash": "7af3c2ed323b54ce4c9a9bc6a5daebdd",
     "semantic_hash": "7af3c2ed323b54ce4c9a9bc6a5daebdd"
   },
-  "D:\\repos\\libbsa\\vcpkg.json": {
+  "vcpkg.json": {
     "mtime": 1779177361.5957048,
     "ast_hash": "779fe2aeb51760a5d26b1e85d658519f",
     "semantic_hash": "779fe2aeb51760a5d26b1e85d658519f"
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\SKILL.md": {
+  ".config/kilo/skills/graphify/SKILL.md": {
     "mtime": 1781685664.60951,
     "ast_hash": "e80886193ec21d40fd6e8c8e334c7488",
     "semantic_hash": "e80886193ec21d40fd6e8c8e334c7488"
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\add-watch.md": {
+  ".config/kilo/skills/graphify/references/add-watch.md": {
     "mtime": 1781684635.1091146,
     "ast_hash": "0df0589623217ca38a12bdcabfb42f4c",
     "semantic_hash": "0df0589623217ca38a12bdcabfb42f4c"
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\exports.md": {
+  ".config/kilo/skills/graphify/references/exports.md": {
     "mtime": 1781684635.1096144,
     "ast_hash": "c04ddf8f1f5ef5e262ebec491a523c74",
     "semantic_hash": "c04ddf8f1f5ef5e262ebec491a523c74"
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\extraction-spec.md": {
+  ".config/kilo/skills/graphify/references/extraction-spec.md": {
     "mtime": 1781684635.1096144,
     "ast_hash": "24808b03abfeaf5f6435bb69c0125b2c",
     "semantic_hash": "24808b03abfeaf5f6435bb69c0125b2c"
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\github-and-merge.md": {
+  ".config/kilo/skills/graphify/references/github-and-merge.md": {
     "mtime": 1781684635.1101167,
     "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
     "semantic_hash": "cde13df085e4c492aeb7ba298a996d0d"
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\hooks.md": {
+  ".config/kilo/skills/graphify/references/hooks.md": {
     "mtime": 1781684635.1106148,
     "ast_hash": "3f545db6ce646650bb9de588f5512a27",
     "semantic_hash": "3f545db6ce646650bb9de588f5512a27"
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\query.md": {
+  ".config/kilo/skills/graphify/references/query.md": {
     "mtime": 1781684635.1111152,
     "ast_hash": "c2a8e798674a81b02aa9975f43023819",
     "semantic_hash": "c2a8e798674a81b02aa9975f43023819"
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\transcribe.md": {
+  ".config/kilo/skills/graphify/references/transcribe.md": {
     "mtime": 1781684635.1116138,
     "ast_hash": "70f6aa30d6211f3a2c7e9fc45479f50c",
     "semantic_hash": "70f6aa30d6211f3a2c7e9fc45479f50c"
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\update.md": {
+  ".config/kilo/skills/graphify/references/update.md": {
     "mtime": 1781684635.1121144,
     "ast_hash": "0dad167a95bdb389f02fecffb60b1bc8",
     "semantic_hash": "0dad167a95bdb389f02fecffb60b1bc8"
   },
-  "D:\\repos\\libbsa\\.github\\workflows\\ci.yml": {
+  ".github/workflows/ci.yml": {
     "mtime": 1781702000.8976858,
     "ast_hash": "08329ff45e207d49b38f0c28a73d3879",
     "semantic_hash": "08329ff45e207d49b38f0c28a73d3879"
   },
-  "D:\\repos\\libbsa\\.pi\\skills\\openspec-apply-change\\SKILL.md": {
+  ".pi/skills/openspec-apply-change/SKILL.md": {
     "mtime": 1781687924.2982845,
     "ast_hash": "0c644086b9d1191f7639324aa9d90557",
     "semantic_hash": "0c644086b9d1191f7639324aa9d90557"
   },
-  "D:\\repos\\libbsa\\.pi\\skills\\openspec-archive-change\\SKILL.md": {
+  ".pi/skills/openspec-archive-change/SKILL.md": {
     "mtime": 1781687924.299781,
     "ast_hash": "a853b3ce25149061a7f13f05b127350c",
     "semantic_hash": "a853b3ce25149061a7f13f05b127350c"
   },
-  "D:\\repos\\libbsa\\.pi\\skills\\openspec-bulk-archive-change\\SKILL.md": {
+  ".pi/skills/openspec-bulk-archive-change/SKILL.md": {
     "mtime": 1781687924.299781,
     "ast_hash": "4c4243b11da830e2a11e06fb236397a7",
     "semantic_hash": "4c4243b11da830e2a11e06fb236397a7"
   },
-  "D:\\repos\\libbsa\\.pi\\skills\\openspec-continue-change\\SKILL.md": {
+  ".pi/skills/openspec-continue-change/SKILL.md": {
     "mtime": 1781687924.2977805,
     "ast_hash": "2f94797a9d8e395b9beeba7ea9a43288",
     "semantic_hash": "2f94797a9d8e395b9beeba7ea9a43288"
   },
-  "D:\\repos\\libbsa\\.pi\\skills\\openspec-explore\\SKILL.md": {
+  ".pi/skills/openspec-explore/SKILL.md": {
     "mtime": 1781687924.2967803,
     "ast_hash": "b50d65377c6c7fe4c9591e114ff77f5f",
     "semantic_hash": "b50d65377c6c7fe4c9591e114ff77f5f"
   },
-  "D:\\repos\\libbsa\\.pi\\skills\\openspec-ff-change\\SKILL.md": {
+  ".pi/skills/openspec-ff-change/SKILL.md": {
     "mtime": 1781687924.2987835,
     "ast_hash": "472d58bb9fa8dc01f0a93956ef153f48",
     "semantic_hash": "472d58bb9fa8dc01f0a93956ef153f48"
   },
-  "D:\\repos\\libbsa\\.pi\\skills\\openspec-new-change\\SKILL.md": {
+  ".pi/skills/openspec-new-change/SKILL.md": {
     "mtime": 1781687924.2972815,
     "ast_hash": "a391aba5d8946da580904fe3782e190d",
     "semantic_hash": "a391aba5d8946da580904fe3782e190d"
   },
-  "D:\\repos\\libbsa\\.pi\\skills\\openspec-onboard\\SKILL.md": {
+  ".pi/skills/openspec-onboard/SKILL.md": {
     "mtime": 1781687924.3002825,
     "ast_hash": "230b8a8e316d76ffcc4f972ef8ea1425",
     "semantic_hash": "230b8a8e316d76ffcc4f972ef8ea1425"
   },
-  "D:\\repos\\libbsa\\.pi\\skills\\openspec-propose\\SKILL.md": {
+  ".pi/skills/openspec-propose/SKILL.md": {
     "mtime": 1781687924.301289,
     "ast_hash": "40b0eb2c1f2d14397b5ad856cd9cbc23",
     "semantic_hash": "40b0eb2c1f2d14397b5ad856cd9cbc23"
   },
-  "D:\\repos\\libbsa\\.pi\\skills\\openspec-sync-specs\\SKILL.md": {
+  ".pi/skills/openspec-sync-specs/SKILL.md": {
     "mtime": 1781687924.2992826,
     "ast_hash": "211bc14ef7cb2d1e24b6b73e878d8509",
     "semantic_hash": "211bc14ef7cb2d1e24b6b73e878d8509"
   },
-  "D:\\repos\\libbsa\\.pi\\skills\\openspec-verify-change\\SKILL.md": {
+  ".pi/skills/openspec-verify-change/SKILL.md": {
     "mtime": 1781687924.3002825,
     "ast_hash": "2baab6b815515578795441106d2d5abd",
     "semantic_hash": "2baab6b815515578795441106d2d5abd"
   },
-  "D:\\repos\\libbsa\\AGENTS.md": {
+  "AGENTS.md": {
     "mtime": 1781684747.9519565,
     "ast_hash": "c421608b77a9c5ddf10891b9b2aadf37",
     "semantic_hash": "c421608b77a9c5ddf10891b9b2aadf37"
   },
-  "D:\\repos\\libbsa\\CLAUDE.md": {
+  "CLAUDE.md": {
     "mtime": 1781693324.0279202,
     "ast_hash": "1e3d3cea13d7c2b5eac0fcd86462eeaf",
     "semantic_hash": "1e3d3cea13d7c2b5eac0fcd86462eeaf"
   },
-  "D:\\repos\\libbsa\\CMakeLists.txt": {
-    "mtime": 1781696445.6117363,
-    "ast_hash": "35a92f425cec26ac03a1d83115468fe8",
-    "semantic_hash": "35a92f425cec26ac03a1d83115468fe8"
+  "CMakeLists.txt": {
+    "mtime": 1781743743.6353407,
+    "ast_hash": "a7138002a9f6c3bf138fa5f1fa36b3a0",
+    "semantic_hash": "a7138002a9f6c3bf138fa5f1fa36b3a0"
   },
-  "D:\\repos\\libbsa\\README.md": {
+  "README.md": {
     "mtime": 1781689639.7476656,
     "ast_hash": "c8929d3f4b413f1632495b72fe84925c",
     "semantic_hash": "c8929d3f4b413f1632495b72fe84925c"
   },
-  "D:\\repos\\libbsa\\benchmarks\\README.md": {
+  "benchmarks/README.md": {
     "mtime": 1779177361.4700868,
     "ast_hash": "9d2024358782413b91b4b5263aea4ae6",
     "semantic_hash": "9d2024358782413b91b4b5263aea4ae6"
   },
-  "D:\\repos\\libbsa\\docs\\api-mainpage.md": {
+  "docs/api-mainpage.md": {
     "mtime": 1779248747.318474,
     "ast_hash": "e92dcd8a54d9b47289f10027af6cb793",
     "semantic_hash": "e92dcd8a54d9b47289f10027af6cb793"
   },
-  "D:\\repos\\libbsa\\docs\\compatibility-evidence.md": {
+  "docs/compatibility-evidence.md": {
     "mtime": 1779248731.5398386,
     "ast_hash": "18a57e2a48d8208cdbd106e0cb70b3f3",
     "semantic_hash": "18a57e2a48d8208cdbd106e0cb70b3f3"
   },
-  "D:\\repos\\libbsa\\docs\\coverage-audit-matrix.md": {
+  "docs/coverage-audit-matrix.md": {
     "mtime": 1779248668.7815495,
     "ast_hash": "625eb67f4d1671945ed7e811ab372d40",
     "semantic_hash": "625eb67f4d1671945ed7e811ab372d40"
   },
-  "D:\\repos\\libbsa\\docs\\integration-examples.md": {
+  "docs/integration-examples.md": {
     "mtime": 1779248739.038786,
     "ast_hash": "c65cdf15039ede2df60e561fdad28029",
     "semantic_hash": "c65cdf15039ede2df60e561fdad28029"
   },
-  "D:\\repos\\libbsa\\docs\\public-api-reality-check.md": {
+  "docs/public-api-reality-check.md": {
     "mtime": 1779258806.304091,
     "ast_hash": "9e3f2692c98bbff88db124654ddd9a91",
     "semantic_hash": "9e3f2692c98bbff88db124654ddd9a91"
   },
-  "D:\\repos\\libbsa\\docs\\target-format-guide.md": {
+  "docs/target-format-guide.md": {
     "mtime": 1779177361.4720864,
     "ast_hash": "bdea9f97950b0c548227b93c67fd1c9c",
     "semantic_hash": "bdea9f97950b0c548227b93c67fd1c9c"
   },
-  "D:\\repos\\libbsa\\docs\\thread-safety.md": {
+  "docs/thread-safety.md": {
     "mtime": 1779177361.4720864,
     "ast_hash": "d741d2ffd19043e4529dd1a0dbc0ae38",
     "semantic_hash": "d741d2ffd19043e4529dd1a0dbc0ae38"
   },
-  "D:\\repos\\libbsa\\openspec\\config.yaml": {
+  "openspec/config.yaml": {
     "mtime": 1779177361.5406473,
     "ast_hash": "63c26766698dd49488b53c274bfec0f9",
     "semantic_hash": "63c26766698dd49488b53c274bfec0f9"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\allocation-error-translation\\spec.md": {
+  "openspec/specs/allocation-error-translation/spec.md": {
     "mtime": 1779177361.5406473,
     "ast_hash": "f9a7009e648224470e5fb63d8e8d60d6",
     "semantic_hash": "f9a7009e648224470e5fb63d8e8d60d6"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\archive-record-metadata-validation\\spec.md": {
+  "openspec/specs/archive-record-metadata-validation/spec.md": {
     "mtime": 1779177361.5411477,
     "ast_hash": "aba3a9ad7ef4c847d759a72c60be12bd",
     "semantic_hash": "aba3a9ad7ef4c847d759a72c60be12bd"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\archive-writer-layering\\spec.md": {
+  "openspec/specs/archive-writer-layering/spec.md": {
     "mtime": 1779177361.5411477,
     "ast_hash": "6266fe959fd6acd753520e04bd78e26b",
     "semantic_hash": "6266fe959fd6acd753520e04bd78e26b"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\behavior-backed-policy-tests\\spec.md": {
+  "openspec/specs/behavior-backed-policy-tests/spec.md": {
     "mtime": 1779177361.5416481,
     "ast_hash": "f41e4e57c68f235a5c23cf72c0d8a0ea",
     "semantic_hash": "f41e4e57c68f235a5c23cf72c0d8a0ea"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\bulk-extraction-deduplication\\spec.md": {
+  "openspec/specs/bulk-extraction-deduplication/spec.md": {
     "mtime": 1779177361.5421474,
     "ast_hash": "e1307f359f7808d18a35f053f95e1a75",
     "semantic_hash": "e1307f359f7808d18a35f053f95e1a75"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\cli-archive-extraction\\spec.md": {
+  "openspec/specs/cli-archive-extraction/spec.md": {
     "mtime": 1781690455.9606974,
     "ast_hash": "9620bffd042c568aac583e3fc2f5dd06",
     "semantic_hash": "9620bffd042c568aac583e3fc2f5dd06"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\cli-archive-inspection\\spec.md": {
+  "openspec/specs/cli-archive-inspection/spec.md": {
     "mtime": 1781690455.9611971,
     "ast_hash": "0dae7491f2cbe751a507f4fb31df66ef",
     "semantic_hash": "0dae7491f2cbe751a507f4fb31df66ef"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\cli-archive-packing\\spec.md": {
+  "openspec/specs/cli-archive-packing/spec.md": {
     "mtime": 1781690455.9601972,
     "ast_hash": "8d004fbf9c753e4d05ce712965695b41",
     "semantic_hash": "8d004fbf9c753e4d05ce712965695b41"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\cli-foundation\\spec.md": {
+  "openspec/specs/cli-foundation/spec.md": {
     "mtime": 1781690455.959197,
     "ast_hash": "af3f3e1ef0df91acbe62862635a09fbb",
     "semantic_hash": "af3f3e1ef0df91acbe62862635a09fbb"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\compressed-extraction-memory-bounds\\spec.md": {
+  "openspec/specs/compressed-extraction-memory-bounds/spec.md": {
     "mtime": 1779177361.5421474,
     "ast_hash": "4e5b002a641b2b25aa162401cd80f98c",
     "semantic_hash": "4e5b002a641b2b25aa162401cd80f98c"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\dx10-snapshot-read-efficiency\\spec.md": {
+  "openspec/specs/dx10-snapshot-read-efficiency/spec.md": {
     "mtime": 1779177361.542647,
     "ast_hash": "1a8514abfbc846d198b2ba03cfdb538b",
     "semantic_hash": "1a8514abfbc846d198b2ba03cfdb538b"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\dx10-snapshot-temp-directory-hardening\\spec.md": {
+  "openspec/specs/dx10-snapshot-temp-directory-hardening/spec.md": {
     "mtime": 1779177361.542647,
     "ast_hash": "1b3e5d7a1d3abeb4f82598d48edbf05f",
     "semantic_hash": "1b3e5d7a1d3abeb4f82598d48edbf05f"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\format-compatibility-constants\\spec.md": {
+  "openspec/specs/format-compatibility-constants/spec.md": {
     "mtime": 1779177361.5431478,
     "ast_hash": "6d1398cb8dc68f15c5f23ad0fdaabfdb",
     "semantic_hash": "6d1398cb8dc68f15c5f23ad0fdaabfdb"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\public-documentation-stability\\spec.md": {
+  "openspec/specs/public-documentation-stability/spec.md": {
     "mtime": 1779177361.5431478,
     "ast_hash": "5a658c9e178daf00cb48dcb890d48484",
     "semantic_hash": "5a658c9e178daf00cb48dcb890d48484"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\shared-library-export-surface\\spec.md": {
+  "openspec/specs/shared-library-export-surface/spec.md": {
     "mtime": 1779177361.5436466,
     "ast_hash": "c7f7eac938ddb4fc7aba040ee5b40dc8",
     "semantic_hash": "c7f7eac938ddb4fc7aba040ee5b40dc8"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\shared-parser-primitives\\spec.md": {
+  "openspec/specs/shared-parser-primitives/spec.md": {
     "mtime": 1779177361.5436466,
     "ast_hash": "580c74a32b5883e0e50763b3198d4b37",
     "semantic_hash": "580c74a32b5883e0e50763b3198d4b37"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\shared-payload-extraction-helpers\\spec.md": {
+  "openspec/specs/shared-payload-extraction-helpers/spec.md": {
     "mtime": 1779177361.5441477,
     "ast_hash": "9f79eba103b7f2c45d8913f90c6bbeb5",
     "semantic_hash": "9f79eba103b7f2c45d8913f90c6bbeb5"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\writer-bounded-source-reads\\spec.md": {
+  "openspec/specs/writer-bounded-source-reads/spec.md": {
     "mtime": 1779177361.5441477,
     "ast_hash": "84a9650841653d53a6a5fff5c3b679e4",
     "semantic_hash": "84a9650841653d53a6a5fff5c3b679e4"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\writer-safe-publish\\spec.md": {
+  "openspec/specs/writer-safe-publish/spec.md": {
     "mtime": 1779177361.5441477,
     "ast_hash": "46130520b03d6529f3e51bfebb8f3ff6",
     "semantic_hash": "46130520b03d6529f3e51bfebb8f3ff6"
   },
-  "D:\\repos\\libbsa\\openspec\\specs\\writer-state-ownership\\spec.md": {
+  "openspec/specs/writer-state-ownership/spec.md": {
     "mtime": 1779177361.544647,
     "ast_hash": "87f53f8dc8140e9e5fcce2892cf78955",
     "semantic_hash": "87f53f8dc8140e9e5fcce2892cf78955"
   },
-  "D:\\repos\\libbsa\\tests\\CMakeLists.txt": {
-    "mtime": 1781697934.414878,
-    "ast_hash": "f3473610f73f962c2dbf073bf9ae1060",
-    "semantic_hash": "f3473610f73f962c2dbf073bf9ae1060"
+  "tests/CMakeLists.txt": {
+    "mtime": 1781744802.2887547,
+    "ast_hash": "f46020871231e1d4ca6f2b4bba603b09",
+    "semantic_hash": "f46020871231e1d4ca6f2b4bba603b09"
   },
-  "D:\\repos\\libbsa\\tests\\fixtures\\README.md": {
+  "tests/fixtures/README.md": {
     "mtime": 1779177361.565683,
     "ast_hash": "d844f75fe08e27475daa1acbd00c0f7f",
     "semantic_hash": "d844f75fe08e27475daa1acbd00c0f7f"
   },
-  "D:\\repos\\libbsa\\tests\\package-consumer\\CMakeLists.txt": {
+  "tests/package-consumer/CMakeLists.txt": {
     "mtime": 1779177361.5826962,
     "ast_hash": "8da6206ba5ffe0bea7999f264b6ebc84",
     "semantic_hash": "8da6206ba5ffe0bea7999f264b6ebc84"

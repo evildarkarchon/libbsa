@@ -5,11 +5,11 @@
 #include <filesystem>
 #include <span>
 
-namespace libbsa::formats::bsa
-{
+namespace libbsa::formats::bsa {
 
-    /// Writes the prepared TES3 archive bytes to the temporary output path supplied by the publish helper.
-    result<void> tes3_write_archive_bytes(std::span<const tes3_prepared_entry> entries,
-                                          const std::filesystem::path &output_path);
+/// Writes the prepared TES3 archive bytes to the temporary output path supplied
+/// by the publish helper.
+result<void> tes3_write_archive_bytes(std::span<const tes3_prepared_entry> entries,
+                                      const std::filesystem::path& output_path);
 
-} // namespace libbsa::formats::bsa
+}  // namespace libbsa::formats::bsa
