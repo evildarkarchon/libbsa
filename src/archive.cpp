@@ -400,6 +400,18 @@ result<std::vector<bulk_extract_entry_result>> archive_reader::extract_entries(
         if (!extracted) {
             record.failure = extracted.error();
         }
+
+        // Destroy the sink before signalling completion so staging factories can
+        // publish or discard the just-written destination immediately. This keeps
+        // the number of in-flight destinations bounded by worker_count rather than
+        // by the whole archive. A publish failure reported by finish() promotes an
+        // otherwise-successful entry to a failure.
+        sink.value().reset();
+        auto finished = sink_factory.finish(group.path, !record.failure.has_value());
+        if (!finished && !record.failure.has_value()) {
+            record.failure = finished.error();
+        }
+
         copy_group_result(group, record);
         return {};
     };

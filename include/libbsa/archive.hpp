@@ -209,10 +209,10 @@ struct bulk_extract_request {
 /// call. `archive_reader::extract_entries` coalesces duplicate exact request
 /// paths before extraction, so duplicate result records mirror the first
 /// occurrence and do not trigger additional `create` calls. When
-/// `bulk_extract_options::worker_count` is greater than one, `create` may be
-/// called concurrently for independent unique paths and the returned sinks may
-/// be written on worker threads. libbsa does not call user factory or sink
-/// methods while holding an internal mutex.
+/// `bulk_extract_options::worker_count` is greater than one, `create` and
+/// `finish` may be called concurrently for independent unique paths and the
+/// returned sinks may be written on worker threads. libbsa does not call user
+/// factory or sink methods while holding an internal mutex.
 ///
 /// Thread-safety: caller-owned factories must protect shared state and return
 /// distinct sinks for concurrent unique-path extraction.
@@ -227,6 +227,27 @@ class LIBBSA_API bulk_extract_sink_factory {
     /// independent sibling entries.
     virtual result<std::unique_ptr<payload_sink>> create(std::string_view path,
                                                          const entry_metadata& entry) = 0;
+
+    /// Signals that the unique request `path` has finished extraction.
+    ///
+    /// Called exactly once for every `path` for which `create` returned a sink,
+    /// after that sink has been destroyed and before the matching result record
+    /// is finalized. `succeeded` is `true` only when payload extraction
+    /// completed without error. Factories that stage writes to temporary files
+    /// should publish on success and discard on failure here; doing so bounds
+    /// the number of concurrently open destinations to the in-flight worker
+    /// count instead of the entire archive.
+    ///
+    /// Returning an error marks an otherwise-successful entry as failed and is
+    /// ignored when the entry already failed. Like `create`, this may be called
+    /// concurrently for independent unique paths and is never invoked while
+    /// libbsa holds an internal mutex. The default implementation does nothing,
+    /// preserving the behavior of factories that do not stage writes.
+    [[nodiscard]] virtual result<void> finish(std::string_view path, bool succeeded) {
+        (void)path;
+        (void)succeeded;
+        return {};
+    }
 };
 
 /// Per-request result record returned by `archive_reader::extract_entries`.

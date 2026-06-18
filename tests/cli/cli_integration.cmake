@@ -232,6 +232,24 @@ function(pack_unpack_roundtrip format extension)
   run_cli(0 stdout stderr pack --format "${format}" --overwrite "${input_root}" "${archive}")
 endfunction()
 
+file(READ "${LIBBSA_SOURCE_DIR}/tools/cli/main.cpp" cli_source)
+string(FIND "${cli_source}" "std::ofstream stream{destination.value()" path_based_destination_open_at)
+if(NOT path_based_destination_open_at EQUAL -1)
+  message(FATAL_ERROR "CLI unpack destinations must not be opened through a path-based truncating ofstream after reparse-point checks")
+endif()
+string(FIND "${cli_source}" "CreateFileW(" destination_create_file_at)
+if(destination_create_file_at EQUAL -1)
+  message(FATAL_ERROR "CLI unpack destinations must use a Windows handle-based create/open path for atomic destination safety")
+endif()
+string(FIND "${cli_source}" "std::cout << entry.path" raw_list_path_at)
+if(NOT raw_list_path_at EQUAL -1)
+  message(FATAL_ERROR "CLI list output must not print archive-controlled paths without escaping control characters")
+endif()
+string(FIND "${cli_source}" "escaped_cli_text(entry.path)" escaped_list_path_at)
+if(escaped_list_path_at EQUAL -1)
+  message(FATAL_ERROR "CLI list output must render archive-controlled paths through escaped_cli_text")
+endif()
+
 run_cli(0 stdout stderr --help)
 require_contains("${stdout}" "pack" "top-level help")
 require_contains("${stdout}" "unpack" "top-level help")
@@ -240,7 +258,6 @@ require_contains("${stdout}" "validate" "top-level help")
 run_cli(0 stdout stderr --version)
 require_contains("${stdout}" "libbsa" "version output")
 
-file(READ "${LIBBSA_SOURCE_DIR}/tools/cli/main.cpp" cli_source)
 string(FIND "${cli_source}" "path_from_utf8(normalized_entry)" utf8_decoder_at)
 if(utf8_decoder_at EQUAL -1)
   message(FATAL_ERROR "CLI unpack destination paths must decode normalized UTF-8 archive paths before appending them")
@@ -315,6 +332,38 @@ require_contains("${stderr}" "does not support raw" "unsupported DX10 compressio
 run_cli(1 stdout stderr pack --format bsa-tes3 "${work_root}/does-not-exist" "${work_root}/missing-input.bsa")
 require_contains("${stderr}" "io_error" "missing input diagnostic")
 
+set(empty_input_archive "${work_root}/empty-input-out.bsa")
+execute_process(
+  COMMAND "${LIBBSA_CLI}" pack --format bsa-tes3 "" "${empty_input_archive}"
+  RESULT_VARIABLE empty_input_code
+  OUTPUT_VARIABLE stdout
+  ERROR_VARIABLE stderr
+)
+if(NOT empty_input_code EQUAL 1)
+  message(FATAL_ERROR
+    "Expected pack to reject an empty input path\n"
+    "  actual: ${empty_input_code}\n"
+    "  stdout:\n${stdout}\n"
+    "  stderr:\n${stderr}")
+endif()
+require_contains("${stderr}" "invalid_argument" "empty pack input path diagnostic")
+require_not_exists("${empty_input_archive}" "archive from empty pack input path")
+
+execute_process(
+  COMMAND "${LIBBSA_CLI}" pack --format bsa-tes3 "${missing_format_root}" ""
+  RESULT_VARIABLE empty_output_code
+  OUTPUT_VARIABLE stdout
+  ERROR_VARIABLE stderr
+)
+if(NOT empty_output_code EQUAL 1)
+  message(FATAL_ERROR
+    "Expected pack to reject an empty output archive path\n"
+    "  actual: ${empty_output_code}\n"
+    "  stdout:\n${stdout}\n"
+    "  stderr:\n${stderr}")
+endif()
+require_contains("${stderr}" "invalid_argument" "empty pack output path diagnostic")
+
 pack_unpack_roundtrip(bsa-tes3 bsa)
 pack_unpack_roundtrip(bsa-oblivion bsa)
 pack_unpack_roundtrip(ba2-gnrl-fo4 ba2)
@@ -374,6 +423,21 @@ require_contains("${stderr}" "not_found" "missing selective path diagnostic")
 
 run_cli(1 stdout stderr unpack "${selective_archive}" "${selective_output}")
 require_contains("${stderr}" "--overwrite" "unpack overwrite refusal")
+
+execute_process(
+  COMMAND "${LIBBSA_CLI}" unpack "${selective_archive}" ""
+  RESULT_VARIABLE empty_unpack_output_code
+  OUTPUT_VARIABLE stdout
+  ERROR_VARIABLE stderr
+)
+if(NOT empty_unpack_output_code EQUAL 1)
+  message(FATAL_ERROR
+    "Expected unpack to reject an empty output path\n"
+    "  actual: ${empty_unpack_output_code}\n"
+    "  stdout:\n${stdout}\n"
+    "  stderr:\n${stderr}")
+endif()
+require_contains("${stderr}" "invalid_argument" "empty unpack output path diagnostic")
 
 set(traversal_output "${work_root}/traversal-output")
 run_cli(1 stdout stderr unpack "${selective_archive}" "${traversal_output}" --path ../escape.txt)
@@ -462,6 +526,30 @@ if(WIN32 AND EXISTS "${tes3_windows_unsafe_names_fixture}")
   require_contains("${stderr}" "trailing dot or space" "Windows trailing dot/space path diagnostic")
   require_contains("${stderr}" "colon" "Windows ADS-style stream path diagnostic")
   require_not_exists("${windows_unsafe_names_output}/textures/file.txt:stream" "ADS-style stream destination")
+endif()
+
+set(corrupt_compressed_fixture "${generated_archive_dir}/malformed_corrupt_compressed_payload.bsa")
+if(WIN32 AND EXISTS "${corrupt_compressed_fixture}")
+  set(corrupt_extract_root "${work_root}/corrupt-compressed-extract")
+  set(corrupt_extract_archive "${corrupt_extract_root}/corrupt.bsa")
+  file(MAKE_DIRECTORY "${corrupt_extract_root}")
+  file(COPY_FILE "${corrupt_compressed_fixture}" "${corrupt_extract_archive}")
+
+  set(corrupt_fresh_output "${corrupt_extract_root}/fresh-output")
+  run_cli(1 stdout stderr unpack "${corrupt_extract_archive}" "${corrupt_fresh_output}")
+  require_contains("${stderr}" "format_error" "corrupt compressed payload diagnostic")
+  require_not_exists("${corrupt_fresh_output}/meshes/tiny/packedmesh.nif" "failed fresh extraction destination")
+
+  set(corrupt_overwrite_output "${corrupt_extract_root}/overwrite-output")
+  set(corrupt_overwrite_path "${corrupt_overwrite_output}/meshes/tiny/packedmesh.nif")
+  write_text("${corrupt_overwrite_path}" "sentinel payload\n")
+  run_cli(1 stdout stderr unpack "${corrupt_extract_archive}" "${corrupt_overwrite_output}" --overwrite)
+  require_contains("${stderr}" "format_error" "corrupt compressed overwrite diagnostic")
+  require_file_text("${corrupt_overwrite_path}" "sentinel payload\n")
+  file(GLOB corrupt_overwrite_temps RELATIVE "${corrupt_overwrite_output}/meshes/tiny" "${corrupt_overwrite_output}/meshes/tiny/.packedmesh.nif.bsa-tmp-*")
+  if(corrupt_overwrite_temps)
+    message(FATAL_ERROR "Unexpected corrupt overwrite extraction temp leftovers: ${corrupt_overwrite_temps}")
+  endif()
 endif()
 
 set(invalid_archive "${work_root}/not-an-archive.bsa")
