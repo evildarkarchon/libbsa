@@ -33,6 +33,23 @@ function(libbsa_enable_msvc_asan target_name)
   endif()
 endfunction()
 
+function(libbsa_copy_msvc_asan_runtime_dlls target_name)
+  if(MSVC AND LIBBSA_ENABLE_MSVC_ASAN)
+    cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH libbsa_msvc_compiler_dir)
+
+    # CTest launches first-party tools without a Visual Studio developer prompt, so place the
+    # compiler-provided ASan runtime beside each instrumented executable that tests may run.
+    add_custom_command(TARGET ${target_name} POST_BUILD
+      COMMAND ${CMAKE_COMMAND}
+        "-DRUNTIME_DLLS=$<TARGET_RUNTIME_DLLS:${target_name}>"
+        "-DEXTRA_RUNTIME_DLLS=${libbsa_msvc_compiler_dir}/clang_rt.asan_dynamic-x86_64.dll;${libbsa_msvc_compiler_dir}/clang_rt.asan_dbg_dynamic-x86_64.dll"
+        "-DTARGET_DIR=$<TARGET_FILE_DIR:${target_name}>"
+        -P "${PROJECT_SOURCE_DIR}/cmake/copy-runtime-dlls.cmake"
+      VERBATIM
+    )
+  endif()
+endfunction()
+
 if(TARGET LZ4::lz4_static)
   set(libbsa_lz4_target LZ4::lz4_static)
 elseif(TARGET LZ4::lz4_shared)
@@ -200,6 +217,7 @@ if(LIBBSA_BUILD_CLI)
   )
 
   libbsa_enable_msvc_asan(bsa)
+  libbsa_copy_msvc_asan_runtime_dlls(bsa)
 endif()
 
 if(LIBBSA_BUILD_BENCHMARKS)

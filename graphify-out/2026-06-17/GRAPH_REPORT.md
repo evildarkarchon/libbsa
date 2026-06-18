@@ -1,18 +1,13 @@
-# Graph Report - libbsa  (2026-06-17)
+# Graph Report - .  (2026-06-17)
 
 ## Corpus Check
-- 241 files · ~163,927 words
+- 246 files · ~163,925 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4440 nodes · 8510 edges · 262 communities (241 shown, 21 thin omitted)
+- 3926 nodes · 8001 edges · 220 communities (203 shown, 17 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 178 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
-
-## Graph Freshness
-- Built from commit: `17d9b0da`
-- Run `git rev-parse HEAD` and compare to check if the graph is stale.
-- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Main CLI Name Usage|Main CLI Name Usage]]
@@ -205,39 +200,6 @@
 - [[_COMMUNITY_Compressed Extraction Memory Bounds|Compressed Extraction Memory Bounds]]
 - [[_COMMUNITY_Sharp Edge Guidance|Sharp Edge Guidance]]
 - [[_COMMUNITY_CLI Integration|CLI Integration]]
-- [[_COMMUNITY_Community 220|Community 220]]
-- [[_COMMUNITY_Community 221|Community 221]]
-- [[_COMMUNITY_Community 222|Community 222]]
-- [[_COMMUNITY_Community 223|Community 223]]
-- [[_COMMUNITY_Community 224|Community 224]]
-- [[_COMMUNITY_Community 225|Community 225]]
-- [[_COMMUNITY_Community 226|Community 226]]
-- [[_COMMUNITY_Community 227|Community 227]]
-- [[_COMMUNITY_Community 228|Community 228]]
-- [[_COMMUNITY_Community 229|Community 229]]
-- [[_COMMUNITY_Community 230|Community 230]]
-- [[_COMMUNITY_Community 231|Community 231]]
-- [[_COMMUNITY_Community 232|Community 232]]
-- [[_COMMUNITY_Community 233|Community 233]]
-- [[_COMMUNITY_Community 234|Community 234]]
-- [[_COMMUNITY_Community 235|Community 235]]
-- [[_COMMUNITY_Community 236|Community 236]]
-- [[_COMMUNITY_Community 237|Community 237]]
-- [[_COMMUNITY_Community 238|Community 238]]
-- [[_COMMUNITY_Community 239|Community 239]]
-- [[_COMMUNITY_Community 240|Community 240]]
-- [[_COMMUNITY_Community 241|Community 241]]
-- [[_COMMUNITY_Community 242|Community 242]]
-- [[_COMMUNITY_Community 243|Community 243]]
-- [[_COMMUNITY_Community 244|Community 244]]
-- [[_COMMUNITY_Community 245|Community 245]]
-- [[_COMMUNITY_Community 246|Community 246]]
-- [[_COMMUNITY_Community 247|Community 247]]
-- [[_COMMUNITY_Community 248|Community 248]]
-- [[_COMMUNITY_Community 249|Community 249]]
-- [[_COMMUNITY_Community 250|Community 250]]
-- [[_COMMUNITY_Community 251|Community 251]]
-- [[_COMMUNITY_Community 252|Community 252]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `string_view` - 25 edges
@@ -252,16 +214,16 @@
 10. `prepare_one_entry()` - 21 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Supported Presets` --semantically_similar_to--> `README Build Verification Lanes`  [INFERRED] [semantically similar]
-  CLAUDE.md → README.md
-- `Reference Boundary` --semantically_similar_to--> `TES5Edit Read-Only Boundary`  [INFERRED] [semantically similar]
+- `README Reference Boundary` --semantically_similar_to--> `TES5Edit Read-Only Boundary`  [INFERRED] [semantically similar]
   README.md → AGENTS.md
-- `Generated Fixture Policy Wording` --references--> `Committed generated fixtures`  [INFERRED]
-  openspec/specs/public-documentation-stability/spec.md → tests/fixtures/README.md
+- `Supported Windows CMake Presets` --semantically_similar_to--> `README Build Verification Lanes`  [INFERRED] [semantically similar]
+  CLAUDE.md → README.md
 - `Native CLAUDE.md Integration` --semantically_similar_to--> `Claude graphify Rules`  [INFERRED] [semantically similar]
   .config/kilo/skills/graphify/references/hooks.md → CLAUDE.md
 - `libbsa Benchmarks Target` --semantically_similar_to--> `Token Reduction Benchmark`  [INFERRED] [semantically similar]
   CMakeLists.txt → .config/kilo/skills/graphify/references/exports.md
+- `Duplicate Request Coalescing` --semantically_similar_to--> `bulk_extract_sink_factory Concurrency`  [INFERRED] [semantically similar]
+  openspec/specs/bulk-extraction-deduplication/spec.md → docs/thread-safety.md
 
 ## Import Cycles
 - None detected.
@@ -277,7 +239,7 @@
 - **Shared Bounded I/O Pattern** — shared_parser_primitives_spec_bounded_exact_parser_file_reads, shared_payload_extraction_helpers_spec_exact_archive_range_reads, writer_bounded_source_reads_spec_bounded_whole_buffer_disk_reads, writer_bounded_source_reads_spec_chunked_disk_source_iteration [INFERRED 0.85]
 - **Public Surface Stability Validation** — public_documentation_stability_spec_documentation_policy_tests, shared_library_export_surface_spec_shared_library_export_surface, tests_cmakelists_package_consumer_smoke, package_consumer_cmakelists_libbsa_package_consumer_target [INFERRED 0.75]
 
-## Communities (262 total, 21 thin omitted)
+## Communities (220 total, 17 thin omitted)
 
 ### Community 0 - "Main CLI Name Usage"
 Cohesion: 0.05
@@ -312,12 +274,12 @@ Cohesion: 0.06
 Nodes (64): add_fits_u64(), checked_add_u32(), checked_mul_u32(), checked_u32(), tes3_assign_raw_offsets(), checked_u32(), disk_payload_size(), preserved_archive_path() (+56 more)
 
 ### Community 8 - "Writer BA2 DX10 Unit"
-Cohesion: 0.07
-Nodes (77): set, archive_reader, array, ba2_dx10_target, ba2_dx10_writer, byte, dds_source_analysis, entry_compression (+69 more)
+Cohesion: 0.08
+Nodes (66): set, archive_reader, array, ba2_dx10_target, ba2_dx10_writer, byte, dds_source_analysis, entry_compression (+58 more)
 
 ### Community 9 - "BA2 Gnrl Prepare Writer"
 Cohesion: 0.07
-Nodes (59): Allocator, archive_default_compressed(), ba2_gnrl_final_stored_dedupe_hash(), ba2_gnrl_make_writer_entry(), ba2_gnrl_prepare_entries(), ba2_gnrl_validate_entries(), ba2_gnrl_validate_target_options(), checked_u32() (+51 more)
+Nodes (60): archive_default_compressed(), ba2_gnrl_final_stored_dedupe_hash(), ba2_gnrl_make_writer_entry(), ba2_gnrl_prepare_entries(), ba2_gnrl_validate_entries(), ba2_gnrl_validate_target_options(), checked_u32(), compression_method_for_compressed_entry() (+52 more)
 
 ### Community 10 - "Path Host Correctness Boundary"
 Cohesion: 0.08
@@ -384,8 +346,8 @@ Cohesion: 0.13
 Nodes (36): archive_reader, byte, entry_compression, entry_metadata, path, result, size_t, span (+28 more)
 
 ### Community 26 - "References Graphify Skill Query"
-Cohesion: 0.17
-Nodes (13): Cache and Merge Pipeline, Graphify Community Outputs, graphify Pipeline, Kilo-specific rules, Semantic Subagent Extraction, Structural AST Extraction, Wiki Export, Cross-Repo Graph Merge (+5 more)
+Cohesion: 0.06
+Nodes (37): Claude graphify Rules, Cache and Merge Pipeline, Graphify Community Outputs, Existing Graph Fast Path, graphify Pipeline, graphify Honesty Rules, Kilo-Specific graphify Rules, Query Path Explain Flows (+29 more)
 
 ### Community 27 - "BA2 DX10 Chunk Assembler"
 Cohesion: 0.13
@@ -416,8 +378,8 @@ Cohesion: 0.16
 Nodes (33): file_record, raw_offset, size, header_fields, file_count, hash_offset_minus_header, version, materialize_entries() (+25 more)
 
 ### Community 34 - "Agents Readme Cmakelists Policy"
-Cohesion: 0.18
-Nodes (11): Core Technologies, Development and Validation Tools, DirectXTex Internal Adapter Policy, DirectXTex GitHub Releases, LZ4 Frame and Raw Block Separation, Minimal Dependency Policy, Public API Boundary, Recommended Stack (+3 more)
+Cohesion: 0.06
+Nodes (33): Archive-Internal Path Policy, Bethesda Archive Formats, BSArchPro Behavioral Reference, C++20 Public API Contract, DirectXTex Internal Adapter Policy, DirectXTex GitHub Releases, Format Compatibility Validation, libbsa (+25 more)
 
 ### Community 35 - "Validation Append Warning Archive"
 Cohesion: 0.14
@@ -452,20 +414,20 @@ Cohesion: 0.15
 Nodes (27): ba2_dx10_header_size_for(), ba2_dx10_make_writer_entry(), ba2_dx10_prepare_chunk(), ba2_dx10_prepare_entries(), ba2_dx10_validate_entries(), ba2_dx10_validate_target_options(), ba2_dx10_version_for(), extension_fourcc_for() (+19 more)
 
 ### Community 43 - "BA2 Gnrl Layout Stored"
-Cohesion: 0.05
-Nodes (68): add_fits_u64(), ba2_gnrl_assign_payload_offsets(), ba2_gnrl_final_stored_dedupe_key, final_stored_dedupe_hash, stored_size, ba2_gnrl_header_size_for(), ba2_gnrl_payloads_equal(), ba2_gnrl_version_for() (+60 more)
+Cohesion: 0.15
+Nodes (26): add_fits_u64(), ba2_gnrl_assign_payload_offsets(), ba2_gnrl_final_stored_dedupe_key, final_stored_dedupe_hash, stored_size, ba2_gnrl_header_size_for(), ba2_gnrl_payloads_equal(), ba2_gnrl_version_for() (+18 more)
 
 ### Community 44 - "Stage Writer Unit Entry"
 Cohesion: 0.15
 Nodes (27): ba2_dx10_prepared_entry, ba2_dx10_writer_entry, ba2_gnrl_prepared_entry, byte, dds_texture_layout, path, size_t, span (+19 more)
 
 ### Community 45 - "Docs BA2 Target Format"
-Cohesion: 0.19
-Nodes (18): Codec Output Allocation Errors, BA2 DX10 Record Extension Validation, BA2 GNRL Record Extension Validation, DX10 DDS Input Requirement, Bounded Sink Extraction, DX10 Chunk-Scoped Extraction, deflate, Fallout 4 BA2 DX10 (+10 more)
+Cohesion: 0.09
+Nodes (27): Codec Output Allocation Errors, BA2 DX10 Aggregate Payload Size Checks, BA2 DX10 Record Extension Validation, BA2 GNRL Filename Table Span Checks, BA2 GNRL Record Extension Validation, TES4 Folder Block Offset Validation, Malformed Inputs for Parser Policy, DX10 DDS Input Requirement (+19 more)
 
 ### Community 46 - "BA2 Gnrl Serialize Stream"
-Cohesion: 0.06
-Nodes (31): Purpose, Requirement: Archive-declared metadata counts are bounded before parser work, Requirement: BA2 DX10 aggregate payload sizes fit public metadata, Requirement: BA2 DX10 record extensions match texture filename table paths, Requirement: BA2 GNRL filename table spans fit archive ranges, Requirement: BA2 GNRL record extensions match filename table paths, Requirement: TES3 payload overlap validation avoids quadratic scans, Requirement: TES4-family BSA folder block offsets match parsed layout (+23 more)
+Cohesion: 0.18
+Nodes (20): ba2_gnrl_write_archive_bytes(), checked_u16(), checked_u32(), stream_disk_payload(), stream_writer, write_name(), ba2_gnrl_prepared_entry, ba2_gnrl_target (+12 more)
 
 ### Community 47 - "BSA Tes4 Payload Descriptor"
 Cohesion: 0.10
@@ -476,8 +438,8 @@ Cohesion: 0.18
 Nodes (26): bytes(), can_read(), position(), read_bytes(), read_u16_le(), read_u32_le(), read_u64_le(), read_u8() (+18 more)
 
 ### Community 49 - "BA2 DX10 Parser Extension"
-Cohesion: 0.07
-Nodes (60): append_u16_le(), read_ba2_dx10_names(), read_ba2_dx10_names_from_file(), ascii_lower_byte(), compression_for(), extension_fourcc_for_extension(), extension_fourcc_matches(), first_payload_offset_for() (+52 more)
+Cohesion: 0.16
+Nodes (25): ascii_lower_byte(), compression_for(), extension_fourcc_for_extension(), extension_fourcc_matches(), inferred_array_size(), is_ascii_extension_byte(), materialize_entries(), public_chunks_for() (+17 more)
 
 ### Community 50 - "BSA Tes4 Prepare Folder"
 Cohesion: 0.10
@@ -504,8 +466,8 @@ Cohesion: 0.29
 Nodes (23): checked_buffer_size(), for_each_host_file_chunk(), inspect_host_file_size(), io_error(), open_host_file(), read_exact_bytes(), read_host_file_exact(), read_host_file_prefix() (+15 more)
 
 ### Community 56 - "Generate BA2 DX10 Fixtures"
-Cohesion: 0.24
-Nodes (18): bytes_per_block(), canonicalize(), checked_u32(), dds_mip_size(), extension_fourcc(), filename_stem(), hash_folder(), header_size_for() (+10 more)
+Cohesion: 0.19
+Nodes (23): canonicalize(), checked_u32(), compression_route_name(), decoded_payload_bytes(), extension_fourcc(), filename_stem(), hash_folder(), header_size_for() (+15 more)
 
 ### Community 57 - "BSA Tes4 Reader Entry"
 Cohesion: 0.17
@@ -532,8 +494,8 @@ Cohesion: 0.19
 Nodes (21): materialize_entries(), parse_tes4_bsa_archive(), parse_tes4_bsa_archive_file(), parse_tes4_bsa_archive_impl(), parse_tes4_bsa_metadata(), stored_payload_span, offset, size (+13 more)
 
 ### Community 63 - "Generate BA2 DX10 Fixtures"
-Cohesion: 0.11
-Nodes (19): chunk_spec, compression, decoded_payload, end_mip, packed_size, payload_offset, raw_size, segment (+11 more)
+Cohesion: 0.10
+Nodes (22): bytes(), chunk_spec, compression, decoded_payload, end_mip, packed_size, payload_offset, raw_size (+14 more)
 
 ### Community 64 - "Warning Compatibility Unit Text"
 Cohesion: 0.23
@@ -588,8 +550,8 @@ Cohesion: 0.19
 Nodes (16): add_fits(), add_fits_u64(), archive_string_from_bytes(), normalize_display_separators(), read_file_bytes_at(), span_fits_u64(), spans_overlap_u64(), validate_metadata_count() (+8 more)
 
 ### Community 77 - "Generate BA2 DX10 Fixtures"
-Cohesion: 0.25
-Nodes (12): build_archive(), build_source_dds(), byte_buffer, bytes, overwrite_u64(), record_table_size(), to_hex(), write_header() (+4 more)
+Cohesion: 0.29
+Nodes (10): build_archive(), build_source_dds(), byte_buffer, bytes, overwrite_u64(), record_table_size(), write_header(), write_records() (+2 more)
 
 ### Community 78 - "Result Error Value Code"
 Cohesion: 0.18
@@ -636,40 +598,40 @@ Cohesion: 0.21
 Nodes (13): byte, path, result, size_t, span, vector, impossible_byte_vector_size(), lz4_vector() (+5 more)
 
 ### Community 89 - "Spec Writer CLI Archive"
-Cohesion: 0.17
-Nodes (12): TES3 Payload Overlap Ordered Spans, Independently Testable Writer Stages, Stage Entry Points, Thin Writer Orchestrator, Extraction Overwrite Control, Explicit Format Writer Selection, Pack Compression and Overwrite Options, Format Taxonomy (+4 more)
+Cohesion: 0.13
+Nodes (15): TES3 Payload Overlap Ordered Spans, Independently Testable Writer Stages, Stage Entry Points, Thin Writer Orchestrator, Extraction Overwrite Control, Explicit Format Writer Selection, Pack Compression and Overwrite Options, CLI Foundation (+7 more)
 
 ### Community 90 - "Generate BA2 DX10 Fixtures"
-Cohesion: 0.11
-Nodes (20): bytes(), decoded_payload_bytes(), source_dds_valid_specs(), texture_spec, array_size, chunks, cube_maps_raw, directory_hash (+12 more)
+Cohesion: 0.13
+Nodes (15): texture_spec, array_size, chunks, cube_maps_raw, directory_hash, dxgi_format, ext, height (+7 more)
 
 ### Community 91 - "Directxtex Analyzer Texture DDS"
 Cohesion: 0.17
 Nodes (14): byte, texture_metadata, uint32_t, vector, dds_source_analysis, dds_bytes, image_payload_bytes, metadata (+6 more)
 
 ### Community 92 - "Allocation Spec Error Translation"
-Cohesion: 0.12
-Nodes (17): Allocation Error Translation, Metadata Container Allocation Errors, Parser Allocation Failures Use Result Errors, Shared Parser Read Allocation Errors, Shared Parser String Allocation Errors, Metadata Count Bounds, validate Subcommand, CLI Foundation (+9 more)
+Cohesion: 0.14
+Nodes (14): Allocation Error Translation, Metadata Container Allocation Errors, Parser Allocation Failures Use Result Errors, Shared Parser Read Allocation Errors, Shared Parser String Allocation Errors, Metadata Count Bounds, validate Subcommand, Exact Decoded-Size Validation (+6 more)
 
 ### Community 93 - "Parser Primitives Metadata Error"
-Cohesion: 0.08
-Nodes (25): Purpose, Requirement: Command-line executable and subcommand dispatch, Requirement: Format taxonomy is explicit and discoverable, Requirement: Gated, dependency-light build deliverable, Requirement: Global help and version output, Requirement: Library errors are mapped to human-readable diagnostics, Requirement: Stable process exit-code conventions, Requirements (+17 more)
+Cohesion: 0.24
+Nodes (13): Allocator, metadata_allocation_error(), reserve_metadata_set(), reserve_metadata_vector(), Hash, Key, KeyEqual, error (+5 more)
 
 ### Community 94 - "BA2 DX10 Names Append"
-Cohesion: 0.09
-Nodes (22): Purpose, Requirement: Archive-internal path mapping, Requirement: DX10 packing requires DDS inputs, Requirement: Explicit writer and target selection via format, Requirement: Pack a host directory into a new archive, Requirement: Pack compression and overwrite options, Requirements, Scenario: BA2 DX10 target (+14 more)
+Cohesion: 0.23
+Nodes (13): append_u16_le(), read_ba2_dx10_names(), read_ba2_dx10_names_from_file(), byte, ifstream, result, size_t, span (+5 more)
 
 ### Community 95 - "Docs API Safety Archive"
 Cohesion: 0.18
-Nodes (10): Narrow Static Policy Checks, Concrete follow-up recommendation, Downstream routing for coverage gap IDs, Flow-by-flow proof table, Helper and API gap conclusions, Public API Reality Check, Scope and evidence policy, Sharp-edge guidance coverage (+2 more)
+Nodes (14): Narrow Static Policy Checks, Extraction Output Path Safety, Archive-Internal Path Mapping, extract_bytes Materialization Limits, Archive Virtual Paths, extract_bytes, libbsa Public API, Integration Examples (+6 more)
 
 ### Community 96 - "Generate BA2 DX10 Fixtures"
-Cohesion: 0.27
-Nodes (15): generate_malformed(), generate_success(), generate_writer_sources(), main(), make_duplicate_canonical_path_malformed(), make_fo4(), make_sfv3(), make_unsupported_compression_malformed() (+7 more)
+Cohesion: 0.30
+Nodes (14): generate_malformed(), generate_success(), generate_writer_sources(), main(), make_duplicate_canonical_path_malformed(), make_fo4(), make_sfv3(), make_unsupported_compression_malformed() (+6 more)
 
 ### Community 97 - "Generate BA2 DX10 Fixtures"
-Cohesion: 0.12
-Nodes (21): compression_route_name(), json_escape(), manifest_for(), source_dds_spec, archive_path, array_size, depth, file (+13 more)
+Cohesion: 0.14
+Nodes (14): source_dds_spec, archive_path, array_size, depth, file, format_id, format_name, height (+6 more)
 
 ### Community 98 - "Spec Source Bounded Reads"
 Cohesion: 0.14
@@ -692,12 +654,12 @@ Cohesion: 0.32
 Nodes (12): path, span, string, string_view, vector, declaration_block(), function_body(), public_declaration_lines() (+4 more)
 
 ### Community 103 - "Docs Writer Archive Layering"
-Cohesion: 0.12
-Nodes (21): Archive Writer Layering, Archive Byte Compatibility Preservation, Per-Family Writer Pipeline Decomposition, Extraction Output Path Safety, Archive-Internal Path Mapping, pack Subcommand, extract_bytes Materialization Limits, Archive Virtual Paths (+13 more)
+Cohesion: 0.17
+Nodes (12): Archive Writer Layering, Archive Byte Compatibility Preservation, Per-Family Writer Pipeline Decomposition, pack Subcommand, BA2 DX10 One-Shot Writer Lifecycle, Family-Specific Writers, example_create_ba2_dx10, example_create_ba2_gnrl (+4 more)
 
 ### Community 104 - "BA2 DX10 Records Header"
-Cohesion: 0.09
-Nodes (21): Purpose, Requirement: Codec output allocation failures use result errors, Requirement: Parser byte-buffer allocation failures use result errors, Requirement: Parser byte-buffer reserve and append failures use result errors, Requirement: Parser metadata-container allocation failures use result errors, Requirement: Shared parser file-read allocations use result errors, Requirement: Shared parser string allocations use result errors, Requirements (+13 more)
+Cohesion: 0.21
+Nodes (11): ba2_dx10_fixed_header_size_for(), read_ba2_dx10_header(), read_ba2_dx10_records(), ba2_dx10_header_fields, ba2_dx10_record, binary_reader, result, size_t (+3 more)
 
 ### Community 105 - "BA2 Gnrl Writer Path"
 Cohesion: 0.20
@@ -712,12 +674,12 @@ Cohesion: 0.42
 Nodes (11): append_byte_vector(), byte_vector_allocation_error(), make_byte_vector(), reserve_byte_vector(), byte, error, result, size_t (+3 more)
 
 ### Community 108 - "Snapshot DX10 Spec Directory"
-Cohesion: 0.14
-Nodes (17): BA2 DX10 Snapshot Read Efficiency, Snapshot-Backed Chunk Batched Assembly, Snapshot Overhead Benchmarks, Snapshot Ownership Semantics, Snapshot Size Mismatch Publication Guard, Writer-Owned DDS Snapshots, Atomic Snapshot Directory Reservation, Existing Archive Behavior Stability (+9 more)
+Cohesion: 0.18
+Nodes (12): BA2 DX10 Snapshot Read Efficiency, Snapshot-Backed Chunk Batched Assembly, Snapshot Overhead Benchmarks, Snapshot Ownership Semantics, Snapshot Size Mismatch Publication Guard, Writer-Owned DDS Snapshots, Atomic Snapshot Directory Reservation, Existing Archive Behavior Stability (+4 more)
 
 ### Community 109 - "Fixtures Cmakelists Generate BA2"
-Cohesion: 0.17
-Nodes (16): Committed generated fixtures, Generated Fixture Manifest Contracts, TES3 manifest schema, TES4-family manifest schema, Archive Behavior Preservation, Generated Fixture Constant Reuse, generate_ba2_dx10_fixtures, generate_ba2_dx10_fixtures_tool (+8 more)
+Cohesion: 0.21
+Nodes (12): Committed Generated Fixtures, Archive Behavior Preservation, Generated Fixture Constant Reuse, generate_ba2_dx10_fixtures, generate_ba2_dx10_fixtures_tool, generate_ba2_gnrl_fixtures, generate_ba2_gnrl_fixtures_tool, generate_tes3_bsa_fixtures (+4 more)
 
 ### Community 110 - "Archive State Bulk Extract"
 Cohesion: 0.18
@@ -728,8 +690,8 @@ Cohesion: 0.17
 Nodes (12): entry_metadata, archive_hash, compression, embedded_name_prefix_size, has_embedded_name, original_path, path, payload_offset (+4 more)
 
 ### Community 112 - "Matrix Compatibility Unit Json"
-Cohesion: 0.10
-Nodes (19): Alternatives Considered, CI / Toolchain Recommendation, CMake Project Layout Recommendation, Comments and Documentation, Constraints, Dependencies, graphify, Hard Boundary: TES5Edit Is Read-Only (+11 more)
+Cohesion: 0.33
+Nodes (11): json, path, string, string_view, compatibility_matrix_path(), generated_archive_dir(), manifest_has_case_id(), read_json_file() (+3 more)
 
 ### Community 113 - "Host Unit Context Path"
 Cohesion: 0.29
@@ -740,16 +702,16 @@ Cohesion: 0.30
 Nodes (11): archive_reader, byte, path, span, string_view, vector, bytes_from_text(), generated_source_dir() (+3 more)
 
 ### Community 115 - "BA2 DX10 Parser Archive"
-Cohesion: 0.10
-Nodes (19): Purpose, Requirement: Layered split preserves archive byte and behavior compatibility, Requirement: Per-family writer pipeline decomposition, Requirement: Stage entry points are independently testable, Requirement: Writer translation unit holds public class plus thin orchestrator only, Requirement: Writer translation units expose only stage entry points across stage boundaries, Requirements, Scenario: BA2 DX10 writer pipeline is layered (+11 more)
+Cohesion: 0.36
+Nodes (11): first_payload_offset_for(), parse_ba2_dx10_archive(), parse_ba2_dx10_archive_file(), parse_ba2_dx10_archive_impl(), ba2_dx10_archive, detected_ba2_format, host_file_path, result (+3 more)
 
 ### Community 116 - "BA2 Format Detector Detected"
 Cohesion: 0.24
 Nodes (10): detect_ba2_format(), detected_header(), archive_variant, ba2_archive_metadata, byte, detected_ba2_format, entry_compression, result (+2 more)
 
 ### Community 117 - "Compatibility Docs Evidence Fixture"
-Cohesion: 0.17
-Nodes (15): Strict Warning Mode, `bsa_embedded_name_compatibility_risk`, Compatibility Evidence Catalog, `compressed_sound_payload`, Default fixture and round-trip proof sweep, Default Fixture and Round-Trip Proof Sweep, Generated Legal Fixture Policy, Optional Local Corpus Checks (+7 more)
+Cohesion: 0.22
+Nodes (11): Strict Warning Mode, bsa_embedded_name_compatibility_risk, Compatibility Evidence Catalog, compressed_sound_payload, Default Fixture and Round-Trip Proof Sweep, Generated Legal Fixture Policy, Optional Local Corpus Checks, target_family_mismatch (+3 more)
 
 ### Community 118 - "Block LZ4 Codec Error"
 Cohesion: 0.38
@@ -788,8 +750,8 @@ Cohesion: 0.38
 Nodes (9): path, span, string, string_view, function_body(), read_text_file(), require_absent_tokens(), require_all_tokens() (+1 more)
 
 ### Community 127 - "Parser Primitives Unit Impossible"
-Cohesion: 0.10
-Nodes (19): Codebase Analysis, Graceful Exit Handling, Guardrails, Phase 10: Archive, Phase 11: Recap & Next Steps, Phase 1: Welcome, Phase 2: Task Selection, Phase 3: Explore Demo (+11 more)
+Cohesion: 0.27
+Nodes (8): path, size_t, impossible_set_capacity(), impossible_string_size(), impossible_vector_capacity(), temp_file_cleanup, path_, unordered_set
 
 ### Community 128 - "Path Archive Error Key"
 Cohesion: 0.33
@@ -813,7 +775,7 @@ Nodes (7): detected_bsa_format, default_compression, variant, version, archive_v
 
 ### Community 133 - "Archive Docs Subcommand Spec"
 Cohesion: 0.25
-Nodes (8): unpack Subcommand, info Subcommand, list Subcommand, archive_reader, payload_sink, `example_open_list_extract`, archive_reader Concurrency, payload_sink Concurrency
+Nodes (8): unpack Subcommand, info Subcommand, list Subcommand, archive_reader, payload_sink, example_open_list_extract, archive_reader Concurrency, payload_sink Concurrency
 
 ### Community 134 - "Host Error Context Allocation"
 Cohesion: 0.29
@@ -824,8 +786,8 @@ Cohesion: 0.25
 Nodes (5): payload_sink, write, payload_source, read, remaining
 
 ### Community 136 - "Fixtures Readme Fixture Policy"
-Cohesion: 0.16
-Nodes (15): Benchmark and generated data policy, Benchmark and Generated Data Policy, BSArchPro-Derived Comparison Manifest, BSArchPro-derived comparison manifest schema, Compatibility evidence, Compatibility Evidence Catalog, CTest Label Taxonomy, Fixture Provenance Requirements (+7 more)
+Cohesion: 0.39
+Nodes (8): Benchmark and Generated Data Policy, BSArchPro-Derived Comparison Manifest, Compatibility Evidence Catalog, CTest Label Taxonomy, Fixture Provenance Requirements, libbsa Fixture Policy, Local Game-Derived Fixtures, TES5Edit Read-Only Fixture Boundary
 
 ### Community 137 - "Package Consumer Cmakelists Runtime"
 Cohesion: 0.25
@@ -873,11 +835,11 @@ Nodes (6): tes4_bsa_archive, entries, metadata, archive_metadata, entry_metadata
 
 ### Community 148 - "Extraction Bulk Spec Deduplication"
 Cohesion: 0.33
-Nodes (7): Distinct Request Paths Remain Independent, Duplicate Request Coalescing, First Occurrence Mirroring, Selective Extraction, Bulk Extraction, `example_bulk_extract`, bulk_extract_sink_factory Concurrency
+Nodes (7): Distinct Request Paths Remain Independent, Duplicate Request Coalescing, First Occurrence Mirroring, Selective Extraction, Bulk Extraction, example_bulk_extract, bulk_extract_sink_factory Concurrency
 
 ### Community 149 - "Generate BA2 DX10 Fixtures"
-Cohesion: 0.10
-Nodes (19): Purpose, Requirement: No-overwrite publication preserves existing destinations, Requirement: Overwrite publication replaces existing regular archives uniformly, Requirement: Shared writer publish lifecycle, Requirement: Writer diagnostics remain format-specific, Requirement: Writer publish filesystem boundaries are documented and enforced, Requirements, Scenario: BSA publish error (+11 more)
+Cohesion: 0.43
+Nodes (7): bytes_per_block(), dds_mip_size(), is_block_compressed(), mip_dimension(), overwrite_u32(), size_t, uint32_t
 
 ### Community 150 - "Documentation Public Stability Spec"
 Cohesion: 0.29
@@ -888,8 +850,8 @@ Cohesion: 0.33
 Nodes (6): Build and Test Toolchain, Catch2 GitHub Releases, Context7 CMake Documentation, Microsoft vcpkg Documentation, libbsa Install Export Package, CMake 4.3.2 CI Install
 
 ### Community 152 - "Policy Coverage Matrix Audit"
-Cohesion: 0.09
-Nodes (25): BA2 DX10 Aggregate Payload Size Checks, BA2 GNRL Filename Table Span Checks, TES4 Folder Block Offset Validation, Behavior-Backed Policy Tests, Executable Policy Oracles, Malformed Inputs for Parser Policy, Advisory local evidence, BA2 DX10 (+17 more)
+Cohesion: 0.33
+Nodes (6): Behavior-Backed Policy Tests, Executable Policy Oracles, Advisory Local Evidence, COV-GAP-002, Default Evidence Policy, Coverage Matrix Maintenance Rule
 
 ### Community 153 - "BSA Format Detector Detect"
 Cohesion: 0.33
@@ -912,8 +874,8 @@ Cohesion: 0.40
 Nodes (5): byte, size_t, vector, deflate_vector(), impossible_byte_vector_size()
 
 ### Community 158 - "Benchmarks Benchmark Readme Report"
-Cohesion: 0.18
-Nodes (9): libbsa Benchmark Report, libbsa Benchmarks, PERF-05 Benchmark Harness, Synthetic Benchmark Policy, Gated Dependency-Light Build Deliverable, Evidence-Gated Helpers, No Broad Public Facade, Existing Public Core (+1 more)
+Cohesion: 0.40
+Nodes (5): libbsa Benchmark Report, libbsa Benchmarks, PERF-05 Benchmark Harness, Synthetic Benchmark Policy, Benchmark Reports Are Not Synchronization Primitives
 
 ### Community 159 - "Atomic Ops Replace Publish"
 Cohesion: 0.70
@@ -924,8 +886,8 @@ Cohesion: 0.50
 Nodes (4): resolve_host_file_path(), host_file_path, result, string_view
 
 ### Community 161 - "Writer Ownership State Spec"
-Cohesion: 0.12
-Nodes (16): Purpose, Requirement: Extraction output path safety, Requirement: Extraction overwrite control, Requirement: Selective extraction by archive path, Requirement: Unpack an archive to a host directory, Requirements, Scenario: Existing file is preserved by default, Scenario: Extract a single named entry (+8 more)
+Cohesion: 0.50
+Nodes (5): catch_discover_tests(libbsa_tests), libbsa_tests, Movable Writer Ownership Transfer, Non-Copyable Public Writers, Writer State Ownership
 
 ### Community 162 - "Bounded Memory Policy Unit"
 Cohesion: 0.60
@@ -936,8 +898,8 @@ Cohesion: 0.60
 Nodes (4): path, string, read_text_file(), source_root()
 
 ### Community 164 - "Public API Reality Check"
-Cohesion: 0.12
-Nodes (15): Purpose, Requirement: BA2 DX10 compressed chunks remain chunk-scoped, Requirement: Compressed extraction preserves exact decoded-size validation, Requirement: Compressed sink extraction bounds decoded output materialization, Requirement: Convenience byte extraction enforces materialization limits before decoding, Requirements, Scenario: Compressed entry is too large for the byte-vector convenience API, Scenario: Entry fits the byte-vector convenience API (+7 more)
+Cohesion: 0.50
+Nodes (4): Gated Dependency-Light Build Deliverable, Evidence-Gated Helpers, No Broad Public Facade, Existing Public Core
 
 ### Community 165 - "Archive Path Key Value"
 Cohesion: 0.67
@@ -948,8 +910,8 @@ Cohesion: 0.50
 Nodes (3): host_file_path, resolved, path
 
 ### Community 167 - "Manifest Readme Fixtures Fixture"
-Cohesion: 0.12
-Nodes (15): Purpose, Requirement: Writer disk source chunk iteration is used when full materialization is unnecessary, Requirement: Writer disk source prefix reads are bounded, Requirement: Writer disk source whole-buffer reads are bounded and centralized, Requirement: Writer source read failures preserve result-based error semantics, Requirement: Writer source read refactor preserves archive behavior, Requirements, Scenario: BA2 GNRL raw disk payload hashing uses chunk iteration (+7 more)
+Cohesion: 0.50
+Nodes (4): Generated Fixture Manifest Contracts, TES3 Manifest Schema, TES4-Family Manifest Schema, validate_fixture_manifests
 
 ### Community 168 - "Constants Format Compatibility Spec"
 Cohesion: 0.67
@@ -971,138 +933,22 @@ Nodes (3): Delta Specs, Intelligent Merging, OpenSpec Sync Specs
 Cohesion: 0.67
 Nodes (3): Completeness Correctness Coherence, OpenSpec Verify Change, Verification Report
 
-### Community 220 - "Community 220"
-Cohesion: 0.13
-Nodes (14): Purpose, Requirement: List archive entries, Requirement: Show archive metadata, Requirement: Validate an archive, Requirements, Scenario: Archive header summary is printed, Scenario: BA2 metadata fields are shown when present, Scenario: Detailed listing includes sizes and compression (+6 more)
-
-### Community 221 - "Community 221"
-Cohesion: 0.13
-Nodes (14): archive_reader, ba2_dx10_writer, ba2_gnrl_writer, bulk_extract_entry_result, bulk_extract_options, bulk_extract_sink_factory, libbsa_benchmarks, payload_sink (+6 more)
-
-### Community 222 - "Community 222"
-Cohesion: 0.13
-Nodes (14): Purpose, Requirement: Format readers preserve archive-specific extraction behavior, Requirement: Shared extraction helpers read archive ranges exactly, Requirement: Shared extraction helpers validate archive-derived sizes and stream spans, Requirement: Shared extraction helpers write sink buffers exactly, Requirements, Scenario: Archive payload size exceeds platform size limits, Scenario: Archive payload span exceeds stream limits (+6 more)
-
-### Community 223 - "Community 223"
-Cohesion: 0.14
-Nodes (13): Purpose, Requirement: Export annotations preserve source compatibility, Requirement: Internal implementation symbols remain private, Requirement: Public headers define an explicit DLL export macro, Requirement: Shared builds export only the intended public entry points, Requirements, Scenario: Auto-export is disabled, Scenario: Existing archive behavior is unchanged (+5 more)
-
-### Community 224 - "Community 224"
-Cohesion: 0.15
-Nodes (12): Purpose, Requirement: BA2 DX10 benchmarks expose snapshot overhead, Requirement: BA2 DX10 snapshot-backed chunks are assembled through a batched path, Requirement: BA2 DX10 snapshot ownership semantics are preserved, Requirements, Scenario: Benchmark reports DX10 add-time staging cost, Scenario: Benchmark reports DX10 write finalization cost, Scenario: Planned chunk reads snapshots in BA2-required subresource order (+4 more)
-
-### Community 225 - "Community 225"
-Cohesion: 0.15
-Nodes (12): Purpose, Requirement: Shared display separator normalization preserves format ownership, Requirement: Shared parser arithmetic validates archive-derived sizes, Requirement: Shared parser file reads are bounded and exact, Requirement: Shared parser strings are allocation-safe, Requirements, Scenario: Archive string cannot be allocated, Scenario: Backslash display separators are normalized (+4 more)
-
-### Community 226 - "Community 226"
-Cohesion: 0.17
-Nodes (11): Purpose, Requirement: Converted policy tests preserve validation scope, Requirement: Observable policy behavior uses executable tests, Requirement: Static policy checks remain narrow, Requirements, Scenario: Behavior coverage replaces a token check, Scenario: Behavior policy has an executable oracle, Scenario: Documentation coverage is structural (+3 more)
-
-### Community 227 - "Community 227"
-Cohesion: 0.17
-Nodes (11): Purpose, Requirement: Bulk extraction coalesces duplicate request paths, Requirement: Distinct request paths remain independently processed, Requirement: Duplicate results mirror the first occurrence outcome, Requirements, Scenario: Distinct request strings are not pre-merged, Scenario: Missing duplicate path produces per-request not-found failures, Scenario: Parallel duplicate requests share one extraction (+3 more)
-
-### Community 228 - "Community 228"
-Cohesion: 0.17
-Nodes (11): Purpose, Requirement: Documentation cleanup preserves behavioral guidance, Requirement: Public documentation stability is regression-tested, Requirement: Public documentation uses durable behavior wording, Requirements, Scenario: Forbidden public documentation tokens are introduced, Scenario: Internal planning history remains outside public docs, Scenario: Public documentation is reviewed for planning identifiers (+3 more)
-
-### Community 229 - "Community 229"
-Cohesion: 0.18
-Nodes (10): BSArchPro Behavioral Reference, Format Compatibility Validation, TES5Edit Read-Only Boundary, libbsa Test Gate, Build, Command-Line Tool, libbsa, Platform Support (+2 more)
-
-### Community 230 - "Community 230"
-Cohesion: 0.18
-Nodes (10): Purpose, Requirement: BA2 DX10 snapshot cleanup ownership remains unchanged, Requirement: BA2 DX10 snapshot directory names use hardened uniqueness, Requirement: BA2 DX10 snapshot directory reservation remains atomic, Requirements, Scenario: Existing archive behavior remains stable, Scenario: Existing candidate path is not reused, Scenario: Reservation failure preserves result semantics (+2 more)
-
-### Community 231 - "Community 231"
-Cohesion: 0.18
-Nodes (10): Purpose, Requirement: Constant centralization preserves archive behavior, Requirement: Constants remain internal implementation details, Requirement: Format compatibility constants are authoritative per family, Requirements, Scenario: BA2 paths share archive-contract values, Scenario: Existing fixtures keep the same observable behavior, Scenario: Public API does not expose constants headers (+2 more)
-
-### Community 232 - "Community 232"
-Cohesion: 0.18
-Nodes (10): Check for context, Ending Discovery, Guardrails, Handling Different Entry Points, OpenSpec Awareness, The Stance, What You Don't Have To Do, What You Might Do (+2 more)
-
-### Community 233 - "Community 233"
-Cohesion: 0.22
-Nodes (8): Windows-Only Support Policy, graphify, Project Scope, Supported Presets, TES5Edit Boundary, README Build Verification Lanes, Configure Build Test Steps, Windows MSVC CI Matrix
-
-### Community 234 - "Community 234"
-Cohesion: 0.20
-Nodes (10): Claude graphify Rules, Existing Graph Fast Path, Query Path Explain Flows, MCP Server Export, Native CLAUDE.md Integration, BFS Query Flow, DFS Path Flow, Explain Flow (+2 more)
-
-### Community 235 - "Community 235"
-Cohesion: 0.20
-Nodes (10): Step 0 - GitHub repos and multi-path merge (only if a URL or several paths), Step 1 - Ensure graphify is installed, Step 2.5 - Video and audio (only if video files detected), Step 2 - Detect files, Step 4 - Build graph, cluster, analyze, generate outputs, Step 5 - Label communities, Step 6 - Generate Obsidian vault (opt-in) + HTML, Step 9 - Save manifest, update cost tracker, clean up, and report (+2 more)
-
-### Community 236 - "Community 236"
-Cohesion: 0.20
-Nodes (9): Purpose, Requirement: Public writer ownership is movable without shared mutable aliases, Requirement: Public writer types are non-copyable, Requirement: Writer behavior is unchanged apart from copy removal, Requirements, Scenario: Existing writer behavior remains stable, Scenario: Moved-to writer finalizes staged state, Scenario: Writer copy operations are unavailable (+1 more)
-
-### Community 237 - "Community 237"
-Cohesion: 0.22
-Nodes (8): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Interpreter guard for subcommands, Usage, What graphify is for
-
-### Community 238 - "Community 238"
-Cohesion: 0.22
-Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
-
-### Community 239 - "Community 239"
-Cohesion: 0.25
-Nodes (8): Folder Watcher, needs_update Flag, URL Ingest Flow, Post-Commit Graph Rebuild Hook, build_merge Pruning, Code-Only Update Short Circuit, Update Graph Diff, Incremental Detection
-
-### Community 240 - "Community 240"
-Cohesion: 0.29
-Nodes (7): Archive-Internal Path Policy, Bethesda Archive Formats, bsa CLI Target, bsa Command-Line Tool, bsa CLI Subcommands, Supported Format Tokens, Stable CLI Exit Codes
-
-### Community 241 - "Community 241"
-Cohesion: 0.40
-Nodes (6): C++20 Public API Contract, libbsa, libbsa result Error Model, Streaming I/O Model, libbsa Library Target, CMake libbsa Project
-
-### Community 242 - "Community 242"
-Cohesion: 0.33
-Nodes (6): Honesty Rules, Confidence Rubric, Frontmatter Propagation Rule, Hyperedge Extraction Rule, Deterministic Node ID Format, Semantic Subagent Prompt
-
-### Community 243 - "Community 243"
-Cohesion: 0.40
-Nodes (5): Context7 (`mcp__context7`), Exa (`mcp__exa`), MCP Server Usage, Ref (`mcp__ref`), Tool Choice
-
-### Community 244 - "Community 244"
-Cohesion: 0.50
-Nodes (4): Part A - Structural extraction for code files, Part B - Semantic extraction (parallel subagents), Part C - Merge AST + semantic into final extraction, Step 3 - Extract entities and relationships
-
-### Community 245 - "Community 245"
-Cohesion: 0.50
-Nodes (3): For /graphify add, For --watch, graphify reference: add a URL and watch a folder
-
-### Community 246 - "Community 246"
-Cohesion: 0.50
-Nodes (3): For git commit hook, For native CLAUDE.md integration, graphify reference: commit hook and native CLAUDE.md integration
-
-### Community 247 - "Community 247"
-Cohesion: 0.50
-Nodes (3): For /graphify explain, For /graphify path, graphify reference: query, path, explain
-
-### Community 248 - "Community 248"
-Cohesion: 0.50
-Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
-
 ## Knowledge Gaps
-- **1533 isolated node(s):** `scenario`, `worker_count`, `elapsed_ms`, `bytes_processed`, `correctness_passed` (+1528 more)
+- **1211 isolated node(s):** `scenario`, `worker_count`, `elapsed_ms`, `bytes_processed`, `correctness_passed` (+1206 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **21 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `unordered_set` connect `BA2 Gnrl Prepare Writer` to `BSA Tes3 Parser Archive`, `BSA Tes4 Prepare Writer`, `BSA Tes3 Writer Prepare`, `BA2 DX10 Prepare Writer`, `BA2 DX10 Parser Extension`, `BA2 Gnrl Parser Size`, `BSA Tes4 Parser Archive`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **Why does `unordered_set` connect `Parser Primitives Unit Impossible` to `BSA Tes3 Parser Archive`, `BSA Tes4 Prepare Writer`, `BSA Tes3 Writer Prepare`, `BA2 Gnrl Prepare Writer`, `BA2 DX10 Prepare Writer`, `BA2 DX10 Parser Extension`, `BA2 Gnrl Parser Size`, `Parser Primitives Metadata Error`, `BSA Tes4 Parser Archive`?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
 - **Why does `fail()` connect `Main Package Consumer Archive` to `Warning Compatibility Unit Text`, `Writer Hotspot Policy Unit`, `Writer BA2 DX10 Unit`, `Validation API Unit Archive`, `Tes3 Writer BSA Unit`, `BA2 Gnrl Reader Unit`, `BA2 DX10 Malformed Unit`, `Tes3 BSA Reader Unit`, `Tes4 BSA Reader Unit`, `Local Fixture Game Unit`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
-- **Why does `read_file_bytes_at()` connect `Parser Primitives Fits U64` to `BSA Tes3 Parser Archive`, `BSA Tes4 Table Folder`, `Byte Vector Error Append`, `BA2 DX10 Parser Extension`, `BA2 Gnrl Parser Size`, `BSA Tes4 Parser Archive`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
+- **Why does `read_file_bytes_at()` connect `Parser Primitives Fits U64` to `BSA Tes3 Parser Archive`, `BSA Tes4 Table Folder`, `Byte Vector Error Append`, `BA2 DX10 Parser Archive`, `BA2 Gnrl Parser Size`, `BSA Tes4 Parser Archive`?**
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **What connects `scenario`, `worker_count`, `elapsed_ms` to the rest of the system?**
-  _1594 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1278 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Main CLI Name Usage` be split into smaller, more focused modules?**
   _Cohesion score 0.05420168067226891 - nodes in this community are weakly interconnected._
 - **Should `BSA Tes4 Prepare Writer` be split into smaller, more focused modules?**
