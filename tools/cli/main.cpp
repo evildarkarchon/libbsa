@@ -1,8 +1,11 @@
 #include <libbsa/libbsa.hpp>
 
+#include <argparse/argparse.hpp>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -21,6 +24,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -40,28 +44,6 @@ enum class process_exit : int {
     success = 0,
     operational_failure = 1,
     usage_error = 2,
-};
-
-enum class option_kind {
-    flag,
-    value,
-};
-
-struct option_spec {
-    std::string_view name;
-    option_kind kind;
-};
-
-struct parsed_option {
-    std::string name;
-    std::optional<std::string> value;
-};
-
-struct parsed_arguments {
-    bool help{false};
-    bool version{false};
-    std::vector<parsed_option> options;
-    std::vector<std::string> positionals;
 };
 
 enum class compression_choice {
@@ -92,6 +74,10 @@ struct input_file {
     std::filesystem::path host_path;
     std::string archive_path;
 };
+
+// Mirrors detail::run_indexed_work's hard worker cap so oversized CLI values
+// fail as usage errors before archive work starts.
+constexpr std::uint32_t max_cli_worker_count = 1024U;
 
 constexpr std::array format_table{
     format_descriptor{
@@ -286,119 +272,10 @@ void render_error(const libbsa::error& err, std::string_view context = {}) {
     std::cerr << ": " << error_code_name(err.code) << ": " << escaped_cli_text(err.message) << '\n';
 }
 
-int usage_failure(const libbsa::error& err, void (*usage)(std::ostream&)) {
+int usage_failure(const libbsa::error& err, const argparse::ArgumentParser& parser) {
     std::cerr << "usage error: " << escaped_cli_text(err.message) << "\n\n";
-    usage(std::cerr);
+    std::cerr << parser.help().str();
     return static_cast<int>(process_exit::usage_error);
-}
-
-const option_spec* find_option_spec(std::span<const option_spec> specs, std::string_view name) {
-    const auto found = std::find_if(specs.begin(), specs.end(),
-                                    [name](const option_spec& spec) { return spec.name == name; });
-    return found == specs.end() ? nullptr : &*found;
-}
-
-libbsa::result<parsed_arguments> parse_options(std::span<const std::string_view> args,
-                                               std::span<const option_spec> specs) {
-    parsed_arguments parsed;
-    bool end_of_options = false;
-
-    for (std::size_t index = 0; index < args.size(); ++index) {
-        const auto token = args[index];
-        if (end_of_options) {
-            parsed.positionals.emplace_back(token);
-            continue;
-        }
-
-        if (token == "--") {
-            end_of_options = true;
-            continue;
-        }
-        if (token == "-h" || token == "--help") {
-            parsed.help = true;
-            continue;
-        }
-        if (token == "-V" || token == "--version") {
-            parsed.version = true;
-            continue;
-        }
-
-        if (token.rfind("--", 0U) == 0U) {
-            const auto body = token.substr(2U);
-            const auto equals = body.find('=');
-            const auto name = equals == std::string_view::npos ? body : body.substr(0U, equals);
-            if (name.empty()) {
-                return make_usage_error("empty option name");
-            }
-
-            const option_spec* spec = find_option_spec(specs, name);
-            if (spec == nullptr) {
-                return make_usage_error("unknown option --" + std::string{name});
-            }
-
-            if (spec->kind == option_kind::flag) {
-                if (equals != std::string_view::npos) {
-                    return make_usage_error("option --" + std::string{name} +
-                                            " does not take a value");
-                }
-                parsed.options.push_back(parsed_option{std::string{name}, std::nullopt});
-                continue;
-            }
-
-            std::string value;
-            if (equals != std::string_view::npos) {
-                value = std::string{body.substr(equals + 1U)};
-            } else {
-                if (index + 1U >= args.size() || args[index + 1U].rfind("-", 0U) == 0U) {
-                    return make_usage_error("missing value for --" + std::string{name});
-                }
-                ++index;
-                value = std::string{args[index]};
-            }
-
-            if (value.empty()) {
-                return make_usage_error("missing value for --" + std::string{name});
-            }
-
-            parsed.options.push_back(parsed_option{std::string{name}, std::move(value)});
-            continue;
-        }
-
-        if (token.rfind("-", 0U) == 0U) {
-            return make_usage_error("unknown option " + std::string{token});
-        }
-
-        parsed.positionals.emplace_back(token);
-    }
-
-    return parsed;
-}
-
-bool has_flag(const parsed_arguments& args, std::string_view name) {
-    return std::any_of(args.options.begin(), args.options.end(),
-                       [name](const parsed_option& option) { return option.name == name; });
-}
-
-std::vector<std::string> values_for(const parsed_arguments& args, std::string_view name) {
-    std::vector<std::string> values;
-    for (const auto& option : args.options) {
-        if (option.name == name && option.value.has_value()) {
-            values.push_back(*option.value);
-        }
-    }
-    return values;
-}
-
-libbsa::result<std::optional<std::string>> single_value_for(const parsed_arguments& args,
-                                                            std::string_view name) {
-    auto values = values_for(args, name);
-    if (values.size() > 1U) {
-        return make_usage_error("option --" + std::string{name} + " may be specified only once");
-    }
-    if (values.empty()) {
-        return std::optional<std::string>{};
-    }
-    return std::optional<std::string>{std::move(values.front())};
 }
 
 const format_descriptor* find_format(std::string_view token) {
@@ -642,66 +519,51 @@ void print_format_table(std::ostream& output) {
     }
 }
 
-void print_top_level_usage(std::ostream& output) {
-    output << "Usage: bsa <command> [options]\n\n"
-           << "Commands:\n"
-           << "  pack      Create a new archive from a directory\n"
-           << "  unpack    Extract archive entries to a directory\n"
-           << "  list      List archive entries\n"
-           << "  info      Print archive metadata\n"
-           << "  validate  Validate an archive\n\n"
-           << "Global options:\n"
-           << "  -h, --help     Show help\n"
-           << "  -V, --version  Show version\n";
-}
-
-void print_pack_usage(std::ostream& output) {
-    output << "Usage: bsa pack --format <token> [--compress "
-              "<default|raw|compressed>] [--overwrite] <input-dir> "
-              "<output-archive>\n\n"
-           << "Options:\n"
-           << "  --format <token>      Required archive writer/target token\n"
-           << "  --compress <value>    Compression policy: default, raw, "
-              "compressed\n"
-           << "  --overwrite           Replace an existing output archive\n"
-           << "  -h, --help            Show help\n\n";
+std::string format_table_help() {
+    std::ostringstream output;
     print_format_table(output);
+    return output.str();
 }
 
-void print_unpack_usage(std::ostream& output) {
-    output << "Usage: bsa unpack [--path <archive-path>]... [--overwrite] "
-              "<archive> <output-dir>\n\n"
-           << "Options:\n"
-           << "  --path <archive-path>  Extract only the requested archive path; "
-              "may repeat\n"
-           << "  --overwrite            Replace existing destination files\n"
-           << "  -h, --help             Show help\n";
-}
-
-void print_list_usage(std::ostream& output) {
-    output << "Usage: bsa list [--details] <archive>\n\n"
-           << "Options:\n"
-           << "  --details, --detail  Include raw size, stored size, and "
-              "compression\n"
-           << "  -h, --help           Show help\n";
-}
-
-void print_info_usage(std::ostream& output) {
-    output << "Usage: bsa info <archive>\n\n"
-           << "Options:\n"
-           << "  -h, --help  Show help\n";
-}
-
-void print_validate_usage(std::ostream& output) {
-    output << "Usage: bsa validate [--strict] <archive>\n\n"
-           << "Options:\n"
-           << "  --strict    Treat compatibility warnings as failures\n"
-           << "  -h, --help  Show help\n";
+std::string version_text() {
+    return std::to_string(libbsa::version_major) + "." + std::to_string(libbsa::version_minor) +
+           "." + std::to_string(libbsa::version_patch);
 }
 
 void print_version(std::ostream& output) {
     output << "bsa (libbsa " << libbsa::version_major << '.' << libbsa::version_minor << '.'
            << libbsa::version_patch << ")\n";
+}
+
+void add_help_argument(argparse::ArgumentParser& parser) {
+    parser.add_argument("-h", "--help").help("Show help").flag();
+}
+
+void add_thread_argument(argparse::ArgumentParser& parser) {
+    parser.add_argument("-j", "--threads")
+        .metavar("<value>")
+        .default_value(std::string{"auto"})
+        .help("Worker threads: -j <value>; 1..1024, auto, or 0 for auto");
+}
+
+void add_positionals_argument(argparse::ArgumentParser& parser, std::string_view metavar) {
+    parser.add_argument("positionals")
+        .metavar(std::string{metavar})
+        .nargs(argparse::nargs_pattern::any)
+        .default_value<std::vector<std::string>>({});
+}
+
+std::vector<std::string> positional_values(const argparse::ArgumentParser& parser) {
+    return parser.get<std::vector<std::string>>("positionals");
+}
+
+bool is_known_subcommand(std::string_view command) noexcept {
+    return command == "pack" || command == "unpack" || command == "list" || command == "info" ||
+           command == "validate";
+}
+
+bool is_global_option(std::string_view command) noexcept {
+    return command == "-h" || command == "--help" || command == "-V" || command == "--version";
 }
 
 libbsa::result<compression_choice> parse_compression(std::string_view value) {
@@ -715,6 +577,36 @@ libbsa::result<compression_choice> parse_compression(std::string_view value) {
         return compression_choice::compressed;
     }
     return make_usage_error("unknown --compress value '" + std::string{value} + "'");
+}
+
+/// Parses a CLI worker-count token into a concrete positive library worker count.
+/// The CLI resolves `auto` and `0` because public libbsa APIs keep `0` invalid.
+libbsa::result<std::uint32_t> resolve_worker_count(std::string_view value) {
+    const auto invalid_worker_count = [value] {
+        return make_usage_error("invalid --threads value '" + std::string{value} +
+                                "'; expected 1.." + std::to_string(max_cli_worker_count) +
+                                ", auto, or 0");
+    };
+
+    if (value.empty()) {
+        return invalid_worker_count();
+    }
+
+    if (value == "auto" || value == "0") {
+        const auto hardware_workers = std::thread::hardware_concurrency();
+        return hardware_workers == 0U ? 1U : hardware_workers;
+    }
+
+    std::uint32_t parsed = 0U;
+    const auto* begin = value.data();
+    const auto* end = value.data() + value.size();
+    const auto [parsed_end, error] = std::from_chars(begin, end, parsed, 10);
+    if (error != std::errc{} || parsed_end != end || parsed == 0U ||
+        parsed > max_cli_worker_count) {
+        return invalid_worker_count();
+    }
+
+    return parsed;
 }
 
 libbsa::archive_compression_policy archive_policy_from(compression_choice choice) {
@@ -858,7 +750,7 @@ libbsa::result<std::vector<input_file>> collect_input_files(
 }
 
 int pack_tes3(const std::vector<input_file>& files, const std::filesystem::path& output_path,
-              bool overwrite) {
+              bool overwrite, std::uint32_t worker_count) {
     libbsa::tes3_bsa_writer_options options;
     options.overwrite_existing = overwrite;
     libbsa::tes3_bsa_writer writer{options};
@@ -871,7 +763,8 @@ int pack_tes3(const std::vector<input_file>& files, const std::filesystem::path&
         }
     }
 
-    auto written = writer.write_to(path_to_utf8(output_path), libbsa::write_execution_options{});
+    auto written =
+        writer.write_to(path_to_utf8(output_path), libbsa::write_execution_options{worker_count});
     if (!written) {
         render_error(written.error(), path_to_utf8(output_path));
         return static_cast<int>(process_exit::operational_failure);
@@ -881,7 +774,7 @@ int pack_tes3(const std::vector<input_file>& files, const std::filesystem::path&
 
 int pack_tes4(const format_descriptor& format, const std::vector<input_file>& files,
               const std::filesystem::path& output_path, bool overwrite,
-              compression_choice compression) {
+              compression_choice compression, std::uint32_t worker_count) {
     libbsa::tes4_bsa_writer_options options;
     options.overwrite_existing = overwrite;
     options.compression_policy = archive_policy_from(compression);
@@ -895,7 +788,8 @@ int pack_tes4(const format_descriptor& format, const std::vector<input_file>& fi
         }
     }
 
-    auto written = writer.write_to(path_to_utf8(output_path), libbsa::write_execution_options{});
+    auto written =
+        writer.write_to(path_to_utf8(output_path), libbsa::write_execution_options{worker_count});
     if (!written) {
         render_error(written.error(), path_to_utf8(output_path));
         return static_cast<int>(process_exit::operational_failure);
@@ -905,7 +799,7 @@ int pack_tes4(const format_descriptor& format, const std::vector<input_file>& fi
 
 int pack_ba2_gnrl(const format_descriptor& format, const std::vector<input_file>& files,
                   const std::filesystem::path& output_path, bool overwrite,
-                  compression_choice compression) {
+                  compression_choice compression, std::uint32_t worker_count) {
     libbsa::ba2_gnrl_writer_options options;
     options.overwrite_existing = overwrite;
     options.compression = archive_policy_from(compression);
@@ -919,7 +813,8 @@ int pack_ba2_gnrl(const format_descriptor& format, const std::vector<input_file>
         }
     }
 
-    auto written = writer.write_to(path_to_utf8(output_path), libbsa::write_execution_options{});
+    auto written =
+        writer.write_to(path_to_utf8(output_path), libbsa::write_execution_options{worker_count});
     if (!written) {
         render_error(written.error(), path_to_utf8(output_path));
         return static_cast<int>(process_exit::operational_failure);
@@ -928,7 +823,8 @@ int pack_ba2_gnrl(const format_descriptor& format, const std::vector<input_file>
 }
 
 int pack_ba2_dx10(const format_descriptor& format, const std::vector<input_file>& files,
-                  const std::filesystem::path& output_path, bool overwrite) {
+                  const std::filesystem::path& output_path, bool overwrite,
+                  std::uint32_t worker_count) {
     libbsa::ba2_dx10_writer_options options;
     options.overwrite_existing = overwrite;
     libbsa::ba2_dx10_writer writer{format.ba2_dx10_target, options};
@@ -941,7 +837,8 @@ int pack_ba2_dx10(const format_descriptor& format, const std::vector<input_file>
         }
     }
 
-    auto written = writer.write_to(path_to_utf8(output_path), libbsa::write_execution_options{});
+    auto written =
+        writer.write_to(path_to_utf8(output_path), libbsa::write_execution_options{worker_count});
     if (!written) {
         render_error(written.error(), path_to_utf8(output_path));
         return static_cast<int>(process_exit::operational_failure);
@@ -949,75 +846,56 @@ int pack_ba2_dx10(const format_descriptor& format, const std::vector<input_file>
     return static_cast<int>(process_exit::success);
 }
 
-int run_pack(std::span<const std::string_view> args) {
-    constexpr std::array specs{
-        option_spec{"format", option_kind::value},
-        option_spec{"compress", option_kind::value},
-        option_spec{"overwrite", option_kind::flag},
-    };
-
-    auto parsed = parse_options(args, specs);
-    if (!parsed) {
-        return usage_failure(parsed.error(), print_pack_usage);
-    }
-    if (parsed.value().help) {
-        print_pack_usage(std::cout);
-        return static_cast<int>(process_exit::success);
-    }
-    if (parsed.value().version) {
-        print_version(std::cout);
-        return static_cast<int>(process_exit::success);
-    }
-    if (parsed.value().positionals.size() != 2U) {
+/// Runs `bsa pack` after argparse syntax parsing, preserving CLI semantic checks.
+/// Usage failures return exit code 2; archive and filesystem failures stay on `render_error`.
+int run_pack(const argparse::ArgumentParser& parser) {
+    const auto positionals = positional_values(parser);
+    if (positionals.size() != 2U) {
         return usage_failure(make_usage_error("pack requires <input-dir> and <output-archive>"),
-                             print_pack_usage);
+                             parser);
     }
 
-    auto format_value = single_value_for(parsed.value(), "format");
-    if (!format_value) {
-        return usage_failure(format_value.error(), print_pack_usage);
+    const auto format_value = parser.present<std::string>("--format");
+    if (!format_value.has_value()) {
+        return usage_failure(make_usage_error("pack requires --format"), parser);
     }
-    if (!format_value.value().has_value()) {
-        return usage_failure(make_usage_error("pack requires --format"), print_pack_usage);
-    }
-    const format_descriptor* format = find_format(*format_value.value());
+    const format_descriptor* format = find_format(*format_value);
     if (format == nullptr) {
-        return usage_failure(make_usage_error("unknown --format token '" + *format_value.value() +
+        return usage_failure(make_usage_error("unknown --format token '" + *format_value +
                                               "'; valid tokens: " + valid_format_tokens()),
-                             print_pack_usage);
+                             parser);
     }
 
     compression_choice compression = compression_choice::target_default;
-    auto compression_value = single_value_for(parsed.value(), "compress");
-    if (!compression_value) {
-        return usage_failure(compression_value.error(), print_pack_usage);
+    auto parsed_compression = parse_compression(parser.get<std::string>("--compress"));
+    if (!parsed_compression) {
+        return usage_failure(parsed_compression.error(), parser);
     }
-    if (compression_value.value().has_value()) {
-        auto parsed_compression = parse_compression(*compression_value.value());
-        if (!parsed_compression) {
-            return usage_failure(parsed_compression.error(), print_pack_usage);
-        }
-        compression = parsed_compression.value();
-    }
+    compression = parsed_compression.value();
 
     if (compression == compression_choice::raw && !format->supports_raw) {
         return usage_failure(make_usage_error("selected --format does not support raw compression"),
-                             print_pack_usage);
+                             parser);
     }
     if (compression == compression_choice::compressed && !format->supports_compressed) {
         return usage_failure(
-            make_usage_error("selected --format does not support compressed payloads"),
-            print_pack_usage);
+            make_usage_error("selected --format does not support compressed payloads"), parser);
     }
 
-    auto input_dir = path_from_utf8(parsed.value().positionals[0]);
+    auto resolved_worker_count = resolve_worker_count(parser.get<std::string>("--threads"));
+    if (!resolved_worker_count) {
+        return usage_failure(resolved_worker_count.error(), parser);
+    }
+    const std::uint32_t worker_count = resolved_worker_count.value();
+
+    auto input_dir = path_from_utf8(positionals[0]);
     if (!input_dir) {
-        render_error(input_dir.error(), parsed.value().positionals[0]);
+        render_error(input_dir.error(), positionals[0]);
         return static_cast<int>(process_exit::operational_failure);
     }
-    auto output_path = path_from_utf8(parsed.value().positionals[1]);
+    auto output_path = path_from_utf8(positionals[1]);
     if (!output_path) {
-        render_error(output_path.error(), parsed.value().positionals[1]);
+        render_error(output_path.error(), positionals[1]);
         return static_cast<int>(process_exit::operational_failure);
     }
 
@@ -1027,22 +905,23 @@ int run_pack(std::span<const std::string_view> args) {
         return static_cast<int>(process_exit::operational_failure);
     }
 
-    const bool overwrite = has_flag(parsed.value(), "overwrite");
+    const bool overwrite = parser.get<bool>("--overwrite");
     int exit_code = static_cast<int>(process_exit::operational_failure);
     switch (format->family) {
         case writer_family::tes3_bsa:
-            exit_code = pack_tes3(files.value(), output_path.value(), overwrite);
+            exit_code = pack_tes3(files.value(), output_path.value(), overwrite, worker_count);
             break;
         case writer_family::tes4_bsa:
-            exit_code =
-                pack_tes4(*format, files.value(), output_path.value(), overwrite, compression);
+            exit_code = pack_tes4(*format, files.value(), output_path.value(), overwrite,
+                                  compression, worker_count);
             break;
         case writer_family::ba2_gnrl:
-            exit_code =
-                pack_ba2_gnrl(*format, files.value(), output_path.value(), overwrite, compression);
+            exit_code = pack_ba2_gnrl(*format, files.value(), output_path.value(), overwrite,
+                                      compression, worker_count);
             break;
         case writer_family::ba2_dx10:
-            exit_code = pack_ba2_dx10(*format, files.value(), output_path.value(), overwrite);
+            exit_code =
+                pack_ba2_dx10(*format, files.value(), output_path.value(), overwrite, worker_count);
             break;
     }
 
@@ -1704,38 +1583,30 @@ libbsa::result<std::filesystem::path> prepare_output_root(const std::filesystem:
     return root;
 }
 
-int run_unpack(std::span<const std::string_view> args) {
-    constexpr std::array specs{
-        option_spec{"path", option_kind::value},
-        option_spec{"overwrite", option_kind::flag},
-    };
-
-    auto parsed = parse_options(args, specs);
-    if (!parsed) {
-        return usage_failure(parsed.error(), print_unpack_usage);
-    }
-    if (parsed.value().help) {
-        print_unpack_usage(std::cout);
-        return static_cast<int>(process_exit::success);
-    }
-    if (parsed.value().version) {
-        print_version(std::cout);
-        return static_cast<int>(process_exit::success);
-    }
-    if (parsed.value().positionals.size() != 2U) {
+/// Runs `bsa unpack` using parsed subcommand values and guarded destination staging.
+/// Selection, traversal checks, and operational diagnostics remain owned by libbsa paths.
+int run_unpack(const argparse::ArgumentParser& parser) {
+    const auto positionals = positional_values(parser);
+    if (positionals.size() != 2U) {
         return usage_failure(make_usage_error("unpack requires <archive> and <output-dir>"),
-                             print_unpack_usage);
+                             parser);
     }
 
-    auto opened = libbsa::archive_reader::open(parsed.value().positionals[0]);
+    auto resolved_worker_count = resolve_worker_count(parser.get<std::string>("--threads"));
+    if (!resolved_worker_count) {
+        return usage_failure(resolved_worker_count.error(), parser);
+    }
+    const std::uint32_t worker_count = resolved_worker_count.value();
+
+    auto opened = libbsa::archive_reader::open(positionals[0]);
     if (!opened) {
-        render_error(opened.error(), parsed.value().positionals[0]);
+        render_error(opened.error(), positionals[0]);
         return static_cast<int>(process_exit::operational_failure);
     }
 
-    auto output_dir = path_from_utf8(parsed.value().positionals[1]);
+    auto output_dir = path_from_utf8(positionals[1]);
     if (!output_dir) {
-        render_error(output_dir.error(), parsed.value().positionals[1]);
+        render_error(output_dir.error(), positionals[1]);
         return static_cast<int>(process_exit::operational_failure);
     }
 
@@ -1746,7 +1617,7 @@ int run_unpack(std::span<const std::string_view> args) {
     }
 
     std::vector<libbsa::bulk_extract_request> requests;
-    const auto selected_paths = values_for(parsed.value(), "path");
+    const auto selected_paths = parser.get<std::vector<std::string>>("--path");
     if (!selected_paths.empty()) {
         requests.reserve(selected_paths.size());
         for (const auto& path : selected_paths) {
@@ -1755,7 +1626,7 @@ int run_unpack(std::span<const std::string_view> args) {
     } else {
         auto entries = opened.value().entries();
         if (!entries) {
-            render_error(entries.error(), parsed.value().positionals[0]);
+            render_error(entries.error(), positionals[0]);
             return static_cast<int>(process_exit::operational_failure);
         }
         requests.reserve(entries.value().size());
@@ -1766,11 +1637,11 @@ int run_unpack(std::span<const std::string_view> args) {
         }
     }
 
-    file_sink_factory sink_factory{output_root.value(), has_flag(parsed.value(), "overwrite")};
-    auto extracted =
-        opened.value().extract_entries(requests, sink_factory, libbsa::bulk_extract_options{});
+    file_sink_factory sink_factory{output_root.value(), parser.get<bool>("--overwrite")};
+    auto extracted = opened.value().extract_entries(requests, sink_factory,
+                                                    libbsa::bulk_extract_options{worker_count});
     if (!extracted) {
-        render_error(extracted.error(), parsed.value().positionals[0]);
+        render_error(extracted.error(), positionals[0]);
         return static_cast<int>(process_exit::operational_failure);
     }
 
@@ -1792,40 +1663,25 @@ int run_unpack(std::span<const std::string_view> args) {
                                : static_cast<int>(process_exit::operational_failure);
 }
 
-int run_list(std::span<const std::string_view> args) {
-    constexpr std::array specs{
-        option_spec{"details", option_kind::flag},
-        option_spec{"detail", option_kind::flag},
-    };
-
-    auto parsed = parse_options(args, specs);
-    if (!parsed) {
-        return usage_failure(parsed.error(), print_list_usage);
-    }
-    if (parsed.value().help) {
-        print_list_usage(std::cout);
-        return static_cast<int>(process_exit::success);
-    }
-    if (parsed.value().version) {
-        print_version(std::cout);
-        return static_cast<int>(process_exit::success);
-    }
-    if (parsed.value().positionals.size() != 1U) {
-        return usage_failure(make_usage_error("list requires <archive>"), print_list_usage);
+/// Runs `bsa list`, preserving escaped archive-path output and optional detail columns.
+int run_list(const argparse::ArgumentParser& parser) {
+    const auto positionals = positional_values(parser);
+    if (positionals.size() != 1U) {
+        return usage_failure(make_usage_error("list requires <archive>"), parser);
     }
 
-    auto opened = libbsa::archive_reader::open(parsed.value().positionals[0]);
+    auto opened = libbsa::archive_reader::open(positionals[0]);
     if (!opened) {
-        render_error(opened.error(), parsed.value().positionals[0]);
+        render_error(opened.error(), positionals[0]);
         return static_cast<int>(process_exit::operational_failure);
     }
     auto entries = opened.value().entries();
     if (!entries) {
-        render_error(entries.error(), parsed.value().positionals[0]);
+        render_error(entries.error(), positionals[0]);
         return static_cast<int>(process_exit::operational_failure);
     }
 
-    const bool details = has_flag(parsed.value(), "details") || has_flag(parsed.value(), "detail");
+    const bool details = parser.get<bool>("--details");
     for (const auto& entry : entries.value()) {
         std::cout << escaped_cli_text(entry.path);
         if (details) {
@@ -1837,31 +1693,21 @@ int run_list(std::span<const std::string_view> args) {
     return static_cast<int>(process_exit::success);
 }
 
-int run_info(std::span<const std::string_view> args) {
-    auto parsed = parse_options(args, std::span<const option_spec>{});
-    if (!parsed) {
-        return usage_failure(parsed.error(), print_info_usage);
-    }
-    if (parsed.value().help) {
-        print_info_usage(std::cout);
-        return static_cast<int>(process_exit::success);
-    }
-    if (parsed.value().version) {
-        print_version(std::cout);
-        return static_cast<int>(process_exit::success);
-    }
-    if (parsed.value().positionals.size() != 1U) {
-        return usage_failure(make_usage_error("info requires <archive>"), print_info_usage);
+/// Runs `bsa info` and emits the existing archive metadata text format.
+int run_info(const argparse::ArgumentParser& parser) {
+    const auto positionals = positional_values(parser);
+    if (positionals.size() != 1U) {
+        return usage_failure(make_usage_error("info requires <archive>"), parser);
     }
 
-    auto opened = libbsa::archive_reader::open(parsed.value().positionals[0]);
+    auto opened = libbsa::archive_reader::open(positionals[0]);
     if (!opened) {
-        render_error(opened.error(), parsed.value().positionals[0]);
+        render_error(opened.error(), positionals[0]);
         return static_cast<int>(process_exit::operational_failure);
     }
     auto metadata = opened.value().metadata();
     if (!metadata) {
-        render_error(metadata.error(), parsed.value().positionals[0]);
+        render_error(metadata.error(), positionals[0]);
         return static_cast<int>(process_exit::operational_failure);
     }
 
@@ -1888,30 +1734,16 @@ int run_info(std::span<const std::string_view> args) {
     return static_cast<int>(process_exit::success);
 }
 
-int run_validate(std::span<const std::string_view> args) {
-    constexpr std::array specs{
-        option_spec{"strict", option_kind::flag},
-    };
-
-    auto parsed = parse_options(args, specs);
-    if (!parsed) {
-        return usage_failure(parsed.error(), print_validate_usage);
-    }
-    if (parsed.value().help) {
-        print_validate_usage(std::cout);
-        return static_cast<int>(process_exit::success);
-    }
-    if (parsed.value().version) {
-        print_version(std::cout);
-        return static_cast<int>(process_exit::success);
-    }
-    if (parsed.value().positionals.size() != 1U) {
-        return usage_failure(make_usage_error("validate requires <archive>"), print_validate_usage);
+/// Runs `bsa validate`, keeping warning output and strict-warning failure semantics.
+int run_validate(const argparse::ArgumentParser& parser) {
+    const auto positionals = positional_values(parser);
+    if (positionals.size() != 1U) {
+        return usage_failure(make_usage_error("validate requires <archive>"), parser);
     }
 
-    auto validated = libbsa::validate_archive(parsed.value().positionals[0]);
+    auto validated = libbsa::validate_archive(positionals[0]);
     if (!validated) {
-        render_error(validated.error(), parsed.value().positionals[0]);
+        render_error(validated.error(), positionals[0]);
         return static_cast<int>(process_exit::operational_failure);
     }
 
@@ -1936,48 +1768,148 @@ int run_validate(std::span<const std::string_view> args) {
         std::cout << '\n';
     }
 
-    if (!report.is_valid() || (has_flag(parsed.value(), "strict") && !report.warnings.empty())) {
+    if (!report.is_valid() || (parser.get<bool>("--strict") && !report.warnings.empty())) {
         return static_cast<int>(process_exit::operational_failure);
     }
     return static_cast<int>(process_exit::success);
 }
 
-int dispatch(std::span<const std::string_view> args) {
+/// Builds the argparse grammar, parses the UTF-8 argument vector, and dispatches one command.
+/// Parser objects stay in this scope because argparse v3 parsers are non-copyable/non-movable
+/// and registered subparsers must outlive parse_args and dispatch.
+int dispatch(const std::vector<std::string>& args) {
+    argparse::ArgumentParser program("bsa", version_text(), argparse::default_arguments::none);
+    program.add_description("Bethesda archive command-line tool");
+    add_help_argument(program);
+    program.add_argument("-V", "--version").help("Show version").flag();
+
+    argparse::ArgumentParser pack_parser("pack", version_text(), argparse::default_arguments::none);
+    pack_parser.add_description("Create a new archive from a directory");
+    add_help_argument(pack_parser);
+    pack_parser.add_argument("--format")
+        .metavar("<token>")
+        .help("Required archive writer/target token. Valid tokens: " + valid_format_tokens());
+    pack_parser.add_argument("--compress")
+        .metavar("<value>")
+        .default_value(std::string{"default"})
+        .help("Compression policy: default, raw, or compressed");
+    add_thread_argument(pack_parser);
+    pack_parser.add_argument("--overwrite").help("Replace an existing output archive").flag();
+    add_positionals_argument(pack_parser, "<input-dir> <output-archive>");
+    pack_parser.add_epilog(format_table_help());
+
+    argparse::ArgumentParser unpack_parser("unpack", version_text(),
+                                           argparse::default_arguments::none);
+    unpack_parser.add_description("Extract archive entries to a directory");
+    add_help_argument(unpack_parser);
+    unpack_parser.add_argument("--path")
+        .metavar("<archive-path>")
+        .default_value<std::vector<std::string>>({})
+        .append()
+        .help("Extract only the requested archive path; may repeat");
+    add_thread_argument(unpack_parser);
+    unpack_parser.add_argument("--overwrite").help("Replace existing destination files").flag();
+    add_positionals_argument(unpack_parser, "<archive> <output-dir>");
+
+    argparse::ArgumentParser list_parser("list", version_text(), argparse::default_arguments::none);
+    list_parser.add_description("List archive entries");
+    add_help_argument(list_parser);
+    list_parser.add_argument("--details", "--detail")
+        .help("Include raw size, stored size, and compression")
+        .flag();
+    add_positionals_argument(list_parser, "<archive>");
+
+    argparse::ArgumentParser info_parser("info", version_text(), argparse::default_arguments::none);
+    info_parser.add_description("Print archive metadata");
+    add_help_argument(info_parser);
+    add_positionals_argument(info_parser, "<archive>");
+
+    argparse::ArgumentParser validate_parser("validate", version_text(),
+                                             argparse::default_arguments::none);
+    validate_parser.add_description("Validate an archive");
+    add_help_argument(validate_parser);
+    validate_parser.add_argument("--strict")
+        .help("Treat compatibility warnings as failures")
+        .flag();
+    add_positionals_argument(validate_parser, "<archive>");
+
+    program.add_subparser(pack_parser);
+    program.add_subparser(unpack_parser);
+    program.add_subparser(list_parser);
+    program.add_subparser(info_parser);
+    program.add_subparser(validate_parser);
+
+    struct command_route {
+        std::string_view name;
+        argparse::ArgumentParser* parser;
+        int (*handler)(const argparse::ArgumentParser&);
+    };
+    const std::array<command_route, 5> routes{{
+        {"pack", &pack_parser, run_pack},
+        {"unpack", &unpack_parser, run_unpack},
+        {"list", &list_parser, run_list},
+        {"info", &info_parser, run_info},
+        {"validate", &validate_parser, run_validate},
+    }};
+
     if (args.empty()) {
-        std::cerr << "usage error: missing subcommand\n\n";
-        print_top_level_usage(std::cerr);
+        std::cerr << "usage error: missing subcommand\n\n" << program.help().str();
         return static_cast<int>(process_exit::usage_error);
     }
 
-    const auto command = args.front();
-    if (command == "-h" || command == "--help") {
-        print_top_level_usage(std::cout);
-        return static_cast<int>(process_exit::success);
+    const auto first_token = std::string_view{args.front()};
+    if (!is_global_option(first_token) && !is_known_subcommand(first_token) &&
+        !first_token.empty() && first_token.front() != '-') {
+        std::cerr << "usage error: unknown subcommand '" << first_token << "'\n\n"
+                  << program.help().str();
+        return static_cast<int>(process_exit::usage_error);
     }
-    if (command == "-V" || command == "--version") {
+
+    std::vector<std::string> parser_args;
+    parser_args.reserve(args.size() + 1U);
+    parser_args.emplace_back("bsa");
+    parser_args.insert(parser_args.end(), args.begin(), args.end());
+
+    const auto usage_parser_for_error = [&]() -> const argparse::ArgumentParser& {
+        for (const auto& route : routes) {
+            if (first_token == route.name) {
+                return *route.parser;
+            }
+        }
+        return program;
+    };
+
+    try {
+        program.parse_args(parser_args);
+    } catch (const std::exception& ex) {
+        // argparse reports syntax failures with exceptions; translate them at the CLI boundary
+        // so parse errors keep the documented usage-error exit code instead of escaping main().
+        std::cerr << "usage error: " << escaped_cli_text(ex.what()) << "\n\n"
+                  << usage_parser_for_error().help().str();
+        return static_cast<int>(process_exit::usage_error);
+    }
+
+    if (program.get<bool>("--version")) {
         print_version(std::cout);
         return static_cast<int>(process_exit::success);
     }
-
-    const auto sub_args = args.subspan(1U);
-    if (command == "pack") {
-        return run_pack(sub_args);
-    }
-    if (command == "unpack") {
-        return run_unpack(sub_args);
-    }
-    if (command == "list") {
-        return run_list(sub_args);
-    }
-    if (command == "info") {
-        return run_info(sub_args);
-    }
-    if (command == "validate") {
-        return run_validate(sub_args);
+    if (program.get<bool>("--help")) {
+        std::cout << program.help().str();
+        return static_cast<int>(process_exit::success);
     }
 
-    std::cerr << "usage error: unknown subcommand '" << command << "'\n\n";
-    print_top_level_usage(std::cerr);
+    for (const auto& route : routes) {
+        if (!program.is_subcommand_used(std::string{route.name})) {
+            continue;
+        }
+        if (route.parser->get<bool>("--help")) {
+            std::cout << route.parser->help().str();
+            return static_cast<int>(process_exit::success);
+        }
+        return route.handler(*route.parser);
+    }
+
+    std::cerr << "usage error: missing subcommand\n\n" << program.help().str();
     return static_cast<int>(process_exit::usage_error);
 }
 }  // namespace
@@ -1990,12 +1922,7 @@ int main(int argc, char** argv) {
             return static_cast<int>(process_exit::operational_failure);
         }
 
-        std::vector<std::string_view> args;
-        args.reserve(owned_args.value().size());
-        for (const auto& argument : owned_args.value()) {
-            args.emplace_back(argument);
-        }
-        return dispatch(args);
+        return dispatch(owned_args.value());
     } catch (const std::exception& ex) {
         std::cerr << "error: unhandled exception: " << ex.what() << '\n';
         return static_cast<int>(process_exit::operational_failure);

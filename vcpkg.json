@@ -11,6 +11,7 @@
     },
     "lz4",
     "directxtex",
+    "argparse",
     "catch2",
     "nlohmann-json"
   ]

@@ -85,6 +85,14 @@ function(require_contains text needle context)
   endif()
 endfunction()
 
+function(require_match_count text regex expected context)
+  string(REGEX MATCHALL "${regex}" matches "${text}")
+  list(LENGTH matches actual)
+  if(NOT actual EQUAL expected)
+    message(FATAL_ERROR "Expected ${context} to match '${regex}' ${expected} time(s), got ${actual}")
+  endif()
+endfunction()
+
 function(write_text path text)
   cmake_path(GET path PARENT_PATH parent)
   file(MAKE_DIRECTORY "${parent}")
@@ -233,6 +241,15 @@ function(pack_unpack_roundtrip format extension)
 endfunction()
 
 file(READ "${LIBBSA_SOURCE_DIR}/tools/cli/main.cpp" cli_source)
+require_contains("${cli_source}" "constexpr std::uint32_t max_cli_worker_count = 1024U" "CLI worker cap source")
+require_contains("${cli_source}" "value == \"auto\" || value == \"0\"" "CLI worker auto parsing source")
+require_contains("${cli_source}" "std::thread::hardware_concurrency()" "CLI worker auto resolution source")
+require_contains("${cli_source}" "hardware_workers == 0U ? 1U : hardware_workers" "CLI worker auto clamp source")
+require_contains("${cli_source}" "if (value.empty())" "CLI empty worker-count rejection source")
+require_contains("${cli_source}" "parser.add_argument(\"-j\", \"--threads\")" "CLI argparse thread option wiring")
+require_match_count("${cli_source}" "resolve_worker_count\\(parser\\.get<std::string>\\(\"--threads\"\\)\\)" 2 "CLI argparse thread-count resolution")
+require_match_count("${cli_source}" "write_execution_options\\{worker_count\\}" 4 "CLI pack worker-count forwarding")
+require_match_count("${cli_source}" "bulk_extract_options\\{worker_count\\}" 1 "CLI unpack worker-count forwarding")
 string(FIND "${cli_source}" "std::ofstream stream{destination.value()" path_based_destination_open_at)
 if(NOT path_based_destination_open_at EQUAL -1)
   message(FATAL_ERROR "CLI unpack destinations must not be opened through a path-based truncating ofstream after reparse-point checks")
@@ -299,6 +316,11 @@ run_cli(2 stdout stderr unknown-subcommand)
 require_contains("${stderr}" "unknown subcommand" "unknown subcommand diagnostic")
 
 run_cli(0 stdout stderr pack --help)
+require_contains("${stdout}" "--threads" "pack help thread option")
+require_contains("${stdout}" "-j <value>" "pack help thread alias")
+require_contains("${stdout}" "1..1024" "pack help worker range")
+require_contains("${stdout}" "auto" "pack help auto worker value")
+require_contains("${stdout}" "0 for auto" "pack help zero auto alias")
 foreach(token IN ITEMS
     bsa-tes3
     bsa-oblivion
@@ -328,6 +350,57 @@ require_contains("${stderr}" "does not support compressed" "unsupported TES3 com
 
 run_cli(2 stdout stderr pack --format ba2-dx10-fo4 --compress raw "${missing_format_root}" "${work_root}/bad-dx10-compress.ba2")
 require_contains("${stderr}" "does not support raw" "unsupported DX10 compression diagnostic")
+
+set(thread_root "${work_root}/threads")
+set(thread_input "${thread_root}/input")
+write_text("${thread_input}/meshes/threaded.nif" "threaded payload\n")
+
+set(thread_integer_archive "${thread_root}/integer.bsa")
+run_cli(0 stdout stderr pack --format bsa-tes3 --threads 2 "${thread_input}" "${thread_integer_archive}")
+require_contains("${stdout}" "packed 1 file(s)" "pack integer thread-count output")
+
+run_cli(0 stdout stderr pack --format bsa-tes3 -j auto --overwrite "${thread_input}" "${thread_integer_archive}")
+require_contains("${stdout}" "packed 1 file(s)" "pack auto thread-count output")
+
+run_cli(0 stdout stderr pack --format bsa-tes3 --threads 0 --overwrite "${thread_input}" "${thread_integer_archive}")
+require_contains("${stdout}" "packed 1 file(s)" "pack zero-auto thread-count output")
+
+foreach(bad_threads IN ITEMS -1 nope 1025)
+  string(REPLACE "-" "minus" bad_suffix "${bad_threads}")
+  set(bad_thread_archive "${thread_root}/bad-${bad_suffix}.bsa")
+  run_cli(2 stdout stderr pack --format bsa-tes3 --threads "${bad_threads}" "${thread_root}/missing-input" "${bad_thread_archive}")
+  require_contains("${stderr}" "invalid --threads value" "invalid pack thread-count diagnostic")
+  require_not_exists("${bad_thread_archive}" "archive from invalid pack thread count")
+endforeach()
+
+set(short_bad_thread_archive "${thread_root}/bad-short-minus1.bsa")
+run_cli(2 stdout stderr pack --format bsa-tes3 -j -1 "${thread_root}/missing-input" "${short_bad_thread_archive}")
+require_contains("${stderr}" "invalid --threads value" "invalid short pack thread-count diagnostic")
+require_not_exists("${short_bad_thread_archive}" "archive from invalid short pack thread count")
+
+set(empty_thread_archive "${thread_root}/bad-empty.bsa")
+run_cli(2 stdout stderr pack --format bsa-tes3 --threads= "${thread_input}" "${empty_thread_archive}")
+require_not_exists("${empty_thread_archive}" "archive from empty pack thread count")
+
+set(thread_unpack_output "${thread_root}/unpack-integer")
+run_cli(0 stdout stderr unpack --threads 2 "${thread_integer_archive}" "${thread_unpack_output}")
+require_file_text("${thread_unpack_output}/meshes/threaded.nif" "threaded payload\n")
+
+set(thread_unpack_auto_output "${thread_root}/unpack-auto")
+run_cli(0 stdout stderr unpack -j auto "${thread_integer_archive}" "${thread_unpack_auto_output}")
+require_file_text("${thread_unpack_auto_output}/meshes/threaded.nif" "threaded payload\n")
+
+set(thread_unpack_zero_output "${thread_root}/unpack-zero")
+run_cli(0 stdout stderr unpack --threads 0 "${thread_integer_archive}" "${thread_unpack_zero_output}")
+require_file_text("${thread_unpack_zero_output}/meshes/threaded.nif" "threaded payload\n")
+
+foreach(bad_threads IN ITEMS -1 nope 1025)
+  string(REPLACE "-" "minus" bad_suffix "${bad_threads}")
+  set(bad_thread_output "${thread_root}/bad-unpack-${bad_suffix}")
+  run_cli(2 stdout stderr unpack --threads "${bad_threads}" "${thread_root}/missing-archive.bsa" "${bad_thread_output}")
+  require_contains("${stderr}" "invalid --threads value" "invalid unpack thread-count diagnostic")
+  require_not_exists("${bad_thread_output}" "output directory from invalid unpack thread count")
+endforeach()
 
 run_cli(1 stdout stderr pack --format bsa-tes3 "${work_root}/does-not-exist" "${work_root}/missing-input.bsa")
 require_contains("${stderr}" "io_error" "missing input diagnostic")
@@ -402,6 +475,12 @@ require_child_name("${mixed_case_selective_output}/Meshes/Tiny" "Probe.nif")
 
 set(selective_archive "${work_root}/roundtrip-bsa-tes3/packed.bsa")
 set(selective_output "${work_root}/selective-output")
+run_cli(0 stdout stderr unpack --help)
+require_contains("${stdout}" "--threads" "unpack help thread option")
+require_contains("${stdout}" "-j <value>" "unpack help thread alias")
+require_contains("${stdout}" "1..1024" "unpack help worker range")
+require_contains("${stdout}" "auto" "unpack help auto worker value")
+require_contains("${stdout}" "0 for auto" "unpack help zero auto alias")
 if(WIN32)
   set(utf8_host_root "${work_root}/utf8-host-Ångström-日本語")
   set(utf8_host_archive "${utf8_host_root}/packed.bsa")

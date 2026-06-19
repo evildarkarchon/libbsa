@@ -197,6 +197,8 @@ target_sources(libbsa
 )
 
 if(LIBBSA_BUILD_CLI)
+  find_package(argparse CONFIG REQUIRED)
+
   add_executable(bsa
     tools/cli/main.cpp
   )
@@ -204,6 +206,7 @@ if(LIBBSA_BUILD_CLI)
   target_link_libraries(bsa
     PRIVATE
       libbsa::libbsa
+      argparse::argparse
       $<$<PLATFORM_ID:Windows>:shell32>
   )
 
