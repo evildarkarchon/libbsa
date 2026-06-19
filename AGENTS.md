@@ -46,6 +46,7 @@ Deflate and LZ4 compression/decompression support are required.
 
 - Do not introduce external dependencies speculatively.
 - Prefer the C++ standard library until a real format, compression, filesystem, testing, or packaging requirement justifies more.
+- Header-only libraries are an allowed exception when they solve a concrete, documented need and add no runtime or shared-library dependency; keep them scoped to the target that needs them and consume them through vcpkg when available.
 - Use `libdeflate` for deflate compression and decompression.
 - Use the official `lz4` library for LZ4 compression and decompression.
 - Use `DirectXTex` for texture analysis.
@@ -110,7 +111,7 @@ The library reimplements BSArchPro-compatible behavior using clean, idiomatic C+
 
 - **Language**: C++20 - implementation must expose idiomatic, reusable C++ interfaces rather than transliterated Delphi structure.
 - **Reference boundary**: `TES5Edit/` is read-only - it may guide behavior but must not be edited, formatted, staged, or compiled into libbsa.
-- **Dependencies**: Use `libdeflate`, official `lz4`, and `DirectXTex` via vcpkg - no other external dependencies without documented justification.
+- **Dependencies**: Use `libdeflate`, official `lz4`, and `DirectXTex` via vcpkg. Non-header-only external dependencies require documented justification; header-only libraries are permitted for concrete, documented needs when they add no runtime/shared-library dependency and are scoped to the consuming target.
 - **Build and tests**: Use CMake, vcpkg manifest mode, Catch2, and CTest for repeatable library builds and validation.
 - **Platform support**: Windows is the only supported target. Reviewers should not request Linux, macOS, POSIX, or cross-platform portability work unless the user explicitly changes this constraint.
 - **API design**: Public headers should remain minimal and avoid leaking platform, compression, or DirectXTex implementation details.

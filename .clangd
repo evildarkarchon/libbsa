@@ -1,0 +1,50 @@
+CompileFlags:
+  Compiler: clang-cl
+  CompilationDatabase: build/windows-msvc-debug-static
+  Add:
+    - /std:c++20
+    - /Zc:__cplusplus
+
+    # Project include roots. clangd fallback commands run from the opened file's
+    # directory, so include a few parent-depth variants instead of a checkout-root
+    # absolute path.
+    - /Iinclude
+    - /Isrc
+    - /Itests
+    - /I../include
+    - /I../src
+    - /I../tests
+    - /I../../include
+    - /I../../src
+    - /I../../tests
+    - /I../../../include
+    - /I../../../src
+    - /I../../../tests
+    - /I../../../../include
+    - /I../../../../src
+    - /I../../../../tests
+
+    # vcpkg manifest install roots for the default preset and common Windows triplets.
+    - /Ibuild/windows-msvc-debug-static/vcpkg_installed/x64-windows/include
+    - /Ibuild/windows-msvc-debug-static/vcpkg_installed/x64-windows-static/include
+    - /Ivcpkg_installed/x64-windows/include
+    - /Ivcpkg_installed/x64-windows-static/include
+    - /I../build/windows-msvc-debug-static/vcpkg_installed/x64-windows/include
+    - /I../build/windows-msvc-debug-static/vcpkg_installed/x64-windows-static/include
+    - /I../vcpkg_installed/x64-windows/include
+    - /I../vcpkg_installed/x64-windows-static/include
+    - /I../../build/windows-msvc-debug-static/vcpkg_installed/x64-windows/include
+    - /I../../build/windows-msvc-debug-static/vcpkg_installed/x64-windows-static/include
+    - /I../../vcpkg_installed/x64-windows/include
+    - /I../../vcpkg_installed/x64-windows-static/include
+    - /I../../../build/windows-msvc-debug-static/vcpkg_installed/x64-windows/include
+    - /I../../../build/windows-msvc-debug-static/vcpkg_installed/x64-windows-static/include
+    - /I../../../vcpkg_installed/x64-windows/include
+    - /I../../../vcpkg_installed/x64-windows-static/include
+    - /I../../../../build/windows-msvc-debug-static/vcpkg_installed/x64-windows/include
+    - /I../../../../build/windows-msvc-debug-static/vcpkg_installed/x64-windows-static/include
+    - /I../../../../vcpkg_installed/x64-windows/include
+    - /I../../../../vcpkg_installed/x64-windows-static/include
+
+    # clang-cl discovers the installed MSVC STL and Windows SDK system headers,
+    # including windows.h, from the local Visual Studio/Windows SDK installation.
