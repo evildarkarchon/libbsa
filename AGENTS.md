@@ -44,14 +44,13 @@ All implementation work belongs outside `TES5Edit/`.
 
 Deflate and LZ4 compression/decompression support are required.
 
-- Do not introduce external dependencies speculatively.
-- Prefer the C++ standard library until a real format, compression, filesystem, testing, or packaging requirement justifies more.
-- Header-only libraries are an allowed exception when they solve a concrete, documented need and add no runtime or shared-library dependency; keep them scoped to the target that needs them and consume them through vcpkg when available.
+- Prefer the C++ standard library for simple cases, but add dependencies when they materially improve correctness, maintainability, performance, or delivery for a concrete project need.
+- Keep dependencies scoped to the target that needs them and consume them through vcpkg when available.
 - Use `libdeflate` for deflate compression and decompression.
 - Use the official `lz4` library for LZ4 compression and decompression.
 - Use `DirectXTex` for texture analysis.
 - Use `vcpkg` for dependency management.
-- If a dependency becomes useful, document the need, the alternatives considered, and the expected project impact before adding it.
+- When adding a dependency, document the need, the alternatives considered, and the expected project impact.
 
 ## Comments and Documentation
 
@@ -111,7 +110,7 @@ The library reimplements BSArchPro-compatible behavior using clean, idiomatic C+
 
 - **Language**: C++20 - implementation must expose idiomatic, reusable C++ interfaces rather than transliterated Delphi structure.
 - **Reference boundary**: `TES5Edit/` is read-only - it may guide behavior but must not be edited, formatted, staged, or compiled into libbsa.
-- **Dependencies**: Use `libdeflate`, official `lz4`, and `DirectXTex` via vcpkg. Non-header-only external dependencies require documented justification; header-only libraries are permitted for concrete, documented needs when they add no runtime/shared-library dependency and are scoped to the consuming target.
+- **Dependencies**: Use `libdeflate`, official `lz4`, and `DirectXTex` via vcpkg. Additional dependencies are allowed when they address concrete project needs; document the need, alternatives considered, and expected project impact, and keep dependencies scoped to the consuming target.
 - **Build and tests**: Use CMake, vcpkg manifest mode, Catch2, and CTest for repeatable library builds and validation.
 - **Platform support**: Windows is the only supported target. Reviewers should not request Linux, macOS, POSIX, or cross-platform portability work unless the user explicitly changes this constraint.
 - **API design**: Public headers should remain minimal and avoid leaking platform, compression, or DirectXTex implementation details.
@@ -171,7 +170,7 @@ The library reimplements BSArchPro-compatible behavior using clean, idiomatic C+
 | `std::filesystem::path` for archive-internal paths | Bethesda virtual paths are normalized archive keys, not host filesystem paths; host separator/case/encoding rules can corrupt lookups and hashes | Store archive paths as normalized UTF-8/byte strings with explicit normalization; use filesystem paths only at host I/O boundaries | HIGH |
 | LZ4 frame API for Starfield BA2 v3 raw LZ4 blocks | LZ4 frame and raw block formats are different; wrong API selection can fail or corrupt output | Route by archive family/version/`CompressionMethod`: `LZ4F_*` for SSE frames, `LZ4_*safe*` for Starfield raw blocks | HIGH |
 | DirectXTex or DXGI types in public headers | Leaks implementation/platform details into downstream consumers | Internal `dds_metadata` / `texture_layout` value types translated from DirectXTex internally | HIGH |
-| External logging/formatting libraries by default (`spdlog`, `fmt`) | Not required by a reusable archive library and violates minimal-dependency constraints | Return structured errors and let consumers log/format however they choose | HIGH |
+| External logging/formatting libraries by default (`spdlog`, `fmt`) | Not required by a reusable archive library unless a concrete project need justifies them | Return structured errors and let consumers log/format however they choose | HIGH |
 | Boost, libarchive, ZIP/7z libraries | They do not implement Bethesda BSA/BA2 semantics and add large dependency/API surface | Purpose-built BSA/BA2 parsers/writers | HIGH |
 | Whole-archive memory loading as primary design | Starfield archives can be very large; whole-file reads break performance and memory goals | Streaming sources/sinks and bounded scratch buffers | HIGH |
 | In-place archive mutation in early milestones | Hard to make safe with shifting tables, compression, DDS chunks, and deduplication | Open/read/write-new archive flow; defer in-place updates to polish/hardening | HIGH |
