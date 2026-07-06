@@ -46,8 +46,12 @@ bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) no
 }  // namespace
 
 result<void> ba2_dx10_assign_payload_offsets(std::span<ba2_dx10_prepared_entry> entries,
-                                             std::uint32_t version, bool deduplicate_payloads,
+                                             const ba2_profile& profile, bool deduplicate_payloads,
                                              std::uint64_t& file_table_offset) {
+    if (!profile.is_dx10()) {
+        return error{error_code::invalid_argument, "BA2 DX10 layout profile is not DX10"};
+    }
+
     std::uint64_t record_bytes = 0;
     for (const auto& entry : entries) {
         std::uint64_t entry_record_bytes = 0;
@@ -60,7 +64,7 @@ result<void> ba2_dx10_assign_payload_offsets(std::span<ba2_dx10_prepared_entry> 
         }
     }
 
-    if (!add_fits_u64(ba2_dx10_header_size_for(version), record_bytes, file_table_offset)) {
+    if (!add_fits_u64(profile.header_size(), record_bytes, file_table_offset)) {
         return error{error_code::format_error, "BA2 DX10 metadata size overflows"};
     }
 

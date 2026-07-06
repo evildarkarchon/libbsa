@@ -1,6 +1,7 @@
 #pragma once
 
 #include "formats/ba2/ba2_gnrl_writer.hpp"
+#include "formats/ba2/ba2_profile.hpp"
 
 #include <detail/host_file_path.hpp>
 
@@ -43,17 +44,13 @@ struct ba2_gnrl_prepared_entry {
 result<ba2_gnrl_writer_entry> ba2_gnrl_make_writer_entry(std::string_view archive_path,
                                                          ba2_gnrl_entry_options options);
 
-/// Validates BA2 GNRL target-specific writer options before preparation.
-result<void> ba2_gnrl_validate_target_options(ba2_gnrl_target target,
-                                              const ba2_gnrl_writer_options& options);
-
 /// Validates BA2 GNRL writer entries before source preparation.
 result<void> ba2_gnrl_validate_entries(std::span<const ba2_gnrl_writer_entry> entries);
 
 /// Prepares BA2 GNRL entries by routing compression, hashing payloads, and
 /// sorting records deterministically.
 result<std::vector<ba2_gnrl_prepared_entry>> ba2_gnrl_prepare_entries(
-    ba2_gnrl_target target, const ba2_gnrl_writer_options& options,
+    const ba2_profile& profile, const ba2_gnrl_writer_options& options,
     std::span<const ba2_gnrl_writer_entry> entries, std::uint32_t worker_count);
 
 }  // namespace libbsa::formats::ba2

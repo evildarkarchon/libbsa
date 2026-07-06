@@ -2,6 +2,7 @@
 
 #include "formats/ba2/ba2_dx10_layout.hpp"
 #include "formats/ba2/ba2_dx10_prepare.hpp"
+#include "formats/ba2/ba2_profile.hpp"
 #include "formats/ba2/ba2_dx10_serialize.hpp"
 
 #include <detail/host_file_path.hpp>
@@ -129,9 +130,9 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target, const ba2_dx10_write
         return error{error_code::invalid_argument, "BA2 DX10 output host path must not be empty"};
     }
 
-    auto target_options = ba2_dx10_validate_target_options(target, options);
-    if (!target_options) {
-        return target_options.error();
+    auto profile = make_ba2_profile_for_dx10_writer(target, options);
+    if (!profile) {
+        return profile.error();
     }
 
     auto output_path = detail::resolve_host_file_path(output_host_path);
@@ -144,14 +145,13 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target, const ba2_dx10_write
         return validated.error();
     }
 
-    const auto version = ba2_dx10_version_for(target);
-    auto prepared = ba2_dx10_prepare_entries(target, options, entries, worker_count);
+    auto prepared = ba2_dx10_prepare_entries(profile.value(), options, entries, worker_count);
     if (!prepared) {
         return prepared.error();
     }
 
     std::uint64_t file_table_offset = 0;
-    auto offsets = ba2_dx10_assign_payload_offsets(prepared.value(), version,
+    auto offsets = ba2_dx10_assign_payload_offsets(prepared.value(), profile.value(),
                                                    options.deduplicate_payloads, file_table_offset);
     if (!offsets) {
         return offsets.error();
@@ -160,7 +160,7 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target, const ba2_dx10_write
     return detail::publish_writer_output(
         output_path.value().resolved, options.overwrite_existing, "BA2 DX10 writer",
         [&](const std::filesystem::path& temp_path) -> result<void> {
-            return ba2_dx10_write_archive_bytes(options, prepared.value(), version,
+            return ba2_dx10_write_archive_bytes(profile.value(), prepared.value(),
                                                 file_table_offset, temp_path);
         });
 }

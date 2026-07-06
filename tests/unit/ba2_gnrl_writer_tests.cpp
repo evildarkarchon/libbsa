@@ -3,6 +3,7 @@
 #include <libbsa/libbsa.hpp>
 
 #include "formats/ba2/ba2_gnrl_layout.hpp"
+#include "formats/ba2/ba2_profile.hpp"
 #include "formats/ba2/ba2_gnrl_serialize.hpp"
 #include "formats/ba2/ba2_gnrl_writer.hpp"
 
@@ -34,6 +35,14 @@ std::filesystem::path writer_test_dir() {
 }
 
 std::filesystem::path output_path(std::string name) { return writer_test_dir() / std::move(name); }
+
+libbsa::formats::ba2::ba2_profile require_gnrl_profile(
+    const libbsa::ba2_gnrl_writer_options& options = {}) {
+    auto profile = libbsa::formats::ba2::make_ba2_profile_for_gnrl_writer(
+        libbsa::ba2_gnrl_target::fallout4, options);
+    REQUIRE(profile.has_value());
+    return profile.value();
+}
 
 std::filesystem::path non_ascii_output_path(std::string_view name) {
     auto path = writer_test_dir() / std::filesystem::path{std::wstring{non_ascii_path_token_wide}} /
@@ -118,17 +127,15 @@ TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
         write_binary_file(source, expected);
         auto entries =
             std::vector{disk_stage_entry(source, static_cast<std::uint32_t>(expected.size()))};
-        const auto version =
-            libbsa::formats::ba2::ba2_gnrl_version_for(libbsa::ba2_gnrl_target::fallout4);
+        const auto profile = require_gnrl_profile();
         std::uint64_t file_table_offset = 0;
-        REQUIRE(libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(entries, version, false,
+        REQUIRE(libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(entries, profile, false,
                                                                       file_table_offset)
                     .has_value());
         write_binary_file(source, grown);
 
         auto streamed = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            libbsa::ba2_gnrl_target::fallout4, libbsa::ba2_gnrl_writer_options{}, entries, version,
-            file_table_offset, output_path("stream-source-grew.ba2"));
+            profile, entries, file_table_offset, output_path("stream-source-grew.ba2"));
 
         REQUIRE_FALSE(streamed.has_value());
         CHECK(streamed.error().code == libbsa::error_code::io_error);
@@ -140,17 +147,15 @@ TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
         write_binary_file(source, expected);
         auto entries =
             std::vector{disk_stage_entry(source, static_cast<std::uint32_t>(expected.size()))};
-        const auto version =
-            libbsa::formats::ba2::ba2_gnrl_version_for(libbsa::ba2_gnrl_target::fallout4);
+        const auto profile = require_gnrl_profile();
         std::uint64_t file_table_offset = 0;
-        REQUIRE(libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(entries, version, false,
+        REQUIRE(libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(entries, profile, false,
                                                                       file_table_offset)
                     .has_value());
         write_binary_file(source, truncated);
 
         auto streamed = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            libbsa::ba2_gnrl_target::fallout4, libbsa::ba2_gnrl_writer_options{}, entries, version,
-            file_table_offset, output_path("stream-source-shrank.ba2"));
+            profile, entries, file_table_offset, output_path("stream-source-shrank.ba2"));
 
         REQUIRE_FALSE(streamed.has_value());
         CHECK(streamed.error().code == libbsa::error_code::io_error);

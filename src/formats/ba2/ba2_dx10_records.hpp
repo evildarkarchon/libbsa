@@ -48,9 +48,6 @@ struct ba2_dx10_record {
     std::vector<ba2_dx10_chunk_record> chunks;
 };
 
-/// Returns the fixed BA2 header width for the detected DX10 archive version.
-[[nodiscard]] std::size_t ba2_dx10_fixed_header_size_for(std::uint32_t version) noexcept;
-
 /// Reads the fixed BA2 DX10 header without consuming texture records or
 /// filename-table bytes.
 [[nodiscard]] result<ba2_dx10_header_fields> read_ba2_dx10_header(detail::binary_reader& reader);

@@ -142,11 +142,14 @@ result<void> stream_disk_payload(const detail::host_file_path& host_path,
 
 }  // namespace
 
-result<void> ba2_gnrl_write_archive_bytes(ba2_gnrl_target target,
-                                          const ba2_gnrl_writer_options& options,
+result<void> ba2_gnrl_write_archive_bytes(const ba2_profile& profile,
                                           std::span<const ba2_gnrl_prepared_entry> entries,
-                                          std::uint32_t version, std::uint64_t file_table_offset,
+                                          std::uint64_t file_table_offset,
                                           const std::filesystem::path& output_path) {
+    if (!profile.is_gnrl()) {
+        return error{error_code::invalid_argument, "BA2 GNRL serialization profile is not GNRL"};
+    }
+
     std::ofstream output{output_path, std::ios::binary | std::ios::trunc};
     if (!output) {
         return error{error_code::io_error, "BA2 GNRL writer failed to create temporary output"};
@@ -154,8 +157,8 @@ result<void> ba2_gnrl_write_archive_bytes(ba2_gnrl_target target,
 
     stream_writer writer{output};
     auto written = writer.write_u32_le(ba2_btdx_magic);
-    if (!(written = writer.write_u32_le(version)) ||
-        !(written = writer.write_u32_le(ba2_gnrl_magic))) {
+    if (!(written = writer.write_u32_le(profile.version())) ||
+        !(written = writer.write_u32_le(profile.subtype_magic()))) {
         return written.error();
     }
     auto file_count = checked_u32(entries.size(), "BA2 GNRL file count");
@@ -166,20 +169,23 @@ result<void> ba2_gnrl_write_archive_bytes(ba2_gnrl_target target,
         !(written = writer.write_u64_le(file_table_offset))) {
         return written.error();
     }
-    if (version >= ba2_starfield_v2_version) {
+    if (profile.version() >= ba2_starfield_v2_version) {
         // xEdit/BSArchPro initializes Starfield writer Unknown1/Unknown2 to 1/0;
         // options can override these raw compatibility fields while keeping them
         // library-owned and version-gated in public metadata.
-        if (!(written = writer.write_u32_le(options.starfield_unknown1)) ||
-            !(written = writer.write_u32_le(options.starfield_unknown2))) {
+        if (!(written = writer.write_u32_le(
+                  profile.ba2_metadata().starfield_unknown1.value_or(0U))) ||
+            !(written = writer.write_u32_le(
+                  profile.ba2_metadata().starfield_unknown2.value_or(0U)))) {
             return written.error();
         }
     }
-    if (version >= ba2_starfield_v3_version) {
+    if (profile.version() >= ba2_starfield_v3_version) {
         // Phase 8 treats v3 GNRL as a structurally supported profile. Method 3
         // remains the default raw-LZ4-block method for later compression support;
         // raw entries still serialize with PackedSize == 0 in this plan.
-        if (!(written = writer.write_u32_le(options.starfield_compression_method))) {
+        if (!(written = writer.write_u32_le(
+                  profile.ba2_metadata().compression_method.value_or(0U)))) {
             return written.error();
         }
     }
@@ -219,7 +225,6 @@ result<void> ba2_gnrl_write_archive_bytes(ba2_gnrl_target target,
         }
     }
 
-    (void)target;
     if (!output) {
         return error{error_code::io_error, "BA2 GNRL writer failed while writing temporary output"};
     }

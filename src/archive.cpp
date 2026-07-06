@@ -200,7 +200,7 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
         if (!archive_size) {
             return archive_size.error();
         }
-        if (detected_ba2.value().is_dx10) {
+        if (detected_ba2.value().profile.is_dx10()) {
             auto ba2_archive = formats::ba2::parse_ba2_dx10_archive_file(
                 resolved_host_path.value(), archive_size.value(), detected_ba2.value());
             if (!ba2_archive) {

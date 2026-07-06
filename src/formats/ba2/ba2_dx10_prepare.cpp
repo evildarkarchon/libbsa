@@ -69,37 +69,6 @@ result<ba2_dx10_writer_entry> ba2_dx10_make_writer_entry(std::string_view archiv
                                                 entry_index);
 }
 
-std::uint32_t ba2_dx10_version_for(ba2_dx10_target target) noexcept {
-    switch (target) {
-        case ba2_dx10_target::fallout4:
-            return ba2_fallout4_version;
-        case ba2_dx10_target::starfield_v3:
-            return ba2_starfield_v3_version;
-    }
-    return 0U;
-}
-
-std::size_t ba2_dx10_header_size_for(std::uint32_t version) noexcept {
-    return version >= ba2_starfield_v3_version ? ba2_starfield_v3_header_size
-                                               : ba2_common_header_size;
-}
-
-result<void> ba2_dx10_validate_target_options(ba2_dx10_target target,
-                                              const ba2_dx10_writer_options& options) {
-    switch (target) {
-        case ba2_dx10_target::fallout4:
-            return {};
-        case ba2_dx10_target::starfield_v3:
-            if (options.starfield_compression_method == ba2_starfield_compression_deflate ||
-                options.starfield_compression_method == ba2_starfield_compression_lz4_block) {
-                return {};
-            }
-            return error{error_code::unsupported,
-                         "BA2 DX10 Starfield v3 compression method is unsupported"};
-    }
-    return error{error_code::invalid_argument, "BA2 DX10 writer target profile is not supported"};
-}
-
 result<void> ba2_dx10_validate_entries(ba2_dx10_target target,
                                        std::span<const ba2_dx10_writer_entry> entries) {
     if (entries.empty()) {
@@ -138,21 +107,25 @@ result<void> ba2_dx10_validate_entries(ba2_dx10_target target,
 }
 
 result<ba2_dx10_prepared_chunk> ba2_dx10_prepare_chunk(
-    ba2_dx10_target target, const ba2_dx10_writer_options& options,
+    const ba2_profile& profile, const ba2_dx10_writer_options& options,
     const ba2_dx10_writer_entry& source, const texture::planned_texture_chunk& planned) {
-    return ba2_dx10_assemble_chunk(target, options, source, planned);
+    return ba2_dx10_assemble_chunk(profile, options, source, planned);
 }
 
 result<std::vector<ba2_dx10_prepared_entry>> ba2_dx10_prepare_entries(
-    ba2_dx10_target target, const ba2_dx10_writer_options& options,
+    const ba2_profile& profile, const ba2_dx10_writer_options& options,
     std::span<const ba2_dx10_writer_entry> entries, std::uint32_t worker_count) {
+    if (!profile.is_dx10()) {
+        return error{error_code::invalid_argument, "BA2 DX10 writer profile is not DX10"};
+    }
+
     std::vector<ba2_dx10_prepared_entry> prepared;
     prepared.reserve(entries.size());
     for (const auto& entry : entries) {
         // The chunk seam still owns detail::run_indexed_work over planned chunk
         // indices; this coordinator only serializes entry preparation and final
         // canonical-path sorting.
-        auto next = ba2_dx10_assemble_planned_entry(target, options, entry, worker_count);
+        auto next = ba2_dx10_assemble_planned_entry(profile, options, entry, worker_count);
         if (!next) {
             return next.error();
         }

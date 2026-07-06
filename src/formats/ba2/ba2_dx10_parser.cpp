@@ -106,7 +106,7 @@ entry_compression compression_for(const ba2_dx10_chunk_record& chunk,
     // Starfield v3 CompressionMethod 3 is normalized by the detector into raw-LZ4
     // block metadata here; DX10 chunks still decide raw-vs-compressed from
     // PackedSize, never filename or extension spelling.
-    return detected.default_compression;
+    return detected.profile.default_compression();
 }
 
 result<std::uint64_t> first_payload_offset_for(std::span<const ba2_dx10_record> records,
@@ -335,7 +335,8 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
             entries.push_back(entry_metadata{
                 canonical.value().value, std::move(original_path), entry_raw_size,
                 stored_payload_size, payload_offset, records[index].name_hash,
-                has_compressed_chunk ? detected.default_compression : entry_compression::none,
+                has_compressed_chunk ? detected.profile.default_compression()
+                                     : entry_compression::none,
                 records[index].unknown_tex, false, 0U, std::move(texture)});
         }
 
@@ -354,7 +355,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
 result<ba2_dx10_archive> parse_ba2_dx10_archive_impl(std::span<const std::byte> metadata_bytes,
                                                      std::size_t archive_size,
                                                      detected_ba2_format detected) {
-    if (!detected.is_dx10 || detected.is_gnrl) {
+    if (!detected.profile.is_dx10()) {
         return error{error_code::unsupported, "detected BA2 format is not DX10"};
     }
 
@@ -366,7 +367,7 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_impl(std::span<const std::byte> 
     if (header.value().magic != ba2_btdx_magic || header.value().subtype != ba2_dx10_magic) {
         return error{error_code::format_error, "BA2 DX10 header magic or subtype is invalid"};
     }
-    if (header.value().version != detected.version ||
+    if (header.value().version != detected.profile.version() ||
         header.value().file_count != detected.file_count) {
         return error{error_code::format_error,
                      "BA2 DX10 detected header does not match parsed header"};
@@ -405,9 +406,10 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_impl(std::span<const std::byte> 
         return entries.error();
     }
 
-    return ba2_dx10_archive{archive_metadata{archive_type::ba2, detected.variant,
+    return ba2_dx10_archive{archive_metadata{archive_type::ba2, detected.profile.variant(),
                                              header.value().version, 0U, header.value().file_count,
-                                             detected.default_compression, header.value().ba2},
+                                             detected.profile.default_compression(),
+                                             detected.profile.ba2_metadata()},
                             std::move(entries.value())};
 }
 
@@ -433,9 +435,8 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_file(const detail::host_file_pat
     if (!input) {
         return input.error();
     }
-    auto fixed_header =
-        read_file_bytes_at(input.value(), 0U, ba2_dx10_fixed_header_size_for(detected.version),
-                           "BA2 DX10 fixed header");
+    auto fixed_header = read_file_bytes_at(input.value(), 0U, detected.profile.header_size(),
+                                           "BA2 DX10 fixed header");
     if (!fixed_header) {
         return fixed_header.error();
     }
@@ -447,7 +448,7 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_file(const detail::host_file_pat
     if (header.value().magic != ba2_btdx_magic || header.value().subtype != ba2_dx10_magic) {
         return error{error_code::format_error, "BA2 DX10 header magic or subtype is invalid"};
     }
-    if (header.value().version != detected.version ||
+    if (header.value().version != detected.profile.version() ||
         header.value().file_count != detected.file_count) {
         return error{error_code::format_error,
                      "BA2 DX10 detected header does not match parsed header"};
@@ -458,7 +459,7 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_file(const detail::host_file_pat
         return count_limit.error();
     }
     if (header.value().file_table_offset > archive_size ||
-        header.value().file_table_offset < ba2_dx10_fixed_header_size_for(header.value().version)) {
+        header.value().file_table_offset < detected.profile.header_size()) {
         return error{error_code::format_error,
                      "BA2 DX10 FileTableOffset is outside the metadata span"};
     }

@@ -138,25 +138,6 @@ bool requested_entry_compression(bool archive_compressed,
     return archive_compressed;
 }
 
-result<detail::compression_method> compression_method_for_compressed_entry(
-    ba2_gnrl_target target, std::uint32_t starfield_method) {
-    switch (target) {
-        case ba2_gnrl_target::fallout4:
-        case ba2_gnrl_target::starfield_v2:
-            return detail::compression_method::deflate;
-        case ba2_gnrl_target::starfield_v3:
-            if (starfield_method == ba2_starfield_compression_deflate) {
-                return detail::compression_method::deflate;
-            }
-            if (starfield_method == ba2_starfield_compression_lz4_block) {
-                return detail::compression_method::lz4_block;
-            }
-            return error{error_code::unsupported,
-                         "BA2 GNRL Starfield v3 compression method is unsupported"};
-    }
-    return error{error_code::invalid_argument, "BA2 GNRL writer target profile is not supported"};
-}
-
 bool is_ascii_extension_byte(unsigned char value) noexcept {
     return value > 0x20U && value <= 0x7EU;
 }
@@ -189,7 +170,7 @@ result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view archive_p
     return fourcc;
 }
 
-result<ba2_gnrl_prepared_entry> prepare_entry(ba2_gnrl_target target,
+result<ba2_gnrl_prepared_entry> prepare_entry(const ba2_profile& profile,
                                               const ba2_gnrl_writer_options& options,
                                               const ba2_gnrl_writer_entry& entry) {
     const bool archive_compressed = archive_default_compressed(options.compression);
@@ -221,12 +202,8 @@ result<ba2_gnrl_prepared_entry> prepare_entry(ba2_gnrl_target target,
             return payload.error();
         }
         if (entry_compressed) {
-            auto method = compression_method_for_compressed_entry(
-                target, options.starfield_compression_method);
-            if (!method) {
-                return method.error();
-            }
-            auto compressed = detail::compress_payload(method.value(), payload.value());
+            auto compressed =
+                detail::compress_payload(profile.compressed_payload_method(), payload.value());
             if (!compressed) {
                 return compressed.error();
             }
@@ -304,23 +281,6 @@ result<ba2_gnrl_writer_entry> ba2_gnrl_make_writer_entry(std::string_view archiv
     return entry;
 }
 
-result<void> ba2_gnrl_validate_target_options(ba2_gnrl_target target,
-                                              const ba2_gnrl_writer_options& options) {
-    switch (target) {
-        case ba2_gnrl_target::fallout4:
-        case ba2_gnrl_target::starfield_v2:
-            return {};
-        case ba2_gnrl_target::starfield_v3:
-            if (options.starfield_compression_method == ba2_starfield_compression_deflate ||
-                options.starfield_compression_method == ba2_starfield_compression_lz4_block) {
-                return {};
-            }
-            return error{error_code::unsupported,
-                         "BA2 GNRL Starfield v3 compression method is unsupported"};
-    }
-    return error{error_code::invalid_argument, "BA2 GNRL writer target profile is not supported"};
-}
-
 result<void> ba2_gnrl_validate_entries(std::span<const ba2_gnrl_writer_entry> entries) {
     if (entries.empty()) {
         return error{error_code::invalid_argument,
@@ -356,11 +316,15 @@ result<void> ba2_gnrl_validate_entries(std::span<const ba2_gnrl_writer_entry> en
 }
 
 result<std::vector<ba2_gnrl_prepared_entry>> ba2_gnrl_prepare_entries(
-    ba2_gnrl_target target, const ba2_gnrl_writer_options& options,
+    const ba2_profile& profile, const ba2_gnrl_writer_options& options,
     std::span<const ba2_gnrl_writer_entry> entries, std::uint32_t worker_count) {
+    if (!profile.is_gnrl()) {
+        return error{error_code::invalid_argument, "BA2 GNRL writer profile is not GNRL"};
+    }
+
     std::vector<std::optional<ba2_gnrl_prepared_entry>> prepared_by_index(entries.size());
     auto work = [&](std::size_t index) -> result<void> {
-        auto prepared = prepare_entry(target, options, entries[index]);
+        auto prepared = prepare_entry(profile, options, entries[index]);
         if (!prepared) {
             return prepared.error();
         }

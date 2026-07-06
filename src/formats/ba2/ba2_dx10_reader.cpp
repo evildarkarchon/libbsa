@@ -1,5 +1,7 @@
 #include "formats/ba2/ba2_dx10_reader.hpp"
 
+#include "formats/ba2/ba2_profile.hpp"
+
 #include <detail/archive_path.hpp>
 #include <detail/compression_router.hpp>
 #include <detail/host_file.hpp>
@@ -35,25 +37,9 @@ result<void> stream_raw_chunk(std::ifstream& input, const texture_chunk_metadata
                                         extraction_chunk_size, "BA2 DX10 chunk payload");
 }
 
-result<detail::compression_method> compression_method_for(const texture_chunk_metadata& chunk) {
-    switch (chunk.compression) {
-        case entry_compression::deflate:
-            return detail::compression_method::deflate;
-        case entry_compression::lz4_block:
-            return detail::compression_method::lz4_block;
-        case entry_compression::none:
-            return error{error_code::format_error,
-                         "BA2 DX10 raw chunks must not enter decompression routing"};
-        case entry_compression::lz4_frame:
-            return error{error_code::format_error,
-                         "BA2 DX10 does not support lz4_frame chunk payloads"};
-    }
-    return error{error_code::format_error, "BA2 DX10 chunk has unknown compression metadata"};
-}
-
 result<void> extract_compressed_chunk(std::ifstream& input, const texture_chunk_metadata& chunk,
                                       payload_sink& sink) {
-    auto method = compression_method_for(chunk);
+    auto method = ba2_compressed_payload_method(ba2_subtype::dx10, chunk.compression);
     if (!method) {
         return method.error();
     }

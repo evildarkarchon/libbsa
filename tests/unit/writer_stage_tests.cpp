@@ -2,6 +2,7 @@
 #include "formats/ba2/ba2_dx10_prepare.hpp"
 #include "formats/ba2/ba2_gnrl_layout.hpp"
 #include "formats/ba2/ba2_gnrl_prepare.hpp"
+#include "formats/ba2/ba2_profile.hpp"
 #include "formats/bsa/tes3_bsa_layout.hpp"
 #include "formats/bsa/tes3_bsa_prepare.hpp"
 #include "formats/bsa/tes4_bsa_layout.hpp"
@@ -62,6 +63,22 @@ std::vector<std::byte> read_stage_binary_file(const std::filesystem::path& path)
     }
     REQUIRE_FALSE(input.bad());
     return bytes;
+}
+
+libbsa::formats::ba2::ba2_profile require_gnrl_profile(
+    libbsa::ba2_gnrl_target target = libbsa::ba2_gnrl_target::fallout4,
+    const libbsa::ba2_gnrl_writer_options& options = {}) {
+    auto profile = libbsa::formats::ba2::make_ba2_profile_for_gnrl_writer(target, options);
+    REQUIRE(profile.has_value());
+    return profile.value();
+}
+
+libbsa::formats::ba2::ba2_profile require_dx10_profile(
+    libbsa::ba2_dx10_target target = libbsa::ba2_dx10_target::fallout4,
+    const libbsa::ba2_dx10_writer_options& options = {}) {
+    auto profile = libbsa::formats::ba2::make_ba2_profile_for_dx10_writer(target, options);
+    REQUIRE(profile.has_value());
+    return profile.value();
 }
 
 libbsa::formats::ba2::ba2_gnrl_prepared_entry ba2_gnrl_memory_stage_entry(
@@ -241,8 +258,9 @@ TEST_CASE("ba2 gnrl writer preparation stage prepares minimal memory entries",
 
     libbsa::ba2_gnrl_writer_options options;
     options.compression = libbsa::archive_compression_policy::all_raw;
+    const auto profile = require_gnrl_profile(libbsa::ba2_gnrl_target::fallout4, options);
     auto prepared = libbsa::formats::ba2::ba2_gnrl_prepare_entries(
-        libbsa::ba2_gnrl_target::fallout4, options,
+        profile, options,
         std::span<const libbsa::formats::ba2::ba2_gnrl_writer_entry>{&entry.value(), 1U}, 1U);
 
     REQUIRE(prepared.has_value());
@@ -256,14 +274,13 @@ TEST_CASE("ba2 gnrl writer preparation stage prepares minimal memory entries",
 TEST_CASE("ba2 gnrl writer layout stage toggles duplicate payload reuse",
           "[unit][writer-stage][ba2_gnrl_writer]") {
     const auto payload = bytes_from_text("shared");
-    const auto version =
-        libbsa::formats::ba2::ba2_gnrl_version_for(libbsa::ba2_gnrl_target::fallout4);
+    const auto profile = require_gnrl_profile();
 
     auto distinct = std::vector{ba2_gnrl_memory_stage_entry(payload, 0xA11CEU),
                                 ba2_gnrl_memory_stage_entry(payload, 0xA11CEU)};
     std::uint64_t distinct_file_table_offset = 0;
     auto assigned_distinct = libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(
-        distinct, version, false, distinct_file_table_offset);
+        distinct, profile, false, distinct_file_table_offset);
 
     REQUIRE(assigned_distinct.has_value());
     CHECK(distinct[0].payload_offset != distinct[1].payload_offset);
@@ -274,7 +291,7 @@ TEST_CASE("ba2 gnrl writer layout stage toggles duplicate payload reuse",
                                ba2_gnrl_memory_stage_entry(payload, 0xA11CEU)};
     std::uint64_t deduped_file_table_offset = 0;
     auto assigned_deduped = libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(
-        deduped, version, true, deduped_file_table_offset);
+        deduped, profile, true, deduped_file_table_offset);
 
     REQUIRE(assigned_deduped.has_value());
     CHECK(deduped[0].payload_offset == deduped[1].payload_offset);
@@ -458,9 +475,9 @@ TEST_CASE("ba2 dx10 writer preparation stage prepares a single-mip chunk",
     REQUIRE(planned.has_value());
     REQUIRE(planned.value().size() == 1U);
 
-    auto chunk = libbsa::formats::ba2::ba2_dx10_prepare_chunk(libbsa::ba2_dx10_target::fallout4,
-                                                              libbsa::ba2_dx10_writer_options{},
-                                                              source, planned.value()[0]);
+    const auto profile = require_dx10_profile();
+    auto chunk = libbsa::formats::ba2::ba2_dx10_prepare_chunk(
+        profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
 
     REQUIRE(chunk.has_value());
     CHECK(chunk.value().raw_size == planned.value()[0].raw_size);
@@ -480,9 +497,9 @@ TEST_CASE(
     REQUIRE(planned.value().size() == 1U);
     REQUIRE(planned.value()[0].start_mip < planned.value()[0].end_mip);
 
-    auto chunk = libbsa::formats::ba2::ba2_dx10_prepare_chunk(libbsa::ba2_dx10_target::fallout4,
-                                                              libbsa::ba2_dx10_writer_options{},
-                                                              source, planned.value()[0]);
+    const auto profile = require_dx10_profile();
+    auto chunk = libbsa::formats::ba2::ba2_dx10_prepare_chunk(
+        profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
 
     REQUIRE(chunk.has_value());
     CHECK(chunk.value().raw_size == planned.value()[0].raw_size);
@@ -535,9 +552,9 @@ TEST_CASE("ba2 dx10 writer preparation stage prepares multi-mip and cubemap entr
           "[unit][writer-stage][ba2_dx10_writer]") {
     const libbsa::texture::dds_texture_layout multi_mip{4U, 4U, 2U, 28U, 1U, false};
     auto multi_entry = ba2_dx10_stage_entry("Textures/Stage/Multi.dds", multi_mip, "dx10-multi");
+    const auto profile = require_dx10_profile();
     auto multi_prepared = libbsa::formats::ba2::ba2_dx10_prepare_entries(
-        libbsa::ba2_dx10_target::fallout4, libbsa::ba2_dx10_writer_options{},
-        std::span{&multi_entry, 1U}, 1U);
+        profile, libbsa::ba2_dx10_writer_options{}, std::span{&multi_entry, 1U}, 1U);
 
     REQUIRE(multi_prepared.has_value());
     REQUIRE(multi_prepared.value().size() == 1U);
@@ -547,8 +564,7 @@ TEST_CASE("ba2 dx10 writer preparation stage prepares multi-mip and cubemap entr
     const libbsa::texture::dds_texture_layout cubemap{4U, 4U, 1U, 28U, 1U, true};
     auto cubemap_entry = ba2_dx10_stage_entry("Textures/Stage/Cube.dds", cubemap, "dx10-cube");
     auto cubemap_prepared = libbsa::formats::ba2::ba2_dx10_prepare_entries(
-        libbsa::ba2_dx10_target::fallout4, libbsa::ba2_dx10_writer_options{},
-        std::span{&cubemap_entry, 1U}, 1U);
+        profile, libbsa::ba2_dx10_writer_options{}, std::span{&cubemap_entry, 1U}, 1U);
 
     REQUIRE(cubemap_prepared.has_value());
     REQUIRE(cubemap_prepared.value().size() == 1U);
@@ -559,14 +575,13 @@ TEST_CASE("ba2 dx10 writer preparation stage prepares multi-mip and cubemap entr
 TEST_CASE("ba2 dx10 writer layout stage toggles duplicate chunk reuse",
           "[unit][writer-stage][ba2_dx10_writer]") {
     const auto payload = bytes_from_text("dx10-shared");
-    const auto version =
-        libbsa::formats::ba2::ba2_dx10_version_for(libbsa::ba2_dx10_target::fallout4);
+    const auto profile = require_dx10_profile();
 
     auto distinct =
         std::vector{ba2_dx10_prepared_stage_entry("Textures/Stage/Distinct.dds", payload)};
     std::uint64_t distinct_file_table_offset = 0;
     auto assigned_distinct = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
-        distinct, version, false, distinct_file_table_offset);
+        distinct, profile, false, distinct_file_table_offset);
 
     REQUIRE(assigned_distinct.has_value());
     REQUIRE(distinct[0].chunks.size() == 2U);
@@ -578,7 +593,7 @@ TEST_CASE("ba2 dx10 writer layout stage toggles duplicate chunk reuse",
         std::vector{ba2_dx10_prepared_stage_entry("Textures/Stage/Deduped.dds", payload)};
     std::uint64_t deduped_file_table_offset = 0;
     auto assigned_deduped = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
-        deduped, version, true, deduped_file_table_offset);
+        deduped, profile, true, deduped_file_table_offset);
 
     REQUIRE(assigned_deduped.has_value());
     REQUIRE(deduped[0].chunks.size() == 2U);

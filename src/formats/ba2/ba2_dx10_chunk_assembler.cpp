@@ -95,24 +95,6 @@ result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view extension
     return fourcc;
 }
 
-result<detail::compression_method> compression_method_for(ba2_dx10_target target,
-                                                          std::uint32_t starfield_method) {
-    switch (target) {
-        case ba2_dx10_target::fallout4:
-            return detail::compression_method::deflate;
-        case ba2_dx10_target::starfield_v3:
-            if (starfield_method == ba2_starfield_compression_deflate) {
-                return detail::compression_method::deflate;
-            }
-            if (starfield_method == ba2_starfield_compression_lz4_block) {
-                return detail::compression_method::lz4_block;
-            }
-            return error{error_code::unsupported,
-                         "BA2 DX10 Starfield v3 compression method is unsupported"};
-    }
-    return error{error_code::invalid_argument, "BA2 DX10 writer target profile is not supported"};
-}
-
 result<void> append_snapshot_bytes(std::vector<std::byte>& bytes,
                                    const ba2_dx10_subresource_snapshot& snapshot) {
     return detail::for_each_host_file_chunk(
@@ -167,8 +149,12 @@ result<ba2_dx10_chunk_snapshot_batch> collect_chunk_snapshots(
 }  // namespace
 
 result<ba2_dx10_prepared_chunk> ba2_dx10_assemble_chunk(
-    ba2_dx10_target target, const ba2_dx10_writer_options& options,
+    const ba2_profile& profile, const ba2_dx10_writer_options& options,
     const ba2_dx10_writer_entry& source, const texture::planned_texture_chunk& planned) {
+    if (!profile.is_dx10()) {
+        return error{error_code::invalid_argument, "BA2 DX10 chunk profile is not DX10"};
+    }
+
     auto snapshots = collect_chunk_snapshots(source, planned);
     if (!snapshots) {
         return snapshots.error();
@@ -210,11 +196,9 @@ result<ba2_dx10_prepared_chunk> ba2_dx10_assemble_chunk(
                      "BA2 DX10 planned chunk size does not match source DDS bytes"};
     }
 
-    auto method = compression_method_for(target, options.starfield_compression_method);
-    if (!method) {
-        return method.error();
-    }
-    auto compressed = detail::compress_payload(method.value(), raw_bytes);
+    (void)options;
+    const auto method = profile.compressed_payload_method();
+    auto compressed = detail::compress_payload(method, raw_bytes);
     if (!compressed) {
         return compressed.error();
     }
@@ -232,13 +216,13 @@ result<ba2_dx10_prepared_chunk> ba2_dx10_assemble_chunk(
                                    raw_size.value(),
                                    start_mip.value(),
                                    end_mip.value(),
-                                   method.value(),
+                                   method,
                                    true,
                                    std::move(compressed.value())};
 }
 
 result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
-    ba2_dx10_target target, const ba2_dx10_writer_options& options,
+    const ba2_profile& profile, const ba2_dx10_writer_options& options,
     const ba2_dx10_writer_entry& entry, std::uint32_t worker_count) {
     texture::dds_texture_layout layout{entry.metadata.width,      entry.metadata.height,
                                        entry.metadata.mip_count,  entry.metadata.dxgi_format,
@@ -292,7 +276,7 @@ result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
     std::vector<std::optional<ba2_dx10_prepared_chunk>> chunks_by_index(
         planned_chunks.value().size());
     auto work = [&](std::size_t index) -> result<void> {
-        auto chunk = ba2_dx10_assemble_chunk(target, options, entry, planned_chunks.value()[index]);
+        auto chunk = ba2_dx10_assemble_chunk(profile, options, entry, planned_chunks.value()[index]);
         if (!chunk) {
             return chunk.error();
         }

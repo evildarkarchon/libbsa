@@ -1,7 +1,8 @@
 #pragma once
 
-#include <libbsa/archive.hpp>
 #include <libbsa/result.hpp>
+
+#include "formats/ba2/ba2_profile.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -11,12 +12,7 @@ namespace libbsa::formats::ba2 {
 
 /// Byte-classified BA2 variant selected before full GNRL parser dispatch.
 struct detected_ba2_format {
-    archive_variant variant;
-    std::uint32_t version;
-    entry_compression default_compression;
-    ba2_archive_metadata ba2;
-    bool is_gnrl;
-    bool is_dx10;
+    ba2_profile profile;
     std::uint32_t file_count;
 };
 

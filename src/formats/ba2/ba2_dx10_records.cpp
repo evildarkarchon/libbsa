@@ -9,16 +9,6 @@
 
 namespace libbsa::formats::ba2 {
 
-std::size_t ba2_dx10_fixed_header_size_for(std::uint32_t version) noexcept {
-    if (version == ba2_starfield_v3_version) {
-        return ba2_starfield_v3_header_size;
-    }
-    if (version == ba2_starfield_v2_version) {
-        return ba2_starfield_v2_header_size;
-    }
-    return ba2_common_header_size;
-}
-
 result<ba2_dx10_header_fields> read_ba2_dx10_header(detail::binary_reader& reader) {
     const auto magic = reader.read_u32_le();
     const auto version = reader.read_u32_le();

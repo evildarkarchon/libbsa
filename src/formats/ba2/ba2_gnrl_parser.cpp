@@ -112,16 +112,6 @@ result<std::array<std::byte, 4>> extension_fourcc_for_file_name(std::string_view
     return fourcc;
 }
 
-std::size_t header_size_for(std::uint32_t version) noexcept {
-    if (version == ba2_starfield_v3_version) {
-        return ba2_starfield_v3_header_size;
-    }
-    if (version == ba2_starfield_v2_version) {
-        return ba2_starfield_v2_header_size;
-    }
-    return ba2_common_header_size;
-}
-
 result<header_fields> read_header(detail::binary_reader& reader) {
     const auto magic = reader.read_u32_le();
     const auto version = reader.read_u32_le();
@@ -291,7 +281,7 @@ entry_compression compression_for(const gnrl_record& record,
     if (record.packed_size == 0U) {
         return entry_compression::none;
     }
-    return detected.default_compression;
+    return detected.profile.default_compression();
 }
 
 result<std::vector<entry_metadata>> materialize_entries(
@@ -410,7 +400,7 @@ result<std::vector<entry_metadata>> materialize_entries(
 result<ba2_gnrl_archive> parse_ba2_gnrl_archive_impl(std::span<const std::byte> metadata_bytes,
                                                      std::size_t archive_size,
                                                      detected_ba2_format detected) {
-    if (!detected.is_gnrl || detected.is_dx10) {
+    if (!detected.profile.is_gnrl()) {
         return error{error_code::unsupported, "detected BA2 format is not GNRL"};
     }
 
@@ -422,7 +412,7 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_impl(std::span<const std::byte> 
     if (header.value().magic != ba2_btdx_magic || header.value().subtype != ba2_gnrl_magic) {
         return error{error_code::format_error, "BA2 GNRL header magic or subtype is invalid"};
     }
-    if (header.value().version != detected.version ||
+    if (header.value().version != detected.profile.version() ||
         header.value().file_count != detected.file_count) {
         return error{error_code::format_error,
                      "BA2 GNRL detected header does not match parsed header"};
@@ -438,7 +428,7 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_impl(std::span<const std::byte> 
         return error{error_code::format_error, "BA2 GNRL record table is too large"};
     }
     std::size_t records_end = 0;
-    if (!add_fits(header_size_for(header.value().version), records_size, records_end) ||
+    if (!add_fits(detected.profile.header_size(), records_size, records_end) ||
         header.value().file_table_offset < records_end ||
         header.value().file_table_offset > archive_size) {
         return error{error_code::format_error,
@@ -473,9 +463,10 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_impl(std::span<const std::byte> 
         return entries.error();
     }
 
-    return ba2_gnrl_archive{archive_metadata{archive_type::ba2, detected.variant,
+    return ba2_gnrl_archive{archive_metadata{archive_type::ba2, detected.profile.variant(),
                                              header.value().version, 0U, header.value().file_count,
-                                             detected.default_compression, header.value().ba2},
+                                             detected.profile.default_compression(),
+                                             detected.profile.ba2_metadata()},
                             std::move(entries.value())};
 }
 
@@ -501,7 +492,7 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(const detail::host_file_pat
     if (!input) {
         return input.error();
     }
-    auto fixed_header = read_file_bytes_at(input.value(), 0U, header_size_for(detected.version),
+    auto fixed_header = read_file_bytes_at(input.value(), 0U, detected.profile.header_size(),
                                            "BA2 GNRL fixed header");
     if (!fixed_header) {
         return fixed_header.error();
@@ -514,7 +505,7 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(const detail::host_file_pat
     if (header.value().magic != ba2_btdx_magic || header.value().subtype != ba2_gnrl_magic) {
         return error{error_code::format_error, "BA2 GNRL header magic or subtype is invalid"};
     }
-    if (header.value().version != detected.version ||
+    if (header.value().version != detected.profile.version() ||
         header.value().file_count != detected.file_count) {
         return error{error_code::format_error,
                      "BA2 GNRL detected header does not match parsed header"};
@@ -530,7 +521,7 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(const detail::host_file_pat
         return error{error_code::format_error, "BA2 GNRL record table is too large"};
     }
     std::size_t records_end = 0;
-    if (!add_fits(header_size_for(header.value().version), records_size, records_end) ||
+    if (!add_fits(detected.profile.header_size(), records_size, records_end) ||
         header.value().file_table_offset < records_end ||
         header.value().file_table_offset > archive_size) {
         return error{error_code::format_error,
@@ -577,9 +568,10 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(const detail::host_file_pat
         return entries.error();
     }
 
-    return ba2_gnrl_archive{archive_metadata{archive_type::ba2, detected.variant,
+    return ba2_gnrl_archive{archive_metadata{archive_type::ba2, detected.profile.variant(),
                                              header.value().version, 0U, header.value().file_count,
-                                             detected.default_compression, header.value().ba2},
+                                             detected.profile.default_compression(),
+                                             detected.profile.ba2_metadata()},
                             std::move(entries.value())};
 }
 

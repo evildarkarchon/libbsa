@@ -69,28 +69,6 @@ result<bool> compare_disk_payloads(const detail::host_file_path& lhs_path,
 
 }  // namespace
 
-std::uint32_t ba2_gnrl_version_for(ba2_gnrl_target target) noexcept {
-    switch (target) {
-        case ba2_gnrl_target::fallout4:
-            return ba2_fallout4_version;
-        case ba2_gnrl_target::starfield_v2:
-            return ba2_starfield_v2_version;
-        case ba2_gnrl_target::starfield_v3:
-            return ba2_starfield_v3_version;
-    }
-    return 0U;
-}
-
-std::size_t ba2_gnrl_header_size_for(std::uint32_t version) noexcept {
-    if (version >= ba2_starfield_v3_version) {
-        return ba2_starfield_v3_header_size;
-    }
-    if (version >= ba2_starfield_v2_version) {
-        return ba2_starfield_v2_header_size;
-    }
-    return ba2_common_header_size;
-}
-
 result<bool> ba2_gnrl_payloads_equal(const ba2_gnrl_prepared_entry& lhs,
                                      const ba2_gnrl_prepared_entry& rhs) {
     if (lhs.stream_from_disk && rhs.stream_from_disk) {
@@ -107,8 +85,12 @@ result<bool> ba2_gnrl_payloads_equal(const ba2_gnrl_prepared_entry& lhs,
 }
 
 result<void> ba2_gnrl_assign_payload_offsets(std::span<ba2_gnrl_prepared_entry> entries,
-                                             std::uint32_t version, bool deduplicate_payloads,
+                                             const ba2_profile& profile, bool deduplicate_payloads,
                                              std::uint64_t& file_table_offset) {
+    if (!profile.is_gnrl()) {
+        return error{error_code::invalid_argument, "BA2 GNRL layout profile is not GNRL"};
+    }
+
     std::uint64_t record_bytes = 0;
     if (entries.size() > std::numeric_limits<std::uint64_t>::max() / ba2_gnrl_record_size) {
         return error{error_code::format_error, "BA2 GNRL record table size overflows"};
@@ -116,7 +98,7 @@ result<void> ba2_gnrl_assign_payload_offsets(std::span<ba2_gnrl_prepared_entry> 
     record_bytes = static_cast<std::uint64_t>(entries.size()) * ba2_gnrl_record_size;
 
     std::uint64_t cursor = 0;
-    if (!add_fits_u64(ba2_gnrl_header_size_for(version), record_bytes, cursor)) {
+    if (!add_fits_u64(profile.header_size(), record_bytes, cursor)) {
         return error{error_code::format_error, "BA2 GNRL metadata size overflows"};
     }
     const auto first_payload_offset = cursor;
