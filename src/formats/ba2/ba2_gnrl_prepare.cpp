@@ -1,9 +1,8 @@
 #include "formats/ba2/ba2_gnrl_prepare.hpp"
 
 #include "formats/ba2/ba2_constants.hpp"
+#include "formats/ba2/ba2_record_identity.hpp"
 
-#include <detail/archive_path.hpp>
-#include <detail/bethesda_hash.hpp>
 #include <detail/compression_router.hpp>
 #include <detail/host_file.hpp>
 #include <detail/parallel_work.hpp>
@@ -20,26 +19,11 @@ namespace libbsa::formats::ba2 {
 
 namespace {
 
-std::string preserved_archive_path(std::string_view archive_path) {
-    std::string preserved{archive_path};
-    std::replace(preserved.begin(), preserved.end(), '\\', '/');
-    return preserved;
-}
-
 result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view description) {
     if (value > std::numeric_limits<std::uint32_t>::max()) {
         return error{error_code::format_error, std::string{description} + " exceeds UInt32 range"};
     }
     return static_cast<std::uint32_t>(value);
-}
-
-std::pair<std::string_view, std::string_view> split_directory_file(
-    std::string_view archive_path) noexcept {
-    const auto slash = archive_path.find_last_of('/');
-    if (slash == std::string_view::npos) {
-        return {{}, archive_path};
-    }
-    return {archive_path.substr(0, slash), archive_path.substr(slash + 1U)};
 }
 
 constexpr detail::host_file_context ba2_gnrl_prepare_source_context{
@@ -138,38 +122,6 @@ bool requested_entry_compression(bool archive_compressed,
     return archive_compressed;
 }
 
-bool is_ascii_extension_byte(unsigned char value) noexcept {
-    return value > 0x20U && value <= 0x7EU;
-}
-
-result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view archive_path) {
-    const auto slash = archive_path.find_last_of('/');
-    const auto file_name =
-        slash == std::string_view::npos ? archive_path : archive_path.substr(slash + 1U);
-    const auto dot = file_name.find_last_of('.');
-    if (dot == std::string_view::npos || dot + 1U == file_name.size()) {
-        return error{error_code::invalid_argument,
-                     "BA2 GNRL archive path must include a file extension"};
-    }
-
-    const auto extension = file_name.substr(dot + 1U);
-    if (extension.size() > 4U) {
-        return error{error_code::invalid_argument,
-                     "BA2 GNRL extension exceeds four-byte record field"};
-    }
-
-    std::array<std::byte, 4> fourcc{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
-    for (std::size_t index = 0; index < extension.size(); ++index) {
-        const auto value = static_cast<unsigned char>(extension[index]);
-        if (!is_ascii_extension_byte(value)) {
-            return error{error_code::invalid_argument,
-                         "BA2 GNRL extension must contain printable ASCII bytes"};
-        }
-        fourcc[index] = static_cast<std::byte>(value);
-    }
-    return fourcc;
-}
-
 result<ba2_gnrl_prepared_entry> prepare_entry(const ba2_profile& profile,
                                               const ba2_gnrl_writer_options& options,
                                               const ba2_gnrl_writer_entry& entry) {
@@ -227,9 +179,12 @@ result<ba2_gnrl_prepared_entry> prepare_entry(const ba2_profile& profile,
 
     final_stored_dedupe_hash = ba2_gnrl_final_stored_dedupe_hash(payload_hash);
 
-    auto extension = extension_fourcc_for(entry.archive_path_original);
-    if (!extension) {
-        return extension.error();
+    auto identity = make_ba2_record_identity(
+        ba2_subtype::gnrl,
+        ba2_record_path{entry.archive_path_original, entry.archive_path_canonical},
+        ba2_record_identity_source::writer_entry);
+    if (!identity) {
+        return identity.error();
     }
 
     detail::host_file_path resolved_source_path;
@@ -241,19 +196,13 @@ result<ba2_gnrl_prepared_entry> prepare_entry(const ba2_profile& profile,
         resolved_source_path = std::move(source_path.value());
     }
 
-    const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
-    if (file_name.empty()) {
-        return error{error_code::invalid_argument,
-                     "BA2 GNRL archive path must include a file name"};
-    }
-
-    return ba2_gnrl_prepared_entry{entry.archive_path_original,
-                                   entry.archive_path_canonical,
+    return ba2_gnrl_prepared_entry{identity.value().display_path,
+                                   identity.value().canonical_path,
                                    entry.host_path,
                                    std::move(resolved_source_path),
-                                   extension.value(),
-                                   detail::hash_fo4(file_name),
-                                   detail::hash_fo4(directory),
+                                   identity.value().extension,
+                                   identity.value().name_hash,
+                                   identity.value().directory_hash,
                                    entry.options.record_flags.value_or(0U),
                                    0U,
                                    packed_size,
@@ -269,14 +218,15 @@ result<ba2_gnrl_prepared_entry> prepare_entry(const ba2_profile& profile,
 
 result<ba2_gnrl_writer_entry> ba2_gnrl_make_writer_entry(std::string_view archive_path,
                                                          ba2_gnrl_entry_options options) {
-    auto canonical = detail::normalize_archive_path(archive_path);
-    if (!canonical) {
-        return canonical.error();
+    auto path = resolve_ba2_record_path(ba2_subtype::gnrl, archive_path,
+                                        ba2_record_identity_source::writer_entry);
+    if (!path) {
+        return path.error();
     }
 
     ba2_gnrl_writer_entry entry;
-    entry.archive_path_original = preserved_archive_path(archive_path);
-    entry.archive_path_canonical = std::move(canonical.value().value);
+    entry.archive_path_original = std::move(path.value().display_path);
+    entry.archive_path_canonical = std::move(path.value().canonical_path);
     entry.options = options;
     return entry;
 }
@@ -294,9 +244,12 @@ result<void> ba2_gnrl_validate_entries(std::span<const ba2_gnrl_writer_entry> en
                          "BA2 GNRL writer has duplicate canonical archive paths"};
         }
 
-        auto fourcc = extension_fourcc_for(entry.archive_path_original);
-        if (!fourcc) {
-            return fourcc.error();
+        auto identity = make_ba2_record_identity(
+            ba2_subtype::gnrl,
+            ba2_record_path{entry.archive_path_original, entry.archive_path_canonical},
+            ba2_record_identity_source::writer_entry);
+        if (!identity) {
+            return identity.error();
         }
 
         if (!entry.from_memory) {

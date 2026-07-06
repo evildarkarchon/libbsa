@@ -1,9 +1,8 @@
 #include "formats/ba2/ba2_gnrl_parser.hpp"
 
 #include "formats/ba2/ba2_constants.hpp"
+#include "formats/ba2/ba2_record_identity.hpp"
 
-#include <detail/archive_path.hpp>
-#include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/host_file.hpp>
 #include <detail/parser_primitives.hpp>
@@ -49,68 +48,10 @@ using detail::add_fits;
 using detail::add_fits_u64;
 using detail::archive_string_from_bytes;
 using detail::multiply_fits;
-using detail::normalize_display_separators;
 using detail::read_file_bytes_at;
 using detail::span_fits;
 using detail::span_fits_u64;
 using detail::spans_overlap_u64;
-
-std::pair<std::string_view, std::string_view> split_directory_file(
-    std::string_view archive_path) noexcept {
-    const auto slash = archive_path.find_last_of('/');
-    if (slash == std::string_view::npos) {
-        return {{}, archive_path};
-    }
-    return {archive_path.substr(0U, slash), archive_path.substr(slash + 1U)};
-}
-
-bool is_ascii_extension_byte(unsigned char value) noexcept {
-    return value > 0x20U && value <= 0x7EU;
-}
-
-std::byte ascii_lower_byte(std::byte byte) noexcept {
-    auto value = std::to_integer<unsigned char>(byte);
-    if (value >= 'A' && value <= 'Z') {
-        value = static_cast<unsigned char>(value - 'A' + 'a');
-    }
-    return static_cast<std::byte>(value);
-}
-
-bool extension_fourcc_matches(const std::array<std::byte, 4>& stored,
-                              const std::array<std::byte, 4>& expected) noexcept {
-    for (std::size_t index = 0; index < stored.size(); ++index) {
-        if (ascii_lower_byte(stored[index]) != ascii_lower_byte(expected[index])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-result<std::array<std::byte, 4>> extension_fourcc_for_file_name(std::string_view file_name) {
-    const auto dot = file_name.find_last_of('.');
-    if (dot == std::string_view::npos || dot + 1U == file_name.size()) {
-        return error{error_code::format_error,
-                     "BA2 GNRL filename table path must include a file extension"};
-    }
-
-    const auto extension = file_name.substr(dot + 1U);
-    if (extension.size() > 4U) {
-        return error{error_code::format_error,
-                     "BA2 GNRL filename table extension exceeds four-byte record field"};
-    }
-
-    std::array<std::byte, 4> fourcc{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
-    for (std::size_t index = 0; index < extension.size(); ++index) {
-        const auto value = static_cast<unsigned char>(extension[index]);
-        if (!is_ascii_extension_byte(value)) {
-            return error{error_code::format_error,
-                         "BA2 GNRL filename table extension must contain printable "
-                         "ASCII bytes"};
-        }
-        fourcc[index] = static_cast<std::byte>(value);
-    }
-    return fourcc;
-}
 
 result<header_fields> read_header(detail::binary_reader& reader) {
     const auto magic = reader.read_u32_le();
@@ -309,39 +250,22 @@ result<std::vector<entry_metadata>> materialize_entries(
         }
 
         for (std::size_t index = 0; index < records.size(); ++index) {
-            auto original_path = names[index];
-            normalize_display_separators(original_path);
-            auto canonical = detail::normalize_archive_path(original_path);
-            if (!canonical) {
-                return error{error_code::format_error,
-                             "BA2 GNRL filename table contains an invalid archive path"};
+            auto identity = make_ba2_record_identity(ba2_subtype::gnrl, names[index],
+                                                     ba2_record_identity_source::filename_table);
+            if (!identity) {
+                return identity.error();
             }
-            if (!canonical_paths.insert(canonical.value().value).second) {
+            if (!canonical_paths.insert(identity.value().canonical_path).second) {
                 return error{error_code::format_error,
                              "BA2 GNRL contains duplicate canonical archive paths"};
             }
-            const auto [directory, file_name] = split_directory_file(canonical.value().value);
-            // BA2 lookup records store separate CRCs for the file name and containing
-            // directory; accepting mismatches would expose entries by parsed text
-            // that Bethesda-style hash lookup cannot reach.
-            if (records[index].name_hash != detail::hash_fo4(file_name)) {
-                return error{error_code::format_error,
-                             "BA2 GNRL NameHash does not match filename table"};
-            }
-            if (records[index].directory_hash != detail::hash_fo4(directory)) {
-                return error{error_code::format_error,
-                             "BA2 GNRL DirectoryHash does not match filename table"};
-            }
-            auto expected_extension = extension_fourcc_for_file_name(file_name);
-            if (!expected_extension) {
-                return expected_extension.error();
-            }
-            // BA2 extension bytes are lookup metadata separate from the filename
-            // text; accepting a mismatch would publish an entry that Bethesda-style
-            // extension lookup cannot resolve consistently.
-            if (!extension_fourcc_matches(records[index].extension, expected_extension.value())) {
-                return error{error_code::format_error,
-                             "BA2 GNRL record extension does not match filename table"};
+
+            const ba2_stored_record_identity stored_identity{
+                records[index].name_hash, records[index].directory_hash, records[index].extension};
+            auto validated_identity =
+                validate_ba2_record_identity(ba2_subtype::gnrl, stored_identity, identity.value());
+            if (!validated_identity) {
+                return validated_identity.error();
             }
 
             const auto stored_size =
@@ -380,8 +304,8 @@ result<std::vector<entry_metadata>> materialize_entries(
             }
 
             entries.push_back(entry_metadata{
-                canonical.value().value, std::move(original_path), records[index].size, stored_size,
-                records[index].offset, records[index].name_hash,
+                std::move(identity.value().canonical_path), std::move(identity.value().display_path),
+                records[index].size, stored_size, records[index].offset, records[index].name_hash,
                 compression_for(records[index], detected), records[index].unknown, false, 0U});
         }
 

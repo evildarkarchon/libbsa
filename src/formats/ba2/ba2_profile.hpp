@@ -3,6 +3,8 @@
 #include <libbsa/archive.hpp>
 #include <libbsa/result.hpp>
 
+#include "formats/ba2/ba2_subtype.hpp"
+
 #include <detail/compression_router.hpp>
 
 #include <cstddef>
@@ -18,12 +20,6 @@ struct ba2_dx10_writer_options;
 }  // namespace libbsa
 
 namespace libbsa::formats::ba2 {
-
-/// BA2 archive subtype selected by the `BTDX` subtype field.
-enum class ba2_subtype {
-    gnrl,
-    dx10,
-};
 
 /// Immutable interpretation of BA2 version, subtype, header, and compression
 /// semantics.

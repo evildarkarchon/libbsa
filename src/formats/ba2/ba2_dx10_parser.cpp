@@ -3,10 +3,9 @@
 #include "formats/ba2/ba2_constants.hpp"
 #include "formats/ba2/ba2_dx10_names.hpp"
 #include "formats/ba2/ba2_dx10_records.hpp"
+#include "formats/ba2/ba2_record_identity.hpp"
 #include "texture/dds_layout.hpp"
 
-#include <detail/archive_path.hpp>
-#include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/byte_vector.hpp>
 #include <detail/host_file.hpp>
@@ -34,69 +33,9 @@ struct stored_chunk_span {
 
 using detail::add_fits;
 using detail::add_fits_u64;
-using detail::normalize_display_separators;
 using detail::read_file_bytes_at;
 using detail::span_fits_u64;
 using detail::spans_overlap_u64;
-
-std::pair<std::string_view, std::string_view> split_directory_file(
-    std::string_view archive_path) noexcept {
-    const auto slash = archive_path.find_last_of('/');
-    if (slash == std::string_view::npos) {
-        return {{}, archive_path};
-    }
-    return {archive_path.substr(0U, slash), archive_path.substr(slash + 1U)};
-}
-
-std::pair<std::string_view, std::string_view> split_stem_extension(
-    std::string_view file_name) noexcept {
-    const auto dot = file_name.find_last_of('.');
-    if (dot == std::string_view::npos || dot == 0U || dot + 1U == file_name.size()) {
-        return {{}, {}};
-    }
-    return {file_name.substr(0U, dot), file_name.substr(dot + 1U)};
-}
-
-bool is_ascii_extension_byte(unsigned char value) noexcept {
-    return value > 0x20U && value <= 0x7EU;
-}
-
-std::byte ascii_lower_byte(std::byte byte) noexcept {
-    auto value = std::to_integer<unsigned char>(byte);
-    if (value >= 'A' && value <= 'Z') {
-        value = static_cast<unsigned char>(value - 'A' + 'a');
-    }
-    return static_cast<std::byte>(value);
-}
-
-bool extension_fourcc_matches(const std::array<std::byte, 4>& stored,
-                              const std::array<std::byte, 4>& expected) noexcept {
-    for (std::size_t index = 0; index < stored.size(); ++index) {
-        if (ascii_lower_byte(stored[index]) != ascii_lower_byte(expected[index])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-result<std::array<std::byte, 4>> extension_fourcc_for_extension(std::string_view extension) {
-    if (extension.size() > 4U) {
-        return error{error_code::format_error,
-                     "BA2 DX10 filename table extension exceeds four-byte record field"};
-    }
-
-    std::array<std::byte, 4> fourcc{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
-    for (std::size_t index = 0; index < extension.size(); ++index) {
-        const auto value = static_cast<unsigned char>(extension[index]);
-        if (!is_ascii_extension_byte(value)) {
-            return error{error_code::format_error,
-                         "BA2 DX10 filename table extension must contain printable "
-                         "ASCII bytes"};
-        }
-        fourcc[index] = static_cast<std::byte>(value);
-    }
-    return fourcc;
-}
 
 entry_compression compression_for(const ba2_dx10_chunk_record& chunk,
                                   detected_ba2_format detected) noexcept {
@@ -250,43 +189,22 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
         }
 
         for (std::size_t index = 0; index < records.size(); ++index) {
-            auto original_path = names[index];
-            normalize_display_separators(original_path);
-            auto canonical = detail::normalize_archive_path(original_path);
-            if (!canonical) {
-                return error{error_code::format_error,
-                             "BA2 DX10 filename table contains an invalid archive path"};
+            auto identity = make_ba2_record_identity(ba2_subtype::dx10, names[index],
+                                                     ba2_record_identity_source::filename_table);
+            if (!identity) {
+                return identity.error();
             }
-            if (!canonical_paths.insert(canonical.value().value).second) {
+            if (!canonical_paths.insert(identity.value().canonical_path).second) {
                 return error{error_code::format_error,
                              "BA2 DX10 contains duplicate canonical archive paths"};
             }
-            const auto [directory, file_name] = split_directory_file(canonical.value().value);
-            const auto [stem, extension_text] = split_stem_extension(file_name);
-            if (stem.empty() || extension_text.empty()) {
-                return error{error_code::format_error,
-                             "BA2 DX10 filename table must include a file stem and extension"};
-            }
-            // DX10 records hash the texture stem separately from its containing
-            // directory; extension bytes are their own record field, so hashing the
-            // full filename would not match Bethesda lookup semantics.
-            if (records[index].name_hash != detail::hash_fo4(stem)) {
-                return error{error_code::format_error,
-                             "BA2 DX10 NameHash does not match filename table"};
-            }
-            if (records[index].directory_hash != detail::hash_fo4(directory)) {
-                return error{error_code::format_error,
-                             "BA2 DX10 DirectoryHash does not match filename table"};
-            }
-            auto expected_extension = extension_fourcc_for_extension(extension_text);
-            if (!expected_extension) {
-                return expected_extension.error();
-            }
-            // DX10 extension bytes participate in Bethesda texture lookup
-            // independently from the hashed stem.
-            if (!extension_fourcc_matches(records[index].extension, expected_extension.value())) {
-                return error{error_code::format_error,
-                             "BA2 DX10 record extension does not match filename table"};
+
+            const ba2_stored_record_identity stored_identity{
+                records[index].name_hash, records[index].directory_hash, records[index].extension};
+            auto validated_identity =
+                validate_ba2_record_identity(ba2_subtype::dx10, stored_identity, identity.value());
+            if (!validated_identity) {
+                return validated_identity.error();
             }
 
             auto chunks = public_chunks_for(records[index], detected);
@@ -333,8 +251,8 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                                      std::move(chunks.value())};
 
             entries.push_back(entry_metadata{
-                canonical.value().value, std::move(original_path), entry_raw_size,
-                stored_payload_size, payload_offset, records[index].name_hash,
+                std::move(identity.value().canonical_path), std::move(identity.value().display_path),
+                entry_raw_size, stored_payload_size, payload_offset, records[index].name_hash,
                 has_compressed_chunk ? detected.profile.default_compression()
                                      : entry_compression::none,
                 records[index].unknown_tex, false, 0U, std::move(texture)});

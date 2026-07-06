@@ -3,9 +3,9 @@
 #include "formats/ba2/ba2_constants.hpp"
 #include "formats/ba2/ba2_dx10_chunk_assembler.hpp"
 #include "formats/ba2/ba2_dx10_snapshot_builder.hpp"
+#include "formats/ba2/ba2_record_identity.hpp"
 
 #include <algorithm>
-#include <array>
 #include <cstddef>
 #include <string>
 #include <string_view>
@@ -13,50 +13,6 @@
 #include <utility>
 
 namespace libbsa::formats::ba2 {
-
-namespace {
-
-std::pair<std::string_view, std::string_view> split_directory_file(
-    std::string_view archive_path) noexcept {
-    const auto slash = archive_path.find_last_of('/');
-    if (slash == std::string_view::npos) {
-        return {{}, archive_path};
-    }
-    return {archive_path.substr(0, slash), archive_path.substr(slash + 1U)};
-}
-
-std::pair<std::string_view, std::string_view> split_stem_extension(
-    std::string_view file_name) noexcept {
-    const auto dot = file_name.find_last_of('.');
-    if (dot == std::string_view::npos || dot == 0U || dot + 1U == file_name.size()) {
-        return {{}, {}};
-    }
-    return {file_name.substr(0, dot), file_name.substr(dot + 1U)};
-}
-
-bool is_ascii_extension_byte(unsigned char value) noexcept {
-    return value > 0x20U && value <= 0x7EU;
-}
-
-result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view extension) {
-    if (extension.size() > 4U) {
-        return error{error_code::invalid_argument,
-                     "BA2 DX10 extension exceeds four-byte record field"};
-    }
-
-    std::array<std::byte, 4> fourcc{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
-    for (std::size_t index = 0; index < extension.size(); ++index) {
-        const auto value = static_cast<unsigned char>(extension[index]);
-        if (!is_ascii_extension_byte(value)) {
-            return error{error_code::invalid_argument,
-                         "BA2 DX10 extension must contain printable ASCII bytes"};
-        }
-        fourcc[index] = static_cast<std::byte>(value);
-    }
-    return fourcc;
-}
-
-}  // namespace
 
 result<ba2_dx10_writer_entry> ba2_dx10_make_writer_entry(std::string_view archive_path,
                                                          std::string_view dds_host_path,
@@ -87,16 +43,12 @@ result<void> ba2_dx10_validate_entries(ba2_dx10_target target,
         if (!target_format) {
             return target_format.error();
         }
-        const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
-        (void)directory;
-        const auto [stem, extension_text] = split_stem_extension(file_name);
-        if (stem.empty() || extension_text.empty()) {
-            return error{error_code::invalid_argument,
-                         "BA2 DX10 archive path must include a file stem and extension"};
-        }
-        auto fourcc = extension_fourcc_for(extension_text);
-        if (!fourcc) {
-            return fourcc.error();
+        auto identity = make_ba2_record_identity(
+            ba2_subtype::dx10,
+            ba2_record_path{entry.archive_path_original, entry.archive_path_canonical},
+            ba2_record_identity_source::writer_entry);
+        if (!identity) {
+            return identity.error();
         }
         if (entry.subresources.empty()) {
             return error{error_code::format_error,

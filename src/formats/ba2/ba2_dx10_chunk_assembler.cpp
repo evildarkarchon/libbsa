@@ -1,8 +1,8 @@
 #include "formats/ba2/ba2_dx10_chunk_assembler.hpp"
 
 #include "formats/ba2/ba2_constants.hpp"
+#include "formats/ba2/ba2_record_identity.hpp"
 
-#include <detail/bethesda_hash.hpp>
 #include <detail/byte_vector.hpp>
 #include <detail/host_file.hpp>
 #include <detail/parallel_work.hpp>
@@ -53,46 +53,6 @@ result<std::size_t> checked_size_t(std::uint64_t value, std::string_view descrip
                      std::string{description} + " exceeds platform size range"};
     }
     return static_cast<std::size_t>(value);
-}
-
-std::pair<std::string_view, std::string_view> split_directory_file(
-    std::string_view archive_path) noexcept {
-    const auto slash = archive_path.find_last_of('/');
-    if (slash == std::string_view::npos) {
-        return {{}, archive_path};
-    }
-    return {archive_path.substr(0, slash), archive_path.substr(slash + 1U)};
-}
-
-std::pair<std::string_view, std::string_view> split_stem_extension(
-    std::string_view file_name) noexcept {
-    const auto dot = file_name.find_last_of('.');
-    if (dot == std::string_view::npos || dot == 0U || dot + 1U == file_name.size()) {
-        return {{}, {}};
-    }
-    return {file_name.substr(0, dot), file_name.substr(dot + 1U)};
-}
-
-bool is_ascii_extension_byte(unsigned char value) noexcept {
-    return value > 0x20U && value <= 0x7EU;
-}
-
-result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view extension) {
-    if (extension.size() > 4U) {
-        return error{error_code::invalid_argument,
-                     "BA2 DX10 extension exceeds four-byte record field"};
-    }
-
-    std::array<std::byte, 4> fourcc{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
-    for (std::size_t index = 0; index < extension.size(); ++index) {
-        const auto value = static_cast<unsigned char>(extension[index]);
-        if (!is_ascii_extension_byte(value)) {
-            return error{error_code::invalid_argument,
-                         "BA2 DX10 extension must contain printable ASCII bytes"};
-        }
-        fourcc[index] = static_cast<std::byte>(value);
-    }
-    return fourcc;
 }
 
 result<void> append_snapshot_bytes(std::vector<std::byte>& bytes,
@@ -235,15 +195,12 @@ result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
         return error{error_code::format_error, "BA2 DX10 writer planned no chunks for texture"};
     }
 
-    const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
-    const auto [stem, extension_text] = split_stem_extension(file_name);
-    if (stem.empty() || extension_text.empty()) {
-        return error{error_code::invalid_argument,
-                     "BA2 DX10 archive path must include a file stem and extension"};
-    }
-    auto extension = extension_fourcc_for(extension_text);
-    if (!extension) {
-        return extension.error();
+    auto identity = make_ba2_record_identity(
+        ba2_subtype::dx10,
+        ba2_record_path{entry.archive_path_original, entry.archive_path_canonical},
+        ba2_record_identity_source::writer_entry);
+    if (!identity) {
+        return identity.error();
     }
 
     auto chunk_count = checked_u8(planned_chunks.value().size(), "BA2 DX10 chunk count");
@@ -260,11 +217,11 @@ result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
     }
 
     ba2_dx10_prepared_entry prepared{
-        entry.archive_path_original,
-        entry.archive_path_canonical,
-        extension.value(),
-        detail::hash_fo4(stem),
-        detail::hash_fo4(directory),
+        identity.value().display_path,
+        identity.value().canonical_path,
+        identity.value().extension,
+        identity.value().name_hash,
+        identity.value().directory_hash,
         ba2_dx10_unknown_tex_default,
         chunk_count.value(),
         height.value(),

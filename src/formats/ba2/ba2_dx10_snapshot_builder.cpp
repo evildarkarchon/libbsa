@@ -1,6 +1,7 @@
 #include "formats/ba2/ba2_dx10_snapshot_builder.hpp"
 
-#include <detail/archive_path.hpp>
+#include "formats/ba2/ba2_record_identity.hpp"
+
 #include <detail/host_file.hpp>
 
 #include "texture/directxtex_analyzer.hpp"
@@ -17,7 +18,6 @@
 
 #include <bcrypt.h>
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <filesystem>
@@ -44,12 +44,6 @@ bool is_starfield_only_dx10_format(std::uint32_t dxgi_format) noexcept {
         default:
             return false;
     }
-}
-
-std::string preserved_archive_path(std::string_view archive_path) {
-    std::string preserved{archive_path};
-    std::replace(preserved.begin(), preserved.end(), '\\', '/');
-    return preserved;
 }
 
 constexpr detail::host_file_context ba2_dx10_dds_source_context{
@@ -166,9 +160,10 @@ result<void> ba2_dx10_ensure_snapshot_directory(std::filesystem::path& snapshot_
 result<ba2_dx10_writer_entry> ba2_dx10_build_writer_entry_snapshot(
     std::string_view archive_path, std::string_view dds_host_path, ba2_dx10_target target,
     const std::filesystem::path& snapshot_dir, std::size_t entry_index) {
-    auto canonical = detail::normalize_archive_path(archive_path);
-    if (!canonical) {
-        return canonical.error();
+    auto path = resolve_ba2_record_path(ba2_subtype::dx10, archive_path,
+                                        ba2_record_identity_source::writer_entry);
+    if (!path) {
+        return path.error();
     }
 
     auto dds_bytes = read_dds_file(dds_host_path);
@@ -187,8 +182,8 @@ result<ba2_dx10_writer_entry> ba2_dx10_build_writer_entry_snapshot(
     }
 
     ba2_dx10_writer_entry entry;
-    entry.archive_path_original = preserved_archive_path(archive_path);
-    entry.archive_path_canonical = std::move(canonical.value().value);
+    entry.archive_path_original = std::move(path.value().display_path);
+    entry.archive_path_canonical = std::move(path.value().canonical_path);
     entry.metadata = source.value().metadata;
     entry.subresources.reserve(source.value().subresources.size());
     for (std::size_t index = 0; index < source.value().subresources.size(); ++index) {
