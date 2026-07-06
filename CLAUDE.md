@@ -8,10 +8,13 @@ Review and implementation work should assume Windows with MSVC, CMake, CTest, an
 
 ## Supported Presets
 
-Use the Windows presets in `CMakePresets.json`:
+Use the Windows-only presets in `CMakePresets.json`:
 
-- `windows-msvc-debug-static`
-- `windows-msvc-debug-shared`
+- **Debug quick path**: `windows-msvc-debug-static`.
+- **Debug inner-loop lane**: `windows-msvc-debug-shared`.
+- **Release package-proof lanes**: `windows-msvc-release-static` and
+  `windows-msvc-release-shared`.
+- **MSVC AddressSanitizer hardening lane**: `windows-msvc-asan-static`.
 
 Linux presets are intentionally absent and should not be reintroduced.
 

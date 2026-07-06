@@ -7,8 +7,8 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
-#include <sstream>
 #include <span>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -39,16 +39,13 @@ static_assert(std::is_class_v<libbsa::validation_diagnostic>);
 static_assert(std::is_class_v<libbsa::compatibility_warning>);
 static_assert(std::is_default_constructible_v<libbsa::ba2_archive_metadata>);
 static_assert(std::is_constructible_v<libbsa::tes4_bsa_writer, libbsa::tes4_bsa_target>);
-static_assert(std::is_constructible_v<libbsa::tes4_bsa_writer,
-                                      libbsa::tes4_bsa_target,
+static_assert(std::is_constructible_v<libbsa::tes4_bsa_writer, libbsa::tes4_bsa_target,
                                       libbsa::tes4_bsa_writer_options>);
 static_assert(std::is_constructible_v<libbsa::ba2_gnrl_writer, libbsa::ba2_gnrl_target>);
-static_assert(std::is_constructible_v<libbsa::ba2_gnrl_writer,
-                                      libbsa::ba2_gnrl_target,
+static_assert(std::is_constructible_v<libbsa::ba2_gnrl_writer, libbsa::ba2_gnrl_target,
                                       libbsa::ba2_gnrl_writer_options>);
 static_assert(std::is_constructible_v<libbsa::ba2_dx10_writer, libbsa::ba2_dx10_target>);
-static_assert(std::is_constructible_v<libbsa::ba2_dx10_writer,
-                                      libbsa::ba2_dx10_target,
+static_assert(std::is_constructible_v<libbsa::ba2_dx10_writer, libbsa::ba2_dx10_target,
                                       libbsa::ba2_dx10_writer_options>);
 static_assert(std::is_abstract_v<libbsa::payload_sink>);
 
@@ -56,244 +53,244 @@ static_assert(std::is_default_constructible_v<libbsa::tes3_bsa_writer>);
 static_assert(std::is_constructible_v<libbsa::tes3_bsa_writer, libbsa::tes3_bsa_writer_options>);
 
 // BEGIN tes3_bsa_public_contract_assertions
-static_assert(requires(libbsa::tes3_bsa_writer &writer, std::span<const std::byte> bytes) {
-  libbsa::write_execution_options{}.worker_count;
-  { writer.options() } -> std::same_as<const libbsa::tes3_bsa_writer_options &>;
-  { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
-  { writer.add_file("Textures/Disk.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
-  { writer.write_to("out.bsa") } -> std::same_as<libbsa::result<void>>;
-  { writer.write_to("out.bsa", libbsa::write_execution_options{}) } -> std::same_as<libbsa::result<void>>;
+static_assert(requires(libbsa::tes3_bsa_writer& writer, std::span<const std::byte> bytes) {
+    libbsa::write_execution_options{}.worker_count;
+    { writer.options() } -> std::same_as<const libbsa::tes3_bsa_writer_options&>;
+    { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
+    { writer.add_file("Textures/Disk.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
+    { writer.write_to("out.bsa") } -> std::same_as<libbsa::result<void>>;
+    {
+        writer.write_to("out.bsa", libbsa::write_execution_options{})
+    } -> std::same_as<libbsa::result<void>>;
 });
 // END tes3_bsa_public_contract_assertions
 
-static_assert(requires(libbsa::tes4_bsa_writer &writer, std::span<const std::byte> bytes) {
-  { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
-  { writer.add_file("Textures/Disk.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
-  { writer.write_to("out.bsa") } -> std::same_as<libbsa::result<void>>;
-  { writer.write_to("out.bsa", libbsa::write_execution_options{}) } -> std::same_as<libbsa::result<void>>;
+static_assert(requires(libbsa::tes4_bsa_writer& writer, std::span<const std::byte> bytes) {
+    { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
+    { writer.add_file("Textures/Disk.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
+    { writer.write_to("out.bsa") } -> std::same_as<libbsa::result<void>>;
+    {
+        writer.write_to("out.bsa", libbsa::write_execution_options{})
+    } -> std::same_as<libbsa::result<void>>;
 });
 
-static_assert(requires(libbsa::ba2_gnrl_writer &writer,
-                       std::span<const std::byte> bytes,
+static_assert(requires(libbsa::ba2_gnrl_writer& writer, std::span<const std::byte> bytes,
                        libbsa::ba2_gnrl_entry_options entry_options) {
-  { libbsa::ba2_gnrl_target::fallout4 } -> std::same_as<libbsa::ba2_gnrl_target>;
-  { libbsa::ba2_gnrl_target::starfield_v2 } -> std::same_as<libbsa::ba2_gnrl_target>;
-  { libbsa::ba2_gnrl_target::starfield_v3 } -> std::same_as<libbsa::ba2_gnrl_target>;
-  { writer.target() } -> std::same_as<libbsa::ba2_gnrl_target>;
-  { writer.options() } -> std::same_as<const libbsa::ba2_gnrl_writer_options &>;
-  { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
-  { writer.add_bytes("Meshes/Memory.nif", bytes, libbsa::entry_compression_policy::raw) }
-    -> std::same_as<libbsa::result<void>>;
-  { writer.add_bytes("Meshes/Memory.nif", bytes, entry_options) } -> std::same_as<libbsa::result<void>>;
-  { writer.add_file("Meshes/Disk.nif", "source.nif") } -> std::same_as<libbsa::result<void>>;
-  { writer.add_file("Meshes/Disk.nif", "source.nif", libbsa::entry_compression_policy::compressed) }
-    -> std::same_as<libbsa::result<void>>;
-  { writer.add_file("Meshes/Disk.nif", "source.nif", entry_options) } -> std::same_as<libbsa::result<void>>;
-  { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
-  { writer.write_to("out.ba2", libbsa::write_execution_options{}) } -> std::same_as<libbsa::result<void>>;
+    { libbsa::ba2_gnrl_target::fallout4 } -> std::same_as<libbsa::ba2_gnrl_target>;
+    { libbsa::ba2_gnrl_target::starfield_v2 } -> std::same_as<libbsa::ba2_gnrl_target>;
+    { libbsa::ba2_gnrl_target::starfield_v3 } -> std::same_as<libbsa::ba2_gnrl_target>;
+    { writer.target() } -> std::same_as<libbsa::ba2_gnrl_target>;
+    { writer.options() } -> std::same_as<const libbsa::ba2_gnrl_writer_options&>;
+    { writer.add_bytes("Meshes/Memory.nif", bytes) } -> std::same_as<libbsa::result<void>>;
+    {
+        writer.add_bytes("Meshes/Memory.nif", bytes, libbsa::entry_compression_policy::raw)
+    } -> std::same_as<libbsa::result<void>>;
+    {
+        writer.add_bytes("Meshes/Memory.nif", bytes, entry_options)
+    } -> std::same_as<libbsa::result<void>>;
+    { writer.add_file("Meshes/Disk.nif", "source.nif") } -> std::same_as<libbsa::result<void>>;
+    {
+        writer.add_file("Meshes/Disk.nif", "source.nif",
+                        libbsa::entry_compression_policy::compressed)
+    } -> std::same_as<libbsa::result<void>>;
+    {
+        writer.add_file("Meshes/Disk.nif", "source.nif", entry_options)
+    } -> std::same_as<libbsa::result<void>>;
+    { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
+    {
+        writer.write_to("out.ba2", libbsa::write_execution_options{})
+    } -> std::same_as<libbsa::result<void>>;
 });
 
 // BEGIN ba2_dx10_public_contract_assertions
-static_assert(requires(libbsa::ba2_dx10_writer &writer) {
-  { libbsa::ba2_dx10_target::fallout4 } -> std::same_as<libbsa::ba2_dx10_target>;
-  { libbsa::ba2_dx10_target::starfield_v3 } -> std::same_as<libbsa::ba2_dx10_target>;
-  { writer.target() } -> std::same_as<libbsa::ba2_dx10_target>;
-  { writer.options() } -> std::same_as<const libbsa::ba2_dx10_writer_options &>;
-  { writer.add_file("Textures/Diffuse.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
-  { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
-  { writer.write_to("out.ba2", libbsa::write_execution_options{}) } -> std::same_as<libbsa::result<void>>;
+static_assert(requires(libbsa::ba2_dx10_writer& writer) {
+    { libbsa::ba2_dx10_target::fallout4 } -> std::same_as<libbsa::ba2_dx10_target>;
+    { libbsa::ba2_dx10_target::starfield_v3 } -> std::same_as<libbsa::ba2_dx10_target>;
+    { writer.target() } -> std::same_as<libbsa::ba2_dx10_target>;
+    { writer.options() } -> std::same_as<const libbsa::ba2_dx10_writer_options&>;
+    { writer.add_file("Textures/Diffuse.dds", "source.dds") } -> std::same_as<libbsa::result<void>>;
+    { writer.write_to("out.ba2") } -> std::same_as<libbsa::result<void>>;
+    {
+        writer.write_to("out.ba2", libbsa::write_execution_options{})
+    } -> std::same_as<libbsa::result<void>>;
 });
 // END ba2_dx10_public_contract_assertions
 
 static_assert(requires(libbsa::write_execution_options execution) {
-  { execution.worker_count } -> std::same_as<std::uint32_t &>;
+    { execution.worker_count } -> std::same_as<std::uint32_t&>;
 });
 
-static_assert(requires(libbsa::validation_report report,
-                       libbsa::validation_options options,
+static_assert(requires(libbsa::validation_report report, libbsa::validation_options options,
                        libbsa::validation_diagnostic diagnostic,
                        libbsa::compatibility_warning warning) {
-  { options.expected_type } -> std::same_as<std::optional<libbsa::archive_type> &>;
-  { options.expected_variant } -> std::same_as<std::optional<libbsa::archive_variant> &>;
-  { options.validate_entry_extractability } -> std::same_as<bool &>;
-  { diagnostic.code } -> std::same_as<libbsa::error_code &>;
-  { diagnostic.message } -> std::same_as<std::string &>;
-  { warning.code } -> std::same_as<libbsa::compatibility_warning_code &>;
-  { warning.severity } -> std::same_as<libbsa::compatibility_warning_severity &>;
-  { warning.message } -> std::same_as<std::string &>;
-  { warning.archive_path } -> std::same_as<std::optional<std::string> &>;
-  { report.valid } -> std::same_as<bool &>;
-  { report.metadata } -> std::same_as<std::optional<libbsa::archive_metadata> &>;
-  { report.errors } -> std::same_as<std::vector<libbsa::validation_diagnostic> &>;
-  { report.warnings } -> std::same_as<std::vector<libbsa::compatibility_warning> &>;
-  { report.is_valid() } -> std::same_as<bool>;
-  { libbsa::compatibility_warning_severity::advisory } -> std::same_as<libbsa::compatibility_warning_severity>;
-  { libbsa::compatibility_warning_severity::risky } -> std::same_as<libbsa::compatibility_warning_severity>;
-  { libbsa::validate_archive("archive.bsa") } -> std::same_as<libbsa::result<libbsa::validation_report>>;
+    { options.expected_type } -> std::same_as<std::optional<libbsa::archive_type>&>;
+    { options.expected_variant } -> std::same_as<std::optional<libbsa::archive_variant>&>;
+    { options.validate_entry_extractability } -> std::same_as<bool&>;
+    { diagnostic.code } -> std::same_as<libbsa::error_code&>;
+    { diagnostic.message } -> std::same_as<std::string&>;
+    { warning.code } -> std::same_as<libbsa::compatibility_warning_code&>;
+    { warning.severity } -> std::same_as<libbsa::compatibility_warning_severity&>;
+    { warning.message } -> std::same_as<std::string&>;
+    { warning.archive_path } -> std::same_as<std::optional<std::string>&>;
+    { report.valid } -> std::same_as<bool&>;
+    { report.metadata } -> std::same_as<std::optional<libbsa::archive_metadata>&>;
+    { report.errors } -> std::same_as<std::vector<libbsa::validation_diagnostic>&>;
+    { report.warnings } -> std::same_as<std::vector<libbsa::compatibility_warning>&>;
+    { report.is_valid() } -> std::same_as<bool>;
+    {
+        libbsa::compatibility_warning_severity::advisory
+    } -> std::same_as<libbsa::compatibility_warning_severity>;
+    {
+        libbsa::compatibility_warning_severity::risky
+    } -> std::same_as<libbsa::compatibility_warning_severity>;
+    {
+        libbsa::validate_archive("archive.bsa")
+    } -> std::same_as<libbsa::result<libbsa::validation_report>>;
 });
 
 TEST_CASE("public_include_boundary umbrella header exposes public boundary types",
-          "[unit][public-api][public_include_boundary]")
-{
-  [[maybe_unused]] libbsa::result<int> result{1};
-  [[maybe_unused]] auto code = libbsa::error_code::unsupported;
-  [[maybe_unused]] auto missing = libbsa::error_code::not_found;
-  [[maybe_unused]] libbsa::ba2_archive_metadata ba2_metadata{123U, 456U, 3U};
-  [[maybe_unused]] libbsa::archive_metadata archive{libbsa::archive_type::bsa,
-                                                    libbsa::archive_variant::tes4,
-                                                    103,
-                                                    0,
-                                                    1,
-                                                    libbsa::entry_compression::deflate,
-                                                    std::nullopt};
-  [[maybe_unused]] libbsa::entry_metadata entry{"meshes/example.nif",
-                                                "Meshes/Example.nif",
-                                                10,
-                                                8,
-                                                128,
-                                                0x0102030405060708ULL,
-                                                libbsa::entry_compression::none,
-                                                0,
-                                                false,
-                                                0};
-  [[maybe_unused]] auto reader = libbsa::archive_reader::open("boundary-smoke.bsa");
-  [[maybe_unused]] libbsa::tes4_bsa_writer_options writer_options{
-      libbsa::archive_compression_policy::target_default, false, false, false};
-  [[maybe_unused]] libbsa::write_execution_options execution_options{};
-  [[maybe_unused]] libbsa::tes3_bsa_writer_options tes3_writer_options{};
-  [[maybe_unused]] auto target = libbsa::tes4_bsa_target::oblivion;
-  [[maybe_unused]] auto ba2_target = libbsa::ba2_gnrl_target::starfield_v3;
-  [[maybe_unused]] libbsa::ba2_gnrl_writer_options ba2_options{};
-  [[maybe_unused]] libbsa::ba2_gnrl_entry_options ba2_entry_options{};
-  [[maybe_unused]] auto ba2_dx10_target = libbsa::ba2_dx10_target::fallout4;
-  [[maybe_unused]] auto ba2_dx10_starfield_target = libbsa::ba2_dx10_target::starfield_v3;
-  [[maybe_unused]] libbsa::ba2_dx10_writer_options ba2_dx10_options{};
-  [[maybe_unused]] auto compression = libbsa::entry_compression_policy::inherit;
+          "[unit][public-api][public_include_boundary]") {
+    [[maybe_unused]] libbsa::result<int> result{1};
+    [[maybe_unused]] auto code = libbsa::error_code::unsupported;
+    [[maybe_unused]] auto missing = libbsa::error_code::not_found;
+    [[maybe_unused]] libbsa::ba2_archive_metadata ba2_metadata{123U, 456U, 3U};
+    [[maybe_unused]] libbsa::archive_metadata archive{libbsa::archive_type::bsa,
+                                                      libbsa::archive_variant::tes4,
+                                                      103,
+                                                      0,
+                                                      1,
+                                                      libbsa::entry_compression::deflate,
+                                                      std::nullopt};
+    [[maybe_unused]] libbsa::entry_metadata entry{"meshes/example.nif",
+                                                  "Meshes/Example.nif",
+                                                  10,
+                                                  8,
+                                                  128,
+                                                  0x0102030405060708ULL,
+                                                  libbsa::entry_compression::none,
+                                                  0,
+                                                  false,
+                                                  0};
+    [[maybe_unused]] auto reader = libbsa::archive_reader::open("boundary-smoke.bsa");
+    [[maybe_unused]] libbsa::tes4_bsa_writer_options writer_options{
+        libbsa::archive_compression_policy::target_default, false, false, false};
+    [[maybe_unused]] libbsa::write_execution_options execution_options{};
+    [[maybe_unused]] libbsa::tes3_bsa_writer_options tes3_writer_options{};
+    [[maybe_unused]] auto target = libbsa::tes4_bsa_target::oblivion;
+    [[maybe_unused]] auto ba2_target = libbsa::ba2_gnrl_target::starfield_v3;
+    [[maybe_unused]] libbsa::ba2_gnrl_writer_options ba2_options{};
+    [[maybe_unused]] libbsa::ba2_gnrl_entry_options ba2_entry_options{};
+    [[maybe_unused]] auto ba2_dx10_target = libbsa::ba2_dx10_target::fallout4;
+    [[maybe_unused]] auto ba2_dx10_starfield_target = libbsa::ba2_dx10_target::starfield_v3;
+    [[maybe_unused]] libbsa::ba2_dx10_writer_options ba2_dx10_options{};
+    [[maybe_unused]] auto compression = libbsa::entry_compression_policy::inherit;
 
-  REQUIRE(result.has_value());
+    REQUIRE(result.has_value());
 }
 
-TEST_CASE("public_include_boundary DX10 writer contract exposes no raw override surface",
-          "[unit][public-api][public_include_boundary]")
-{
-  // Phase 9 intentionally corrects the stale SPEC raw/compressed override wording:
-  // the public DX10 writer is DDS-host-file-only and compressed-only at archive level.
-  const auto test_file_path = std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "unit" /
-                              "public_include_boundary_tests.cpp";
-  std::ifstream file{test_file_path.string()};
-  REQUIRE(file.is_open());
+TEST_CASE(
+    "public_include_boundary DX10 writer contract exposes no raw "
+    "override surface",
+    "[unit][public-api][public_include_boundary]") {
+    // Phase 9 intentionally corrects the stale SPEC raw/compressed override
+    // wording: the public DX10 writer is DDS-host-file-only and compressed-only
+    // at archive level.
+    const auto test_file_path = std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "unit" /
+                                "public_include_boundary_tests.cpp";
+    std::ifstream file{test_file_path.string()};
+    REQUIRE(file.is_open());
 
-  std::ostringstream contents;
-  contents << file.rdbuf();
-  const auto text = contents.str();
-  const auto begin = text.find("BEGIN ba2_dx10_public_contract_assertions");
-  const auto end = text.find("END ba2_dx10_public_contract_assertions");
-  REQUIRE(begin != std::string::npos);
-  REQUIRE(end != std::string::npos);
-  REQUIRE(begin < end);
+    std::ostringstream contents;
+    contents << file.rdbuf();
+    const auto text = contents.str();
+    const auto begin = text.find("BEGIN ba2_dx10_public_contract_assertions");
+    const auto end = text.find("END ba2_dx10_public_contract_assertions");
+    REQUIRE(begin != std::string::npos);
+    REQUIRE(end != std::string::npos);
+    REQUIRE(begin < end);
 
-  const auto dx10_contract = text.substr(begin, end - begin);
-  constexpr auto forbidden_dx10_tokens = std::to_array<std::string_view>({"ba2_dx10_entry_options",
-                                                                          "entry_compression_policy",
-                                                                          "add_bytes",
-                                                                          "chunk_compression"});
-  for (const auto token : forbidden_dx10_tokens)
-  {
-    INFO("DX10 public contract token: " << token);
-    REQUIRE(dx10_contract.find(token) == std::string::npos);
-  }
+    const auto dx10_contract = text.substr(begin, end - begin);
+    constexpr auto forbidden_dx10_tokens = std::to_array<std::string_view>(
+        {"ba2_dx10_entry_options", "entry_compression_policy", "add_bytes", "chunk_compression"});
+    for (const auto token : forbidden_dx10_tokens) {
+        INFO("DX10 public contract token: " << token);
+        REQUIRE(dx10_contract.find(token) == std::string::npos);
+    }
 }
 
 TEST_CASE("public_include_boundary excludes private Phase 2 implementation names",
-          "[unit][public-api][public_include_boundary]")
-{
-  constexpr auto forbidden_tokens = std::to_array<std::string_view>({"libdeflate",
-                                                                     "lz4::",
-                                                                     "DirectXTex",
-                                                                     "DirectX::",
-                                                                     "DXGI",
-                                                                     "Windows.h",
-                                                                     "DDS_HEADER_DXT10",
-                                                                     "TES5Edit",
-                                                                     "std::expected",
-                                                                     "std::thread",
-                                                                     "std::jthread",
-                                                                     "std::mutex",
-                                                                     "bethesda_hash",
-                                                                     "compression_router",
-                                                                     "archive_path_key",
-                                                                     "formats::",
-                                                                     "tes3_writer_entry",
-                                                                     "tes4_writer_entry",
-                                                                     "ba2_gnrl_writer_entry",
-                                                                     "ba2_dx10_writer_entry"});
-  const auto include_dir = std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa";
+          "[unit][public-api][public_include_boundary]") {
+    constexpr auto forbidden_tokens = std::to_array<std::string_view>({"libdeflate",
+                                                                       "lz4::",
+                                                                       "DirectXTex",
+                                                                       "DirectX::",
+                                                                       "DXGI",
+                                                                       "Windows.h",
+                                                                       "DDS_HEADER_DXT10",
+                                                                       "TES5Edit",
+                                                                       "std::expected",
+                                                                       "std::thread",
+                                                                       "std::jthread",
+                                                                       "std::mutex",
+                                                                       "bethesda_hash",
+                                                                       "compression_router",
+                                                                       "archive_path_key",
+                                                                       "formats::",
+                                                                       "tes3_writer_entry",
+                                                                       "tes4_writer_entry",
+                                                                       "ba2_gnrl_writer_entry",
+                                                                       "ba2_dx10_writer_entry"});
+    const auto include_dir = std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa";
 
-  for (const auto &entry : std::filesystem::directory_iterator{include_dir})
-  {
-    if (entry.path().extension() != ".hpp")
-    {
-      continue;
+    for (const auto& entry : std::filesystem::directory_iterator{include_dir}) {
+        if (entry.path().extension() != ".hpp") {
+            continue;
+        }
+
+        std::ifstream file{entry.path().string()};
+        REQUIRE(file.is_open());
+
+        std::string line;
+        while (std::getline(file, line)) {
+            auto first = line.find_first_not_of(" \t");
+            if (first == std::string::npos || line.compare(first, 2, "//") == 0) {
+                continue;
+            }
+            for (const auto token : forbidden_tokens) {
+                INFO("public boundary token: " << token << " in " << entry.path().string());
+                REQUIRE(line.find(token) == std::string::npos);
+            }
+        }
     }
-
-    std::ifstream file{entry.path().string()};
-    REQUIRE(file.is_open());
-
-    std::string line;
-    while (std::getline(file, line))
-    {
-      auto first = line.find_first_not_of(" \t");
-      if (first == std::string::npos || line.compare(first, 2, "//") == 0)
-      {
-        continue;
-      }
-      for (const auto token : forbidden_tokens)
-      {
-        INFO("public boundary token: " << token << " in " << entry.path().string());
-        REQUIRE(line.find(token) == std::string::npos);
-      }
-    }
-  }
 }
 
 TEST_CASE("public_include_boundary writer execution options stay dependency-light",
-          "[unit][public-api][public_include_boundary]")
-{
-  const auto writer_header = std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa" / "writer.hpp";
-  std::ifstream file{writer_header.string()};
-  REQUIRE(file.is_open());
+          "[unit][public-api][public_include_boundary]") {
+    const auto writer_header =
+        std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa" / "writer.hpp";
+    std::ifstream file{writer_header.string()};
+    REQUIRE(file.is_open());
 
-  std::ostringstream contents;
-  contents << file.rdbuf();
-  const auto text = contents.str();
-  const auto begin = text.find("/// Write-call execution controls");
-  const auto end = text.find("/// Options controlling TES4-family", begin);
-  REQUIRE(begin != std::string::npos);
-  REQUIRE(end != std::string::npos);
-  REQUIRE(begin < end);
+    std::ostringstream contents;
+    contents << file.rdbuf();
+    const auto text = contents.str();
+    const auto begin = text.find("/// Write-call execution controls");
+    const auto end = text.find("/// Options controlling TES4-family", begin);
+    REQUIRE(begin != std::string::npos);
+    REQUIRE(end != std::string::npos);
+    REQUIRE(begin < end);
 
-  const auto section = text.substr(begin, end - begin);
-  constexpr auto forbidden_tokens = std::to_array<std::string_view>({"std::thread",
-                                                                     "std::jthread",
-                                                                     "std::mutex",
-                                                                     "std::expected",
-                                                                     "libdeflate",
-                                                                     "lz4",
-                                                                     "DirectXTex",
-                                                                     "Windows.h",
-                                                                     "TES5Edit",
-                                                                     "formats::",
-                                                                     "tes3_writer_entry",
-                                                                     "tes4_writer_entry",
-                                                                     "ba2_gnrl_writer_entry",
-                                                                     "ba2_dx10_writer_entry"});
-  for (const auto token : forbidden_tokens)
-  {
-    INFO("writer execution option public boundary token: " << token);
-    REQUIRE(section.find(token) == std::string::npos);
-  }
+    const auto section = text.substr(begin, end - begin);
+    constexpr auto forbidden_tokens = std::to_array<std::string_view>(
+        {"std::thread", "std::jthread", "std::mutex", "std::expected", "libdeflate", "lz4",
+         "DirectXTex", "Windows.h", "TES5Edit", "formats::", "tes3_writer_entry",
+         "tes4_writer_entry", "ba2_gnrl_writer_entry", "ba2_dx10_writer_entry"});
+    for (const auto token : forbidden_tokens) {
+        INFO("writer execution option public boundary token: " << token);
+        REQUIRE(section.find(token) == std::string::npos);
+    }
 
-  REQUIRE(section.find("worker_count == 1") != std::string::npos);
-  REQUIRE(section.find("worker_count > 1") != std::string::npos);
-  REQUIRE(section.find("worker_count == 0") != std::string::npos);
+    REQUIRE(section.find("worker_count == 1") != std::string::npos);
+    REQUIRE(section.find("worker_count > 1") != std::string::npos);
+    REQUIRE(section.find("worker_count == 0") != std::string::npos);
 }

@@ -2,2301 +2,1316 @@
   "CMakePresets.json": {
     "mtime": 1779177361.4620588,
     "ast_hash": "a25340f5d0f73242473292236f7ab6a4",
-    "semantic_hash": ""
+    "semantic_hash": "a25340f5d0f73242473292236f7ab6a4"
   },
   "benchmarks/libbsa_benchmarks.cpp": {
-    "mtime": 1779177361.4700868,
-    "ast_hash": "f777f2a6c3d2e0cb0eaea7648c0b039a",
-    "semantic_hash": ""
+    "mtime": 1781747978.4271634,
+    "ast_hash": "96ef9785e47331c961a9ed98202394c2",
+    "semantic_hash": "96ef9785e47331c961a9ed98202394c2"
   },
   "include/libbsa/archive.hpp": {
-    "mtime": 1779177361.5126202,
-    "ast_hash": "ffd1e71b5e6074b373fd62eaa2befbc4",
-    "semantic_hash": ""
+    "mtime": 1781760450.4304173,
+    "ast_hash": "3f0e6a8b83ced00ecb42cde107f9776b",
+    "semantic_hash": "3f0e6a8b83ced00ecb42cde107f9776b"
   },
   "include/libbsa/export.hpp": {
     "mtime": 1779177361.5131202,
     "ast_hash": "a478ddca3e5dc88f56a719c4ef6f4a76",
-    "semantic_hash": ""
+    "semantic_hash": "a478ddca3e5dc88f56a719c4ef6f4a76"
   },
   "include/libbsa/libbsa.hpp": {
     "mtime": 1779177361.5131202,
     "ast_hash": "0f1477e13645a66955a8f010dcd94699",
-    "semantic_hash": ""
+    "semantic_hash": "0f1477e13645a66955a8f010dcd94699"
   },
   "include/libbsa/result.hpp": {
-    "mtime": 1779177361.5131202,
-    "ast_hash": "10016220a6d039aa5f068472605de52e",
-    "semantic_hash": ""
+    "mtime": 1781748187.5336518,
+    "ast_hash": "3d2d413a749ea48826fd6288cadf599e",
+    "semantic_hash": "3d2d413a749ea48826fd6288cadf599e"
   },
   "include/libbsa/validation.hpp": {
-    "mtime": 1779177361.51362,
-    "ast_hash": "7d6562c95bf1723cb141cb168fadd1c4",
-    "semantic_hash": ""
+    "mtime": 1781748187.5506508,
+    "ast_hash": "a28e72a4aab2ef0edc459b49deeee935",
+    "semantic_hash": "a28e72a4aab2ef0edc459b49deeee935"
   },
   "include/libbsa/version.hpp": {
-    "mtime": 1779177361.51362,
-    "ast_hash": "80c8dad5a148b255301b1e6b26fe3d12",
-    "semantic_hash": ""
+    "mtime": 1781748187.5666518,
+    "ast_hash": "b06c55156adf4b8dac77be2f0b0a9561",
+    "semantic_hash": "b06c55156adf4b8dac77be2f0b0a9561"
   },
   "include/libbsa/writer.hpp": {
-    "mtime": 1779177361.51412,
-    "ast_hash": "c85b7173a9d26bb5b5f7d270cfa78c62",
-    "semantic_hash": ""
+    "mtime": 1781748187.585158,
+    "ast_hash": "f64cdc67394f38f91c8ee977e5dc1eb1",
+    "semantic_hash": "f64cdc67394f38f91c8ee977e5dc1eb1"
   },
   "src/archive.cpp": {
-    "mtime": 1779177361.544647,
-    "ast_hash": "a870b198761b0acd657f3cfce66d1b88",
-    "semantic_hash": ""
+    "mtime": 1781760460.1177852,
+    "ast_hash": "e961532d724efe6457f766cc8c159ba0",
+    "semantic_hash": "e961532d724efe6457f766cc8c159ba0"
   },
   "src/detail/archive_path.cpp": {
-    "mtime": 1779177361.544647,
-    "ast_hash": "e121c22b89af1f76d4cad60819ae6d61",
-    "semantic_hash": ""
+    "mtime": 1781748187.65422,
+    "ast_hash": "9e16ea04c848782a8eabe50c4c1f9fa9",
+    "semantic_hash": "9e16ea04c848782a8eabe50c4c1f9fa9"
   },
   "src/detail/archive_path.hpp": {
-    "mtime": 1779177361.544647,
-    "ast_hash": "13345948982d478a8100785dcc3fd472",
-    "semantic_hash": ""
+    "mtime": 1781748187.681219,
+    "ast_hash": "4ae7aee6ec88d51868348f6c38c7627b",
+    "semantic_hash": "4ae7aee6ec88d51868348f6c38c7627b"
   },
   "src/detail/atomic_file_ops.hpp": {
-    "mtime": 1779177361.54565,
-    "ast_hash": "41e4e39df7bf613349542d55c0bff281",
-    "semantic_hash": ""
+    "mtime": 1781748187.710713,
+    "ast_hash": "fef1534365456182b88593ceea8eafe8",
+    "semantic_hash": "fef1534365456182b88593ceea8eafe8"
   },
   "src/detail/bethesda_hash.cpp": {
-    "mtime": 1779177361.54565,
-    "ast_hash": "4859d67d44a4e0244783f04ce7cc377d",
-    "semantic_hash": ""
+    "mtime": 1781748187.7292128,
+    "ast_hash": "d066117ff74a9eb2e1f1a847010f2528",
+    "semantic_hash": "d066117ff74a9eb2e1f1a847010f2528"
   },
   "src/detail/bethesda_hash.hpp": {
-    "mtime": 1779177361.54565,
-    "ast_hash": "ac0d58c16d82bb0a3b8a2fe9539da385",
-    "semantic_hash": ""
+    "mtime": 1781748187.756214,
+    "ast_hash": "e2fa380818cedd7212e8750f059edd45",
+    "semantic_hash": "e2fa380818cedd7212e8750f059edd45"
   },
   "src/detail/binary_io.cpp": {
-    "mtime": 1779177361.5461545,
-    "ast_hash": "41df2238a2a92be8f5157472f267f5c6",
-    "semantic_hash": ""
+    "mtime": 1781748187.7747126,
+    "ast_hash": "57ebc4ca2263c8b55634a436abda9ca9",
+    "semantic_hash": "57ebc4ca2263c8b55634a436abda9ca9"
   },
   "src/detail/binary_io.hpp": {
-    "mtime": 1779177361.5461545,
-    "ast_hash": "63d810fd17eb7dfada394b51312abd58",
-    "semantic_hash": ""
+    "mtime": 1781748187.8507304,
+    "ast_hash": "c552153155f8344140698e16b0683fc2",
+    "semantic_hash": "c552153155f8344140698e16b0683fc2"
   },
   "src/detail/byte_vector.hpp": {
-    "mtime": 1779177361.5461545,
-    "ast_hash": "d0d496a417b033e83e9cd368caefa865",
-    "semantic_hash": ""
+    "mtime": 1781748187.867243,
+    "ast_hash": "aa6a319ad9b67b12e0592481f6b69131",
+    "semantic_hash": "aa6a319ad9b67b12e0592481f6b69131"
   },
   "src/detail/compression_router.cpp": {
-    "mtime": 1779177361.5466547,
-    "ast_hash": "d3e5a9b93db502078d320969fdd9b013",
-    "semantic_hash": ""
+    "mtime": 1781748187.8837402,
+    "ast_hash": "39998ac5f5837c916e57a6280d097dc9",
+    "semantic_hash": "39998ac5f5837c916e57a6280d097dc9"
   },
   "src/detail/compression_router.hpp": {
-    "mtime": 1779177361.5466547,
-    "ast_hash": "9bfd249cff7019694c030072128efe1e",
-    "semantic_hash": ""
+    "mtime": 1781748187.9117405,
+    "ast_hash": "c28b42e2f8a9b0251e6769c111673c14",
+    "semantic_hash": "c28b42e2f8a9b0251e6769c111673c14"
   },
   "src/detail/deflate_codec.cpp": {
-    "mtime": 1779177361.5466547,
-    "ast_hash": "df2da844791737805bdd18dcb77644b7",
-    "semantic_hash": ""
+    "mtime": 1781748187.9287403,
+    "ast_hash": "5b551b1cd6f5b53286687f3d78a9cbf9",
+    "semantic_hash": "5b551b1cd6f5b53286687f3d78a9cbf9"
   },
   "src/detail/deflate_codec.hpp": {
-    "mtime": 1779177361.5471547,
-    "ast_hash": "1f4d9b99a5ef1e819564d1d4017fa78f",
-    "semantic_hash": ""
+    "mtime": 1781748187.94524,
+    "ast_hash": "1abadb941efbb99264c62147c71a6103",
+    "semantic_hash": "1abadb941efbb99264c62147c71a6103"
   },
   "src/detail/host_file.cpp": {
-    "mtime": 1779177361.5471547,
-    "ast_hash": "8c3eae5e6bf34e7a9926d51605e52395",
-    "semantic_hash": ""
+    "mtime": 1781748188.0082586,
+    "ast_hash": "221e29a065deefdab4fdb580edf47e36",
+    "semantic_hash": "221e29a065deefdab4fdb580edf47e36"
   },
   "src/detail/host_file.hpp": {
-    "mtime": 1779177361.5471547,
-    "ast_hash": "b8c67cc2c45e2f9f4d56b8ea626aeb5f",
-    "semantic_hash": ""
+    "mtime": 1781748188.0362573,
+    "ast_hash": "ae766b7120b9e301ad34ec0d6cd06944",
+    "semantic_hash": "ae766b7120b9e301ad34ec0d6cd06944"
   },
   "src/detail/host_file_path.cpp": {
-    "mtime": 1779177361.5476556,
-    "ast_hash": "05fa1735ae771f34c3ccfad79f212129",
-    "semantic_hash": ""
+    "mtime": 1781748187.9727404,
+    "ast_hash": "c37e5c8c952c67d15fb5d17b33aa867d",
+    "semantic_hash": "c37e5c8c952c67d15fb5d17b33aa867d"
   },
   "src/detail/host_file_path.hpp": {
-    "mtime": 1779177361.5476556,
-    "ast_hash": "5e234fe04cc89c6385dbfe819c7bb40a",
-    "semantic_hash": ""
+    "mtime": 1781748187.9892466,
+    "ast_hash": "85bdaf3b75b3cb01dee22cc6f7a6b033",
+    "semantic_hash": "85bdaf3b75b3cb01dee22cc6f7a6b033"
   },
   "src/detail/lz4_block_codec.cpp": {
-    "mtime": 1779177361.5476556,
-    "ast_hash": "d5be644d14cece3dbd8499804883a93f",
-    "semantic_hash": ""
+    "mtime": 1781748188.0547729,
+    "ast_hash": "8d250b961214acd4178aa68778d581ba",
+    "semantic_hash": "8d250b961214acd4178aa68778d581ba"
   },
   "src/detail/lz4_block_codec.hpp": {
-    "mtime": 1779177361.5481553,
-    "ast_hash": "d5986cbe5034595b8ac0ef1bf0b82149",
-    "semantic_hash": ""
+    "mtime": 1781748188.0827725,
+    "ast_hash": "e41dc1d30d98b8b4dc1f47e73d8920d4",
+    "semantic_hash": "e41dc1d30d98b8b4dc1f47e73d8920d4"
   },
   "src/detail/lz4_frame_codec.cpp": {
-    "mtime": 1779177361.5481553,
-    "ast_hash": "fcbb2c93ed1557467dadff548789691d",
-    "semantic_hash": ""
+    "mtime": 1781748188.1007736,
+    "ast_hash": "d30cb51b90f46e833b50368cfa849d6f",
+    "semantic_hash": "d30cb51b90f46e833b50368cfa849d6f"
   },
   "src/detail/lz4_frame_codec.hpp": {
-    "mtime": 1779177361.5486543,
-    "ast_hash": "8c14f4b22c84e4309149c92cd8406fdc",
-    "semantic_hash": ""
+    "mtime": 1781748188.116273,
+    "ast_hash": "053f9934405eec3204e22bb977219794",
+    "semantic_hash": "053f9934405eec3204e22bb977219794"
   },
   "src/detail/parallel_work.cpp": {
-    "mtime": 1779177361.5486543,
-    "ast_hash": "8d6e97b9255381285236030de7d89f71",
-    "semantic_hash": ""
+    "mtime": 1781748188.1452723,
+    "ast_hash": "c2c0bfc94c1f21be2fe05d66f9eb578c",
+    "semantic_hash": "c2c0bfc94c1f21be2fe05d66f9eb578c"
   },
   "src/detail/parallel_work.hpp": {
-    "mtime": 1779177361.5486543,
-    "ast_hash": "3ec05e239a6d065143fcad503a6cbb96",
-    "semantic_hash": ""
+    "mtime": 1781748188.1607723,
+    "ast_hash": "a73936d6610aba43bd5b9a9a3bdd9553",
+    "semantic_hash": "a73936d6610aba43bd5b9a9a3bdd9553"
   },
   "src/detail/parser_primitives.cpp": {
-    "mtime": 1779177361.5491548,
-    "ast_hash": "4fd41f5d59c07c6f108409826525655d",
-    "semantic_hash": ""
+    "mtime": 1781748188.1792722,
+    "ast_hash": "a4161fc0a73a69029fafbc5aed7a7f37",
+    "semantic_hash": "a4161fc0a73a69029fafbc5aed7a7f37"
   },
   "src/detail/parser_primitives.hpp": {
-    "mtime": 1779177361.5491548,
-    "ast_hash": "6d9f86037af179929f6fd0faa5cd74ff",
-    "semantic_hash": ""
+    "mtime": 1781748188.2072823,
+    "ast_hash": "b588f90056a1755ba6b169e86d512c56",
+    "semantic_hash": "b588f90056a1755ba6b169e86d512c56"
   },
   "src/detail/payload_stream.cpp": {
-    "mtime": 1779177361.5496542,
-    "ast_hash": "f21a7fb668fb6987bfe5fa8a075069af",
-    "semantic_hash": ""
+    "mtime": 1781748188.226282,
+    "ast_hash": "dab05164c886ab683e5fa58411ab9e97",
+    "semantic_hash": "dab05164c886ab683e5fa58411ab9e97"
   },
   "src/detail/payload_stream.hpp": {
-    "mtime": 1779177361.5496542,
-    "ast_hash": "33e4d60c96b5401ce0f087d3221be5a5",
-    "semantic_hash": ""
+    "mtime": 1781748188.2542994,
+    "ast_hash": "3c24dee18d6b3a099481061803491d5e",
+    "semantic_hash": "3c24dee18d6b3a099481061803491d5e"
   },
   "src/detail/writer_publish.cpp": {
-    "mtime": 1779177361.5496542,
-    "ast_hash": "ad47b8c0e1a6df7b2efec5bebaa17cf9",
-    "semantic_hash": ""
+    "mtime": 1781748188.2727995,
+    "ast_hash": "e3863083ee2268cbe82eb5321b7854b4",
+    "semantic_hash": "e3863083ee2268cbe82eb5321b7854b4"
   },
   "src/detail/writer_publish.hpp": {
-    "mtime": 1779177361.5501542,
-    "ast_hash": "432e18e14218c31c558819d6857d3574",
-    "semantic_hash": ""
+    "mtime": 1781748188.302299,
+    "ast_hash": "5cb6c59d1466e1d64f70e0da73877208",
+    "semantic_hash": "5cb6c59d1466e1d64f70e0da73877208"
   },
   "src/formats/ba2/ba2_constants.hpp": {
-    "mtime": 1779177361.5501542,
-    "ast_hash": "5c4725ea685e85c2d79d8d735a9e57a3",
-    "semantic_hash": ""
+    "mtime": 1781748188.3317988,
+    "ast_hash": "b2596641b139392f02530f7093cc6b0b",
+    "semantic_hash": "b2596641b139392f02530f7093cc6b0b"
   },
   "src/formats/ba2/ba2_dx10_chunk_assembler.cpp": {
-    "mtime": 1779177361.5506546,
-    "ast_hash": "0aa6d948488e657cc4cc01ef9391e37a",
-    "semantic_hash": ""
+    "mtime": 1781748188.40281,
+    "ast_hash": "b167e692e3d4c302d830332f3dd9de3f",
+    "semantic_hash": "b167e692e3d4c302d830332f3dd9de3f"
   },
   "src/formats/ba2/ba2_dx10_chunk_assembler.hpp": {
-    "mtime": 1779177361.5506546,
-    "ast_hash": "ee17318b5880c000d9a3a9c5cdf9f5a8",
-    "semantic_hash": ""
+    "mtime": 1781748188.4213107,
+    "ast_hash": "73be81aca26e6dcf12f64e1f0608974d",
+    "semantic_hash": "73be81aca26e6dcf12f64e1f0608974d"
   },
   "src/formats/ba2/ba2_dx10_layout.cpp": {
-    "mtime": 1779177361.5511544,
-    "ast_hash": "ab45e640638ef10ea91c2a7f54308565",
-    "semantic_hash": ""
+    "mtime": 1781748188.4398136,
+    "ast_hash": "acd63120657e53c842b03ba4b5edb3a9",
+    "semantic_hash": "acd63120657e53c842b03ba4b5edb3a9"
   },
   "src/formats/ba2/ba2_dx10_layout.hpp": {
-    "mtime": 1779177361.5511544,
-    "ast_hash": "b6c196447d31af705ff71528907e0ffa",
-    "semantic_hash": ""
+    "mtime": 1781748188.456827,
+    "ast_hash": "a46063dcb1f74e4794b5d4516d17f242",
+    "semantic_hash": "a46063dcb1f74e4794b5d4516d17f242"
   },
   "src/formats/ba2/ba2_dx10_names.cpp": {
-    "mtime": 1779177361.551654,
-    "ast_hash": "6abc86696491228f4830c96b264b954a",
-    "semantic_hash": ""
+    "mtime": 1781748188.4883296,
+    "ast_hash": "f3693dfb53306ca802e75c30c86c12a2",
+    "semantic_hash": "f3693dfb53306ca802e75c30c86c12a2"
   },
   "src/formats/ba2/ba2_dx10_names.hpp": {
-    "mtime": 1779177361.5521538,
-    "ast_hash": "592747b42c3e7fe9473be9cb66a14038",
-    "semantic_hash": ""
+    "mtime": 1781748188.5193298,
+    "ast_hash": "8ce423d83e0499a340168624a41926d9",
+    "semantic_hash": "8ce423d83e0499a340168624a41926d9"
   },
   "src/formats/ba2/ba2_dx10_parser.cpp": {
-    "mtime": 1779177361.5521538,
-    "ast_hash": "87fc8c42c8f42cafe22fe571f04ddf52",
-    "semantic_hash": ""
+    "mtime": 1781748188.5578296,
+    "ast_hash": "676f36d727d767197a9da418080323c4",
+    "semantic_hash": "676f36d727d767197a9da418080323c4"
   },
   "src/formats/ba2/ba2_dx10_parser.hpp": {
-    "mtime": 1779177361.552655,
-    "ast_hash": "bdbbf91a91de80b3ad4236407c88573b",
-    "semantic_hash": ""
+    "mtime": 1781748188.5763297,
+    "ast_hash": "6815fcd71b378b0fe4d7c15c7b76cdb8",
+    "semantic_hash": "6815fcd71b378b0fe4d7c15c7b76cdb8"
   },
   "src/formats/ba2/ba2_dx10_prepare.cpp": {
-    "mtime": 1779177361.552655,
-    "ast_hash": "7bf5b29cc6442e909ea4a335b04ccd00",
-    "semantic_hash": ""
+    "mtime": 1781748188.596835,
+    "ast_hash": "cf7a9d14802fc5e113bcb8bba1c53c4f",
+    "semantic_hash": "cf7a9d14802fc5e113bcb8bba1c53c4f"
   },
   "src/formats/ba2/ba2_dx10_prepare.hpp": {
-    "mtime": 1779177361.552655,
-    "ast_hash": "74dd0c98a199b93835f76b7c0760f1ca",
-    "semantic_hash": ""
+    "mtime": 1781748188.6268406,
+    "ast_hash": "749e84eb2359d2a141fcaef1aaf3bd87",
+    "semantic_hash": "749e84eb2359d2a141fcaef1aaf3bd87"
   },
   "src/formats/ba2/ba2_dx10_reader.cpp": {
-    "mtime": 1779177361.5531545,
-    "ast_hash": "a5829283c4844e904d52daf5992353bf",
-    "semantic_hash": ""
+    "mtime": 1781748188.658856,
+    "ast_hash": "226b3cf97d24958d66c5a28417522a05",
+    "semantic_hash": "226b3cf97d24958d66c5a28417522a05"
   },
   "src/formats/ba2/ba2_dx10_reader.hpp": {
-    "mtime": 1779177361.5531545,
-    "ast_hash": "ebf810c5febab3d7e3ed9300aac443f6",
-    "semantic_hash": ""
+    "mtime": 1781748188.6868563,
+    "ast_hash": "002786941e402aaffc3fa95d81bc6dfd",
+    "semantic_hash": "002786941e402aaffc3fa95d81bc6dfd"
   },
   "src/formats/ba2/ba2_dx10_records.cpp": {
-    "mtime": 1779177361.553654,
-    "ast_hash": "7f9c419300e972e8778d6669f5eb2f2e",
-    "semantic_hash": ""
+    "mtime": 1781748188.7053564,
+    "ast_hash": "35e795e247a7522894c0b18576175700",
+    "semantic_hash": "35e795e247a7522894c0b18576175700"
   },
   "src/formats/ba2/ba2_dx10_records.hpp": {
-    "mtime": 1779177361.553654,
-    "ast_hash": "74aa9106e5da0d9db219ae823264c891",
-    "semantic_hash": ""
+    "mtime": 1781748188.734857,
+    "ast_hash": "f34528d8d59f8208ca24eed07680bc02",
+    "semantic_hash": "f34528d8d59f8208ca24eed07680bc02"
   },
   "src/formats/ba2/ba2_dx10_serialize.cpp": {
-    "mtime": 1779177361.553654,
-    "ast_hash": "b345b2e5f3a5bff3944990f761b15364",
-    "semantic_hash": ""
+    "mtime": 1781748188.7543576,
+    "ast_hash": "adada18a36cbf622c68886fdbd1cf0c3",
+    "semantic_hash": "adada18a36cbf622c68886fdbd1cf0c3"
   },
   "src/formats/ba2/ba2_dx10_serialize.hpp": {
-    "mtime": 1779177361.5541544,
-    "ast_hash": "338865dc2b636ed03841411c862e86da",
-    "semantic_hash": ""
+    "mtime": 1781748188.7813559,
+    "ast_hash": "81368a0d3d1f1a7190cedd48c6f2acc0",
+    "semantic_hash": "81368a0d3d1f1a7190cedd48c6f2acc0"
   },
   "src/formats/ba2/ba2_dx10_snapshot_builder.cpp": {
-    "mtime": 1779177361.5541544,
-    "ast_hash": "f27723a707559ae37b8d1a61756e71de",
-    "semantic_hash": ""
+    "mtime": 1781748188.8123674,
+    "ast_hash": "0a09a85c7594a28583344a0367803a83",
+    "semantic_hash": "0a09a85c7594a28583344a0367803a83"
   },
   "src/formats/ba2/ba2_dx10_snapshot_builder.hpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "0ad40d1163a0d3b0aa2ef7df17d50f0e",
-    "semantic_hash": ""
+    "mtime": 1781748188.8433714,
+    "ast_hash": "c210da3729213442d100a7b806f2d29b",
+    "semantic_hash": "c210da3729213442d100a7b806f2d29b"
   },
   "src/formats/ba2/ba2_dx10_writer.cpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "46efa4513db5168a6f4e39b60ddd5cff",
-    "semantic_hash": ""
+    "mtime": 1781748188.8743787,
+    "ast_hash": "00e1088d5711423cb53ddf62bcd9426f",
+    "semantic_hash": "00e1088d5711423cb53ddf62bcd9426f"
   },
   "src/formats/ba2/ba2_dx10_writer.hpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "ad4b40706e62840d2258b374b4e961eb",
-    "semantic_hash": ""
+    "mtime": 1781748188.9033787,
+    "ast_hash": "468a71a634c6658026717142e8c68131",
+    "semantic_hash": "468a71a634c6658026717142e8c68131"
   },
   "src/formats/ba2/ba2_format_detector.cpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "0b97482c4569fbcbc71f08247b4faa5b",
-    "semantic_hash": ""
+    "mtime": 1781748188.9203796,
+    "ast_hash": "f374849e85784d6248b856cd4b7a6bf3",
+    "semantic_hash": "f374849e85784d6248b856cd4b7a6bf3"
   },
   "src/formats/ba2/ba2_format_detector.hpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "47c8e79990e38dafc789ff0eb02871f4",
-    "semantic_hash": ""
+    "mtime": 1781748188.9843793,
+    "ast_hash": "bd5bd52c2abc4dcaf220fce29ec522b3",
+    "semantic_hash": "bd5bd52c2abc4dcaf220fce29ec522b3"
   },
   "src/formats/ba2/ba2_gnrl_layout.cpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "4d458eb811b2a6180784147b674b9cf4",
-    "semantic_hash": ""
+    "mtime": 1781748189.01639,
+    "ast_hash": "e01c76cb93d641b0d7e221c955e8400d",
+    "semantic_hash": "e01c76cb93d641b0d7e221c955e8400d"
   },
   "src/formats/ba2/ba2_gnrl_layout.hpp": {
-    "mtime": 1779177361.5556579,
-    "ast_hash": "88f80219bc73e25ea0928bfeb4ad034c",
-    "semantic_hash": ""
+    "mtime": 1781748189.0433931,
+    "ast_hash": "c73d40a8af9b7cccc5f8b9588162f840",
+    "semantic_hash": "c73d40a8af9b7cccc5f8b9588162f840"
   },
   "src/formats/ba2/ba2_gnrl_parser.cpp": {
-    "mtime": 1779177361.5556579,
-    "ast_hash": "564765e5be9d70da1c6b4c93e3274b62",
-    "semantic_hash": ""
+    "mtime": 1781748189.0689018,
+    "ast_hash": "7f5324485bb72890aebd0763f746a4d9",
+    "semantic_hash": "7f5324485bb72890aebd0763f746a4d9"
   },
   "src/formats/ba2/ba2_gnrl_parser.hpp": {
-    "mtime": 1779177361.5556579,
-    "ast_hash": "f22bff159ee1d8c9408828ff8caa794d",
-    "semantic_hash": ""
+    "mtime": 1781748189.084401,
+    "ast_hash": "b60ff1b6ef1a97815a03931d7970db14",
+    "semantic_hash": "b60ff1b6ef1a97815a03931d7970db14"
   },
   "src/formats/ba2/ba2_gnrl_prepare.cpp": {
-    "mtime": 1779177361.5561638,
-    "ast_hash": "1fb6326c7b6861e04aa515e8d5899d04",
-    "semantic_hash": ""
+    "mtime": 1781748189.1049025,
+    "ast_hash": "6c2229615ba0960e702ed2ab992dd609",
+    "semantic_hash": "6c2229615ba0960e702ed2ab992dd609"
   },
   "src/formats/ba2/ba2_gnrl_prepare.hpp": {
-    "mtime": 1779177361.5561638,
-    "ast_hash": "4fc354bea6b6e7cccf3619b63dac3b4f",
-    "semantic_hash": ""
+    "mtime": 1781748189.121401,
+    "ast_hash": "438e78fd4f0cf60379c31b8fd6a3ecfb",
+    "semantic_hash": "438e78fd4f0cf60379c31b8fd6a3ecfb"
   },
   "src/formats/ba2/ba2_gnrl_reader.cpp": {
-    "mtime": 1779177361.5561638,
-    "ast_hash": "cc48d99d25a99ca9f1ed68f9c3ce21d7",
-    "semantic_hash": ""
+    "mtime": 1781748189.138402,
+    "ast_hash": "8ab014c0e5c96127d4d16c1433197e25",
+    "semantic_hash": "8ab014c0e5c96127d4d16c1433197e25"
   },
   "src/formats/ba2/ba2_gnrl_reader.hpp": {
-    "mtime": 1779177361.5566618,
-    "ast_hash": "2f62548820382cd0e2f63ee4cf318765",
-    "semantic_hash": ""
+    "mtime": 1781748189.1694014,
+    "ast_hash": "b4ce8edb91029bbec909b7a990c9ee17",
+    "semantic_hash": "b4ce8edb91029bbec909b7a990c9ee17"
   },
   "src/formats/ba2/ba2_gnrl_serialize.cpp": {
-    "mtime": 1779177361.5566618,
-    "ast_hash": "5fa36673f9e7dbbe28ffe9d4c150ae51",
-    "semantic_hash": ""
+    "mtime": 1781748189.2021954,
+    "ast_hash": "8c153553d6fc5859478574bca1b65909",
+    "semantic_hash": "8c153553d6fc5859478574bca1b65909"
   },
   "src/formats/ba2/ba2_gnrl_serialize.hpp": {
-    "mtime": 1779177361.5571618,
-    "ast_hash": "abec3fd978230b3e556616fc6f3274be",
-    "semantic_hash": ""
+    "mtime": 1781748189.2296953,
+    "ast_hash": "a474c44c51bc7695ce7bbeb630e03f39",
+    "semantic_hash": "a474c44c51bc7695ce7bbeb630e03f39"
   },
   "src/formats/ba2/ba2_gnrl_writer.cpp": {
-    "mtime": 1779177361.5571618,
-    "ast_hash": "c52b93c8cf475723b98b4a18fb7590cc",
-    "semantic_hash": ""
+    "mtime": 1781748189.2477005,
+    "ast_hash": "ec84e6c0eb56f2e224deaa804e08837a",
+    "semantic_hash": "ec84e6c0eb56f2e224deaa804e08837a"
   },
   "src/formats/ba2/ba2_gnrl_writer.hpp": {
-    "mtime": 1779177361.5571618,
-    "ast_hash": "18c83fa51930bc5ab8614a8294bd1bc0",
-    "semantic_hash": ""
+    "mtime": 1781748189.2747107,
+    "ast_hash": "07ec586170ae37d316c8a95a043eea4a",
+    "semantic_hash": "07ec586170ae37d316c8a95a043eea4a"
   },
   "src/formats/bsa/bsa_format_detector.cpp": {
-    "mtime": 1779177361.5576637,
-    "ast_hash": "9bad6768bb4344aceca4859b7691f404",
-    "semantic_hash": ""
+    "mtime": 1781748189.291711,
+    "ast_hash": "c24864a02597f1c2c87f89e04c67742e",
+    "semantic_hash": "c24864a02597f1c2c87f89e04c67742e"
   },
   "src/formats/bsa/bsa_format_detector.hpp": {
-    "mtime": 1779177361.5576637,
-    "ast_hash": "e0db3c2fb1edb3ce970d5d89b24668c5",
-    "semantic_hash": ""
+    "mtime": 1781748189.3082123,
+    "ast_hash": "078b608f894cb0cf5721dcd8ee7978ae",
+    "semantic_hash": "078b608f894cb0cf5721dcd8ee7978ae"
   },
   "src/formats/bsa/tes3_bsa_layout.cpp": {
-    "mtime": 1779177361.5581622,
-    "ast_hash": "28bf36f74870a068aece0f36389e05ed",
-    "semantic_hash": ""
+    "mtime": 1781748189.324713,
+    "ast_hash": "ca1a90b2b10d9e615e9f02a12135f4dc",
+    "semantic_hash": "ca1a90b2b10d9e615e9f02a12135f4dc"
   },
   "src/formats/bsa/tes3_bsa_layout.hpp": {
-    "mtime": 1779177361.5581622,
-    "ast_hash": "837f2a301f4a25df9d8ef12a9c416d6d",
-    "semantic_hash": ""
+    "mtime": 1781748189.352712,
+    "ast_hash": "817da5e3b7c8e3790ae101a4a23bdcc2",
+    "semantic_hash": "817da5e3b7c8e3790ae101a4a23bdcc2"
   },
   "src/formats/bsa/tes3_bsa_parser.cpp": {
-    "mtime": 1779177361.5586622,
-    "ast_hash": "343e9d65f2630d798a9f438a1d9a82a8",
-    "semantic_hash": ""
+    "mtime": 1781748189.3757126,
+    "ast_hash": "973a5243cabbebb4837e7c111eaf284a",
+    "semantic_hash": "973a5243cabbebb4837e7c111eaf284a"
   },
   "src/formats/bsa/tes3_bsa_parser.hpp": {
-    "mtime": 1779177361.5586622,
-    "ast_hash": "6b94e9a7575a22d74334bbad83274201",
-    "semantic_hash": ""
+    "mtime": 1781748189.3922148,
+    "ast_hash": "755274b8f0bebb52846d3d341b2e3cbf",
+    "semantic_hash": "755274b8f0bebb52846d3d341b2e3cbf"
   },
   "src/formats/bsa/tes3_bsa_prepare.cpp": {
-    "mtime": 1779177361.559162,
-    "ast_hash": "e5b15f7f2e1d99e5d29311c3479553c5",
-    "semantic_hash": ""
+    "mtime": 1781748189.4097278,
+    "ast_hash": "a71c00cc8edebe3c962d9b0df322d4da",
+    "semantic_hash": "a71c00cc8edebe3c962d9b0df322d4da"
   },
   "src/formats/bsa/tes3_bsa_prepare.hpp": {
-    "mtime": 1779177361.559162,
-    "ast_hash": "0f8ff4cc8be2ecac9e2bfe78ff68f0a4",
-    "semantic_hash": ""
+    "mtime": 1781748189.4252262,
+    "ast_hash": "11fa191ca55c581e966dfafd48cb0e2c",
+    "semantic_hash": "11fa191ca55c581e966dfafd48cb0e2c"
   },
   "src/formats/bsa/tes3_bsa_reader.cpp": {
-    "mtime": 1779177361.559662,
-    "ast_hash": "7d0601617167c93d858794d485832efe",
-    "semantic_hash": ""
+    "mtime": 1781748189.4417315,
+    "ast_hash": "83d96f31fcd193c5302c3102e2e0949e",
+    "semantic_hash": "83d96f31fcd193c5302c3102e2e0949e"
   },
   "src/formats/bsa/tes3_bsa_reader.hpp": {
-    "mtime": 1779177361.559662,
-    "ast_hash": "0114420d01c026bb4192cafd8f5e6bed",
-    "semantic_hash": ""
+    "mtime": 1781748189.4577425,
+    "ast_hash": "27310a9cae771e0ed363d425d835e7fc",
+    "semantic_hash": "27310a9cae771e0ed363d425d835e7fc"
   },
   "src/formats/bsa/tes3_bsa_serialize.cpp": {
-    "mtime": 1779177361.559662,
-    "ast_hash": "d958a8c44bf5186075a3a5e0030bee00",
-    "semantic_hash": ""
+    "mtime": 1781748189.5252423,
+    "ast_hash": "7f1a76e5c247d9538166bbe7710f0ceb",
+    "semantic_hash": "7f1a76e5c247d9538166bbe7710f0ceb"
   },
   "src/formats/bsa/tes3_bsa_serialize.hpp": {
-    "mtime": 1779177361.5601633,
-    "ast_hash": "32beb377d1163b57290dc39af3046edc",
-    "semantic_hash": ""
+    "mtime": 1781748189.541743,
+    "ast_hash": "549bb39393a221b94db6e0e2e61d19e5",
+    "semantic_hash": "549bb39393a221b94db6e0e2e61d19e5"
   },
   "src/formats/bsa/tes3_bsa_writer.cpp": {
-    "mtime": 1779177361.5601633,
-    "ast_hash": "d2384b99508651875e2a0288dda07801",
-    "semantic_hash": ""
+    "mtime": 1781748189.5577426,
+    "ast_hash": "13a06a005be42fe66cc1af363abd00c6",
+    "semantic_hash": "13a06a005be42fe66cc1af363abd00c6"
   },
   "src/formats/bsa/tes3_bsa_writer.hpp": {
-    "mtime": 1779177361.5601633,
-    "ast_hash": "ba5935a5eb751fd22e5c256487528feb",
-    "semantic_hash": ""
+    "mtime": 1781748189.585242,
+    "ast_hash": "425a3195db8c16ac291e851529acf7e6",
+    "semantic_hash": "425a3195db8c16ac291e851529acf7e6"
   },
   "src/formats/bsa/tes4_bsa_constants.hpp": {
-    "mtime": 1779177361.560662,
-    "ast_hash": "af6af27245d085f8b95d20c0141c12b2",
-    "semantic_hash": ""
+    "mtime": 1781748189.6007454,
+    "ast_hash": "ddfde894a291935cad50e6abdd6f3dc3",
+    "semantic_hash": "ddfde894a291935cad50e6abdd6f3dc3"
   },
   "src/formats/bsa/tes4_bsa_layout.cpp": {
-    "mtime": 1779177361.560662,
-    "ast_hash": "9b0afb3eea8737e46eb251e4bc6f0c09",
-    "semantic_hash": ""
+    "mtime": 1781748189.6237538,
+    "ast_hash": "79b0345d0bdd10918faa01e9d1deec61",
+    "semantic_hash": "79b0345d0bdd10918faa01e9d1deec61"
   },
   "src/formats/bsa/tes4_bsa_layout.hpp": {
-    "mtime": 1779177361.5611622,
-    "ast_hash": "54c251808d0a275a41a43c6069ed8d75",
-    "semantic_hash": ""
+    "mtime": 1781748189.6402545,
+    "ast_hash": "f2e38e293bbad0f3a3ed1fb29990691a",
+    "semantic_hash": "f2e38e293bbad0f3a3ed1fb29990691a"
   },
   "src/formats/bsa/tes4_bsa_parser.cpp": {
-    "mtime": 1779177361.5611622,
-    "ast_hash": "67200627a46e1fd7a63a5f45c6eb41bf",
-    "semantic_hash": ""
+    "mtime": 1781748189.6597679,
+    "ast_hash": "bb01b297c080e1faf9dba301b038b683",
+    "semantic_hash": "bb01b297c080e1faf9dba301b038b683"
   },
   "src/formats/bsa/tes4_bsa_parser.hpp": {
-    "mtime": 1779177361.5611622,
-    "ast_hash": "b9e5ef0761f3a5f1518ac0beb64bef40",
-    "semantic_hash": ""
+    "mtime": 1781748189.6767738,
+    "ast_hash": "271e93892c8c0caba75e171a7500758d",
+    "semantic_hash": "271e93892c8c0caba75e171a7500758d"
   },
   "src/formats/bsa/tes4_bsa_payload_descriptor.cpp": {
-    "mtime": 1779177361.561663,
-    "ast_hash": "7839cde61f41c61fa7591b05dad3cf25",
-    "semantic_hash": ""
+    "mtime": 1781748189.6937742,
+    "ast_hash": "75580798fa7e62131318009928d0d567",
+    "semantic_hash": "75580798fa7e62131318009928d0d567"
   },
   "src/formats/bsa/tes4_bsa_payload_descriptor.hpp": {
-    "mtime": 1779177361.561663,
-    "ast_hash": "f1ead52638bb2da2c7ba50c80035ddf7",
-    "semantic_hash": ""
+    "mtime": 1781748189.7097754,
+    "ast_hash": "a0508a29301b133de2377216385e2fd5",
+    "semantic_hash": "a0508a29301b133de2377216385e2fd5"
   },
   "src/formats/bsa/tes4_bsa_prepare.cpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "1310b777009233996ad9fd72b39af21c",
-    "semantic_hash": ""
+    "mtime": 1781748189.731274,
+    "ast_hash": "24454acf484a738ef0398d6fcb38efad",
+    "semantic_hash": "24454acf484a738ef0398d6fcb38efad"
   },
   "src/formats/bsa/tes4_bsa_prepare.hpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "e448771f374ecd80ba9f2ff860ff5324",
-    "semantic_hash": ""
+    "mtime": 1781748189.758775,
+    "ast_hash": "53ab295efa0cb28e1b29f28281be1f18",
+    "semantic_hash": "53ab295efa0cb28e1b29f28281be1f18"
   },
   "src/formats/bsa/tes4_bsa_reader.cpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "bbb94117bbf695f82162b0f892543653",
-    "semantic_hash": ""
+    "mtime": 1781748189.788777,
+    "ast_hash": "7582bf8b18e350902c9b4c9d51a4f2f0",
+    "semantic_hash": "7582bf8b18e350902c9b4c9d51a4f2f0"
   },
   "src/formats/bsa/tes4_bsa_reader.hpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "bcdcc620552f0b1aae3b303aaf9fa3d7",
-    "semantic_hash": ""
+    "mtime": 1781748189.8052888,
+    "ast_hash": "a083ba57ae33f222e0a7c8de561d7636",
+    "semantic_hash": "a083ba57ae33f222e0a7c8de561d7636"
   },
   "src/formats/bsa/tes4_bsa_serialize.cpp": {
-    "mtime": 1779177361.5626624,
-    "ast_hash": "5bc0a46924db10b83a34922c7a847ebb",
-    "semantic_hash": ""
+    "mtime": 1781748189.8237903,
+    "ast_hash": "5d0ab36faa6ab10cbfec7be0ad9468b7",
+    "semantic_hash": "5d0ab36faa6ab10cbfec7be0ad9468b7"
   },
   "src/formats/bsa/tes4_bsa_serialize.hpp": {
-    "mtime": 1779177361.5626624,
-    "ast_hash": "1138454c1ee4663413717b0015c97bfc",
-    "semantic_hash": ""
+    "mtime": 1781748189.8497934,
+    "ast_hash": "4417a63f2a8650ccb5c8c5d3ebd5a9e5",
+    "semantic_hash": "4417a63f2a8650ccb5c8c5d3ebd5a9e5"
   },
   "src/formats/bsa/tes4_bsa_table.cpp": {
-    "mtime": 1779177361.5631638,
-    "ast_hash": "177807c69584519e392f2a10ab8985bb",
-    "semantic_hash": ""
+    "mtime": 1781748189.8723047,
+    "ast_hash": "4947426e7c286b5529d090f91afb3f74",
+    "semantic_hash": "4947426e7c286b5529d090f91afb3f74"
   },
   "src/formats/bsa/tes4_bsa_table.hpp": {
-    "mtime": 1779177361.5631638,
-    "ast_hash": "441ebc32a53538262c960ac0eb7a8621",
-    "semantic_hash": ""
+    "mtime": 1781748189.8903027,
+    "ast_hash": "ff4e832152c7b554a6202896cbc79001",
+    "semantic_hash": "ff4e832152c7b554a6202896cbc79001"
   },
   "src/formats/bsa/tes4_bsa_writer.cpp": {
-    "mtime": 1779177361.5631638,
-    "ast_hash": "f10a64ee2ad592fc48f718226b9a45d2",
-    "semantic_hash": ""
+    "mtime": 1781748189.907304,
+    "ast_hash": "b7e490f99f160c29023a5a4881fe6ffd",
+    "semantic_hash": "b7e490f99f160c29023a5a4881fe6ffd"
   },
   "src/formats/bsa/tes4_bsa_writer.hpp": {
-    "mtime": 1779177361.5636632,
-    "ast_hash": "f7dd67f27902dbf01bf6218a5883c68c",
-    "semantic_hash": ""
+    "mtime": 1781748189.9233036,
+    "ast_hash": "3177e80c7e918e2fbf87f4dce66479d1",
+    "semantic_hash": "3177e80c7e918e2fbf87f4dce66479d1"
   },
   "src/libbsa.cpp": {
     "mtime": 1779177361.5636632,
     "ast_hash": "a804e58ac27e122d4ed2ed2d8ac91262",
-    "semantic_hash": ""
+    "semantic_hash": "a804e58ac27e122d4ed2ed2d8ac91262"
   },
   "src/texture/dds_layout.cpp": {
-    "mtime": 1779177361.5636632,
-    "ast_hash": "2856052593ccfeaf0b400c6b75d5beec",
-    "semantic_hash": ""
+    "mtime": 1781748189.9458022,
+    "ast_hash": "bf789e66fe8c5e0cb64c8b03879ba410",
+    "semantic_hash": "bf789e66fe8c5e0cb64c8b03879ba410"
   },
   "src/texture/dds_layout.hpp": {
-    "mtime": 1779177361.5636632,
-    "ast_hash": "222ee38dbb6f5500eca3609345b6a011",
-    "semantic_hash": ""
+    "mtime": 1781748189.974303,
+    "ast_hash": "79da6459da322582386ec8abf0177c16",
+    "semantic_hash": "79da6459da322582386ec8abf0177c16"
   },
   "src/texture/directxtex_analyzer.cpp": {
-    "mtime": 1779177361.5646667,
-    "ast_hash": "b8a5491851995f6f91740236ab8b1fbd",
-    "semantic_hash": ""
+    "mtime": 1781748190.0398147,
+    "ast_hash": "aa6df6fd4917b84b933c7e5ebe818aeb",
+    "semantic_hash": "aa6df6fd4917b84b933c7e5ebe818aeb"
   },
   "src/texture/directxtex_analyzer.hpp": {
-    "mtime": 1779177361.5646667,
-    "ast_hash": "4773c31751fc4334a7fa79a04782e3c4",
-    "semantic_hash": ""
+    "mtime": 1781748190.0673246,
+    "ast_hash": "7f056dfe001cb88b62eb8964c5a55211",
+    "semantic_hash": "7f056dfe001cb88b62eb8964c5a55211"
   },
   "src/validation.cpp": {
-    "mtime": 1779177361.5646667,
-    "ast_hash": "8e4d04be50b348d40116a0796f31bcd2",
-    "semantic_hash": ""
+    "mtime": 1781748190.131323,
+    "ast_hash": "68ba790dd5937d6e9350369bca5f0a2c",
+    "semantic_hash": "68ba790dd5937d6e9350369bca5f0a2c"
   },
   "tests/fixtures/generated/archives/ba2_dx10_fo4_manifest.json": {
     "mtime": 1779261973.6912448,
     "ast_hash": "63458804e57bccef689051cf0748f024",
-    "semantic_hash": ""
+    "semantic_hash": "63458804e57bccef689051cf0748f024"
   },
   "tests/fixtures/generated/archives/ba2_dx10_malformed_manifest.json": {
     "mtime": 1779261973.6962516,
     "ast_hash": "dd863fb753280d5bf74ad5cac0619bf9",
-    "semantic_hash": ""
+    "semantic_hash": "dd863fb753280d5bf74ad5cac0619bf9"
   },
   "tests/fixtures/generated/archives/ba2_dx10_sfv3_manifest.json": {
     "mtime": 1779261973.692245,
     "ast_hash": "905922021b773954086d09a1db62eab9",
-    "semantic_hash": ""
+    "semantic_hash": "905922021b773954086d09a1db62eab9"
   },
   "tests/fixtures/generated/archives/ba2_gnrl_fo4_manifest.json": {
     "mtime": 1779261972.4484286,
     "ast_hash": "9634e52ab4e1828b0f77723fa22bcf44",
-    "semantic_hash": ""
+    "semantic_hash": "9634e52ab4e1828b0f77723fa22bcf44"
   },
   "tests/fixtures/generated/archives/ba2_gnrl_malformed_manifest.json": {
     "mtime": 1779261972.4529302,
     "ast_hash": "9e5c564bcef8942dfe15d47c41f13bfc",
-    "semantic_hash": ""
+    "semantic_hash": "9e5c564bcef8942dfe15d47c41f13bfc"
   },
   "tests/fixtures/generated/archives/ba2_gnrl_sfv2_manifest.json": {
     "mtime": 1779261972.4489293,
     "ast_hash": "7a051f08ca5577e8e3b5a004beadfd12",
-    "semantic_hash": ""
+    "semantic_hash": "7a051f08ca5577e8e3b5a004beadfd12"
   },
   "tests/fixtures/generated/archives/ba2_gnrl_sfv3_manifest.json": {
     "mtime": 1779261972.4499292,
     "ast_hash": "70c22b4666f03abdb6bd596ce4aebe25",
-    "semantic_hash": ""
+    "semantic_hash": "70c22b4666f03abdb6bd596ce4aebe25"
   },
   "tests/fixtures/generated/archives/malformed_manifest.json": {
     "mtime": 1779177361.5721874,
     "ast_hash": "24c6b3e83596cef64aa1c53b1734c6d3",
-    "semantic_hash": ""
+    "semantic_hash": "24c6b3e83596cef64aa1c53b1734c6d3"
   },
   "tests/fixtures/generated/archives/tes3_malformed_manifest.json": {
-    "mtime": 1779261969.0677125,
+    "mtime": 1781700858.507029,
     "ast_hash": "f3a90861acccbfd4c63ce41adce03da4",
-    "semantic_hash": ""
+    "semantic_hash": "f3a90861acccbfd4c63ce41adce03da4"
   },
   "tests/fixtures/generated/archives/tes3_success_manifest.json": {
-    "mtime": 1779261969.0642054,
+    "mtime": 1781700858.5025315,
     "ast_hash": "7962b22c6a953f0a28c20f112068a2b8",
-    "semantic_hash": ""
+    "semantic_hash": "7962b22c6a953f0a28c20f112068a2b8"
+  },
+  "tests/fixtures/generated/archives/tes3_windows_unsafe_names_manifest.json": {
+    "mtime": 1781700858.5035298,
+    "ast_hash": "0d627c347b9f007ddad62e5363710ffe",
+    "semantic_hash": "0d627c347b9f007ddad62e5363710ffe"
   },
   "tests/fixtures/generated/archives/tes3_writer_canonical_manifest.json": {
     "mtime": 1779261970.1498535,
     "ast_hash": "f80ebf3d791fe07b087e6a3585bf2619",
-    "semantic_hash": ""
+    "semantic_hash": "f80ebf3d791fe07b087e6a3585bf2619"
   },
   "tests/fixtures/generated/archives/tes4_v103_manifest.json": {
     "mtime": 1779261971.2925792,
     "ast_hash": "54d0909fe669c0f8b3005dbf5a74a059",
-    "semantic_hash": ""
+    "semantic_hash": "54d0909fe669c0f8b3005dbf5a74a059"
   },
   "tests/fixtures/generated/archives/tes4_v104_manifest.json": {
     "mtime": 1779261971.293079,
     "ast_hash": "1e2db449cf7e49bef0e674d1256719cc",
-    "semantic_hash": ""
+    "semantic_hash": "1e2db449cf7e49bef0e674d1256719cc"
   },
   "tests/fixtures/generated/archives/tes4_v105_manifest.json": {
     "mtime": 1779261971.2940817,
     "ast_hash": "82dc59cf6cf0fe1053eb72f7b081ac21",
-    "semantic_hash": ""
+    "semantic_hash": "82dc59cf6cf0fe1053eb72f7b081ac21"
   },
   "tests/fixtures/generated/compatibility_matrix.json": {
     "mtime": 1779177361.5766964,
     "ast_hash": "3fabad65014f58d9f7eda00640fdd6b7",
-    "semantic_hash": ""
+    "semantic_hash": "3fabad65014f58d9f7eda00640fdd6b7"
   },
   "tests/fixtures/generated/generate_ba2_dx10_fixtures.cpp": {
-    "mtime": 1779177361.5766964,
-    "ast_hash": "1935664ce1c809ea17edddbd94afaa1c",
-    "semantic_hash": ""
+    "mtime": 1781748190.418851,
+    "ast_hash": "37f363d9f7e53d949f01f1331fb5d918",
+    "semantic_hash": "37f363d9f7e53d949f01f1331fb5d918"
   },
   "tests/fixtures/generated/generate_ba2_gnrl_fixtures.cpp": {
-    "mtime": 1779177361.577196,
-    "ast_hash": "7bf7f3a18ac7b59d520abd348c79d5a7",
-    "semantic_hash": ""
+    "mtime": 1781748190.449854,
+    "ast_hash": "13b8a9f01ab96bde5cb71496350e3565",
+    "semantic_hash": "13b8a9f01ab96bde5cb71496350e3565"
   },
   "tests/fixtures/generated/generate_tes3_bsa_fixtures.cpp": {
-    "mtime": 1779177361.577196,
-    "ast_hash": "35fe9175b6d3fd8826a6a548178a44c3",
-    "semantic_hash": ""
+    "mtime": 1781748190.4730844,
+    "ast_hash": "b5baa7de8e693a0c0208654383d7331d",
+    "semantic_hash": "b5baa7de8e693a0c0208654383d7331d"
   },
   "tests/fixtures/generated/generate_tes3_bsa_writer_fixtures.cpp": {
-    "mtime": 1779177361.577696,
-    "ast_hash": "6874521e6ce1e23fd750bf05fd0f4f4c",
-    "semantic_hash": ""
+    "mtime": 1781748190.5070856,
+    "ast_hash": "52d27ca5e2e2131ac7954500a7f2f1a7",
+    "semantic_hash": "52d27ca5e2e2131ac7954500a7f2f1a7"
   },
   "tests/fixtures/generated/generate_tes4_bsa_fixtures.cpp": {
-    "mtime": 1779177361.5781958,
-    "ast_hash": "c5b839423fae96e1015f0f8106a3fad1",
-    "semantic_hash": ""
+    "mtime": 1781748190.5330842,
+    "ast_hash": "46edf258133c5078bfb423b37eae6081",
+    "semantic_hash": "46edf258133c5078bfb423b37eae6081"
   },
   "tests/fixtures/generated/source/ba2_dx10_writer_sources_manifest.json": {
     "mtime": 1779261973.7052588,
     "ast_hash": "3f836bd63abc899bf9f3de1ae3e588fc",
-    "semantic_hash": ""
+    "semantic_hash": "3f836bd63abc899bf9f3de1ae3e588fc"
   },
   "tests/fixtures/generated/validate_fixture_manifests.py": {
     "mtime": 1779177361.5821962,
     "ast_hash": "e3266e973a3cd7028c20273b32e52860",
-    "semantic_hash": ""
+    "semantic_hash": "e3266e973a3cd7028c20273b32e52860"
   },
   "tests/package-consumer/main.cpp": {
-    "mtime": 1779248425.5015626,
-    "ast_hash": "af9287c5daf969b345ffa6a9ad146092",
-    "semantic_hash": ""
+    "mtime": 1781748190.5720842,
+    "ast_hash": "5d21daff8f7ea7559c0bfd69213686a9",
+    "semantic_hash": "5d21daff8f7ea7559c0bfd69213686a9"
   },
   "tests/unit/archive_path_tests.cpp": {
-    "mtime": 1779177361.5836961,
-    "ast_hash": "fc069c07ca86adcf821564d9cfb3427f",
-    "semantic_hash": ""
+    "mtime": 1781748190.5895908,
+    "ast_hash": "2a854d7004103db36250caea7fcf8282",
+    "semantic_hash": "2a854d7004103db36250caea7fcf8282"
   },
   "tests/unit/archive_reader_dispatch_policy_tests.cpp": {
-    "mtime": 1779177361.5836961,
-    "ast_hash": "44208d2b58335fd209ba0118d60f6ea1",
-    "semantic_hash": ""
+    "mtime": 1781755110.7852879,
+    "ast_hash": "06922f7f1c8b1cb89286f86bc665d0a3",
+    "semantic_hash": "06922f7f1c8b1cb89286f86bc665d0a3"
   },
   "tests/unit/archive_reader_dispatch_tests.cpp": {
-    "mtime": 1779177361.5836961,
-    "ast_hash": "34010e1c10b03f12aa10a66aefd1e318",
-    "semantic_hash": ""
+    "mtime": 1781748190.6296012,
+    "ast_hash": "cfa7310f9f9bc78b34032a3c07bcecbf",
+    "semantic_hash": "cfa7310f9f9bc78b34032a3c07bcecbf"
   },
   "tests/unit/archive_reader_tests.cpp": {
-    "mtime": 1779177361.584196,
-    "ast_hash": "ea034484873f00f92cee08e0b504489f",
-    "semantic_hash": ""
+    "mtime": 1781748190.6601079,
+    "ast_hash": "b8a21f947d5021998e40edcd0c174da7",
+    "semantic_hash": "b8a21f947d5021998e40edcd0c174da7"
   },
   "tests/unit/ba2_dx10_extraction_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "9b095ca8002f2fd55cb4bfe44c9211d0",
-    "semantic_hash": ""
+    "mtime": 1781748190.692613,
+    "ast_hash": "477e11d1e6098cd3cfd4b5f671bb28d8",
+    "semantic_hash": "477e11d1e6098cd3cfd4b5f671bb28d8"
   },
   "tests/unit/ba2_dx10_malformed_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "fb5e38c8d7937e5a53632830c0e4fdf0",
-    "semantic_hash": ""
+    "mtime": 1781748190.709613,
+    "ast_hash": "4f142570bc3eec6aa4bd54372e06d315",
+    "semantic_hash": "4f142570bc3eec6aa4bd54372e06d315"
   },
   "tests/unit/ba2_dx10_metadata_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "b75f0a46ad563540d89613e2a917ee52",
-    "semantic_hash": ""
+    "mtime": 1781748190.7726128,
+    "ast_hash": "68465f458fbebf6b5784a4ee90600d57",
+    "semantic_hash": "68465f458fbebf6b5784a4ee90600d57"
   },
   "tests/unit/ba2_dx10_parser_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "3754b2e7d20d3d9f5022dfa4dc353dcc",
-    "semantic_hash": ""
+    "mtime": 1781748190.8016198,
+    "ast_hash": "f65e8988d6b5a80ab7ebd109e675f594",
+    "semantic_hash": "f65e8988d6b5a80ab7ebd109e675f594"
   },
   "tests/unit/ba2_dx10_preparer_seam_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "4f855c19ad6d595217be7a57efd3aa82",
-    "semantic_hash": ""
+    "mtime": 1781748190.82213,
+    "ast_hash": "b056ebafd19f778ee295d965cbca3231",
+    "semantic_hash": "b056ebafd19f778ee295d965cbca3231"
   },
   "tests/unit/ba2_dx10_writer_tests.cpp": {
-    "mtime": 1779177361.5856993,
-    "ast_hash": "8851781afab1d98bef981e7bf789d59a",
-    "semantic_hash": ""
+    "mtime": 1781748190.8626394,
+    "ast_hash": "77b9ec23914e4372e9020246269948f2",
+    "semantic_hash": "77b9ec23914e4372e9020246269948f2"
   },
   "tests/unit/ba2_gnrl_reader_tests.cpp": {
-    "mtime": 1779177361.5862036,
-    "ast_hash": "56c6520f2fc10d77ea5c8b669c68b334",
-    "semantic_hash": ""
+    "mtime": 1781748190.894642,
+    "ast_hash": "b2a7eb8a795cc2f24fada397997768a4",
+    "semantic_hash": "b2a7eb8a795cc2f24fada397997768a4"
   },
   "tests/unit/ba2_gnrl_writer_tests.cpp": {
-    "mtime": 1779177361.5862036,
-    "ast_hash": "1e5eb0aa952c3ad8beba63ac70d14b94",
-    "semantic_hash": ""
+    "mtime": 1781748190.926141,
+    "ast_hash": "170b961e5e5cd7a2a5b3ace900115126",
+    "semantic_hash": "170b961e5e5cd7a2a5b3ace900115126"
   },
   "tests/unit/ba2_writer_execution_tests.cpp": {
-    "mtime": 1779177361.5867033,
-    "ast_hash": "54241d246b4f7c55d6a0b1ad9fbba195",
-    "semantic_hash": ""
+    "mtime": 1781748190.9491403,
+    "ast_hash": "d223a6dbc7e09d18699987a9e82f879c",
+    "semantic_hash": "d223a6dbc7e09d18699987a9e82f879c"
   },
   "tests/unit/benchmark_policy_tests.cpp": {
-    "mtime": 1779177361.5867033,
-    "ast_hash": "f4cdbc71827bf8351fe6e9e27578fae5",
-    "semantic_hash": ""
+    "mtime": 1781748190.9676414,
+    "ast_hash": "15cbb305805d12c8c7e9b17821db77c0",
+    "semantic_hash": "15cbb305805d12c8c7e9b17821db77c0"
   },
   "tests/unit/bethesda_hash_tests.cpp": {
-    "mtime": 1779177361.5872042,
-    "ast_hash": "e18846a15c2e6d30ae9ad6557728badf",
-    "semantic_hash": ""
+    "mtime": 1781748190.9956467,
+    "ast_hash": "540de31566d0b897c555694252927666",
+    "semantic_hash": "540de31566d0b897c555694252927666"
   },
   "tests/unit/binary_io_tests.cpp": {
-    "mtime": 1779177361.5872042,
-    "ast_hash": "e9f2089c53e3f6832ed23ba9360254da",
-    "semantic_hash": ""
+    "mtime": 1781748191.014158,
+    "ast_hash": "6ba5ac1fc6526a87427b3ab4fe193d9f",
+    "semantic_hash": "6ba5ac1fc6526a87427b3ab4fe193d9f"
   },
   "tests/unit/bounded_memory_policy_tests.cpp": {
-    "mtime": 1779177361.5872042,
-    "ast_hash": "20d864a885de4daec834bc974966461a",
-    "semantic_hash": ""
+    "mtime": 1781748191.0301592,
+    "ast_hash": "f86b4f54271864f9bff9172262b0e2ff",
+    "semantic_hash": "f86b4f54271864f9bff9172262b0e2ff"
   },
   "tests/unit/bsa_writer_execution_tests.cpp": {
-    "mtime": 1779177361.587703,
-    "ast_hash": "3caf717b562f451ec9db7309880cf7f7",
-    "semantic_hash": ""
+    "mtime": 1781748191.0486622,
+    "ast_hash": "95475c676ff233009c480db357666123",
+    "semantic_hash": "95475c676ff233009c480db357666123"
   },
   "tests/unit/bulk_extraction_tests.cpp": {
-    "mtime": 1779177361.587703,
-    "ast_hash": "cde11192802ce43ef8a17704bdc9a8a1",
-    "semantic_hash": ""
+    "mtime": 1781748191.0871682,
+    "ast_hash": "1cce08b212b38612a5820615d9bcfe82",
+    "semantic_hash": "1cce08b212b38612a5820615d9bcfe82"
   },
   "tests/unit/compatibility_matrix_tests.cpp": {
-    "mtime": 1779177361.5882034,
-    "ast_hash": "44db003ad58cf9d38f6799041df251cc",
-    "semantic_hash": ""
+    "mtime": 1781748191.1046686,
+    "ast_hash": "2105593c7832c376b1c2c1b29491688c",
+    "semantic_hash": "2105593c7832c376b1c2c1b29491688c"
   },
   "tests/unit/compatibility_warning_tests.cpp": {
-    "mtime": 1779177361.5882034,
-    "ast_hash": "8ad9dd2b01453828a6c8cc55264ff58c",
-    "semantic_hash": ""
+    "mtime": 1781748191.123169,
+    "ast_hash": "7480fb49dab03814946ba40d703f5fdb",
+    "semantic_hash": "7480fb49dab03814946ba40d703f5fdb"
   },
   "tests/unit/compression_router_tests.cpp": {
-    "mtime": 1779177361.5887034,
-    "ast_hash": "702c4bdcb93c534930db5e4652d3d503",
-    "semantic_hash": ""
+    "mtime": 1781748191.1541698,
+    "ast_hash": "27bbad4063448562c9692a1f3e6b71a2",
+    "semantic_hash": "27bbad4063448562c9692a1f3e6b71a2"
   },
   "tests/unit/coverage_audit_matrix_docs_tests.cpp": {
-    "mtime": 1779258956.1031854,
-    "ast_hash": "72bc9f22ad7fbe2d100ebee07c4e039e",
-    "semantic_hash": ""
+    "mtime": 1781748191.1861684,
+    "ast_hash": "b8bb67a37175fec49029d692cd034293",
+    "semantic_hash": "b8bb67a37175fec49029d692cd034293"
   },
   "tests/unit/dds_layout_tests.cpp": {
-    "mtime": 1779177361.5887034,
-    "ast_hash": "a217a3a1b4876d6f265281ea34ed8517",
-    "semantic_hash": ""
+    "mtime": 1781748191.220682,
+    "ast_hash": "cf1459a56cb2ac25236e826715077c28",
+    "semantic_hash": "cf1459a56cb2ac25236e826715077c28"
   },
   "tests/unit/deflate_codec_tests.cpp": {
-    "mtime": 1779177361.5892034,
-    "ast_hash": "d417996ad5a46b1999eb967387af86d2",
-    "semantic_hash": ""
+    "mtime": 1781748191.237181,
+    "ast_hash": "ab6665fc9c8e7789353fc8c06326b3d0",
+    "semantic_hash": "ab6665fc9c8e7789353fc8c06326b3d0"
   },
   "tests/unit/docs_policy_tests.cpp": {
-    "mtime": 1779258906.571265,
-    "ast_hash": "8dc4a282ccc37354be3e51877c443fea",
-    "semantic_hash": ""
+    "mtime": 1781748191.2566853,
+    "ast_hash": "b5260c6dd7640a539e00f5c09681586f",
+    "semantic_hash": "b5260c6dd7640a539e00f5c09681586f"
   },
   "tests/unit/export_surface_policy_tests.cpp": {
-    "mtime": 1779261667.7670329,
-    "ast_hash": "550db87e0ff9dacb311f89c1bea2c5c6",
-    "semantic_hash": ""
+    "mtime": 1781748191.2726986,
+    "ast_hash": "173b1d0443d9d58d1b0278a530d1a439",
+    "semantic_hash": "173b1d0443d9d58d1b0278a530d1a439"
   },
   "tests/unit/host_file_path_tests.cpp": {
-    "mtime": 1779177361.5897033,
-    "ast_hash": "97571098c5cc40ea0f6d58edd29422ff",
-    "semantic_hash": ""
+    "mtime": 1781748191.2887003,
+    "ast_hash": "6a02168380eba0ab49464b4eb5acee39",
+    "semantic_hash": "6a02168380eba0ab49464b4eb5acee39"
   },
   "tests/unit/host_file_tests.cpp": {
-    "mtime": 1779177361.5897033,
-    "ast_hash": "44c11b4b40d85ea89b311108f2d4cde8",
-    "semantic_hash": ""
+    "mtime": 1781748191.3536994,
+    "ast_hash": "e843d2f850d1f60c6cec105826e89f15",
+    "semantic_hash": "e843d2f850d1f60c6cec105826e89f15"
   },
   "tests/unit/host_file_writer_name_tests.cpp": {
-    "mtime": 1779177361.5902038,
-    "ast_hash": "9e04e4f408cc8114aa46e80cbad59353",
-    "semantic_hash": ""
+    "mtime": 1781748191.3756988,
+    "ast_hash": "0c5e8ff74ba66c47213df0c22a39a48f",
+    "semantic_hash": "0c5e8ff74ba66c47213df0c22a39a48f"
   },
   "tests/unit/host_path_correctness_boundary_tests.cpp": {
-    "mtime": 1779177361.5902038,
-    "ast_hash": "62a245588fdad35d4344e31416d31c48",
-    "semantic_hash": ""
+    "mtime": 1781748191.3992052,
+    "ast_hash": "1cf385caf339ea7d40ff8dc34f806115",
+    "semantic_hash": "1cf385caf339ea7d40ff8dc34f806115"
   },
   "tests/unit/local_game_fixture_tests.cpp": {
-    "mtime": 1779177361.5907035,
-    "ast_hash": "a8f2034be482115624ae9761736deb09",
-    "semantic_hash": ""
+    "mtime": 1781748191.4202168,
+    "ast_hash": "9bf7eb777f0f1ad3ef7edd61e8bae1cb",
+    "semantic_hash": "9bf7eb777f0f1ad3ef7edd61e8bae1cb"
   },
   "tests/unit/lz4_codec_tests.cpp": {
-    "mtime": 1779177361.5907035,
-    "ast_hash": "3c23430dadb82edcc62ae5cad67d628f",
-    "semantic_hash": ""
+    "mtime": 1781748191.4522238,
+    "ast_hash": "3b07188e76d4bed192db131c2a2f6511",
+    "semantic_hash": "3b07188e76d4bed192db131c2a2f6511"
   },
   "tests/unit/parser_preparer_seam_policy_tests.cpp": {
-    "mtime": 1779177361.5912032,
-    "ast_hash": "31385f1b32e7bac09210dcb33fdd4c8c",
-    "semantic_hash": ""
+    "mtime": 1781755110.7897875,
+    "ast_hash": "f481a72b32278181ada6d1e3413e463f",
+    "semantic_hash": "f481a72b32278181ada6d1e3413e463f"
   },
   "tests/unit/parser_primitives_tests.cpp": {
-    "mtime": 1779177361.5912032,
-    "ast_hash": "9603b470926ed7f88ad8ba81cc3c85d5",
-    "semantic_hash": ""
+    "mtime": 1781748191.502236,
+    "ast_hash": "25e6d579707ee7aebd5f896b3a51e08e",
+    "semantic_hash": "25e6d579707ee7aebd5f896b3a51e08e"
   },
   "tests/unit/payload_stream_tests.cpp": {
-    "mtime": 1779177361.5917032,
-    "ast_hash": "bafb3ccce51b4f146492386b770a2c83",
-    "semantic_hash": ""
+    "mtime": 1781748191.5222516,
+    "ast_hash": "f60d422ed22398dc4e8da0329dc1d161",
+    "semantic_hash": "f60d422ed22398dc4e8da0329dc1d161"
   },
   "tests/unit/public_include_boundary_tests.cpp": {
-    "mtime": 1779261457.4555204,
-    "ast_hash": "74774d46350a23b516c2cf37c6f6043c",
-    "semantic_hash": ""
+    "mtime": 1781748191.5437517,
+    "ast_hash": "ca235ada2ad5b7da9a8a7b6e5e815d7a",
+    "semantic_hash": "ca235ada2ad5b7da9a8a7b6e5e815d7a"
   },
   "tests/unit/result_tests.cpp": {
-    "mtime": 1779177361.5917032,
-    "ast_hash": "37d5bf31ec08d646e29c6826e5cfdcc8",
-    "semantic_hash": ""
+    "mtime": 1781748191.5717514,
+    "ast_hash": "1d6e7f3fcc203499ced0ee6dc38af3f8",
+    "semantic_hash": "1d6e7f3fcc203499ced0ee6dc38af3f8"
   },
   "tests/unit/target_format_policy_tests.cpp": {
-    "mtime": 1779248926.5657184,
-    "ast_hash": "e9f67da709caf1d74659739f2ddcf289",
-    "semantic_hash": ""
+    "mtime": 1781748191.5922549,
+    "ast_hash": "8e3af3b5a880dc0336b78ef07b758919",
+    "semantic_hash": "8e3af3b5a880dc0336b78ef07b758919"
   },
   "tests/unit/tes3_bsa_reader_tests.cpp": {
-    "mtime": 1779177361.5922022,
-    "ast_hash": "6a78f2fcb8a4ff0e8a7e14096f904734",
-    "semantic_hash": ""
+    "mtime": 1781748191.621262,
+    "ast_hash": "13fd5f483ea1bab109ab8ab6ce736af4",
+    "semantic_hash": "13fd5f483ea1bab109ab8ab6ce736af4"
   },
   "tests/unit/tes3_bsa_writer_tests.cpp": {
-    "mtime": 1779177361.5927024,
-    "ast_hash": "adda047b022ed21681f938a0ae1583c9",
-    "semantic_hash": ""
+    "mtime": 1781748191.6617663,
+    "ast_hash": "4c974d0e886ad5af518a66a541de77a3",
+    "semantic_hash": "4c974d0e886ad5af518a66a541de77a3"
   },
   "tests/unit/tes4_bsa_parser_seam_tests.cpp": {
-    "mtime": 1779177361.5927024,
-    "ast_hash": "d6d1168dd080d1ef99ef7ac27196f19e",
-    "semantic_hash": ""
+    "mtime": 1781748191.6817768,
+    "ast_hash": "5507e77bd3463e7c13ef41c8c3b4c706",
+    "semantic_hash": "5507e77bd3463e7c13ef41c8c3b4c706"
   },
   "tests/unit/tes4_bsa_reader_tests.cpp": {
-    "mtime": 1779177361.593202,
-    "ast_hash": "7e5dbc65aab5cae31f03b7f71802dbe0",
-    "semantic_hash": ""
+    "mtime": 1781755110.804805,
+    "ast_hash": "365a9daa60a01fe07da97d925b45205c",
+    "semantic_hash": "365a9daa60a01fe07da97d925b45205c"
   },
   "tests/unit/tes4_bsa_writer_tests.cpp": {
-    "mtime": 1779177361.593202,
-    "ast_hash": "cdabeb03e8bfd9e50f373329eabaf792",
-    "semantic_hash": ""
+    "mtime": 1781748191.751276,
+    "ast_hash": "c122a5e68bd3c9366bdc29531bb8a41a",
+    "semantic_hash": "c122a5e68bd3c9366bdc29531bb8a41a"
   },
   "tests/unit/thread_safety_docs_policy_tests.cpp": {
-    "mtime": 1779177361.5937023,
-    "ast_hash": "9f0a391752252b3f446e4603137cd25e",
-    "semantic_hash": ""
+    "mtime": 1781748191.7687764,
+    "ast_hash": "81198aa37588eee54df827f90c63b2b6",
+    "semantic_hash": "81198aa37588eee54df827f90c63b2b6"
   },
   "tests/unit/validation_api_tests.cpp": {
-    "mtime": 1779246308.807443,
-    "ast_hash": "9854c6802225e32c35e993073d7ccb46",
-    "semantic_hash": ""
+    "mtime": 1781748191.79378,
+    "ast_hash": "b68c220fed24975f22694389ca74296a",
+    "semantic_hash": "b68c220fed24975f22694389ca74296a"
   },
   "tests/unit/validation_policy_tests.cpp": {
-    "mtime": 1779177361.5942023,
-    "ast_hash": "54345b6f2e92f7c49306cfc2b6cc4204",
-    "semantic_hash": ""
+    "mtime": 1781748191.817786,
+    "ast_hash": "bb1dc5fd59dd353ec5fc0afddea6dd7d",
+    "semantic_hash": "bb1dc5fd59dd353ec5fc0afddea6dd7d"
   },
   "tests/unit/writer_execution_options_tests.cpp": {
-    "mtime": 1779177361.5942023,
-    "ast_hash": "49f24da329ed5a16942c6d4b7bb3bd25",
-    "semantic_hash": ""
+    "mtime": 1781748191.8387873,
+    "ast_hash": "6103812866e45696f1ade0093e32a213",
+    "semantic_hash": "6103812866e45696f1ade0093e32a213"
   },
   "tests/unit/writer_hotspot_policy_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "1856af823fc9f2e4f5c5f76e45a5ddee",
-    "semantic_hash": ""
+    "mtime": 1781755110.811314,
+    "ast_hash": "f30f41a9fcc6be114450236b2f460117",
+    "semantic_hash": "f30f41a9fcc6be114450236b2f460117"
   },
   "tests/unit/writer_ownership_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "fd58d9a58d4efb995603b205438206b0",
-    "semantic_hash": ""
+    "mtime": 1781748191.9002993,
+    "ast_hash": "395edd89ccd2425bb67d5acf163ed006",
+    "semantic_hash": "395edd89ccd2425bb67d5acf163ed006"
   },
   "tests/unit/writer_publish_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "d39966ce815de64d87dc6aa0df3dd469",
-    "semantic_hash": ""
+    "mtime": 1781748191.936297,
+    "ast_hash": "4bbc898ce1ef1267b973f2aa70c0ca64",
+    "semantic_hash": "4bbc898ce1ef1267b973f2aa70c0ca64"
   },
   "tests/unit/writer_stage_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "816361a6c4ea118c9e6b78e84517bb75",
+    "mtime": 1781748192.010807,
+    "ast_hash": "ce48dbab182019d477aabdad1bd22770",
+    "semantic_hash": "ce48dbab182019d477aabdad1bd22770"
+  },
+  "tools/cli/main.cpp": {
+    "mtime": 1781824129.8741243,
+    "ast_hash": "28548df0e60ac35a840d80eda4a60199",
     "semantic_hash": ""
   },
   "vcpkg-configuration.json": {
     "mtime": 1779177361.5957048,
     "ast_hash": "7af3c2ed323b54ce4c9a9bc6a5daebdd",
-    "semantic_hash": ""
+    "semantic_hash": "7af3c2ed323b54ce4c9a9bc6a5daebdd"
   },
   "vcpkg.json": {
-    "mtime": 1779177361.5957048,
-    "ast_hash": "779fe2aeb51760a5d26b1e85d658519f",
+    "mtime": 1781823809.8208103,
+    "ast_hash": "7414303723d19e7f89903b86124f2ccc",
     "semantic_hash": ""
   },
   ".config/kilo/skills/graphify/SKILL.md": {
-    "mtime": 1781684716.4248207,
-    "ast_hash": "e80886193ec21d40fd6e8c8e334c7488",
-    "semantic_hash": ""
+    "mtime": 1781778167.3251166,
+    "ast_hash": "364dea47ffde188f9306d79147d14e47",
+    "semantic_hash": "364dea47ffde188f9306d79147d14e47"
   },
   ".config/kilo/skills/graphify/references/add-watch.md": {
-    "mtime": 1781684635.1091146,
+    "mtime": 1781764097.9902096,
     "ast_hash": "0df0589623217ca38a12bdcabfb42f4c",
-    "semantic_hash": ""
+    "semantic_hash": "0df0589623217ca38a12bdcabfb42f4c"
   },
   ".config/kilo/skills/graphify/references/exports.md": {
-    "mtime": 1781684635.1096144,
+    "mtime": 1781764097.9902096,
     "ast_hash": "c04ddf8f1f5ef5e262ebec491a523c74",
-    "semantic_hash": ""
+    "semantic_hash": "c04ddf8f1f5ef5e262ebec491a523c74"
   },
   ".config/kilo/skills/graphify/references/extraction-spec.md": {
-    "mtime": 1781684635.1096144,
+    "mtime": 1781764097.9912133,
     "ast_hash": "24808b03abfeaf5f6435bb69c0125b2c",
-    "semantic_hash": ""
+    "semantic_hash": "24808b03abfeaf5f6435bb69c0125b2c"
   },
   ".config/kilo/skills/graphify/references/github-and-merge.md": {
-    "mtime": 1781684635.1101167,
+    "mtime": 1781764097.9917192,
     "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
-    "semantic_hash": ""
+    "semantic_hash": "cde13df085e4c492aeb7ba298a996d0d"
   },
   ".config/kilo/skills/graphify/references/hooks.md": {
-    "mtime": 1781684635.1106148,
+    "mtime": 1781764097.9922185,
     "ast_hash": "3f545db6ce646650bb9de588f5512a27",
-    "semantic_hash": ""
+    "semantic_hash": "3f545db6ce646650bb9de588f5512a27"
   },
   ".config/kilo/skills/graphify/references/query.md": {
-    "mtime": 1781684635.1111152,
-    "ast_hash": "c2a8e798674a81b02aa9975f43023819",
-    "semantic_hash": ""
+    "mtime": 1781764097.9927177,
+    "ast_hash": "7d1ff295a0e0aa1cc9a14e52c3a19202",
+    "semantic_hash": "7d1ff295a0e0aa1cc9a14e52c3a19202"
   },
   ".config/kilo/skills/graphify/references/transcribe.md": {
-    "mtime": 1781684635.1116138,
+    "mtime": 1781764097.9932177,
     "ast_hash": "70f6aa30d6211f3a2c7e9fc45479f50c",
-    "semantic_hash": ""
+    "semantic_hash": "70f6aa30d6211f3a2c7e9fc45479f50c"
   },
   ".config/kilo/skills/graphify/references/update.md": {
-    "mtime": 1781684635.1121144,
-    "ast_hash": "0dad167a95bdb389f02fecffb60b1bc8",
-    "semantic_hash": ""
+    "mtime": 1781764097.9937174,
+    "ast_hash": "0662e1a77b21d670132cd5855954bfff",
+    "semantic_hash": "0662e1a77b21d670132cd5855954bfff"
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1779177361.228684,
-    "ast_hash": "c5b76d86918b27cb37902a5878e704d1",
-    "semantic_hash": ""
+    "mtime": 1781702000.8976858,
+    "ast_hash": "08329ff45e207d49b38f0c28a73d3879",
+    "semantic_hash": "08329ff45e207d49b38f0c28a73d3879"
+  },
+  ".pi/skills/openspec-apply-change/SKILL.md": {
+    "mtime": 1781687924.2982845,
+    "ast_hash": "0c644086b9d1191f7639324aa9d90557",
+    "semantic_hash": "0c644086b9d1191f7639324aa9d90557"
+  },
+  ".pi/skills/openspec-archive-change/SKILL.md": {
+    "mtime": 1781687924.299781,
+    "ast_hash": "a853b3ce25149061a7f13f05b127350c",
+    "semantic_hash": "a853b3ce25149061a7f13f05b127350c"
+  },
+  ".pi/skills/openspec-bulk-archive-change/SKILL.md": {
+    "mtime": 1781687924.299781,
+    "ast_hash": "4c4243b11da830e2a11e06fb236397a7",
+    "semantic_hash": "4c4243b11da830e2a11e06fb236397a7"
+  },
+  ".pi/skills/openspec-continue-change/SKILL.md": {
+    "mtime": 1781687924.2977805,
+    "ast_hash": "2f94797a9d8e395b9beeba7ea9a43288",
+    "semantic_hash": "2f94797a9d8e395b9beeba7ea9a43288"
+  },
+  ".pi/skills/openspec-explore/SKILL.md": {
+    "mtime": 1781687924.2967803,
+    "ast_hash": "b50d65377c6c7fe4c9591e114ff77f5f",
+    "semantic_hash": "b50d65377c6c7fe4c9591e114ff77f5f"
+  },
+  ".pi/skills/openspec-ff-change/SKILL.md": {
+    "mtime": 1781687924.2987835,
+    "ast_hash": "472d58bb9fa8dc01f0a93956ef153f48",
+    "semantic_hash": "472d58bb9fa8dc01f0a93956ef153f48"
+  },
+  ".pi/skills/openspec-new-change/SKILL.md": {
+    "mtime": 1781687924.2972815,
+    "ast_hash": "a391aba5d8946da580904fe3782e190d",
+    "semantic_hash": "a391aba5d8946da580904fe3782e190d"
+  },
+  ".pi/skills/openspec-onboard/SKILL.md": {
+    "mtime": 1781687924.3002825,
+    "ast_hash": "230b8a8e316d76ffcc4f972ef8ea1425",
+    "semantic_hash": "230b8a8e316d76ffcc4f972ef8ea1425"
+  },
+  ".pi/skills/openspec-propose/SKILL.md": {
+    "mtime": 1781687924.301289,
+    "ast_hash": "40b0eb2c1f2d14397b5ad856cd9cbc23",
+    "semantic_hash": "40b0eb2c1f2d14397b5ad856cd9cbc23"
+  },
+  ".pi/skills/openspec-sync-specs/SKILL.md": {
+    "mtime": 1781687924.2992826,
+    "ast_hash": "211bc14ef7cb2d1e24b6b73e878d8509",
+    "semantic_hash": "211bc14ef7cb2d1e24b6b73e878d8509"
+  },
+  ".pi/skills/openspec-verify-change/SKILL.md": {
+    "mtime": 1781687924.3002825,
+    "ast_hash": "2baab6b815515578795441106d2d5abd",
+    "semantic_hash": "2baab6b815515578795441106d2d5abd"
   },
   "AGENTS.md": {
-    "mtime": 1781684747.9519565,
-    "ast_hash": "c421608b77a9c5ddf10891b9b2aadf37",
+    "mtime": 1781781828.8933368,
+    "ast_hash": "1c4cc0458fee884490f11bc332fc262e",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1781684811.7594166,
-    "ast_hash": "201db6f8409d4189b451cc18dd9f96e4",
-    "semantic_hash": ""
+    "mtime": 1781693324.0279202,
+    "ast_hash": "1e3d3cea13d7c2b5eac0fcd86462eeaf",
+    "semantic_hash": "1e3d3cea13d7c2b5eac0fcd86462eeaf"
   },
   "CMakeLists.txt": {
-    "mtime": 1779177361.4620588,
-    "ast_hash": "fae139bf491847c8173c05f70c9e9293",
-    "semantic_hash": ""
-  },
-  "CONCERNS.md": {
-    "mtime": 1779177361.462559,
-    "ast_hash": "c1b357b1328979d179b79c4c41a8a9bd",
+    "mtime": 1781823809.8218105,
+    "ast_hash": "44e8a071693ad1875d9cdf87ed44e2f3",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1779177361.462559,
-    "ast_hash": "4c287b26b3612794ce85d04e8aad6bc0",
-    "semantic_hash": ""
+    "mtime": 1781689639.7476656,
+    "ast_hash": "c8929d3f4b413f1632495b72fe84925c",
+    "semantic_hash": "c8929d3f4b413f1632495b72fe84925c"
   },
   "benchmarks/README.md": {
     "mtime": 1779177361.4700868,
     "ast_hash": "9d2024358782413b91b4b5263aea4ae6",
-    "semantic_hash": ""
+    "semantic_hash": "9d2024358782413b91b4b5263aea4ae6"
   },
   "docs/api-mainpage.md": {
     "mtime": 1779248747.318474,
     "ast_hash": "e92dcd8a54d9b47289f10027af6cb793",
-    "semantic_hash": ""
+    "semantic_hash": "e92dcd8a54d9b47289f10027af6cb793"
   },
   "docs/compatibility-evidence.md": {
     "mtime": 1779248731.5398386,
     "ast_hash": "18a57e2a48d8208cdbd106e0cb70b3f3",
-    "semantic_hash": ""
+    "semantic_hash": "18a57e2a48d8208cdbd106e0cb70b3f3"
   },
   "docs/coverage-audit-matrix.md": {
     "mtime": 1779248668.7815495,
     "ast_hash": "625eb67f4d1671945ed7e811ab372d40",
-    "semantic_hash": ""
+    "semantic_hash": "625eb67f4d1671945ed7e811ab372d40"
   },
   "docs/integration-examples.md": {
     "mtime": 1779248739.038786,
     "ast_hash": "c65cdf15039ede2df60e561fdad28029",
-    "semantic_hash": ""
+    "semantic_hash": "c65cdf15039ede2df60e561fdad28029"
   },
   "docs/public-api-reality-check.md": {
     "mtime": 1779258806.304091,
     "ast_hash": "9e3f2692c98bbff88db124654ddd9a91",
-    "semantic_hash": ""
+    "semantic_hash": "9e3f2692c98bbff88db124654ddd9a91"
   },
   "docs/target-format-guide.md": {
     "mtime": 1779177361.4720864,
     "ast_hash": "bdea9f97950b0c548227b93c67fd1c9c",
-    "semantic_hash": ""
+    "semantic_hash": "bdea9f97950b0c548227b93c67fd1c9c"
   },
   "docs/thread-safety.md": {
     "mtime": 1779177361.4720864,
     "ast_hash": "d741d2ffd19043e4529dd1a0dbc0ae38",
-    "semantic_hash": ""
+    "semantic_hash": "d741d2ffd19043e4529dd1a0dbc0ae38"
   },
   "openspec/config.yaml": {
     "mtime": 1779177361.5406473,
     "ast_hash": "63c26766698dd49488b53c274bfec0f9",
-    "semantic_hash": ""
+    "semantic_hash": "63c26766698dd49488b53c274bfec0f9"
   },
   "openspec/specs/allocation-error-translation/spec.md": {
     "mtime": 1779177361.5406473,
     "ast_hash": "f9a7009e648224470e5fb63d8e8d60d6",
-    "semantic_hash": ""
+    "semantic_hash": "f9a7009e648224470e5fb63d8e8d60d6"
   },
   "openspec/specs/archive-record-metadata-validation/spec.md": {
     "mtime": 1779177361.5411477,
     "ast_hash": "aba3a9ad7ef4c847d759a72c60be12bd",
-    "semantic_hash": ""
+    "semantic_hash": "aba3a9ad7ef4c847d759a72c60be12bd"
   },
   "openspec/specs/archive-writer-layering/spec.md": {
     "mtime": 1779177361.5411477,
     "ast_hash": "6266fe959fd6acd753520e04bd78e26b",
-    "semantic_hash": ""
+    "semantic_hash": "6266fe959fd6acd753520e04bd78e26b"
   },
   "openspec/specs/behavior-backed-policy-tests/spec.md": {
     "mtime": 1779177361.5416481,
     "ast_hash": "f41e4e57c68f235a5c23cf72c0d8a0ea",
-    "semantic_hash": ""
+    "semantic_hash": "f41e4e57c68f235a5c23cf72c0d8a0ea"
   },
   "openspec/specs/bulk-extraction-deduplication/spec.md": {
     "mtime": 1779177361.5421474,
     "ast_hash": "e1307f359f7808d18a35f053f95e1a75",
-    "semantic_hash": ""
+    "semantic_hash": "e1307f359f7808d18a35f053f95e1a75"
+  },
+  "openspec/specs/cli-archive-extraction/spec.md": {
+    "mtime": 1781690455.9606974,
+    "ast_hash": "9620bffd042c568aac583e3fc2f5dd06",
+    "semantic_hash": "9620bffd042c568aac583e3fc2f5dd06"
+  },
+  "openspec/specs/cli-archive-inspection/spec.md": {
+    "mtime": 1781690455.9611971,
+    "ast_hash": "0dae7491f2cbe751a507f4fb31df66ef",
+    "semantic_hash": "0dae7491f2cbe751a507f4fb31df66ef"
+  },
+  "openspec/specs/cli-archive-packing/spec.md": {
+    "mtime": 1781690455.9601972,
+    "ast_hash": "8d004fbf9c753e4d05ce712965695b41",
+    "semantic_hash": "8d004fbf9c753e4d05ce712965695b41"
+  },
+  "openspec/specs/cli-foundation/spec.md": {
+    "mtime": 1781690455.959197,
+    "ast_hash": "af3f3e1ef0df91acbe62862635a09fbb",
+    "semantic_hash": "af3f3e1ef0df91acbe62862635a09fbb"
   },
   "openspec/specs/compressed-extraction-memory-bounds/spec.md": {
     "mtime": 1779177361.5421474,
     "ast_hash": "4e5b002a641b2b25aa162401cd80f98c",
-    "semantic_hash": ""
+    "semantic_hash": "4e5b002a641b2b25aa162401cd80f98c"
   },
   "openspec/specs/dx10-snapshot-read-efficiency/spec.md": {
     "mtime": 1779177361.542647,
     "ast_hash": "1a8514abfbc846d198b2ba03cfdb538b",
-    "semantic_hash": ""
+    "semantic_hash": "1a8514abfbc846d198b2ba03cfdb538b"
   },
   "openspec/specs/dx10-snapshot-temp-directory-hardening/spec.md": {
     "mtime": 1779177361.542647,
     "ast_hash": "1b3e5d7a1d3abeb4f82598d48edbf05f",
-    "semantic_hash": ""
+    "semantic_hash": "1b3e5d7a1d3abeb4f82598d48edbf05f"
   },
   "openspec/specs/format-compatibility-constants/spec.md": {
     "mtime": 1779177361.5431478,
     "ast_hash": "6d1398cb8dc68f15c5f23ad0fdaabfdb",
-    "semantic_hash": ""
+    "semantic_hash": "6d1398cb8dc68f15c5f23ad0fdaabfdb"
   },
   "openspec/specs/public-documentation-stability/spec.md": {
     "mtime": 1779177361.5431478,
     "ast_hash": "5a658c9e178daf00cb48dcb890d48484",
-    "semantic_hash": ""
+    "semantic_hash": "5a658c9e178daf00cb48dcb890d48484"
   },
   "openspec/specs/shared-library-export-surface/spec.md": {
     "mtime": 1779177361.5436466,
     "ast_hash": "c7f7eac938ddb4fc7aba040ee5b40dc8",
-    "semantic_hash": ""
+    "semantic_hash": "c7f7eac938ddb4fc7aba040ee5b40dc8"
   },
   "openspec/specs/shared-parser-primitives/spec.md": {
     "mtime": 1779177361.5436466,
     "ast_hash": "580c74a32b5883e0e50763b3198d4b37",
-    "semantic_hash": ""
+    "semantic_hash": "580c74a32b5883e0e50763b3198d4b37"
   },
   "openspec/specs/shared-payload-extraction-helpers/spec.md": {
     "mtime": 1779177361.5441477,
     "ast_hash": "9f79eba103b7f2c45d8913f90c6bbeb5",
-    "semantic_hash": ""
+    "semantic_hash": "9f79eba103b7f2c45d8913f90c6bbeb5"
   },
   "openspec/specs/writer-bounded-source-reads/spec.md": {
     "mtime": 1779177361.5441477,
     "ast_hash": "84a9650841653d53a6a5fff5c3b679e4",
-    "semantic_hash": ""
+    "semantic_hash": "84a9650841653d53a6a5fff5c3b679e4"
   },
   "openspec/specs/writer-safe-publish/spec.md": {
     "mtime": 1779177361.5441477,
     "ast_hash": "46130520b03d6529f3e51bfebb8f3ff6",
-    "semantic_hash": ""
+    "semantic_hash": "46130520b03d6529f3e51bfebb8f3ff6"
   },
   "openspec/specs/writer-state-ownership/spec.md": {
     "mtime": 1779177361.544647,
     "ast_hash": "87f53f8dc8140e9e5fcce2892cf78955",
-    "semantic_hash": ""
+    "semantic_hash": "87f53f8dc8140e9e5fcce2892cf78955"
   },
   "tests/CMakeLists.txt": {
-    "mtime": 1779240778.9195888,
-    "ast_hash": "6ee5b1ab34a234a7c59d8b367487896e",
-    "semantic_hash": ""
+    "mtime": 1781754760.7109072,
+    "ast_hash": "a3a3f562bc31e87bbc04f0362fe91ffd",
+    "semantic_hash": "a3a3f562bc31e87bbc04f0362fe91ffd"
   },
   "tests/fixtures/README.md": {
     "mtime": 1779177361.565683,
     "ast_hash": "d844f75fe08e27475daa1acbd00c0f7f",
-    "semantic_hash": ""
+    "semantic_hash": "d844f75fe08e27475daa1acbd00c0f7f"
   },
   "tests/package-consumer/CMakeLists.txt": {
     "mtime": 1779177361.5826962,
     "ast_hash": "8da6206ba5ffe0bea7999f264b6ebc84",
+    "semantic_hash": "8da6206ba5ffe0bea7999f264b6ebc84"
+  },
+  "Format-Cpp.ps1": {
+    "mtime": 1781754017.3777246,
+    "ast_hash": "7dedc0327dd29588b752812315f22b0d",
+    "semantic_hash": "7dedc0327dd29588b752812315f22b0d"
+  },
+  "tests/unit/test_source_root.hpp": {
+    "mtime": 1781755110.780276,
+    "ast_hash": "32d18ad5a4430a9b4d9ce84d74e17a27",
+    "semantic_hash": "32d18ad5a4430a9b4d9ce84d74e17a27"
+  },
+  "openspec/specs/cli-parallel-execution/spec.md": {
+    "mtime": 1781775883.6949103,
+    "ast_hash": "f61092f9e7cf0e17e38382d7af06631e",
+    "semantic_hash": "f61092f9e7cf0e17e38382d7af06631e"
+  },
+  "openspec/changes/cli-argparse-refactor/.openspec.yaml": {
+    "mtime": 1781780945.7294848,
+    "ast_hash": "b7b869129b3342cbedebad25d6f39a1e",
     "semantic_hash": ""
   },
-  "D:\\repos\\libbsa\\CMakePresets.json": {
-    "mtime": 1779177361.4620588,
-    "ast_hash": "a25340f5d0f73242473292236f7ab6a4",
-    "semantic_hash": "a25340f5d0f73242473292236f7ab6a4"
-  },
-  "D:\\repos\\libbsa\\benchmarks\\libbsa_benchmarks.cpp": {
-    "mtime": 1779177361.4700868,
-    "ast_hash": "f777f2a6c3d2e0cb0eaea7648c0b039a",
-    "semantic_hash": "f777f2a6c3d2e0cb0eaea7648c0b039a"
-  },
-  "D:\\repos\\libbsa\\include\\libbsa\\archive.hpp": {
-    "mtime": 1779177361.5126202,
-    "ast_hash": "ffd1e71b5e6074b373fd62eaa2befbc4",
-    "semantic_hash": "ffd1e71b5e6074b373fd62eaa2befbc4"
-  },
-  "D:\\repos\\libbsa\\include\\libbsa\\export.hpp": {
-    "mtime": 1779177361.5131202,
-    "ast_hash": "a478ddca3e5dc88f56a719c4ef6f4a76",
-    "semantic_hash": "a478ddca3e5dc88f56a719c4ef6f4a76"
-  },
-  "D:\\repos\\libbsa\\include\\libbsa\\libbsa.hpp": {
-    "mtime": 1779177361.5131202,
-    "ast_hash": "0f1477e13645a66955a8f010dcd94699",
-    "semantic_hash": "0f1477e13645a66955a8f010dcd94699"
-  },
-  "D:\\repos\\libbsa\\include\\libbsa\\result.hpp": {
-    "mtime": 1779177361.5131202,
-    "ast_hash": "10016220a6d039aa5f068472605de52e",
-    "semantic_hash": "10016220a6d039aa5f068472605de52e"
-  },
-  "D:\\repos\\libbsa\\include\\libbsa\\validation.hpp": {
-    "mtime": 1779177361.51362,
-    "ast_hash": "7d6562c95bf1723cb141cb168fadd1c4",
-    "semantic_hash": "7d6562c95bf1723cb141cb168fadd1c4"
-  },
-  "D:\\repos\\libbsa\\include\\libbsa\\version.hpp": {
-    "mtime": 1779177361.51362,
-    "ast_hash": "80c8dad5a148b255301b1e6b26fe3d12",
-    "semantic_hash": "80c8dad5a148b255301b1e6b26fe3d12"
-  },
-  "D:\\repos\\libbsa\\include\\libbsa\\writer.hpp": {
-    "mtime": 1779177361.51412,
-    "ast_hash": "c85b7173a9d26bb5b5f7d270cfa78c62",
-    "semantic_hash": "c85b7173a9d26bb5b5f7d270cfa78c62"
-  },
-  "D:\\repos\\libbsa\\src\\archive.cpp": {
-    "mtime": 1779177361.544647,
-    "ast_hash": "a870b198761b0acd657f3cfce66d1b88",
-    "semantic_hash": "a870b198761b0acd657f3cfce66d1b88"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\archive_path.cpp": {
-    "mtime": 1779177361.544647,
-    "ast_hash": "e121c22b89af1f76d4cad60819ae6d61",
-    "semantic_hash": "e121c22b89af1f76d4cad60819ae6d61"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\archive_path.hpp": {
-    "mtime": 1779177361.544647,
-    "ast_hash": "13345948982d478a8100785dcc3fd472",
-    "semantic_hash": "13345948982d478a8100785dcc3fd472"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\atomic_file_ops.hpp": {
-    "mtime": 1779177361.54565,
-    "ast_hash": "41e4e39df7bf613349542d55c0bff281",
-    "semantic_hash": "41e4e39df7bf613349542d55c0bff281"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\bethesda_hash.cpp": {
-    "mtime": 1779177361.54565,
-    "ast_hash": "4859d67d44a4e0244783f04ce7cc377d",
-    "semantic_hash": "4859d67d44a4e0244783f04ce7cc377d"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\bethesda_hash.hpp": {
-    "mtime": 1779177361.54565,
-    "ast_hash": "ac0d58c16d82bb0a3b8a2fe9539da385",
-    "semantic_hash": "ac0d58c16d82bb0a3b8a2fe9539da385"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\binary_io.cpp": {
-    "mtime": 1779177361.5461545,
-    "ast_hash": "41df2238a2a92be8f5157472f267f5c6",
-    "semantic_hash": "41df2238a2a92be8f5157472f267f5c6"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\binary_io.hpp": {
-    "mtime": 1779177361.5461545,
-    "ast_hash": "63d810fd17eb7dfada394b51312abd58",
-    "semantic_hash": "63d810fd17eb7dfada394b51312abd58"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\byte_vector.hpp": {
-    "mtime": 1779177361.5461545,
-    "ast_hash": "d0d496a417b033e83e9cd368caefa865",
-    "semantic_hash": "d0d496a417b033e83e9cd368caefa865"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\compression_router.cpp": {
-    "mtime": 1779177361.5466547,
-    "ast_hash": "d3e5a9b93db502078d320969fdd9b013",
-    "semantic_hash": "d3e5a9b93db502078d320969fdd9b013"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\compression_router.hpp": {
-    "mtime": 1779177361.5466547,
-    "ast_hash": "9bfd249cff7019694c030072128efe1e",
-    "semantic_hash": "9bfd249cff7019694c030072128efe1e"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\deflate_codec.cpp": {
-    "mtime": 1779177361.5466547,
-    "ast_hash": "df2da844791737805bdd18dcb77644b7",
-    "semantic_hash": "df2da844791737805bdd18dcb77644b7"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\deflate_codec.hpp": {
-    "mtime": 1779177361.5471547,
-    "ast_hash": "1f4d9b99a5ef1e819564d1d4017fa78f",
-    "semantic_hash": "1f4d9b99a5ef1e819564d1d4017fa78f"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\host_file.cpp": {
-    "mtime": 1779177361.5471547,
-    "ast_hash": "8c3eae5e6bf34e7a9926d51605e52395",
-    "semantic_hash": "8c3eae5e6bf34e7a9926d51605e52395"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\host_file.hpp": {
-    "mtime": 1779177361.5471547,
-    "ast_hash": "b8c67cc2c45e2f9f4d56b8ea626aeb5f",
-    "semantic_hash": "b8c67cc2c45e2f9f4d56b8ea626aeb5f"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\host_file_path.cpp": {
-    "mtime": 1779177361.5476556,
-    "ast_hash": "05fa1735ae771f34c3ccfad79f212129",
-    "semantic_hash": "05fa1735ae771f34c3ccfad79f212129"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\host_file_path.hpp": {
-    "mtime": 1779177361.5476556,
-    "ast_hash": "5e234fe04cc89c6385dbfe819c7bb40a",
-    "semantic_hash": "5e234fe04cc89c6385dbfe819c7bb40a"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\lz4_block_codec.cpp": {
-    "mtime": 1779177361.5476556,
-    "ast_hash": "d5be644d14cece3dbd8499804883a93f",
-    "semantic_hash": "d5be644d14cece3dbd8499804883a93f"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\lz4_block_codec.hpp": {
-    "mtime": 1779177361.5481553,
-    "ast_hash": "d5986cbe5034595b8ac0ef1bf0b82149",
-    "semantic_hash": "d5986cbe5034595b8ac0ef1bf0b82149"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\lz4_frame_codec.cpp": {
-    "mtime": 1779177361.5481553,
-    "ast_hash": "fcbb2c93ed1557467dadff548789691d",
-    "semantic_hash": "fcbb2c93ed1557467dadff548789691d"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\lz4_frame_codec.hpp": {
-    "mtime": 1779177361.5486543,
-    "ast_hash": "8c14f4b22c84e4309149c92cd8406fdc",
-    "semantic_hash": "8c14f4b22c84e4309149c92cd8406fdc"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\parallel_work.cpp": {
-    "mtime": 1779177361.5486543,
-    "ast_hash": "8d6e97b9255381285236030de7d89f71",
-    "semantic_hash": "8d6e97b9255381285236030de7d89f71"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\parallel_work.hpp": {
-    "mtime": 1779177361.5486543,
-    "ast_hash": "3ec05e239a6d065143fcad503a6cbb96",
-    "semantic_hash": "3ec05e239a6d065143fcad503a6cbb96"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\parser_primitives.cpp": {
-    "mtime": 1779177361.5491548,
-    "ast_hash": "4fd41f5d59c07c6f108409826525655d",
-    "semantic_hash": "4fd41f5d59c07c6f108409826525655d"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\parser_primitives.hpp": {
-    "mtime": 1779177361.5491548,
-    "ast_hash": "6d9f86037af179929f6fd0faa5cd74ff",
-    "semantic_hash": "6d9f86037af179929f6fd0faa5cd74ff"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\payload_stream.cpp": {
-    "mtime": 1779177361.5496542,
-    "ast_hash": "f21a7fb668fb6987bfe5fa8a075069af",
-    "semantic_hash": "f21a7fb668fb6987bfe5fa8a075069af"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\payload_stream.hpp": {
-    "mtime": 1779177361.5496542,
-    "ast_hash": "33e4d60c96b5401ce0f087d3221be5a5",
-    "semantic_hash": "33e4d60c96b5401ce0f087d3221be5a5"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\writer_publish.cpp": {
-    "mtime": 1779177361.5496542,
-    "ast_hash": "ad47b8c0e1a6df7b2efec5bebaa17cf9",
-    "semantic_hash": "ad47b8c0e1a6df7b2efec5bebaa17cf9"
-  },
-  "D:\\repos\\libbsa\\src\\detail\\writer_publish.hpp": {
-    "mtime": 1779177361.5501542,
-    "ast_hash": "432e18e14218c31c558819d6857d3574",
-    "semantic_hash": "432e18e14218c31c558819d6857d3574"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_constants.hpp": {
-    "mtime": 1779177361.5501542,
-    "ast_hash": "5c4725ea685e85c2d79d8d735a9e57a3",
-    "semantic_hash": "5c4725ea685e85c2d79d8d735a9e57a3"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_chunk_assembler.cpp": {
-    "mtime": 1779177361.5506546,
-    "ast_hash": "0aa6d948488e657cc4cc01ef9391e37a",
-    "semantic_hash": "0aa6d948488e657cc4cc01ef9391e37a"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_chunk_assembler.hpp": {
-    "mtime": 1779177361.5506546,
-    "ast_hash": "ee17318b5880c000d9a3a9c5cdf9f5a8",
-    "semantic_hash": "ee17318b5880c000d9a3a9c5cdf9f5a8"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_layout.cpp": {
-    "mtime": 1779177361.5511544,
-    "ast_hash": "ab45e640638ef10ea91c2a7f54308565",
-    "semantic_hash": "ab45e640638ef10ea91c2a7f54308565"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_layout.hpp": {
-    "mtime": 1779177361.5511544,
-    "ast_hash": "b6c196447d31af705ff71528907e0ffa",
-    "semantic_hash": "b6c196447d31af705ff71528907e0ffa"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_names.cpp": {
-    "mtime": 1779177361.551654,
-    "ast_hash": "6abc86696491228f4830c96b264b954a",
-    "semantic_hash": "6abc86696491228f4830c96b264b954a"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_names.hpp": {
-    "mtime": 1779177361.5521538,
-    "ast_hash": "592747b42c3e7fe9473be9cb66a14038",
-    "semantic_hash": "592747b42c3e7fe9473be9cb66a14038"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_parser.cpp": {
-    "mtime": 1779177361.5521538,
-    "ast_hash": "87fc8c42c8f42cafe22fe571f04ddf52",
-    "semantic_hash": "87fc8c42c8f42cafe22fe571f04ddf52"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_parser.hpp": {
-    "mtime": 1779177361.552655,
-    "ast_hash": "bdbbf91a91de80b3ad4236407c88573b",
-    "semantic_hash": "bdbbf91a91de80b3ad4236407c88573b"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_prepare.cpp": {
-    "mtime": 1779177361.552655,
-    "ast_hash": "7bf5b29cc6442e909ea4a335b04ccd00",
-    "semantic_hash": "7bf5b29cc6442e909ea4a335b04ccd00"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_prepare.hpp": {
-    "mtime": 1779177361.552655,
-    "ast_hash": "74dd0c98a199b93835f76b7c0760f1ca",
-    "semantic_hash": "74dd0c98a199b93835f76b7c0760f1ca"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_reader.cpp": {
-    "mtime": 1779177361.5531545,
-    "ast_hash": "a5829283c4844e904d52daf5992353bf",
-    "semantic_hash": "a5829283c4844e904d52daf5992353bf"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_reader.hpp": {
-    "mtime": 1779177361.5531545,
-    "ast_hash": "ebf810c5febab3d7e3ed9300aac443f6",
-    "semantic_hash": "ebf810c5febab3d7e3ed9300aac443f6"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_records.cpp": {
-    "mtime": 1779177361.553654,
-    "ast_hash": "7f9c419300e972e8778d6669f5eb2f2e",
-    "semantic_hash": "7f9c419300e972e8778d6669f5eb2f2e"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_records.hpp": {
-    "mtime": 1779177361.553654,
-    "ast_hash": "74aa9106e5da0d9db219ae823264c891",
-    "semantic_hash": "74aa9106e5da0d9db219ae823264c891"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_serialize.cpp": {
-    "mtime": 1779177361.553654,
-    "ast_hash": "b345b2e5f3a5bff3944990f761b15364",
-    "semantic_hash": "b345b2e5f3a5bff3944990f761b15364"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_serialize.hpp": {
-    "mtime": 1779177361.5541544,
-    "ast_hash": "338865dc2b636ed03841411c862e86da",
-    "semantic_hash": "338865dc2b636ed03841411c862e86da"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_snapshot_builder.cpp": {
-    "mtime": 1779177361.5541544,
-    "ast_hash": "f27723a707559ae37b8d1a61756e71de",
-    "semantic_hash": "f27723a707559ae37b8d1a61756e71de"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_snapshot_builder.hpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "0ad40d1163a0d3b0aa2ef7df17d50f0e",
-    "semantic_hash": "0ad40d1163a0d3b0aa2ef7df17d50f0e"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_writer.cpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "46efa4513db5168a6f4e39b60ddd5cff",
-    "semantic_hash": "46efa4513db5168a6f4e39b60ddd5cff"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_dx10_writer.hpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "ad4b40706e62840d2258b374b4e961eb",
-    "semantic_hash": "ad4b40706e62840d2258b374b4e961eb"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_format_detector.cpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "0b97482c4569fbcbc71f08247b4faa5b",
-    "semantic_hash": "0b97482c4569fbcbc71f08247b4faa5b"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_format_detector.hpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "47c8e79990e38dafc789ff0eb02871f4",
-    "semantic_hash": "47c8e79990e38dafc789ff0eb02871f4"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_layout.cpp": {
-    "mtime": 1779177361.5546544,
-    "ast_hash": "4d458eb811b2a6180784147b674b9cf4",
-    "semantic_hash": "4d458eb811b2a6180784147b674b9cf4"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_layout.hpp": {
-    "mtime": 1779177361.5556579,
-    "ast_hash": "88f80219bc73e25ea0928bfeb4ad034c",
-    "semantic_hash": "88f80219bc73e25ea0928bfeb4ad034c"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_parser.cpp": {
-    "mtime": 1779177361.5556579,
-    "ast_hash": "564765e5be9d70da1c6b4c93e3274b62",
-    "semantic_hash": "564765e5be9d70da1c6b4c93e3274b62"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_parser.hpp": {
-    "mtime": 1779177361.5556579,
-    "ast_hash": "f22bff159ee1d8c9408828ff8caa794d",
-    "semantic_hash": "f22bff159ee1d8c9408828ff8caa794d"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_prepare.cpp": {
-    "mtime": 1779177361.5561638,
-    "ast_hash": "1fb6326c7b6861e04aa515e8d5899d04",
-    "semantic_hash": "1fb6326c7b6861e04aa515e8d5899d04"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_prepare.hpp": {
-    "mtime": 1779177361.5561638,
-    "ast_hash": "4fc354bea6b6e7cccf3619b63dac3b4f",
-    "semantic_hash": "4fc354bea6b6e7cccf3619b63dac3b4f"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_reader.cpp": {
-    "mtime": 1779177361.5561638,
-    "ast_hash": "cc48d99d25a99ca9f1ed68f9c3ce21d7",
-    "semantic_hash": "cc48d99d25a99ca9f1ed68f9c3ce21d7"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_reader.hpp": {
-    "mtime": 1779177361.5566618,
-    "ast_hash": "2f62548820382cd0e2f63ee4cf318765",
-    "semantic_hash": "2f62548820382cd0e2f63ee4cf318765"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_serialize.cpp": {
-    "mtime": 1779177361.5566618,
-    "ast_hash": "5fa36673f9e7dbbe28ffe9d4c150ae51",
-    "semantic_hash": "5fa36673f9e7dbbe28ffe9d4c150ae51"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_serialize.hpp": {
-    "mtime": 1779177361.5571618,
-    "ast_hash": "abec3fd978230b3e556616fc6f3274be",
-    "semantic_hash": "abec3fd978230b3e556616fc6f3274be"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_writer.cpp": {
-    "mtime": 1779177361.5571618,
-    "ast_hash": "c52b93c8cf475723b98b4a18fb7590cc",
-    "semantic_hash": "c52b93c8cf475723b98b4a18fb7590cc"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\ba2\\ba2_gnrl_writer.hpp": {
-    "mtime": 1779177361.5571618,
-    "ast_hash": "18c83fa51930bc5ab8614a8294bd1bc0",
-    "semantic_hash": "18c83fa51930bc5ab8614a8294bd1bc0"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\bsa_format_detector.cpp": {
-    "mtime": 1779177361.5576637,
-    "ast_hash": "9bad6768bb4344aceca4859b7691f404",
-    "semantic_hash": "9bad6768bb4344aceca4859b7691f404"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\bsa_format_detector.hpp": {
-    "mtime": 1779177361.5576637,
-    "ast_hash": "e0db3c2fb1edb3ce970d5d89b24668c5",
-    "semantic_hash": "e0db3c2fb1edb3ce970d5d89b24668c5"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_layout.cpp": {
-    "mtime": 1779177361.5581622,
-    "ast_hash": "28bf36f74870a068aece0f36389e05ed",
-    "semantic_hash": "28bf36f74870a068aece0f36389e05ed"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_layout.hpp": {
-    "mtime": 1779177361.5581622,
-    "ast_hash": "837f2a301f4a25df9d8ef12a9c416d6d",
-    "semantic_hash": "837f2a301f4a25df9d8ef12a9c416d6d"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_parser.cpp": {
-    "mtime": 1779177361.5586622,
-    "ast_hash": "343e9d65f2630d798a9f438a1d9a82a8",
-    "semantic_hash": "343e9d65f2630d798a9f438a1d9a82a8"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_parser.hpp": {
-    "mtime": 1779177361.5586622,
-    "ast_hash": "6b94e9a7575a22d74334bbad83274201",
-    "semantic_hash": "6b94e9a7575a22d74334bbad83274201"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_prepare.cpp": {
-    "mtime": 1779177361.559162,
-    "ast_hash": "e5b15f7f2e1d99e5d29311c3479553c5",
-    "semantic_hash": "e5b15f7f2e1d99e5d29311c3479553c5"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_prepare.hpp": {
-    "mtime": 1779177361.559162,
-    "ast_hash": "0f8ff4cc8be2ecac9e2bfe78ff68f0a4",
-    "semantic_hash": "0f8ff4cc8be2ecac9e2bfe78ff68f0a4"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_reader.cpp": {
-    "mtime": 1779177361.559662,
-    "ast_hash": "7d0601617167c93d858794d485832efe",
-    "semantic_hash": "7d0601617167c93d858794d485832efe"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_reader.hpp": {
-    "mtime": 1779177361.559662,
-    "ast_hash": "0114420d01c026bb4192cafd8f5e6bed",
-    "semantic_hash": "0114420d01c026bb4192cafd8f5e6bed"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_serialize.cpp": {
-    "mtime": 1779177361.559662,
-    "ast_hash": "d958a8c44bf5186075a3a5e0030bee00",
-    "semantic_hash": "d958a8c44bf5186075a3a5e0030bee00"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_serialize.hpp": {
-    "mtime": 1779177361.5601633,
-    "ast_hash": "32beb377d1163b57290dc39af3046edc",
-    "semantic_hash": "32beb377d1163b57290dc39af3046edc"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_writer.cpp": {
-    "mtime": 1779177361.5601633,
-    "ast_hash": "d2384b99508651875e2a0288dda07801",
-    "semantic_hash": "d2384b99508651875e2a0288dda07801"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes3_bsa_writer.hpp": {
-    "mtime": 1779177361.5601633,
-    "ast_hash": "ba5935a5eb751fd22e5c256487528feb",
-    "semantic_hash": "ba5935a5eb751fd22e5c256487528feb"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_constants.hpp": {
-    "mtime": 1779177361.560662,
-    "ast_hash": "af6af27245d085f8b95d20c0141c12b2",
-    "semantic_hash": "af6af27245d085f8b95d20c0141c12b2"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_layout.cpp": {
-    "mtime": 1779177361.560662,
-    "ast_hash": "9b0afb3eea8737e46eb251e4bc6f0c09",
-    "semantic_hash": "9b0afb3eea8737e46eb251e4bc6f0c09"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_layout.hpp": {
-    "mtime": 1779177361.5611622,
-    "ast_hash": "54c251808d0a275a41a43c6069ed8d75",
-    "semantic_hash": "54c251808d0a275a41a43c6069ed8d75"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_parser.cpp": {
-    "mtime": 1779177361.5611622,
-    "ast_hash": "67200627a46e1fd7a63a5f45c6eb41bf",
-    "semantic_hash": "67200627a46e1fd7a63a5f45c6eb41bf"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_parser.hpp": {
-    "mtime": 1779177361.5611622,
-    "ast_hash": "b9e5ef0761f3a5f1518ac0beb64bef40",
-    "semantic_hash": "b9e5ef0761f3a5f1518ac0beb64bef40"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_payload_descriptor.cpp": {
-    "mtime": 1779177361.561663,
-    "ast_hash": "7839cde61f41c61fa7591b05dad3cf25",
-    "semantic_hash": "7839cde61f41c61fa7591b05dad3cf25"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_payload_descriptor.hpp": {
-    "mtime": 1779177361.561663,
-    "ast_hash": "f1ead52638bb2da2c7ba50c80035ddf7",
-    "semantic_hash": "f1ead52638bb2da2c7ba50c80035ddf7"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_prepare.cpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "1310b777009233996ad9fd72b39af21c",
-    "semantic_hash": "1310b777009233996ad9fd72b39af21c"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_prepare.hpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "e448771f374ecd80ba9f2ff860ff5324",
-    "semantic_hash": "e448771f374ecd80ba9f2ff860ff5324"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_reader.cpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "bbb94117bbf695f82162b0f892543653",
-    "semantic_hash": "bbb94117bbf695f82162b0f892543653"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_reader.hpp": {
-    "mtime": 1779177361.5621622,
-    "ast_hash": "bcdcc620552f0b1aae3b303aaf9fa3d7",
-    "semantic_hash": "bcdcc620552f0b1aae3b303aaf9fa3d7"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_serialize.cpp": {
-    "mtime": 1779177361.5626624,
-    "ast_hash": "5bc0a46924db10b83a34922c7a847ebb",
-    "semantic_hash": "5bc0a46924db10b83a34922c7a847ebb"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_serialize.hpp": {
-    "mtime": 1779177361.5626624,
-    "ast_hash": "1138454c1ee4663413717b0015c97bfc",
-    "semantic_hash": "1138454c1ee4663413717b0015c97bfc"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_table.cpp": {
-    "mtime": 1779177361.5631638,
-    "ast_hash": "177807c69584519e392f2a10ab8985bb",
-    "semantic_hash": "177807c69584519e392f2a10ab8985bb"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_table.hpp": {
-    "mtime": 1779177361.5631638,
-    "ast_hash": "441ebc32a53538262c960ac0eb7a8621",
-    "semantic_hash": "441ebc32a53538262c960ac0eb7a8621"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_writer.cpp": {
-    "mtime": 1779177361.5631638,
-    "ast_hash": "f10a64ee2ad592fc48f718226b9a45d2",
-    "semantic_hash": "f10a64ee2ad592fc48f718226b9a45d2"
-  },
-  "D:\\repos\\libbsa\\src\\formats\\bsa\\tes4_bsa_writer.hpp": {
-    "mtime": 1779177361.5636632,
-    "ast_hash": "f7dd67f27902dbf01bf6218a5883c68c",
-    "semantic_hash": "f7dd67f27902dbf01bf6218a5883c68c"
-  },
-  "D:\\repos\\libbsa\\src\\libbsa.cpp": {
-    "mtime": 1779177361.5636632,
-    "ast_hash": "a804e58ac27e122d4ed2ed2d8ac91262",
-    "semantic_hash": "a804e58ac27e122d4ed2ed2d8ac91262"
-  },
-  "D:\\repos\\libbsa\\src\\texture\\dds_layout.cpp": {
-    "mtime": 1779177361.5636632,
-    "ast_hash": "2856052593ccfeaf0b400c6b75d5beec",
-    "semantic_hash": "2856052593ccfeaf0b400c6b75d5beec"
-  },
-  "D:\\repos\\libbsa\\src\\texture\\dds_layout.hpp": {
-    "mtime": 1779177361.5636632,
-    "ast_hash": "222ee38dbb6f5500eca3609345b6a011",
-    "semantic_hash": "222ee38dbb6f5500eca3609345b6a011"
-  },
-  "D:\\repos\\libbsa\\src\\texture\\directxtex_analyzer.cpp": {
-    "mtime": 1779177361.5646667,
-    "ast_hash": "b8a5491851995f6f91740236ab8b1fbd",
-    "semantic_hash": "b8a5491851995f6f91740236ab8b1fbd"
-  },
-  "D:\\repos\\libbsa\\src\\texture\\directxtex_analyzer.hpp": {
-    "mtime": 1779177361.5646667,
-    "ast_hash": "4773c31751fc4334a7fa79a04782e3c4",
-    "semantic_hash": "4773c31751fc4334a7fa79a04782e3c4"
-  },
-  "D:\\repos\\libbsa\\src\\validation.cpp": {
-    "mtime": 1779177361.5646667,
-    "ast_hash": "8e4d04be50b348d40116a0796f31bcd2",
-    "semantic_hash": "8e4d04be50b348d40116a0796f31bcd2"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_dx10_fo4_manifest.json": {
-    "mtime": 1779261973.6912448,
-    "ast_hash": "63458804e57bccef689051cf0748f024",
-    "semantic_hash": "63458804e57bccef689051cf0748f024"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_dx10_malformed_manifest.json": {
-    "mtime": 1779261973.6962516,
-    "ast_hash": "dd863fb753280d5bf74ad5cac0619bf9",
-    "semantic_hash": "dd863fb753280d5bf74ad5cac0619bf9"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_dx10_sfv3_manifest.json": {
-    "mtime": 1779261973.692245,
-    "ast_hash": "905922021b773954086d09a1db62eab9",
-    "semantic_hash": "905922021b773954086d09a1db62eab9"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_gnrl_fo4_manifest.json": {
-    "mtime": 1779261972.4484286,
-    "ast_hash": "9634e52ab4e1828b0f77723fa22bcf44",
-    "semantic_hash": "9634e52ab4e1828b0f77723fa22bcf44"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_gnrl_malformed_manifest.json": {
-    "mtime": 1779261972.4529302,
-    "ast_hash": "9e5c564bcef8942dfe15d47c41f13bfc",
-    "semantic_hash": "9e5c564bcef8942dfe15d47c41f13bfc"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_gnrl_sfv2_manifest.json": {
-    "mtime": 1779261972.4489293,
-    "ast_hash": "7a051f08ca5577e8e3b5a004beadfd12",
-    "semantic_hash": "7a051f08ca5577e8e3b5a004beadfd12"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\ba2_gnrl_sfv3_manifest.json": {
-    "mtime": 1779261972.4499292,
-    "ast_hash": "70c22b4666f03abdb6bd596ce4aebe25",
-    "semantic_hash": "70c22b4666f03abdb6bd596ce4aebe25"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\malformed_manifest.json": {
-    "mtime": 1779177361.5721874,
-    "ast_hash": "24c6b3e83596cef64aa1c53b1734c6d3",
-    "semantic_hash": "24c6b3e83596cef64aa1c53b1734c6d3"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes3_malformed_manifest.json": {
-    "mtime": 1779261969.0677125,
-    "ast_hash": "f3a90861acccbfd4c63ce41adce03da4",
-    "semantic_hash": "f3a90861acccbfd4c63ce41adce03da4"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes3_success_manifest.json": {
-    "mtime": 1779261969.0642054,
-    "ast_hash": "7962b22c6a953f0a28c20f112068a2b8",
-    "semantic_hash": "7962b22c6a953f0a28c20f112068a2b8"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes3_writer_canonical_manifest.json": {
-    "mtime": 1779261970.1498535,
-    "ast_hash": "f80ebf3d791fe07b087e6a3585bf2619",
-    "semantic_hash": "f80ebf3d791fe07b087e6a3585bf2619"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes4_v103_manifest.json": {
-    "mtime": 1779261971.2925792,
-    "ast_hash": "54d0909fe669c0f8b3005dbf5a74a059",
-    "semantic_hash": "54d0909fe669c0f8b3005dbf5a74a059"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes4_v104_manifest.json": {
-    "mtime": 1779261971.293079,
-    "ast_hash": "1e2db449cf7e49bef0e674d1256719cc",
-    "semantic_hash": "1e2db449cf7e49bef0e674d1256719cc"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\archives\\tes4_v105_manifest.json": {
-    "mtime": 1779261971.2940817,
-    "ast_hash": "82dc59cf6cf0fe1053eb72f7b081ac21",
-    "semantic_hash": "82dc59cf6cf0fe1053eb72f7b081ac21"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\compatibility_matrix.json": {
-    "mtime": 1779177361.5766964,
-    "ast_hash": "3fabad65014f58d9f7eda00640fdd6b7",
-    "semantic_hash": "3fabad65014f58d9f7eda00640fdd6b7"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_ba2_dx10_fixtures.cpp": {
-    "mtime": 1779177361.5766964,
-    "ast_hash": "1935664ce1c809ea17edddbd94afaa1c",
-    "semantic_hash": "1935664ce1c809ea17edddbd94afaa1c"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_ba2_gnrl_fixtures.cpp": {
-    "mtime": 1779177361.577196,
-    "ast_hash": "7bf7f3a18ac7b59d520abd348c79d5a7",
-    "semantic_hash": "7bf7f3a18ac7b59d520abd348c79d5a7"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_tes3_bsa_fixtures.cpp": {
-    "mtime": 1779177361.577196,
-    "ast_hash": "35fe9175b6d3fd8826a6a548178a44c3",
-    "semantic_hash": "35fe9175b6d3fd8826a6a548178a44c3"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_tes3_bsa_writer_fixtures.cpp": {
-    "mtime": 1779177361.577696,
-    "ast_hash": "6874521e6ce1e23fd750bf05fd0f4f4c",
-    "semantic_hash": "6874521e6ce1e23fd750bf05fd0f4f4c"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\generate_tes4_bsa_fixtures.cpp": {
-    "mtime": 1779177361.5781958,
-    "ast_hash": "c5b839423fae96e1015f0f8106a3fad1",
-    "semantic_hash": "c5b839423fae96e1015f0f8106a3fad1"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\source\\ba2_dx10_writer_sources_manifest.json": {
-    "mtime": 1779261973.7052588,
-    "ast_hash": "3f836bd63abc899bf9f3de1ae3e588fc",
-    "semantic_hash": "3f836bd63abc899bf9f3de1ae3e588fc"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\generated\\validate_fixture_manifests.py": {
-    "mtime": 1779177361.5821962,
-    "ast_hash": "e3266e973a3cd7028c20273b32e52860",
-    "semantic_hash": "e3266e973a3cd7028c20273b32e52860"
-  },
-  "D:\\repos\\libbsa\\tests\\package-consumer\\main.cpp": {
-    "mtime": 1779248425.5015626,
-    "ast_hash": "af9287c5daf969b345ffa6a9ad146092",
-    "semantic_hash": "af9287c5daf969b345ffa6a9ad146092"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\archive_path_tests.cpp": {
-    "mtime": 1779177361.5836961,
-    "ast_hash": "fc069c07ca86adcf821564d9cfb3427f",
-    "semantic_hash": "fc069c07ca86adcf821564d9cfb3427f"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\archive_reader_dispatch_policy_tests.cpp": {
-    "mtime": 1779177361.5836961,
-    "ast_hash": "44208d2b58335fd209ba0118d60f6ea1",
-    "semantic_hash": "44208d2b58335fd209ba0118d60f6ea1"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\archive_reader_dispatch_tests.cpp": {
-    "mtime": 1779177361.5836961,
-    "ast_hash": "34010e1c10b03f12aa10a66aefd1e318",
-    "semantic_hash": "34010e1c10b03f12aa10a66aefd1e318"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\archive_reader_tests.cpp": {
-    "mtime": 1779177361.584196,
-    "ast_hash": "ea034484873f00f92cee08e0b504489f",
-    "semantic_hash": "ea034484873f00f92cee08e0b504489f"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_extraction_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "9b095ca8002f2fd55cb4bfe44c9211d0",
-    "semantic_hash": "9b095ca8002f2fd55cb4bfe44c9211d0"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_malformed_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "fb5e38c8d7937e5a53632830c0e4fdf0",
-    "semantic_hash": "fb5e38c8d7937e5a53632830c0e4fdf0"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_metadata_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "b75f0a46ad563540d89613e2a917ee52",
-    "semantic_hash": "b75f0a46ad563540d89613e2a917ee52"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_parser_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "3754b2e7d20d3d9f5022dfa4dc353dcc",
-    "semantic_hash": "3754b2e7d20d3d9f5022dfa4dc353dcc"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_preparer_seam_tests.cpp": {
-    "mtime": 1779177361.5846965,
-    "ast_hash": "4f855c19ad6d595217be7a57efd3aa82",
-    "semantic_hash": "4f855c19ad6d595217be7a57efd3aa82"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_dx10_writer_tests.cpp": {
-    "mtime": 1779177361.5856993,
-    "ast_hash": "8851781afab1d98bef981e7bf789d59a",
-    "semantic_hash": "8851781afab1d98bef981e7bf789d59a"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_gnrl_reader_tests.cpp": {
-    "mtime": 1779177361.5862036,
-    "ast_hash": "56c6520f2fc10d77ea5c8b669c68b334",
-    "semantic_hash": "56c6520f2fc10d77ea5c8b669c68b334"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_gnrl_writer_tests.cpp": {
-    "mtime": 1779177361.5862036,
-    "ast_hash": "1e5eb0aa952c3ad8beba63ac70d14b94",
-    "semantic_hash": "1e5eb0aa952c3ad8beba63ac70d14b94"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\ba2_writer_execution_tests.cpp": {
-    "mtime": 1779177361.5867033,
-    "ast_hash": "54241d246b4f7c55d6a0b1ad9fbba195",
-    "semantic_hash": "54241d246b4f7c55d6a0b1ad9fbba195"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\benchmark_policy_tests.cpp": {
-    "mtime": 1779177361.5867033,
-    "ast_hash": "f4cdbc71827bf8351fe6e9e27578fae5",
-    "semantic_hash": "f4cdbc71827bf8351fe6e9e27578fae5"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\bethesda_hash_tests.cpp": {
-    "mtime": 1779177361.5872042,
-    "ast_hash": "e18846a15c2e6d30ae9ad6557728badf",
-    "semantic_hash": "e18846a15c2e6d30ae9ad6557728badf"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\binary_io_tests.cpp": {
-    "mtime": 1779177361.5872042,
-    "ast_hash": "e9f2089c53e3f6832ed23ba9360254da",
-    "semantic_hash": "e9f2089c53e3f6832ed23ba9360254da"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\bounded_memory_policy_tests.cpp": {
-    "mtime": 1779177361.5872042,
-    "ast_hash": "20d864a885de4daec834bc974966461a",
-    "semantic_hash": "20d864a885de4daec834bc974966461a"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\bsa_writer_execution_tests.cpp": {
-    "mtime": 1779177361.587703,
-    "ast_hash": "3caf717b562f451ec9db7309880cf7f7",
-    "semantic_hash": "3caf717b562f451ec9db7309880cf7f7"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\bulk_extraction_tests.cpp": {
-    "mtime": 1779177361.587703,
-    "ast_hash": "cde11192802ce43ef8a17704bdc9a8a1",
-    "semantic_hash": "cde11192802ce43ef8a17704bdc9a8a1"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\compatibility_matrix_tests.cpp": {
-    "mtime": 1779177361.5882034,
-    "ast_hash": "44db003ad58cf9d38f6799041df251cc",
-    "semantic_hash": "44db003ad58cf9d38f6799041df251cc"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\compatibility_warning_tests.cpp": {
-    "mtime": 1779177361.5882034,
-    "ast_hash": "8ad9dd2b01453828a6c8cc55264ff58c",
-    "semantic_hash": "8ad9dd2b01453828a6c8cc55264ff58c"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\compression_router_tests.cpp": {
-    "mtime": 1779177361.5887034,
-    "ast_hash": "702c4bdcb93c534930db5e4652d3d503",
-    "semantic_hash": "702c4bdcb93c534930db5e4652d3d503"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\coverage_audit_matrix_docs_tests.cpp": {
-    "mtime": 1779258956.1031854,
-    "ast_hash": "72bc9f22ad7fbe2d100ebee07c4e039e",
-    "semantic_hash": "72bc9f22ad7fbe2d100ebee07c4e039e"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\dds_layout_tests.cpp": {
-    "mtime": 1779177361.5887034,
-    "ast_hash": "a217a3a1b4876d6f265281ea34ed8517",
-    "semantic_hash": "a217a3a1b4876d6f265281ea34ed8517"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\deflate_codec_tests.cpp": {
-    "mtime": 1779177361.5892034,
-    "ast_hash": "d417996ad5a46b1999eb967387af86d2",
-    "semantic_hash": "d417996ad5a46b1999eb967387af86d2"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\docs_policy_tests.cpp": {
-    "mtime": 1779258906.571265,
-    "ast_hash": "8dc4a282ccc37354be3e51877c443fea",
-    "semantic_hash": "8dc4a282ccc37354be3e51877c443fea"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\export_surface_policy_tests.cpp": {
-    "mtime": 1779261667.7670329,
-    "ast_hash": "550db87e0ff9dacb311f89c1bea2c5c6",
-    "semantic_hash": "550db87e0ff9dacb311f89c1bea2c5c6"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\host_file_path_tests.cpp": {
-    "mtime": 1779177361.5897033,
-    "ast_hash": "97571098c5cc40ea0f6d58edd29422ff",
-    "semantic_hash": "97571098c5cc40ea0f6d58edd29422ff"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\host_file_tests.cpp": {
-    "mtime": 1779177361.5897033,
-    "ast_hash": "44c11b4b40d85ea89b311108f2d4cde8",
-    "semantic_hash": "44c11b4b40d85ea89b311108f2d4cde8"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\host_file_writer_name_tests.cpp": {
-    "mtime": 1779177361.5902038,
-    "ast_hash": "9e04e4f408cc8114aa46e80cbad59353",
-    "semantic_hash": "9e04e4f408cc8114aa46e80cbad59353"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\host_path_correctness_boundary_tests.cpp": {
-    "mtime": 1779177361.5902038,
-    "ast_hash": "62a245588fdad35d4344e31416d31c48",
-    "semantic_hash": "62a245588fdad35d4344e31416d31c48"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\local_game_fixture_tests.cpp": {
-    "mtime": 1779177361.5907035,
-    "ast_hash": "a8f2034be482115624ae9761736deb09",
-    "semantic_hash": "a8f2034be482115624ae9761736deb09"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\lz4_codec_tests.cpp": {
-    "mtime": 1779177361.5907035,
-    "ast_hash": "3c23430dadb82edcc62ae5cad67d628f",
-    "semantic_hash": "3c23430dadb82edcc62ae5cad67d628f"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\parser_preparer_seam_policy_tests.cpp": {
-    "mtime": 1779177361.5912032,
-    "ast_hash": "31385f1b32e7bac09210dcb33fdd4c8c",
-    "semantic_hash": "31385f1b32e7bac09210dcb33fdd4c8c"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\parser_primitives_tests.cpp": {
-    "mtime": 1779177361.5912032,
-    "ast_hash": "9603b470926ed7f88ad8ba81cc3c85d5",
-    "semantic_hash": "9603b470926ed7f88ad8ba81cc3c85d5"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\payload_stream_tests.cpp": {
-    "mtime": 1779177361.5917032,
-    "ast_hash": "bafb3ccce51b4f146492386b770a2c83",
-    "semantic_hash": "bafb3ccce51b4f146492386b770a2c83"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\public_include_boundary_tests.cpp": {
-    "mtime": 1779261457.4555204,
-    "ast_hash": "74774d46350a23b516c2cf37c6f6043c",
-    "semantic_hash": "74774d46350a23b516c2cf37c6f6043c"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\result_tests.cpp": {
-    "mtime": 1779177361.5917032,
-    "ast_hash": "37d5bf31ec08d646e29c6826e5cfdcc8",
-    "semantic_hash": "37d5bf31ec08d646e29c6826e5cfdcc8"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\target_format_policy_tests.cpp": {
-    "mtime": 1779248926.5657184,
-    "ast_hash": "e9f67da709caf1d74659739f2ddcf289",
-    "semantic_hash": "e9f67da709caf1d74659739f2ddcf289"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\tes3_bsa_reader_tests.cpp": {
-    "mtime": 1779177361.5922022,
-    "ast_hash": "6a78f2fcb8a4ff0e8a7e14096f904734",
-    "semantic_hash": "6a78f2fcb8a4ff0e8a7e14096f904734"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\tes3_bsa_writer_tests.cpp": {
-    "mtime": 1779177361.5927024,
-    "ast_hash": "adda047b022ed21681f938a0ae1583c9",
-    "semantic_hash": "adda047b022ed21681f938a0ae1583c9"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\tes4_bsa_parser_seam_tests.cpp": {
-    "mtime": 1779177361.5927024,
-    "ast_hash": "d6d1168dd080d1ef99ef7ac27196f19e",
-    "semantic_hash": "d6d1168dd080d1ef99ef7ac27196f19e"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\tes4_bsa_reader_tests.cpp": {
-    "mtime": 1779177361.593202,
-    "ast_hash": "7e5dbc65aab5cae31f03b7f71802dbe0",
-    "semantic_hash": "7e5dbc65aab5cae31f03b7f71802dbe0"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\tes4_bsa_writer_tests.cpp": {
-    "mtime": 1779177361.593202,
-    "ast_hash": "cdabeb03e8bfd9e50f373329eabaf792",
-    "semantic_hash": "cdabeb03e8bfd9e50f373329eabaf792"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\thread_safety_docs_policy_tests.cpp": {
-    "mtime": 1779177361.5937023,
-    "ast_hash": "9f0a391752252b3f446e4603137cd25e",
-    "semantic_hash": "9f0a391752252b3f446e4603137cd25e"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\validation_api_tests.cpp": {
-    "mtime": 1779246308.807443,
-    "ast_hash": "9854c6802225e32c35e993073d7ccb46",
-    "semantic_hash": "9854c6802225e32c35e993073d7ccb46"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\validation_policy_tests.cpp": {
-    "mtime": 1779177361.5942023,
-    "ast_hash": "54345b6f2e92f7c49306cfc2b6cc4204",
-    "semantic_hash": "54345b6f2e92f7c49306cfc2b6cc4204"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\writer_execution_options_tests.cpp": {
-    "mtime": 1779177361.5942023,
-    "ast_hash": "49f24da329ed5a16942c6d4b7bb3bd25",
-    "semantic_hash": "49f24da329ed5a16942c6d4b7bb3bd25"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\writer_hotspot_policy_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "1856af823fc9f2e4f5c5f76e45a5ddee",
-    "semantic_hash": "1856af823fc9f2e4f5c5f76e45a5ddee"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\writer_ownership_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "fd58d9a58d4efb995603b205438206b0",
-    "semantic_hash": "fd58d9a58d4efb995603b205438206b0"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\writer_publish_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "d39966ce815de64d87dc6aa0df3dd469",
-    "semantic_hash": "d39966ce815de64d87dc6aa0df3dd469"
-  },
-  "D:\\repos\\libbsa\\tests\\unit\\writer_stage_tests.cpp": {
-    "mtime": 1779177361.5947022,
-    "ast_hash": "816361a6c4ea118c9e6b78e84517bb75",
-    "semantic_hash": "816361a6c4ea118c9e6b78e84517bb75"
-  },
-  "D:\\repos\\libbsa\\vcpkg-configuration.json": {
-    "mtime": 1779177361.5957048,
-    "ast_hash": "7af3c2ed323b54ce4c9a9bc6a5daebdd",
-    "semantic_hash": "7af3c2ed323b54ce4c9a9bc6a5daebdd"
-  },
-  "D:\\repos\\libbsa\\vcpkg.json": {
-    "mtime": 1779177361.5957048,
-    "ast_hash": "779fe2aeb51760a5d26b1e85d658519f",
-    "semantic_hash": "779fe2aeb51760a5d26b1e85d658519f"
-  },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\SKILL.md": {
-    "mtime": 1781684716.4248207,
-    "ast_hash": "e80886193ec21d40fd6e8c8e334c7488",
-    "semantic_hash": "e80886193ec21d40fd6e8c8e334c7488"
-  },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\add-watch.md": {
-    "mtime": 1781684635.1091146,
+  "openspec/changes/cli-argparse-refactor/design.md": {
+    "mtime": 1781781504.0665338,
+    "ast_hash": "5b43a13af4393e02f429ea62162280be",
+    "semantic_hash": ""
+  },
+  "openspec/changes/cli-argparse-refactor/proposal.md": {
+    "mtime": 1781781323.9832418,
+    "ast_hash": "9333397b0b8f61a8739c896d36e6b8f7",
+    "semantic_hash": ""
+  },
+  "openspec/changes/cli-argparse-refactor/specs/cli-foundation/spec.md": {
+    "mtime": 1781781358.3569598,
+    "ast_hash": "a6b114ddfc4e5548ec9788dd7e8c2dde",
+    "semantic_hash": ""
+  },
+  "openspec/changes/cli-argparse-refactor/tasks.md": {
+    "mtime": 1781824612.136362,
+    "ast_hash": "c368f36c9985f98cc799c3a68628fffe",
+    "semantic_hash": ""
+  },
+  ".pi/agent/skills/graphify/SKILL.md": {
+    "mtime": 1781823450.3224092,
+    "ast_hash": "9789fc1893135c6f4088d1012f2a1f62",
+    "semantic_hash": ""
+  },
+  ".pi/agent/skills/graphify/references/add-watch.md": {
+    "mtime": 1781764098.0037339,
     "ast_hash": "0df0589623217ca38a12bdcabfb42f4c",
-    "semantic_hash": "0df0589623217ca38a12bdcabfb42f4c"
+    "semantic_hash": ""
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\exports.md": {
-    "mtime": 1781684635.1096144,
+  ".pi/agent/skills/graphify/references/exports.md": {
+    "mtime": 1781764098.0037339,
     "ast_hash": "c04ddf8f1f5ef5e262ebec491a523c74",
-    "semantic_hash": "c04ddf8f1f5ef5e262ebec491a523c74"
+    "semantic_hash": ""
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\extraction-spec.md": {
-    "mtime": 1781684635.1096144,
-    "ast_hash": "24808b03abfeaf5f6435bb69c0125b2c",
-    "semantic_hash": "24808b03abfeaf5f6435bb69c0125b2c"
+  ".pi/agent/skills/graphify/references/extraction-spec.md": {
+    "mtime": 1781764098.0042336,
+    "ast_hash": "a86a7321597b23cc2b22e011b3dc6e1d",
+    "semantic_hash": ""
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\github-and-merge.md": {
-    "mtime": 1781684635.1101167,
+  ".pi/agent/skills/graphify/references/github-and-merge.md": {
+    "mtime": 1781764098.0047345,
     "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
-    "semantic_hash": "cde13df085e4c492aeb7ba298a996d0d"
+    "semantic_hash": ""
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\hooks.md": {
-    "mtime": 1781684635.1106148,
+  ".pi/agent/skills/graphify/references/hooks.md": {
+    "mtime": 1781764098.0052347,
     "ast_hash": "3f545db6ce646650bb9de588f5512a27",
-    "semantic_hash": "3f545db6ce646650bb9de588f5512a27"
+    "semantic_hash": ""
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\query.md": {
-    "mtime": 1781684635.1111152,
-    "ast_hash": "c2a8e798674a81b02aa9975f43023819",
-    "semantic_hash": "c2a8e798674a81b02aa9975f43023819"
+  ".pi/agent/skills/graphify/references/query.md": {
+    "mtime": 1781764098.005735,
+    "ast_hash": "7d1ff295a0e0aa1cc9a14e52c3a19202",
+    "semantic_hash": ""
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\transcribe.md": {
-    "mtime": 1781684635.1116138,
+  ".pi/agent/skills/graphify/references/transcribe.md": {
+    "mtime": 1781764098.005735,
     "ast_hash": "70f6aa30d6211f3a2c7e9fc45479f50c",
-    "semantic_hash": "70f6aa30d6211f3a2c7e9fc45479f50c"
+    "semantic_hash": ""
   },
-  "D:\\repos\\libbsa\\.config\\kilo\\skills\\graphify\\references\\update.md": {
-    "mtime": 1781684635.1121144,
-    "ast_hash": "0dad167a95bdb389f02fecffb60b1bc8",
-    "semantic_hash": "0dad167a95bdb389f02fecffb60b1bc8"
-  },
-  "D:\\repos\\libbsa\\.github\\workflows\\ci.yml": {
-    "mtime": 1779177361.228684,
-    "ast_hash": "c5b76d86918b27cb37902a5878e704d1",
-    "semantic_hash": "c5b76d86918b27cb37902a5878e704d1"
-  },
-  "D:\\repos\\libbsa\\AGENTS.md": {
-    "mtime": 1781684747.9519565,
-    "ast_hash": "c421608b77a9c5ddf10891b9b2aadf37",
-    "semantic_hash": "c421608b77a9c5ddf10891b9b2aadf37"
-  },
-  "D:\\repos\\libbsa\\CLAUDE.md": {
-    "mtime": 1781684811.7594166,
-    "ast_hash": "201db6f8409d4189b451cc18dd9f96e4",
-    "semantic_hash": "201db6f8409d4189b451cc18dd9f96e4"
-  },
-  "D:\\repos\\libbsa\\CMakeLists.txt": {
-    "mtime": 1779177361.4620588,
-    "ast_hash": "fae139bf491847c8173c05f70c9e9293",
-    "semantic_hash": "fae139bf491847c8173c05f70c9e9293"
-  },
-  "D:\\repos\\libbsa\\CONCERNS.md": {
-    "mtime": 1779177361.462559,
-    "ast_hash": "c1b357b1328979d179b79c4c41a8a9bd",
-    "semantic_hash": "c1b357b1328979d179b79c4c41a8a9bd"
-  },
-  "D:\\repos\\libbsa\\README.md": {
-    "mtime": 1779177361.462559,
-    "ast_hash": "4c287b26b3612794ce85d04e8aad6bc0",
-    "semantic_hash": "4c287b26b3612794ce85d04e8aad6bc0"
-  },
-  "D:\\repos\\libbsa\\benchmarks\\README.md": {
-    "mtime": 1779177361.4700868,
-    "ast_hash": "9d2024358782413b91b4b5263aea4ae6",
-    "semantic_hash": "9d2024358782413b91b4b5263aea4ae6"
-  },
-  "D:\\repos\\libbsa\\docs\\api-mainpage.md": {
-    "mtime": 1779248747.318474,
-    "ast_hash": "e92dcd8a54d9b47289f10027af6cb793",
-    "semantic_hash": "e92dcd8a54d9b47289f10027af6cb793"
-  },
-  "D:\\repos\\libbsa\\docs\\compatibility-evidence.md": {
-    "mtime": 1779248731.5398386,
-    "ast_hash": "18a57e2a48d8208cdbd106e0cb70b3f3",
-    "semantic_hash": "18a57e2a48d8208cdbd106e0cb70b3f3"
-  },
-  "D:\\repos\\libbsa\\docs\\coverage-audit-matrix.md": {
-    "mtime": 1779248668.7815495,
-    "ast_hash": "625eb67f4d1671945ed7e811ab372d40",
-    "semantic_hash": "625eb67f4d1671945ed7e811ab372d40"
-  },
-  "D:\\repos\\libbsa\\docs\\integration-examples.md": {
-    "mtime": 1779248739.038786,
-    "ast_hash": "c65cdf15039ede2df60e561fdad28029",
-    "semantic_hash": "c65cdf15039ede2df60e561fdad28029"
-  },
-  "D:\\repos\\libbsa\\docs\\public-api-reality-check.md": {
-    "mtime": 1779258806.304091,
-    "ast_hash": "9e3f2692c98bbff88db124654ddd9a91",
-    "semantic_hash": "9e3f2692c98bbff88db124654ddd9a91"
-  },
-  "D:\\repos\\libbsa\\docs\\target-format-guide.md": {
-    "mtime": 1779177361.4720864,
-    "ast_hash": "bdea9f97950b0c548227b93c67fd1c9c",
-    "semantic_hash": "bdea9f97950b0c548227b93c67fd1c9c"
-  },
-  "D:\\repos\\libbsa\\docs\\thread-safety.md": {
-    "mtime": 1779177361.4720864,
-    "ast_hash": "d741d2ffd19043e4529dd1a0dbc0ae38",
-    "semantic_hash": "d741d2ffd19043e4529dd1a0dbc0ae38"
-  },
-  "D:\\repos\\libbsa\\openspec\\config.yaml": {
-    "mtime": 1779177361.5406473,
-    "ast_hash": "63c26766698dd49488b53c274bfec0f9",
-    "semantic_hash": "63c26766698dd49488b53c274bfec0f9"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\allocation-error-translation\\spec.md": {
-    "mtime": 1779177361.5406473,
-    "ast_hash": "f9a7009e648224470e5fb63d8e8d60d6",
-    "semantic_hash": "f9a7009e648224470e5fb63d8e8d60d6"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\archive-record-metadata-validation\\spec.md": {
-    "mtime": 1779177361.5411477,
-    "ast_hash": "aba3a9ad7ef4c847d759a72c60be12bd",
-    "semantic_hash": "aba3a9ad7ef4c847d759a72c60be12bd"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\archive-writer-layering\\spec.md": {
-    "mtime": 1779177361.5411477,
-    "ast_hash": "6266fe959fd6acd753520e04bd78e26b",
-    "semantic_hash": "6266fe959fd6acd753520e04bd78e26b"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\behavior-backed-policy-tests\\spec.md": {
-    "mtime": 1779177361.5416481,
-    "ast_hash": "f41e4e57c68f235a5c23cf72c0d8a0ea",
-    "semantic_hash": "f41e4e57c68f235a5c23cf72c0d8a0ea"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\bulk-extraction-deduplication\\spec.md": {
-    "mtime": 1779177361.5421474,
-    "ast_hash": "e1307f359f7808d18a35f053f95e1a75",
-    "semantic_hash": "e1307f359f7808d18a35f053f95e1a75"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\compressed-extraction-memory-bounds\\spec.md": {
-    "mtime": 1779177361.5421474,
-    "ast_hash": "4e5b002a641b2b25aa162401cd80f98c",
-    "semantic_hash": "4e5b002a641b2b25aa162401cd80f98c"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\dx10-snapshot-read-efficiency\\spec.md": {
-    "mtime": 1779177361.542647,
-    "ast_hash": "1a8514abfbc846d198b2ba03cfdb538b",
-    "semantic_hash": "1a8514abfbc846d198b2ba03cfdb538b"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\dx10-snapshot-temp-directory-hardening\\spec.md": {
-    "mtime": 1779177361.542647,
-    "ast_hash": "1b3e5d7a1d3abeb4f82598d48edbf05f",
-    "semantic_hash": "1b3e5d7a1d3abeb4f82598d48edbf05f"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\format-compatibility-constants\\spec.md": {
-    "mtime": 1779177361.5431478,
-    "ast_hash": "6d1398cb8dc68f15c5f23ad0fdaabfdb",
-    "semantic_hash": "6d1398cb8dc68f15c5f23ad0fdaabfdb"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\public-documentation-stability\\spec.md": {
-    "mtime": 1779177361.5431478,
-    "ast_hash": "5a658c9e178daf00cb48dcb890d48484",
-    "semantic_hash": "5a658c9e178daf00cb48dcb890d48484"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\shared-library-export-surface\\spec.md": {
-    "mtime": 1779177361.5436466,
-    "ast_hash": "c7f7eac938ddb4fc7aba040ee5b40dc8",
-    "semantic_hash": "c7f7eac938ddb4fc7aba040ee5b40dc8"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\shared-parser-primitives\\spec.md": {
-    "mtime": 1779177361.5436466,
-    "ast_hash": "580c74a32b5883e0e50763b3198d4b37",
-    "semantic_hash": "580c74a32b5883e0e50763b3198d4b37"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\shared-payload-extraction-helpers\\spec.md": {
-    "mtime": 1779177361.5441477,
-    "ast_hash": "9f79eba103b7f2c45d8913f90c6bbeb5",
-    "semantic_hash": "9f79eba103b7f2c45d8913f90c6bbeb5"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\writer-bounded-source-reads\\spec.md": {
-    "mtime": 1779177361.5441477,
-    "ast_hash": "84a9650841653d53a6a5fff5c3b679e4",
-    "semantic_hash": "84a9650841653d53a6a5fff5c3b679e4"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\writer-safe-publish\\spec.md": {
-    "mtime": 1779177361.5441477,
-    "ast_hash": "46130520b03d6529f3e51bfebb8f3ff6",
-    "semantic_hash": "46130520b03d6529f3e51bfebb8f3ff6"
-  },
-  "D:\\repos\\libbsa\\openspec\\specs\\writer-state-ownership\\spec.md": {
-    "mtime": 1779177361.544647,
-    "ast_hash": "87f53f8dc8140e9e5fcce2892cf78955",
-    "semantic_hash": "87f53f8dc8140e9e5fcce2892cf78955"
-  },
-  "D:\\repos\\libbsa\\tests\\CMakeLists.txt": {
-    "mtime": 1779240778.9195888,
-    "ast_hash": "6ee5b1ab34a234a7c59d8b367487896e",
-    "semantic_hash": "6ee5b1ab34a234a7c59d8b367487896e"
-  },
-  "D:\\repos\\libbsa\\tests\\fixtures\\README.md": {
-    "mtime": 1779177361.565683,
-    "ast_hash": "d844f75fe08e27475daa1acbd00c0f7f",
-    "semantic_hash": "d844f75fe08e27475daa1acbd00c0f7f"
-  },
-  "D:\\repos\\libbsa\\tests\\package-consumer\\CMakeLists.txt": {
-    "mtime": 1779177361.5826962,
-    "ast_hash": "8da6206ba5ffe0bea7999f264b6ebc84",
-    "semantic_hash": "8da6206ba5ffe0bea7999f264b6ebc84"
+  ".pi/agent/skills/graphify/references/update.md": {
+    "mtime": 1781764098.006739,
+    "ast_hash": "0662e1a77b21d670132cd5855954bfff",
+    "semantic_hash": ""
   }
 }

@@ -1,0 +1,120 @@
+{
+  "variant": "tes3",
+  "version": 256,
+  "file_count": 6,
+  "data_section_start": 213,
+  "provenance": {
+    "generator": "tests/fixtures/generated/generate_tes3_bsa_fixtures.cpp",
+    "source": "synthetic strings generated for libbsa tests; no game or TES5Edit bytes copied"
+  },
+  "entries": [
+    {
+      "path": "com¹",
+      "original_path": "COM¹",
+      "lookup_variants": ["com¹", "COM¹", "com¹"],
+      "archive_hash": "0x00006f6303d1c200",
+      "hash_low32": "0x03d1c200",
+      "hash_high32": "0x00006f63",
+      "raw_size": 33,
+      "stored_size": 33,
+      "raw_tes3_data_offset": 21,
+      "payload_offset": 234,
+      "compression": "raw",
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "expected": {
+        "bytes_hex": "726573657276656420434f4d207375706572736372697074207061796c6f61640a"
+      }
+    },
+    {
+      "path": "con.txt",
+      "original_path": "CON.txt",
+      "lookup_variants": ["con.txt", "CON.txt", "con.txt"],
+      "archive_hash": "0x006e6f6374c07400",
+      "hash_low32": "0x74c07400",
+      "hash_high32": "0x006e6f63",
+      "raw_size": 21,
+      "stored_size": 21,
+      "raw_tes3_data_offset": 75,
+      "payload_offset": 288,
+      "compression": "raw",
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "expected": {
+        "bytes_hex": "726573657276656420434f4e207061796c6f61640a"
+      }
+    },
+    {
+      "path": "nul",
+      "original_path": "NUL",
+      "lookup_variants": ["nul", "NUL", "nul"],
+      "archive_hash": "0x0000006e0003c400",
+      "hash_low32": "0x0003c400",
+      "hash_high32": "0x0000006e",
+      "raw_size": 21,
+      "stored_size": 21,
+      "raw_tes3_data_offset": 0,
+      "payload_offset": 213,
+      "compression": "raw",
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "expected": {
+        "bytes_hex": "7265736572766564204e554c207061796c6f61640a"
+      }
+    },
+    {
+      "path": "textures/file.txt ",
+      "original_path": "textures/file.txt ",
+      "lookup_variants": ["textures/file.txt ", "textures/file.txt ", "textures/file.txt "],
+      "archive_hash": "0x071d172ed0c78191",
+      "hash_low32": "0xd0c78191",
+      "hash_high32": "0x071d172e",
+      "raw_size": 23,
+      "stored_size": 23,
+      "raw_tes3_data_offset": 121,
+      "payload_offset": 334,
+      "compression": "raw",
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "expected": {
+        "bytes_hex": "747261696c696e67207370616365207061796c6f61640a"
+      }
+    },
+    {
+      "path": "textures/file.txt.",
+      "original_path": "textures/file.txt.",
+      "lookup_variants": ["textures/file.txt.", "textures/file.txt.", "textures/file.txt."],
+      "archive_hash": "0x071d172e067f431e",
+      "hash_low32": "0x067f431e",
+      "hash_high32": "0x071d172e",
+      "raw_size": 21,
+      "stored_size": 21,
+      "raw_tes3_data_offset": 54,
+      "payload_offset": 267,
+      "compression": "raw",
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "expected": {
+        "bytes_hex": "747261696c696e6720646f74207061796c6f61640a"
+      }
+    },
+    {
+      "path": "textures/file.txt:stream",
+      "original_path": "textures/file.txt:stream",
+      "lookup_variants": ["textures/file.txt:stream", "textures/file.txt:stream", "textures/file.txt:stream"],
+      "archive_hash": "0x6b74712e7ebc28a5",
+      "hash_low32": "0x7ebc28a5",
+      "hash_high32": "0x6b74712e",
+      "raw_size": 25,
+      "stored_size": 25,
+      "raw_tes3_data_offset": 96,
+      "payload_offset": 309,
+      "compression": "raw",
+      "has_embedded_name": false,
+      "embedded_name_prefix_size": 0,
+      "expected": {
+        "bytes_hex": "4144532d7374796c652073747265616d207061796c6f61640a"
+      }
+    }
+  ]
+}

@@ -12,6 +12,7 @@ find_package(directxtex CONFIG REQUIRED)
 
 option(LIBBSA_BUILD_TESTS "Build libbsa tests" ${BUILD_TESTING})
 option(LIBBSA_BUILD_BENCHMARKS "Build libbsa benchmark tools" ON)
+option(LIBBSA_BUILD_CLI "Build the libbsa command-line tool (enabled by default for first-party smoke coverage)" ON)
 option(LIBBSA_ENABLE_MSVC_ASAN "Build targets with MSVC AddressSanitizer instrumentation" OFF)
 
 function(libbsa_enable_msvc_asan target_name)
@@ -29,6 +30,23 @@ function(libbsa_enable_msvc_asan target_name)
     # MSVC's compiler flag injects the AddressSanitizer runtime libraries for us; passing the
     # same switch through the linker only produces noisy unsupported-option warnings.
     target_compile_options(${target_name} PRIVATE /fsanitize=address)
+  endif()
+endfunction()
+
+function(libbsa_copy_msvc_asan_runtime_dlls target_name)
+  if(MSVC AND LIBBSA_ENABLE_MSVC_ASAN)
+    cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH libbsa_msvc_compiler_dir)
+
+    # CTest launches first-party tools without a Visual Studio developer prompt, so place the
+    # compiler-provided ASan runtime beside each instrumented executable that tests may run.
+    add_custom_command(TARGET ${target_name} POST_BUILD
+      COMMAND ${CMAKE_COMMAND}
+        "-DRUNTIME_DLLS=$<TARGET_RUNTIME_DLLS:${target_name}>"
+        "-DEXTRA_RUNTIME_DLLS=${libbsa_msvc_compiler_dir}/clang_rt.asan_dynamic-x86_64.dll;${libbsa_msvc_compiler_dir}/clang_rt.asan_dbg_dynamic-x86_64.dll"
+        "-DTARGET_DIR=$<TARGET_FILE_DIR:${target_name}>"
+        -P "${PROJECT_SOURCE_DIR}/cmake/copy-runtime-dlls.cmake"
+      VERBATIM
+    )
   endif()
 endfunction()
 
@@ -177,6 +195,33 @@ target_sources(libbsa
   PRIVATE
     ${libbsa_library_sources}
 )
+
+if(LIBBSA_BUILD_CLI)
+  find_package(argparse CONFIG REQUIRED)
+
+  add_executable(bsa
+    tools/cli/main.cpp
+  )
+
+  target_link_libraries(bsa
+    PRIVATE
+      libbsa::libbsa
+      argparse::argparse
+      $<$<PLATFORM_ID:Windows>:shell32>
+  )
+
+  target_compile_features(bsa PRIVATE cxx_std_20)
+
+  target_compile_options(bsa
+    PRIVATE
+      $<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus>
+      $<$<CXX_COMPILER_ID:MSVC>:/W4>
+      $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
+  )
+
+  libbsa_enable_msvc_asan(bsa)
+  libbsa_copy_msvc_asan_runtime_dlls(bsa)
+endif()
 
 if(LIBBSA_BUILD_BENCHMARKS)
   add_executable(libbsa_benchmarks
