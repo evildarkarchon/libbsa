@@ -217,3 +217,17 @@ The library reimplements BSArchPro-compatible behavior using clean, idiomatic C+
 - vcpkg package page and Catch2 GitHub releases — `catch2` `3.14.0#0`, thread-safe assertion feature, latest release fixes: https://vcpkg.io/en/package/catch2.html and https://github.com/catchorg/Catch2/releases
 
 The `gsd_exec` tool only accepts "bash", "python", or "node" as valid values for the `runtime` field.
+
+## Agent skills
+
+### Issue tracker
+
+Track work and PRDs as GitHub Issues in `evildarkarchon/libbsa`; external pull requests are not a triage request surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the canonical triage-state labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use the single-context layout rooted at `CONTEXT.md`, with architectural decisions under `docs/adr/`. See `docs/agents/domain.md`.
