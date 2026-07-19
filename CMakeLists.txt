@@ -143,6 +143,8 @@ set(libbsa_library_sources
   src/detail/writer_publish.cpp
   src/detail/host_file.cpp
   src/detail/host_file_path.cpp
+  src/formats/ba2/ba2_archive_header.cpp
+  src/formats/ba2/ba2_archive_opening.cpp
   src/formats/ba2/ba2_format_detector.cpp
   src/formats/ba2/ba2_profile.cpp
   src/formats/ba2/ba2_record_identity.cpp

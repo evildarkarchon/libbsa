@@ -304,8 +304,9 @@ result<std::vector<entry_metadata>> materialize_entries(
             }
 
             entries.push_back(entry_metadata{
-                std::move(identity.value().canonical_path), std::move(identity.value().display_path),
-                records[index].size, stored_size, records[index].offset, records[index].name_hash,
+                std::move(identity.value().canonical_path),
+                std::move(identity.value().display_path), records[index].size, stored_size,
+                records[index].offset, records[index].name_hash,
                 compression_for(records[index], detected), records[index].unknown, false, 0U});
         }
 
@@ -387,11 +388,11 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_impl(std::span<const std::byte> 
         return entries.error();
     }
 
-    return ba2_gnrl_archive{archive_metadata{archive_type::ba2, detected.profile.variant(),
-                                             header.value().version, 0U, header.value().file_count,
-                                             detected.profile.default_compression(),
-                                             detected.profile.ba2_metadata()},
-                            std::move(entries.value())};
+    return ba2_gnrl_archive{
+        archive_metadata{archive_type::ba2, detected.profile.variant(), header.value().version, 0U,
+                         header.value().file_count, detected.profile.default_compression(),
+                         detected.stored_metadata},
+        std::move(entries.value())};
 }
 
 }  // namespace
@@ -492,11 +493,11 @@ result<ba2_gnrl_archive> parse_ba2_gnrl_archive_file(const detail::host_file_pat
         return entries.error();
     }
 
-    return ba2_gnrl_archive{archive_metadata{archive_type::ba2, detected.profile.variant(),
-                                             header.value().version, 0U, header.value().file_count,
-                                             detected.profile.default_compression(),
-                                             detected.profile.ba2_metadata()},
-                            std::move(entries.value())};
+    return ba2_gnrl_archive{
+        archive_metadata{archive_type::ba2, detected.profile.variant(), header.value().version, 0U,
+                         header.value().file_count, detected.profile.default_compression(),
+                         detected.stored_metadata},
+        std::move(entries.value())};
 }
 
 }  // namespace libbsa::formats::ba2

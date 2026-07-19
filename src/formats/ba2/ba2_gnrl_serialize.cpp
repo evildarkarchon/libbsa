@@ -2,6 +2,8 @@
 
 #include "formats/ba2/ba2_constants.hpp"
 
+#include <libbsa/writer.hpp>
+
 #include <detail/host_file.hpp>
 
 #include <algorithm>
@@ -143,6 +145,7 @@ result<void> stream_disk_payload(const detail::host_file_path& host_path,
 }  // namespace
 
 result<void> ba2_gnrl_write_archive_bytes(const ba2_profile& profile,
+                                          const ba2_gnrl_writer_options& options,
                                           std::span<const ba2_gnrl_prepared_entry> entries,
                                           std::uint64_t file_table_offset,
                                           const std::filesystem::path& output_path) {
@@ -173,10 +176,8 @@ result<void> ba2_gnrl_write_archive_bytes(const ba2_profile& profile,
         // xEdit/BSArchPro initializes Starfield writer Unknown1/Unknown2 to 1/0;
         // options can override these raw compatibility fields while keeping them
         // library-owned and version-gated in public metadata.
-        if (!(written = writer.write_u32_le(
-                  profile.ba2_metadata().starfield_unknown1.value_or(0U))) ||
-            !(written = writer.write_u32_le(
-                  profile.ba2_metadata().starfield_unknown2.value_or(0U)))) {
+        if (!(written = writer.write_u32_le(options.starfield_unknown1)) ||
+            !(written = writer.write_u32_le(options.starfield_unknown2))) {
             return written.error();
         }
     }
@@ -184,8 +185,7 @@ result<void> ba2_gnrl_write_archive_bytes(const ba2_profile& profile,
         // Phase 8 treats v3 GNRL as a structurally supported profile. Method 3
         // remains the default raw-LZ4-block method for later compression support;
         // raw entries still serialize with PackedSize == 0 in this plan.
-        if (!(written = writer.write_u32_le(
-                  profile.ba2_metadata().compression_method.value_or(0U)))) {
+        if (!(written = writer.write_u32_le(options.starfield_compression_method))) {
             return written.error();
         }
     }

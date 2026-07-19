@@ -135,7 +135,7 @@ TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
         write_binary_file(source, grown);
 
         auto streamed = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            profile, entries, file_table_offset, output_path("stream-source-grew.ba2"));
+            profile, {}, entries, file_table_offset, output_path("stream-source-grew.ba2"));
 
         REQUIRE_FALSE(streamed.has_value());
         CHECK(streamed.error().code == libbsa::error_code::io_error);
@@ -155,7 +155,7 @@ TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
         write_binary_file(source, truncated);
 
         auto streamed = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            profile, entries, file_table_offset, output_path("stream-source-shrank.ba2"));
+            profile, {}, entries, file_table_offset, output_path("stream-source-shrank.ba2"));
 
         REQUIRE_FALSE(streamed.has_value());
         CHECK(streamed.error().code == libbsa::error_code::io_error);

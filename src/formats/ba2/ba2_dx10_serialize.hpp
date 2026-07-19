@@ -11,7 +11,11 @@ namespace libbsa::formats::ba2 {
 
 /// Writes prepared BA2 DX10 archive bytes to the temporary output path supplied
 /// by the publish helper.
+///
+/// `options` supplies version-gated raw header fields without placing per-archive
+/// metadata in the reusable BA2 Profile.
 result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
+                                          const ba2_dx10_writer_options& options,
                                           std::span<const ba2_dx10_prepared_entry> entries,
                                           std::uint64_t file_table_offset,
                                           const std::filesystem::path& output_path);

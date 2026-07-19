@@ -2,6 +2,8 @@
 
 #include "formats/ba2/ba2_constants.hpp"
 
+#include <libbsa/writer.hpp>
+
 #include <array>
 #include <cstddef>
 #include <fstream>
@@ -97,6 +99,7 @@ result<void> write_name(stream_writer& writer, std::string_view name) {
 }  // namespace
 
 result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
+                                          const ba2_dx10_writer_options& options,
                                           std::span<const ba2_dx10_prepared_entry> entries,
                                           std::uint64_t file_table_offset,
                                           const std::filesystem::path& output_path) {
@@ -124,12 +127,9 @@ result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
         return written.error();
     }
     if (profile.version() >= ba2_starfield_v3_version) {
-        if (!(written = writer.write_u32_le(
-                  profile.ba2_metadata().starfield_unknown1.value_or(0U))) ||
-            !(written = writer.write_u32_le(
-                  profile.ba2_metadata().starfield_unknown2.value_or(0U))) ||
-            !(written =
-                  writer.write_u32_le(profile.ba2_metadata().compression_method.value_or(0U)))) {
+        if (!(written = writer.write_u32_le(options.starfield_unknown1)) ||
+            !(written = writer.write_u32_le(options.starfield_unknown2)) ||
+            !(written = writer.write_u32_le(options.starfield_compression_method))) {
             return written.error();
         }
     }

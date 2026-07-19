@@ -4,6 +4,8 @@
 
 #include <detail/binary_io.hpp>
 
+#include <utility>
+
 namespace libbsa::formats::ba2 {
 
 result<detected_ba2_format> detect_ba2_format(std::span<const std::byte> bytes) {
@@ -75,7 +77,7 @@ result<detected_ba2_format> detect_ba2_format(std::span<const std::byte> bytes) 
     if (!profile) {
         return profile.error();
     }
-    return detected_ba2_format{profile.value(), file_count.value()};
+    return detected_ba2_format{profile.value(), file_count.value(), std::move(ba2)};
 }
 
 }  // namespace libbsa::formats::ba2

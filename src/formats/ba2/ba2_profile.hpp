@@ -43,9 +43,6 @@ class ba2_profile {
     /// Returns the public default compression metadata for compressed entries.
     [[nodiscard]] entry_compression default_compression() const noexcept;
 
-    /// Returns raw BA2 archive metadata exposed through the public reader.
-    [[nodiscard]] const ba2_archive_metadata& ba2_metadata() const noexcept;
-
     /// Returns the internal codec used when an entry or chunk is compressed.
     [[nodiscard]] detail::compression_method compressed_payload_method() const noexcept;
 
@@ -58,31 +55,33 @@ class ba2_profile {
    private:
     ba2_profile(archive_variant variant, ba2_subtype subtype, std::uint32_t version,
                 std::size_t header_size, entry_compression default_compression,
-                ba2_archive_metadata metadata, detail::compression_method compressed_method);
+                detail::compression_method compressed_method);
 
     archive_variant variant_{archive_variant::fallout4};
     ba2_subtype subtype_{ba2_subtype::gnrl};
     std::uint32_t version_{0U};
     std::size_t header_size_{0U};
     entry_compression default_compression_{entry_compression::deflate};
-    ba2_archive_metadata metadata_{};
     detail::compression_method compressed_method_{detail::compression_method::deflate};
 
-    friend result<ba2_profile> make_ba2_profile_from_header(
-        std::uint32_t version, ba2_subtype subtype, ba2_archive_metadata metadata);
+    friend result<ba2_profile> make_ba2_profile_from_header(std::uint32_t version,
+                                                            ba2_subtype subtype,
+                                                            ba2_archive_metadata metadata);
     friend result<ba2_profile> make_ba2_profile_for_gnrl_writer(
         ba2_gnrl_target target, const ba2_gnrl_writer_options& options);
     friend result<ba2_profile> make_ba2_profile_for_dx10_writer(
         ba2_dx10_target target, const ba2_dx10_writer_options& options);
     friend result<ba2_profile> make_profile(std::uint32_t version, ba2_subtype subtype,
-                                            ba2_archive_metadata metadata,
                                             detail::compression_method method);
 };
 
 /// Converts a BA2 subtype magic value into a supported subtype.
 result<ba2_subtype> ba2_subtype_from_magic(std::uint32_t subtype_magic);
 
-/// Builds a BA2 profile from parsed header fields.
+/// Builds reusable BA2 family and compression semantics from parsed header fields.
+///
+/// Version-specific raw metadata is consulted to resolve compression but remains
+/// owned by the archive header rather than the resulting profile.
 result<ba2_profile> make_ba2_profile_from_header(std::uint32_t version, ba2_subtype subtype,
                                                  ba2_archive_metadata metadata);
 
@@ -95,7 +94,7 @@ result<ba2_profile> make_ba2_profile_for_dx10_writer(ba2_dx10_target target,
                                                      const ba2_dx10_writer_options& options);
 
 /// Maps public BA2 entry compression metadata to the internal codec method.
-result<detail::compression_method> ba2_compressed_payload_method(
-    ba2_subtype subtype, entry_compression compression);
+result<detail::compression_method> ba2_compressed_payload_method(ba2_subtype subtype,
+                                                                 entry_compression compression);
 
 }  // namespace libbsa::formats::ba2

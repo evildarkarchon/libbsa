@@ -1,9 +1,7 @@
 #include <libbsa/archive.hpp>
 
-#include "formats/ba2/ba2_dx10_parser.hpp"
+#include "formats/ba2/ba2_archive_opening.hpp"
 #include "formats/ba2/ba2_dx10_reader.hpp"
-#include "formats/ba2/ba2_format_detector.hpp"
-#include "formats/ba2/ba2_gnrl_parser.hpp"
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 #include "formats/bsa/bsa_format_detector.hpp"
 #include "formats/bsa/tes3_bsa_parser.hpp"
@@ -191,35 +189,18 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
         prefix.value()[1] == static_cast<std::byte>(static_cast<unsigned char>('T')) &&
         prefix.value()[2] == static_cast<std::byte>(static_cast<unsigned char>('D')) &&
         prefix.value()[3] == static_cast<std::byte>(static_cast<unsigned char>('X'))) {
-        auto detected_ba2 = formats::ba2::detect_ba2_format(prefix.value());
-        if (!detected_ba2) {
-            return detected_ba2.error();
-        }
-
-        auto archive_size = archive_file_size(resolved_host_path.value());
-        if (!archive_size) {
-            return archive_size.error();
-        }
-        if (detected_ba2.value().profile.is_dx10()) {
-            auto ba2_archive = formats::ba2::parse_ba2_dx10_archive_file(
-                resolved_host_path.value(), archive_size.value(), detected_ba2.value());
-            if (!ba2_archive) {
-                return ba2_archive.error();
-            }
-
-            return make_opened_reader(ba2_archive.value().metadata,
-                                      std::move(ba2_archive.value().entries),
-                                      reader_backend_identity::ba2_dx10);
-        }
-
-        auto ba2_archive = formats::ba2::parse_ba2_gnrl_archive_file(
-            resolved_host_path.value(), archive_size.value(), detected_ba2.value());
+        // The prefix recognizes only a BTDX candidate. BA2 Archive Opening
+        // independently validates the fixed header through its stabilizing
+        // native read session and owns metadata subtype dispatch.
+        auto ba2_archive = formats::ba2::open_ba2_archive(resolved_host_path.value());
         if (!ba2_archive) {
             return ba2_archive.error();
         }
+        const auto backend_identity = ba2_archive.value().subtype == formats::ba2::ba2_subtype::dx10
+                                          ? reader_backend_identity::ba2_dx10
+                                          : reader_backend_identity::ba2_gnrl;
         return make_opened_reader(ba2_archive.value().metadata,
-                                  std::move(ba2_archive.value().entries),
-                                  reader_backend_identity::ba2_gnrl);
+                                  std::move(ba2_archive.value().entries), backend_identity);
     }
 
     auto detected = formats::bsa::detect_bsa_format(prefix.value());

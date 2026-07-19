@@ -250,12 +250,13 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                                      records[index].cube_maps_raw,
                                      std::move(chunks.value())};
 
-            entries.push_back(entry_metadata{
-                std::move(identity.value().canonical_path), std::move(identity.value().display_path),
-                entry_raw_size, stored_payload_size, payload_offset, records[index].name_hash,
-                has_compressed_chunk ? detected.profile.default_compression()
-                                     : entry_compression::none,
-                records[index].unknown_tex, false, 0U, std::move(texture)});
+            entries.push_back(
+                entry_metadata{std::move(identity.value().canonical_path),
+                               std::move(identity.value().display_path), entry_raw_size,
+                               stored_payload_size, payload_offset, records[index].name_hash,
+                               has_compressed_chunk ? detected.profile.default_compression()
+                                                    : entry_compression::none,
+                               records[index].unknown_tex, false, 0U, std::move(texture)});
         }
 
         std::sort(entries.begin(), entries.end(),
@@ -324,11 +325,11 @@ result<ba2_dx10_archive> parse_ba2_dx10_archive_impl(std::span<const std::byte> 
         return entries.error();
     }
 
-    return ba2_dx10_archive{archive_metadata{archive_type::ba2, detected.profile.variant(),
-                                             header.value().version, 0U, header.value().file_count,
-                                             detected.profile.default_compression(),
-                                             detected.profile.ba2_metadata()},
-                            std::move(entries.value())};
+    return ba2_dx10_archive{
+        archive_metadata{archive_type::ba2, detected.profile.variant(), header.value().version, 0U,
+                         header.value().file_count, detected.profile.default_compression(),
+                         detected.stored_metadata},
+        std::move(entries.value())};
 }
 
 }  // namespace

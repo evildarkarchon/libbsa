@@ -160,7 +160,7 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target, const ba2_dx10_write
     return detail::publish_writer_output(
         output_path.value().resolved, options.overwrite_existing, "BA2 DX10 writer",
         [&](const std::filesystem::path& temp_path) -> result<void> {
-            return ba2_dx10_write_archive_bytes(profile.value(), prepared.value(),
+            return ba2_dx10_write_archive_bytes(profile.value(), options, prepared.value(),
                                                 file_table_offset, temp_path);
         });
 }

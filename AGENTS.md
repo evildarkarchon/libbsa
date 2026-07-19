@@ -44,7 +44,6 @@ All implementation work belongs outside `TES5Edit/`.
 
 Deflate and LZ4 compression/decompression support are required.
 
-- Prefer the C++ standard library for simple cases, but add dependencies when they materially improve correctness, maintainability, performance, or delivery for a concrete project need.
 - Keep dependencies scoped to the target that needs them and consume them through vcpkg when available.
 - Use `libdeflate` for deflate compression and decompression.
 - Use the official `lz4` library for LZ4 compression and decompression.

@@ -76,6 +76,7 @@ add_executable(libbsa_tests
   unit/tes4_bsa_reader_tests.cpp
   unit/tes3_bsa_reader_tests.cpp
   unit/ba2_gnrl_reader_tests.cpp
+  unit/ba2_archive_opening_tests.cpp
   unit/ba2_record_identity_tests.cpp
   unit/ba2_profile_tests.cpp
   unit/ba2_dx10_metadata_tests.cpp
