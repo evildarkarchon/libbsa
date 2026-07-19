@@ -4,7 +4,6 @@
 #include "formats/ba2/ba2_archive_source.hpp"
 #include "formats/ba2/ba2_constants.hpp"
 #include "formats/ba2/ba2_dx10_parser.hpp"
-#include "formats/ba2/ba2_format_detector.hpp"
 #include "formats/ba2/ba2_gnrl_parser.hpp"
 
 #include <detail/byte_vector.hpp>
@@ -37,10 +36,8 @@ class ba2_native_read_session final : public ba2_archive_source {
    public:
     /// Acquires a native read handle that permits only other readers to share it.
     static result<ba2_native_read_session> open(const detail::host_file_path& host_path) {
-        // The DX10 parser may temporarily reopen for read until issue #11 moves
-        // it onto this source. Excluding write and delete sharing prevents both
-        // byte mutation and path replacement while all subtype metadata is
-        // materialized.
+        // Excluding write and delete sharing prevents both byte mutation and path
+        // replacement while subtype metadata is materialized through this handle.
         const auto handle = ::CreateFileW(host_path.resolved.c_str(), GENERIC_READ, FILE_SHARE_READ,
                                           nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (handle == INVALID_HANDLE_VALUE) {
@@ -159,18 +156,7 @@ result<opened_ba2_archive> open_ba2_archive(const detail::host_file_path& host_p
     }
 
     if (header.value().profile().is_dx10()) {
-        // DX10 still accepts the detector-shaped adapter until issue #11. Build
-        // it only from the authoritative header and keep the session alive so
-        // its temporary read reopen cannot observe mutated or replaced bytes.
-        detected_ba2_format detected{header.value().profile(), header.value().file_count(),
-                                     header.value().stored_metadata()};
-        auto parsed =
-            parse_ba2_dx10_archive_file(host_path, session.value().size(), std::move(detected));
-        if (!parsed) {
-            return parsed.error();
-        }
-        return opened_ba2_archive{header.value().materialize_metadata(),
-                                  std::move(parsed.value().entries), ba2_subtype::dx10};
+        return materialize_ba2_dx10_archive(session.value(), header.value());
     }
 
     return materialize_ba2_gnrl_archive(session.value(), header.value());

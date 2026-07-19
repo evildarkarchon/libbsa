@@ -13,6 +13,7 @@
 #endif
 #include <windows.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <barrier>
@@ -218,6 +219,34 @@ TEST_CASE("BA2 Archive Opening returns normalized supported profile metadata and
             CHECK(*opened.value().metadata.ba2->compression_method == profile.compression_method);
         }
     }
+}
+
+TEST_CASE("BA2 Archive Opening materializes non-empty DX10 metadata from its stable session",
+          "[unit][fixture][ba2_archive_opening][dx10]") {
+    const auto fixture_path = std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" /
+                              "generated" / "archives" / "ba2_dx10_fo4.ba2";
+    auto resolved = libbsa::detail::resolve_host_file_path(fixture_path.string());
+    REQUIRE(resolved.has_value());
+
+    auto opened = libbsa::formats::ba2::open_ba2_archive(resolved.value());
+
+    REQUIRE(opened.has_value());
+    CHECK(opened.value().subtype == libbsa::formats::ba2::ba2_subtype::dx10);
+    CHECK(opened.value().metadata.type == libbsa::archive_type::ba2);
+    CHECK(opened.value().metadata.variant == libbsa::archive_variant::fallout4);
+    CHECK(opened.value().metadata.file_count == 3U);
+    REQUIRE(opened.value().entries.size() == 3U);
+    const auto texture_entry = std::find_if(
+        opened.value().entries.begin(), opened.value().entries.end(),
+        [](const auto& entry) { return entry.path == "textures/generated/fo4raw.dds"; });
+    REQUIRE(texture_entry != opened.value().entries.end());
+    CHECK(texture_entry->original_path == "Textures/Generated/Fo4Raw.dds");
+    CHECK(texture_entry->compression == libbsa::entry_compression::none);
+    REQUIRE(texture_entry->texture.has_value());
+    CHECK(texture_entry->texture->width == 2U);
+    CHECK(texture_entry->texture->height == 2U);
+    REQUIRE(texture_entry->texture->chunks.size() == 1U);
+    CHECK(texture_entry->texture->chunks.front().compression == libbsa::entry_compression::none);
 }
 
 TEST_CASE("BA2 Archive Opening classifies every fixed-header truncation as format_error",

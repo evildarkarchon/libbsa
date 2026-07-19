@@ -9,44 +9,8 @@
 
 namespace libbsa::formats::ba2 {
 
-result<ba2_dx10_header_fields> read_ba2_dx10_header(detail::binary_reader& reader) {
-    const auto magic = reader.read_u32_le();
-    const auto version = reader.read_u32_le();
-    const auto subtype = reader.read_u32_le();
-    const auto file_count = reader.read_u32_le();
-    const auto file_table_offset = reader.read_u64_le();
-    if (!magic || !version || !subtype || !file_count || !file_table_offset) {
-        return error{error_code::format_error,
-                     "BA2 DX10 fixed header is truncated before FileTableOffset"};
-    }
-
-    ba2_archive_metadata ba2{};
-    if (version.value() >= ba2_starfield_v2_version) {
-        const auto unknown1 = reader.read_u32_le();
-        const auto unknown2 = reader.read_u32_le();
-        if (!unknown1 || !unknown2) {
-            return error{error_code::format_error,
-                         "BA2 DX10 Starfield v2 header fields are truncated"};
-        }
-        ba2.starfield_unknown1 = unknown1.value();
-        ba2.starfield_unknown2 = unknown2.value();
-    }
-    if (version.value() >= ba2_starfield_v3_version) {
-        const auto compression_method = reader.read_u32_le();
-        if (!compression_method) {
-            return error{error_code::format_error,
-                         "BA2 DX10 Starfield v3 CompressionMethod is truncated"};
-        }
-        ba2.compression_method = compression_method.value();
-    }
-
-    return ba2_dx10_header_fields{magic.value(),      version.value(),           subtype.value(),
-                                  file_count.value(), file_table_offset.value(), ba2};
-}
-
 result<std::vector<ba2_dx10_record>> read_ba2_dx10_records(detail::binary_reader& reader,
-                                                           std::uint32_t file_count,
-                                                           std::uint64_t file_table_offset) {
+                                                           std::uint32_t file_count) {
     std::vector<ba2_dx10_record> records;
     auto reserved = detail::reserve_metadata_vector(records, file_count, "BA2 DX10 records");
     if (!reserved) {
@@ -123,7 +87,7 @@ result<std::vector<ba2_dx10_record>> read_ba2_dx10_records(detail::binary_reader
         }
         records.push_back(std::move(record));
     }
-    if (reader.position() != file_table_offset) {
+    if (reader.remaining() != 0U) {
         return error{error_code::format_error,
                      "BA2 DX10 FileTableOffset does not match texture record table size"};
     }

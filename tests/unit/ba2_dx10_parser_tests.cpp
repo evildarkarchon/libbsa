@@ -5,8 +5,6 @@
 #include <detail/bethesda_hash.hpp>
 #include <detail/parser_primitives.hpp>
 
-#include "formats/ba2/ba2_dx10_parser.hpp"
-
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -19,6 +17,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -100,22 +99,61 @@ void write_binary_file(const std::filesystem::path& path, const std::vector<std:
                  static_cast<std::streamsize>(bytes.size()));
 }
 
+/// Writes a mutated archive and verifies that the public open seam rejects it
+/// as malformed.
+void require_open_format_error(const std::filesystem::path& path,
+                               const std::vector<std::byte>& bytes) {
+    write_binary_file(path, bytes);
+    auto opened = libbsa::archive_reader::open(path.string());
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::format_error);
+}
+
+/// Overwrites an unsigned integer field using little-endian byte order.
+template <typename UInt>
+void overwrite_unsigned_le(std::vector<std::byte>& bytes, std::size_t offset, UInt value) {
+    static_assert(std::is_unsigned_v<UInt>);
+    for (std::size_t index = 0; index < sizeof(UInt); ++index) {
+        bytes.at(offset + index) =
+            static_cast<std::byte>((value >> (index * 8U)) & static_cast<UInt>(0xFFU));
+    }
+}
+
 /// Overwrites a little-endian UInt32 field inside a mutable binary fixture.
 void overwrite_u32_le(std::vector<std::byte>& bytes, std::size_t offset, std::uint32_t value) {
-    for (std::uint32_t index = 0; index < 4U; ++index) {
-        bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
+    overwrite_unsigned_le(bytes, offset, value);
+}
+
+/// Overwrites a little-endian UInt16 field inside a mutable binary fixture.
+void overwrite_u16_le(std::vector<std::byte>& bytes, std::size_t offset, std::uint16_t value) {
+    overwrite_unsigned_le(bytes, offset, value);
+}
+
+/// Overwrites a little-endian UInt64 field inside a mutable binary fixture.
+void overwrite_u64_le(std::vector<std::byte>& bytes, std::size_t offset, std::uint64_t value) {
+    overwrite_unsigned_le(bytes, offset, value);
+}
+
+/// Reads an unsigned integer field using little-endian byte order.
+template <typename UInt>
+UInt read_unsigned_le(const std::vector<std::byte>& bytes, std::size_t offset) {
+    static_assert(std::is_unsigned_v<UInt>);
+    UInt value = 0;
+    for (std::size_t index = 0; index < sizeof(UInt); ++index) {
+        value |= static_cast<UInt>(std::to_integer<unsigned char>(bytes.at(offset + index)))
+                 << (index * 8U);
     }
+    return value;
 }
 
 /// Reads a little-endian UInt32 field from a binary fixture.
 std::uint32_t read_u32_le(const std::vector<std::byte>& bytes, std::size_t offset) {
-    std::uint32_t value = 0;
-    for (std::uint32_t index = 0; index < 4U; ++index) {
-        value |=
-            static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes.at(offset + index)))
-            << (index * 8U);
-    }
-    return value;
+    return read_unsigned_le<std::uint32_t>(bytes, offset);
+}
+
+/// Reads a little-endian UInt64 field from a binary fixture.
+std::uint64_t read_u64_le(const std::vector<std::byte>& bytes, std::size_t offset) {
+    return read_unsigned_le<std::uint64_t>(bytes, offset);
 }
 
 const nlohmann::json& manifest_entry_for_path(const nlohmann::json& manifest,
@@ -407,8 +445,8 @@ void require_texture_metadata(const libbsa::entry_metadata& actual,
 
 }  // namespace
 
-TEST_CASE("ba2_dx10_detector opens generated FO4 texture archive",
-          "[unit][fixture][ba2_dx10_detector]") {
+TEST_CASE("ba2_archive_opening opens generated FO4 texture archive",
+          "[unit][fixture][ba2_archive_opening]") {
     const auto manifest = read_json_file(generated_archive_path("ba2_dx10_fo4_manifest.json"));
 
     auto opened = libbsa::archive_reader::open(generated_archive_path("ba2_dx10_fo4.ba2").string());
@@ -422,8 +460,8 @@ TEST_CASE("ba2_dx10_detector opens generated FO4 texture archive",
     REQUIRE_FALSE(metadata.value().ba2->compression_method.has_value());
 }
 
-TEST_CASE("ba2_dx10_detector opens generated Starfield v3 texture archive",
-          "[unit][fixture][ba2_dx10_detector]") {
+TEST_CASE("ba2_archive_opening opens generated Starfield v3 texture archive",
+          "[unit][fixture][ba2_archive_opening]") {
     const auto manifest = read_json_file(generated_archive_path("ba2_dx10_sfv3_manifest.json"));
 
     auto opened =
@@ -435,6 +473,8 @@ TEST_CASE("ba2_dx10_detector opens generated Starfield v3 texture archive",
     require_common_dx10_metadata(manifest, metadata.value(), libbsa::archive_variant::starfield);
     REQUIRE(metadata.value().ba2->compression_method ==
             manifest.at("compression_method").get<std::uint32_t>());
+    REQUIRE(metadata.value().ba2->starfield_unknown1 == 0x1020'3040U);
+    REQUIRE(metadata.value().ba2->starfield_unknown2 == 0x5060'7080U);
     REQUIRE(metadata.value().default_compression == libbsa::entry_compression::lz4_block);
 }
 
@@ -467,6 +507,14 @@ TEST_CASE("ba2_dx10_metadata exposes texture chunks from manifest records",
             REQUIRE(entry.embedded_name_prefix_size == 0U);
             require_texture_metadata(entry, expected);
 
+            const auto has_compressed_chunk = std::any_of(
+                expected.at("chunks").begin(), expected.at("chunks").end(), [](const auto& chunk) {
+                    return chunk.at("packed_size").get<std::uint32_t>() != 0U;
+                });
+            REQUIRE(entry.compression == (has_compressed_chunk
+                                              ? expected_default_compression(manifest)
+                                              : libbsa::entry_compression::none));
+
             saw_cubemap = saw_cubemap || entry.texture->is_cubemap;
             saw_array = saw_array || entry.texture->array_size > 1U;
             for (const auto& chunk : entry.texture->chunks) {
@@ -485,7 +533,7 @@ TEST_CASE("ba2_dx10_metadata exposes texture chunks from manifest records",
 }
 
 TEST_CASE("ba2_dx10_lookup preserves canonical lowercase paths and original spelling",
-          "[unit][fixture][ba2_dx10_detector]") {
+          "[unit][fixture][ba2_archive_opening]") {
     const auto manifest = read_json_file(generated_archive_path("ba2_dx10_fo4_manifest.json"));
     auto opened = libbsa::archive_reader::open(generated_archive_path("ba2_dx10_fo4.ba2").string());
     REQUIRE(opened.has_value());
@@ -511,8 +559,8 @@ TEST_CASE("ba2_dx10_lookup preserves canonical lowercase paths and original spel
     REQUIRE_FALSE(missing.value().has_value());
 }
 
-TEST_CASE("ba2_dx10_detector opens sparse archive without reading the payload gap",
-          "[unit][fixture][bounded_memory_policy][ba2_dx10_detector][sparse]") {
+TEST_CASE("ba2_archive_opening opens sparse DX10 archives without reading the payload gap",
+          "[unit][fixture][bounded_memory_policy][ba2_archive_opening][sparse]") {
     const auto sparse_path =
         std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_sparse_gap.ba2";
     write_sparse_dx10_archive(sparse_path);
@@ -535,8 +583,8 @@ TEST_CASE("ba2_dx10_detector opens sparse archive without reading the payload ga
     REQUIRE(contains.value());
 }
 
-TEST_CASE("ba2_dx10_detector rejects partially overlapping chunk payload spans",
-          "[unit][malformed][ba2_dx10_detector][ba2_dx10_overlap]") {
+TEST_CASE("ba2_archive_opening rejects partially overlapping DX10 chunk payload spans",
+          "[unit][malformed][ba2_archive_opening][ba2_dx10_overlap]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-partial-overlap.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -566,8 +614,8 @@ TEST_CASE("ba2_dx10_detector rejects partially overlapping chunk payload spans",
     CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("ba2_dx10_detector accepts exact duplicate non-empty chunk payload spans",
-          "[unit][ba2_dx10_detector][ba2_dx10_overlap]") {
+TEST_CASE("ba2_archive_opening accepts exact duplicate non-empty DX10 chunk payload spans",
+          "[unit][ba2_archive_opening][ba2_dx10_overlap]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-duplicate-span.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -615,10 +663,98 @@ TEST_CASE("ba2_dx10_detector accepts exact duplicate non-empty chunk payload spa
     }
 }
 
+TEST_CASE("ba2_archive_opening preserves DX10 record, name, metadata, and cubemap validation",
+          "[unit][malformed][ba2_archive_opening][ba2_dx10_validation]") {
+    constexpr std::size_t first_record_offset = 24U;
+    constexpr std::size_t first_chunk_offset = first_record_offset + 24U;
+    constexpr std::size_t chunk_header_size_offset = first_record_offset + 14U;
+    constexpr std::size_t cube_maps_offset = first_record_offset + 22U;
+    constexpr std::size_t chunk_payload_offset = first_chunk_offset;
+    constexpr std::size_t chunk_raw_size_offset = first_chunk_offset + 12U;
+    constexpr std::size_t chunk_sentinel_offset = first_chunk_offset + 20U;
+
+    SECTION("chunk header width") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-chunk-width.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        auto bytes = read_binary_file(generated_archive_path("ba2_dx10_fo4.ba2"));
+        overwrite_u16_le(bytes, chunk_header_size_offset, 23U);
+        require_open_format_error(temp_path, bytes);
+    }
+
+    SECTION("chunk sentinel") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-chunk-sentinel.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        auto bytes = read_binary_file(generated_archive_path("ba2_dx10_fo4.ba2"));
+        overwrite_u32_le(bytes, chunk_sentinel_offset, 0U);
+        require_open_format_error(temp_path, bytes);
+    }
+
+    SECTION("truncated encoded name length") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-name-length.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        const std::string archive_path = "textures/names/truncated.dds";
+        const std::array records{synthetic_dx10_record{archive_path, 73U, 1U}};
+        const std::array payload{std::byte{0x7A}};
+        auto bytes = make_synthetic_dx10_archive(records, payload);
+        overwrite_u64_le(bytes, chunk_payload_offset, 73U);
+        overwrite_u32_le(bytes, chunk_raw_size_offset, 1U);
+        bytes.resize(74U);
+        bytes.at(73U) = payload.front();
+        require_open_format_error(temp_path, bytes);
+    }
+
+    SECTION("encoded name crosses payload") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-name-crosses.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        auto bytes = read_binary_file(generated_archive_path("ba2_dx10_fo4.ba2"));
+        const auto filename_table_offset = static_cast<std::size_t>(read_u64_le(bytes, 16U));
+        overwrite_u16_le(bytes, filename_table_offset, 0xFFFFU);
+        require_open_format_error(temp_path, bytes);
+    }
+
+    SECTION("empty encoded name") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-empty-name.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        auto bytes = read_binary_file(generated_archive_path("ba2_dx10_fo4.ba2"));
+        const auto filename_table_offset = static_cast<std::size_t>(read_u64_le(bytes, 16U));
+        overwrite_u16_le(bytes, filename_table_offset, 0U);
+        require_open_format_error(temp_path, bytes);
+    }
+
+    SECTION("chunk payload overlaps metadata") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-metadata-overlap.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        auto bytes = read_binary_file(generated_archive_path("ba2_dx10_fo4.ba2"));
+        overwrite_u64_le(bytes, chunk_payload_offset, 0U);
+        require_open_format_error(temp_path, bytes);
+    }
+
+    SECTION("cubemap has fewer than six faces") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-cubemap-layout.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        const std::string archive_path = "textures/layout/incomplete_cube.dds";
+        const std::array payload{std::byte{0x10}, std::byte{0x20}, std::byte{0x30},
+                                 std::byte{0x40}};
+        const auto payload_offset = static_cast<std::uint64_t>(72U + 2U + archive_path.size());
+        const std::array records{synthetic_dx10_record{archive_path, payload_offset,
+                                                       static_cast<std::uint32_t>(payload.size())}};
+        auto bytes = make_synthetic_dx10_archive(records, payload);
+        overwrite_u16_le(bytes, cube_maps_offset, 2049U);
+        require_open_format_error(temp_path, bytes);
+    }
+}
+
 TEST_CASE(
-    "ba2_dx10_detector returns format_error for oversized declared "
+    "ba2_archive_opening returns format_error for oversized declared "
     "filename table offsets",
-    "[unit][fixture][malformed][ba2_dx10_detector][allocation]") {
+    "[unit][fixture][malformed][ba2_archive_opening][allocation]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_oversized_filename_offset.ba2";
     std::error_code remove_error;
@@ -643,8 +779,8 @@ TEST_CASE(
     std::filesystem::remove(temp_path, remove_error);
 }
 
-TEST_CASE("ba2_dx10_detector rejects declared file counts above the metadata limit",
-          "[unit][fixture][malformed][ba2_dx10_detector]") {
+TEST_CASE("ba2_archive_opening rejects declared DX10 file counts above the metadata limit",
+          "[unit][fixture][malformed][ba2_archive_opening]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_excessive_file_count.ba2";
     std::error_code remove_error;
@@ -658,13 +794,6 @@ TEST_CASE("ba2_dx10_detector rejects declared file counts above the metadata lim
     append_ascii(bytes, "DX10");
     append_u32_le(bytes, excessive_file_count);
     append_u64_le(bytes, 24U);
-
-    auto detected = libbsa::formats::ba2::detect_ba2_format(bytes);
-    REQUIRE(detected.has_value());
-
-    auto parsed = libbsa::formats::ba2::parse_ba2_dx10_archive(bytes, detected.value());
-    REQUIRE_FALSE(parsed.has_value());
-    REQUIRE(parsed.error().code == libbsa::error_code::format_error);
 
     write_binary_file(temp_path, bytes);
     auto opened = libbsa::archive_reader::open(temp_path.string());
@@ -681,9 +810,12 @@ TEST_CASE("ba2_dx10_detector rejects declared file counts above the metadata lim
 }
 
 TEST_CASE(
-    "ba2_dx10_detector rejects aggregate texture chunk counts above the "
+    "ba2_archive_opening rejects aggregate DX10 texture chunk counts above the "
     "metadata limit",
-    "[unit][fixture][malformed][ba2_dx10_detector]") {
+    "[unit][fixture][malformed][ba2_archive_opening]") {
+    const auto temp_path =
+        std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_excessive_chunk_count.ba2";
+    temp_file_cleanup cleanup{temp_path};
     constexpr std::uint8_t chunks_per_record = std::numeric_limits<std::uint8_t>::max();
     const auto file_count = static_cast<std::uint32_t>(
         libbsa::detail::metadata_dx10_chunk_count_limit / chunks_per_record + 1U);
@@ -717,19 +849,17 @@ TEST_CASE(
     }
     REQUIRE(bytes.size() == file_table_offset);
 
-    auto detected = libbsa::formats::ba2::detect_ba2_format(bytes);
-    REQUIRE(detected.has_value());
+    write_binary_file(temp_path, bytes);
+    auto opened = libbsa::archive_reader::open(temp_path.string());
 
-    auto parsed = libbsa::formats::ba2::parse_ba2_dx10_archive(bytes, detected.value());
-
-    REQUIRE_FALSE(parsed.has_value());
-    REQUIRE(parsed.error().code == libbsa::error_code::format_error);
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
 
 TEST_CASE(
     "ba2_dx10 aggregate overflow fixtures are unreachable under record "
     "field bounds",
-    "[unit][fixture][ba2_dx10_detector][allocation]") {
+    "[unit][fixture][ba2_archive_opening][allocation]") {
     constexpr std::uint64_t max_dx10_chunks_per_texture = std::numeric_limits<std::uint8_t>::max();
     constexpr std::uint64_t max_dx10_chunk_size = std::numeric_limits<std::uint32_t>::max();
     constexpr std::uint64_t reconstructed_dds_header_size = 148U;
@@ -745,8 +875,8 @@ TEST_CASE(
     REQUIRE(max_payload_aggregate + reconstructed_dds_header_size == 1'095'216'660'373ULL);
 }
 
-TEST_CASE("ba2_dx10_detector rejects record hash mismatches",
-          "[unit][fixture][malformed][ba2_dx10_detector][ba2_dx10_hash_lookup]") {
+TEST_CASE("ba2_archive_opening rejects DX10 record hash mismatches",
+          "[unit][fixture][malformed][ba2_archive_opening][ba2_dx10_hash_lookup]") {
     constexpr std::size_t first_record_name_hash_offset = 24U;
     constexpr std::size_t first_record_extension_offset = 28U;
     constexpr std::size_t first_record_directory_hash_offset = 32U;
