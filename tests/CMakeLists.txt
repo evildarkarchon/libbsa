@@ -81,7 +81,7 @@ add_executable(libbsa_tests
   unit/ba2_profile_tests.cpp
   unit/ba2_dx10_metadata_tests.cpp
   unit/dds_layout_tests.cpp
-  unit/ba2_dx10_parser_tests.cpp
+  unit/ba2_dx10_reader_tests.cpp
   unit/ba2_dx10_extraction_tests.cpp
   unit/ba2_dx10_writer_tests.cpp
   unit/ba2_dx10_malformed_tests.cpp

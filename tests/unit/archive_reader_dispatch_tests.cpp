@@ -63,10 +63,14 @@ std::vector<dispatch_fixture> dispatch_fixtures() {
              "valid/missing/path.txt", "folder//file.txt"},
             {"ba2_gnrl_fo4", "ba2_gnrl_fo4.ba2", "ba2_gnrl_fo4_manifest.json",
              "meshes/mixedcase/probe.nif", "valid/missing/path.txt", "folder//file.txt"},
+            {"ba2_gnrl_starfield_v2", "ba2_gnrl_sfv2.ba2", "ba2_gnrl_sfv2_manifest.json",
+             "data/scripts/rawscript.pex", "valid/missing/path.txt", "folder//file.txt"},
             {"ba2_gnrl_starfield_v3", "ba2_gnrl_sfv3.ba2", "ba2_gnrl_sfv3_manifest.json",
              "geometries/packed/block.mesh", "valid/missing/path.txt", "folder//file.txt"},
-            {"ba2_dx10", "ba2_dx10_fo4.ba2", "ba2_dx10_fo4_manifest.json",
-             "textures/generated/fo4raw.dds", "valid/missing/path.txt", "folder//file.txt"}};
+            {"ba2_dx10_fo4", "ba2_dx10_fo4.ba2", "ba2_dx10_fo4_manifest.json",
+             "textures/generated/fo4raw.dds", "valid/missing/path.txt", "folder//file.txt"},
+            {"ba2_dx10_starfield_v3", "ba2_dx10_sfv3.ba2", "ba2_dx10_sfv3_manifest.json",
+             "textures/generated/sfrawlz4.dds", "valid/missing/path.txt", "folder//file.txt"}};
 }
 
 const nlohmann::json& find_manifest_entry(const nlohmann::json& manifest, std::string_view path) {
@@ -192,7 +196,7 @@ void require_result_entry_matches_expected(const libbsa::bulk_extract_entry_resu
 
 TEST_CASE(
     "reader_backend_dispatch preserves reader operations across "
-    "representative backends",
+    "supported backends",
     "[unit][fixture][reader_backend_dispatch]") {
     for (const auto& fixture : dispatch_fixtures()) {
         INFO("fixture: " << fixture.name);

@@ -534,29 +534,38 @@ TEST_CASE("ba2_dx10_metadata exposes texture chunks from manifest records",
 
 TEST_CASE("ba2_dx10_lookup preserves canonical lowercase paths and original spelling",
           "[unit][fixture][ba2_archive_opening]") {
-    const auto manifest = read_json_file(generated_archive_path("ba2_dx10_fo4_manifest.json"));
-    auto opened = libbsa::archive_reader::open(generated_archive_path("ba2_dx10_fo4.ba2").string());
-    REQUIRE(opened.has_value());
+    for (const auto fixture : {"ba2_dx10_fo4", "ba2_dx10_sfv3"}) {
+        INFO("fixture: " << fixture);
+        const auto manifest =
+            read_json_file(generated_archive_path(std::string{fixture} + "_manifest.json"));
+        auto opened = libbsa::archive_reader::open(
+            generated_archive_path(std::string{fixture} + ".ba2").string());
+        REQUIRE(opened.has_value());
 
-    for (const auto& expected : manifest.at("entries")) {
-        const auto canonical = expected.at("path").get<std::string>();
-        auto found = opened.value().find(expected.at("original_path").get<std::string>());
-        REQUIRE(found.has_value());
-        REQUIRE(found.value().has_value());
-        REQUIRE(found.value()->path == canonical);
-        REQUIRE(
-            found.value()->original_path ==
-            archive_original_path_from_manifest(expected.at("original_path").get<std::string>()));
-        REQUIRE(found.value()->texture.has_value());
+        for (const auto& expected : manifest.at("entries")) {
+            const auto canonical = expected.at("path").get<std::string>();
+            auto found = opened.value().find(expected.at("original_path").get<std::string>());
+            REQUIRE(found.has_value());
+            REQUIRE(found.value().has_value());
+            REQUIRE(found.value()->path == canonical);
+            REQUIRE(found.value()->original_path ==
+                    archive_original_path_from_manifest(
+                        expected.at("original_path").get<std::string>()));
+            REQUIRE(found.value()->payload_offset ==
+                    expected.at("chunks").front().at("offset").get<std::uint64_t>());
+            REQUIRE(found.value()->archive_hash == hex_u64_from_manifest(expected.at("name_hash")));
+            REQUIRE(found.value()->record_flags == expected.at("unknown_tex").get<std::uint32_t>());
+            require_texture_metadata(*found.value(), expected);
 
-        auto contains = opened.value().contains(canonical);
-        REQUIRE(contains.has_value());
-        REQUIRE(contains.value());
+            auto contains = opened.value().contains(canonical);
+            REQUIRE(contains.has_value());
+            REQUIRE(contains.value());
+        }
+
+        auto missing = opened.value().find("textures/generated/missing.dds");
+        REQUIRE(missing.has_value());
+        REQUIRE_FALSE(missing.value().has_value());
     }
-
-    auto missing = opened.value().find("textures/generated/missing.dds");
-    REQUIRE(missing.has_value());
-    REQUIRE_FALSE(missing.value().has_value());
 }
 
 TEST_CASE("ba2_archive_opening opens sparse DX10 archives without reading the payload gap",
@@ -854,25 +863,6 @@ TEST_CASE(
 
     REQUIRE_FALSE(opened.has_value());
     REQUIRE(opened.error().code == libbsa::error_code::format_error);
-}
-
-TEST_CASE(
-    "ba2_dx10 aggregate overflow fixtures are unreachable under record "
-    "field bounds",
-    "[unit][fixture][ba2_archive_opening][allocation]") {
-    constexpr std::uint64_t max_dx10_chunks_per_texture = std::numeric_limits<std::uint8_t>::max();
-    constexpr std::uint64_t max_dx10_chunk_size = std::numeric_limits<std::uint32_t>::max();
-    constexpr std::uint64_t reconstructed_dds_header_size = 148U;
-
-    // BA2 DX10 encodes chunk count as UInt8 and each chunk size as UInt32, so an
-    // archive fixture cannot reach the defensive UInt64 aggregate-overflow branch
-    // without first violating the record schema.
-    constexpr std::uint64_t max_payload_aggregate =
-        max_dx10_chunks_per_texture * max_dx10_chunk_size;
-
-    REQUIRE(max_payload_aggregate <=
-            std::numeric_limits<std::uint64_t>::max() - reconstructed_dds_header_size);
-    REQUIRE(max_payload_aggregate + reconstructed_dds_header_size == 1'095'216'660'373ULL);
 }
 
 TEST_CASE("ba2_archive_opening rejects DX10 record hash mismatches",

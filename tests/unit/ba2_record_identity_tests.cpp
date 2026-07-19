@@ -120,7 +120,7 @@ TEST_CASE("BA2 record identity validates stored fields with stable diagnostics",
           "BA2 DX10 record extension does not match filename table");
 }
 
-TEST_CASE("BA2 record identity preserves parser and writer diagnostics",
+TEST_CASE("BA2 record identity preserves filename-table and writer diagnostics",
           "[unit][ba2_record_identity]") {
     auto gnrl_filename_table = libbsa::formats::ba2::make_ba2_record_identity(
         ba2_subtype::gnrl, "Meshes/File", ba2_record_identity_source::filename_table);
