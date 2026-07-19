@@ -26,6 +26,9 @@ class ba2_archive_header final {
     /// Returns version-specific raw fields stored by this archive instance.
     [[nodiscard]] const ba2_archive_metadata& stored_metadata() const noexcept;
 
+    /// Returns normalized public archive metadata derived from this validated header.
+    [[nodiscard]] archive_metadata materialize_metadata() const;
+
    private:
     /// Constructs a header only after the decoder has validated every fixed field.
     ba2_archive_header(ba2_profile profile, std::uint32_t file_count,

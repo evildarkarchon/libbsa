@@ -247,12 +247,12 @@ TEST_CASE(
                               "std::ios::binary | std::ios::ate}") == std::string::npos);
 }
 
-TEST_CASE("parser entry declarations consume the shared host-file path contract",
+TEST_CASE("path-based parser entry declarations consume the shared host-file path contract",
           "[unit][host_file]") {
     const auto root = source_root();
     constexpr auto parser_headers = std::to_array<std::string_view>(
         {"src/formats/bsa/tes3_bsa_parser.hpp", "src/formats/bsa/tes4_bsa_parser.hpp",
-         "src/formats/ba2/ba2_gnrl_parser.hpp", "src/formats/ba2/ba2_dx10_parser.hpp"});
+         "src/formats/ba2/ba2_dx10_parser.hpp"});
 
     for (const auto relative_path : parser_headers) {
         const auto text = read_text_file(root / relative_path);
@@ -262,11 +262,12 @@ TEST_CASE("parser entry declarations consume the shared host-file path contract"
     }
 }
 
-TEST_CASE("parser archive-file opens use the shared host_file seam", "[unit][host_file]") {
+TEST_CASE("path-based parser archive-file opens use the shared host_file seam",
+          "[unit][host_file]") {
     const auto root = source_root();
     constexpr auto parser_sources = std::to_array<std::string_view>(
         {"src/formats/bsa/tes3_bsa_parser.cpp", "src/formats/bsa/tes4_bsa_parser.cpp",
-         "src/formats/ba2/ba2_gnrl_parser.cpp", "src/formats/ba2/ba2_dx10_parser.cpp"});
+         "src/formats/ba2/ba2_dx10_parser.cpp"});
 
     for (const auto relative_path : parser_sources) {
         const auto text = read_text_file(root / relative_path);

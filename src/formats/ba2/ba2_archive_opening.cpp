@@ -1,6 +1,7 @@
 #include "formats/ba2/ba2_archive_opening.hpp"
 
 #include "formats/ba2/ba2_archive_header.hpp"
+#include "formats/ba2/ba2_archive_source.hpp"
 #include "formats/ba2/ba2_constants.hpp"
 #include "formats/ba2/ba2_dx10_parser.hpp"
 #include "formats/ba2/ba2_format_detector.hpp"
@@ -32,13 +33,14 @@ namespace {
 inline constexpr std::size_t ba2_native_read_chunk_size = 64U * 1024U;
 
 /// Owns the native handle that stabilizes one BA2 metadata observation.
-class ba2_native_read_session final {
+class ba2_native_read_session final : public ba2_archive_source {
    public:
     /// Acquires a native read handle that permits only other readers to share it.
     static result<ba2_native_read_session> open(const detail::host_file_path& host_path) {
-        // Metadata parsers may temporarily reopen for read during this expand
-        // phase. Excluding write and delete sharing prevents both byte mutation
-        // and path replacement until those parsers finish materializing entries.
+        // The DX10 parser may temporarily reopen for read until issue #11 moves
+        // it onto this source. Excluding write and delete sharing prevents both
+        // byte mutation and path replacement while all subtype metadata is
+        // materialized.
         const auto handle = ::CreateFileW(host_path.resolved.c_str(), GENERIC_READ, FILE_SHARE_READ,
                                           nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (handle == INVALID_HANDLE_VALUE) {
@@ -81,15 +83,14 @@ class ba2_native_read_session final {
     }
 
     /// Returns the file size observed through this session's handle.
-    [[nodiscard]] std::uint64_t size() const noexcept { return size_; }
+    [[nodiscard]] std::uint64_t size() const noexcept override { return size_; }
 
     /// Reads exactly `count` bytes at a checked archive-absolute offset.
     ///
-    /// Native calls are deliberately chunked even though issue #9 reads only a
-    /// fixed header; later BA2 metadata phases can reuse the same bounded source
-    /// without introducing single-call DWORD limits.
+    /// Native calls are deliberately chunked so subtype record and name tables
+    /// can reuse this source without introducing single-call DWORD limits.
     result<std::vector<std::byte>> read_exact(std::uint64_t offset, std::size_t count,
-                                              std::string_view description) const {
+                                              std::string_view description) const override {
         if (offset > size_ || static_cast<std::uint64_t>(count) > size_ - offset) {
             return error{error_code::format_error,
                          std::string{description} + " is outside the BA2 archive"};
@@ -145,14 +146,6 @@ result<ba2_archive_header> read_authoritative_header(const ba2_native_read_sessi
     return decode_ba2_archive_header(bytes.value(), session.size());
 }
 
-/// Materializes public archive facts only from the authoritative fixed header.
-archive_metadata materialize_archive_metadata(const ba2_archive_header& header) {
-    return archive_metadata{archive_type::ba2,          header.profile().variant(),
-                            header.profile().version(), 0U,
-                            header.file_count(),        header.profile().default_compression(),
-                            header.stored_metadata()};
-}
-
 }  // namespace
 
 result<opened_ba2_archive> open_ba2_archive(const detail::host_file_path& host_path) {
@@ -165,30 +158,22 @@ result<opened_ba2_archive> open_ba2_archive(const detail::host_file_path& host_p
         return header.error();
     }
 
-    // Existing subtype parsers still accept the legacy detector-shaped value
-    // during this expand phase. Build that adapter only from the authoritative
-    // header, and keep the session alive across the entire parser call so their
-    // temporary read reopens cannot observe mutated or replaced bytes. Issues
-    // #10 and #11 move those parsers directly onto the header and stable source.
-    detected_ba2_format detected{header.value().profile(), header.value().file_count(),
-                                 header.value().stored_metadata()};
     if (header.value().profile().is_dx10()) {
+        // DX10 still accepts the detector-shaped adapter until issue #11. Build
+        // it only from the authoritative header and keep the session alive so
+        // its temporary read reopen cannot observe mutated or replaced bytes.
+        detected_ba2_format detected{header.value().profile(), header.value().file_count(),
+                                     header.value().stored_metadata()};
         auto parsed =
             parse_ba2_dx10_archive_file(host_path, session.value().size(), std::move(detected));
         if (!parsed) {
             return parsed.error();
         }
-        return opened_ba2_archive{materialize_archive_metadata(header.value()),
+        return opened_ba2_archive{header.value().materialize_metadata(),
                                   std::move(parsed.value().entries), ba2_subtype::dx10};
     }
 
-    auto parsed =
-        parse_ba2_gnrl_archive_file(host_path, session.value().size(), std::move(detected));
-    if (!parsed) {
-        return parsed.error();
-    }
-    return opened_ba2_archive{materialize_archive_metadata(header.value()),
-                              std::move(parsed.value().entries), ba2_subtype::gnrl};
+    return materialize_ba2_gnrl_archive(session.value(), header.value());
 }
 
 }  // namespace libbsa::formats::ba2

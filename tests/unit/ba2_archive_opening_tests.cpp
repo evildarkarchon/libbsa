@@ -73,6 +73,12 @@ void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
     }
 }
 
+/// Appends one little-endian 16-bit value to a synthetic table.
+void append_u16_le(std::vector<std::byte>& bytes, std::uint16_t value) {
+    bytes.push_back(static_cast<std::byte>(value & 0xFFU));
+    bytes.push_back(static_cast<std::byte>((value >> 8U) & 0xFFU));
+}
+
 /// Appends one little-endian 64-bit value to a synthetic header.
 void append_u64_le(std::vector<std::byte>& bytes, std::uint64_t value) {
     for (std::size_t index = 0; index < 8U; ++index) {
@@ -115,6 +121,18 @@ std::vector<std::byte> make_empty_ba2_header(
         append_u32_le(bytes, compression_method);
     }
     return bytes;
+}
+
+/// Appends one structurally complete placeholder GNRL record.
+void append_placeholder_gnrl_record(std::vector<std::byte>& bytes) {
+    append_u32_le(bytes, 0U);
+    append_u32_le(bytes, 0U);
+    append_u32_le(bytes, 0U);
+    append_u32_le(bytes, 0U);
+    append_u64_le(bytes, 0U);
+    append_u32_le(bytes, 0U);
+    append_u32_le(bytes, 0U);
+    append_u32_le(bytes, libbsa::formats::ba2::ba2_record_sentinel);
 }
 
 /// Resolves a synthetic archive and opens it through the internal BA2 seam.
@@ -279,6 +297,53 @@ TEST_CASE("BA2 Archive Opening preserves fixed-header error categories",
         archive.write(make_empty_ba2_header(ba2_fallout4_version, ba2_dx10_magic,
                                             ba2_starfield_compression_deflate, 0U, 0U, 0U, 0U));
         auto opened = open_synthetic_ba2(archive);
+        REQUIRE_FALSE(opened.has_value());
+        CHECK(opened.error().code == libbsa::error_code::format_error);
+    }
+}
+
+TEST_CASE("BA2 Archive Opening validates GNRL record and encoded-name bounds",
+          "[unit][ba2_archive_opening][gnrl][malformed]") {
+    using namespace libbsa::formats::ba2;
+    temporary_archive archive;
+
+    SECTION("filename table cannot begin before the complete record table") {
+        archive.write(make_empty_ba2_header(ba2_fallout4_version, ba2_gnrl_magic,
+                                            ba2_starfield_compression_deflate, 0U, 0U, 1U,
+                                            ba2_common_header_size));
+
+        auto opened = open_synthetic_ba2(archive);
+
+        REQUIRE_FALSE(opened.has_value());
+        CHECK(opened.error().code == libbsa::error_code::format_error);
+    }
+
+    SECTION("encoded filename length cannot extend past the stable source") {
+        auto bytes = make_empty_ba2_header(ba2_fallout4_version, ba2_gnrl_magic,
+                                           ba2_starfield_compression_deflate, 0U, 0U, 1U,
+                                           ba2_common_header_size + ba2_gnrl_record_size);
+        append_placeholder_gnrl_record(bytes);
+        append_u16_le(bytes, 4U);
+        bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>('a')));
+        bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>('b')));
+        archive.write(bytes);
+
+        auto opened = open_synthetic_ba2(archive);
+
+        REQUIRE_FALSE(opened.has_value());
+        CHECK(opened.error().code == libbsa::error_code::format_error);
+    }
+
+    SECTION("encoded filenames cannot be empty") {
+        auto bytes = make_empty_ba2_header(ba2_fallout4_version, ba2_gnrl_magic,
+                                           ba2_starfield_compression_deflate, 0U, 0U, 1U,
+                                           ba2_common_header_size + ba2_gnrl_record_size);
+        append_placeholder_gnrl_record(bytes);
+        append_u16_le(bytes, 0U);
+        archive.write(bytes);
+
+        auto opened = open_synthetic_ba2(archive);
+
         REQUIRE_FALSE(opened.has_value());
         CHECK(opened.error().code == libbsa::error_code::format_error);
     }

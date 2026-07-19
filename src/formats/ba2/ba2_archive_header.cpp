@@ -55,6 +55,13 @@ const ba2_archive_metadata& ba2_archive_header::stored_metadata() const noexcept
     return stored_metadata_;
 }
 
+archive_metadata ba2_archive_header::materialize_metadata() const {
+    return archive_metadata{archive_type::ba2,  profile_.variant(),
+                            profile_.version(), 0U,
+                            file_count_,        profile_.default_compression(),
+                            stored_metadata_};
+}
+
 result<ba2_archive_header> decode_ba2_archive_header(std::span<const std::byte> bytes,
                                                      std::uint64_t archive_size) {
     detail::binary_reader reader{bytes};

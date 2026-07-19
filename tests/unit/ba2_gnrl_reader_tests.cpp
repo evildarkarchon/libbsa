@@ -2,9 +2,6 @@
 
 #include <libbsa/libbsa.hpp>
 
-#include <detail/host_file_path.hpp>
-
-#include "formats/ba2/ba2_gnrl_parser.hpp"
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 
 #include <detail/bethesda_hash.hpp>
@@ -16,7 +13,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <limits>
 #include <span>
 #include <string>
 #include <string_view>
@@ -270,8 +266,8 @@ void require_common_ba2_metadata(const nlohmann::json& manifest,
 
 }  // namespace
 
-TEST_CASE("ba2_gnrl_detector opens Fallout 4 GNRL metadata without Starfield fields",
-          "[unit][fixture][ba2_gnrl_detector]") {
+TEST_CASE("ba2_archive_opening opens Fallout 4 GNRL metadata without Starfield fields",
+          "[unit][fixture][ba2_archive_opening]") {
     const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_fo4_manifest.json"));
 
     auto opened = libbsa::archive_reader::open(generated_archive_path("ba2_gnrl_fo4.ba2").string());
@@ -286,9 +282,9 @@ TEST_CASE("ba2_gnrl_detector opens Fallout 4 GNRL metadata without Starfield fie
 }
 
 TEST_CASE(
-    "ba2_gnrl_detector opens Starfield v2 GNRL metadata with "
+    "ba2_archive_opening opens Starfield v2 GNRL metadata with "
     "version-gated unknowns",
-    "[unit][fixture][ba2_gnrl_detector]") {
+    "[unit][fixture][ba2_archive_opening]") {
     const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_sfv2_manifest.json"));
 
     auto opened =
@@ -306,9 +302,9 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "ba2_gnrl_detector opens Starfield v3 GNRL metadata with compression "
+    "ba2_archive_opening opens Starfield v3 GNRL metadata with compression "
     "method",
-    "[unit][fixture][ba2_gnrl_detector]") {
+    "[unit][fixture][ba2_archive_opening]") {
     const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_sfv3_manifest.json"));
 
     auto opened =
@@ -327,9 +323,9 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "ba2_gnrl_detector rejects Phase 5 unsupported BA2 profiles with "
+    "ba2_archive_opening rejects unsupported BA2 profiles with "
     "stable errors",
-    "[unit][fixture][ba2_gnrl_detector]") {
+    "[unit][fixture][ba2_archive_opening]") {
     const auto manifest =
         read_json_file(generated_archive_path("ba2_gnrl_malformed_manifest.json"));
 
@@ -479,63 +475,8 @@ TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename t
     CHECK(extracted.value() == payload);
 }
 
-TEST_CASE(
-    "ba2_gnrl_detector rejects unrepresentable high filename table "
-    "ranges before materialization",
-    "[unit][malformed][ba2_gnrl_detector]") {
-    const auto temp_path =
-        std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-name-table-overflow.ba2";
-    temp_file_cleanup cleanup{temp_path};
-    std::error_code remove_error;
-    std::filesystem::remove(temp_path, remove_error);
-
-    constexpr std::uint32_t file_count = 1U;
-    constexpr std::uint64_t record_table_end = 60U;
-    constexpr std::uint64_t file_table_offset = std::numeric_limits<std::uint64_t>::max() - 2U;
-    const std::string archive_path = "meshes/overflow.bin";
-
-    std::vector<std::byte> bytes;
-    append_ascii(bytes, "BTDX");
-    append_u32_le(bytes, 1U);
-    append_ascii(bytes, "GNRL");
-    append_u32_le(bytes, file_count);
-    append_u64_le(bytes, file_table_offset);
-
-    append_u32_le(bytes, libbsa::detail::hash_fo4("overflow.bin"));
-    append_ascii(bytes, std::string_view{"BIN\0", 4U});
-    append_u32_le(bytes, libbsa::detail::hash_fo4("meshes"));
-    append_u32_le(bytes, 0U);
-    append_u64_le(bytes, record_table_end);
-    append_u32_le(bytes, 0U);
-    append_u32_le(bytes, 0U);
-    append_u32_le(bytes, 0xBAADF00DU);
-
-    {
-        std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
-        REQUIRE(output.good());
-        output.write(reinterpret_cast<const char*>(bytes.data()),
-                     static_cast<std::streamsize>(bytes.size()));
-        REQUIRE(output.good());
-    }
-
-    auto detected = libbsa::formats::ba2::detect_ba2_format(bytes);
-    REQUIRE(detected.has_value());
-
-    // A non-empty BA2 name table high enough to overflow UInt64 is above normal
-    // Windows stream seek limits, so this parser-level host-file fixture
-    // documents the malformed layout rejection while parser primitive tests cover
-    // the exact aggregate-end arithmetic contract.
-    auto resolved = libbsa::detail::resolve_host_file_path(temp_path.string());
-    REQUIRE(resolved.has_value());
-    auto parsed = libbsa::formats::ba2::parse_ba2_gnrl_archive_file(
-        resolved.value(), std::numeric_limits<std::uint64_t>::max(), detected.value());
-
-    REQUIRE_FALSE(parsed.has_value());
-    REQUIRE(parsed.error().code == libbsa::error_code::format_error);
-}
-
-TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
-          "[unit][malformed][ba2_gnrl_detector]") {
+TEST_CASE("ba2_archive_opening rejects non-empty payload spans in fixed metadata",
+          "[unit][malformed][ba2_archive_opening]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-payload-in-metadata.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -585,8 +526,28 @@ TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
     CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("ba2_gnrl_detector rejects partially overlapping payload spans",
-          "[unit][malformed][ba2_gnrl_detector][ba2_gnrl_overlap]") {
+TEST_CASE("ba2_archive_opening rejects payload spans that intersect the filename table",
+          "[unit][malformed][ba2_archive_opening][ba2_gnrl_overlap]") {
+    const auto temp_path =
+        std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-payload-in-name-table.ba2";
+    temp_file_cleanup cleanup{temp_path};
+    const std::string archive_path = "meshes/table.bin";
+    constexpr std::uint64_t filename_table_offset = 60U;
+    constexpr std::uint64_t payload_offset = filename_table_offset + 2U;
+    const std::array payload{std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
+    const std::array records{synthetic_gnrl_record{archive_path, payload_offset,
+                                                   static_cast<std::uint32_t>(payload.size())}};
+    const auto bytes = make_synthetic_gnrl_archive(records, payload);
+    write_binary_file(temp_path, bytes);
+
+    auto opened = libbsa::archive_reader::open(temp_path.string());
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("ba2_archive_opening rejects partially overlapping payload spans",
+          "[unit][malformed][ba2_archive_opening][ba2_gnrl_overlap]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-partial-overlap.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -618,8 +579,8 @@ TEST_CASE("ba2_gnrl_detector rejects partially overlapping payload spans",
     CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("ba2_gnrl_detector accepts exact duplicate non-empty payload spans",
-          "[unit][ba2_gnrl_detector][ba2_gnrl_overlap]") {
+TEST_CASE("ba2_archive_opening accepts exact duplicate non-empty payload spans",
+          "[unit][ba2_archive_opening][ba2_gnrl_overlap]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-duplicate-span.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -660,8 +621,8 @@ TEST_CASE("ba2_gnrl_detector accepts exact duplicate non-empty payload spans",
     }
 }
 
-TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
-          "[unit][fixture][malformed][ba2_gnrl_detector][ba2_gnrl_hash_lookup]") {
+TEST_CASE("ba2_archive_opening rejects record hash mismatches",
+          "[unit][fixture][malformed][ba2_archive_opening][ba2_gnrl_hash_lookup]") {
     constexpr std::size_t first_record_name_hash_offset = 24U;
     constexpr std::size_t first_record_extension_offset = 28U;
     constexpr std::size_t first_record_directory_hash_offset = 32U;
@@ -733,9 +694,9 @@ TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
 }
 
 TEST_CASE(
-    "ba2_gnrl_detector returns format_error for oversized declared "
+    "ba2_archive_opening returns format_error for oversized declared "
     "record tables",
-    "[unit][malformed][ba2_gnrl_detector][allocation]") {
+    "[unit][malformed][ba2_archive_opening][allocation]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-oversized-records.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -763,8 +724,8 @@ TEST_CASE(
     REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("ba2_gnrl_detector rejects declared file counts above the metadata limit",
-          "[unit][malformed][ba2_gnrl_detector]") {
+TEST_CASE("ba2_archive_opening rejects declared file counts above the metadata limit",
+          "[unit][malformed][ba2_archive_opening]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-excessive-file-count.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -779,13 +740,6 @@ TEST_CASE("ba2_gnrl_detector rejects declared file counts above the metadata lim
     append_ascii(bytes, "GNRL");
     append_u32_le(bytes, excessive_file_count);
     append_u64_le(bytes, 60U);
-
-    auto detected = libbsa::formats::ba2::detect_ba2_format(bytes);
-    REQUIRE(detected.has_value());
-
-    auto parsed = libbsa::formats::ba2::parse_ba2_gnrl_archive(bytes, detected.value());
-    REQUIRE_FALSE(parsed.has_value());
-    REQUIRE(parsed.error().code == libbsa::error_code::format_error);
 
     write_binary_file(temp_path, bytes);
     auto opened = libbsa::archive_reader::open(temp_path.string());
