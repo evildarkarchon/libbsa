@@ -2,6 +2,7 @@
 
 #include "formats/bsa/tes4_bsa_layout.hpp"
 #include "formats/bsa/tes4_bsa_prepare.hpp"
+#include "formats/bsa/tes4_bsa_profile.hpp"
 #include "formats/bsa/tes4_bsa_serialize.hpp"
 
 #include <detail/host_file_path.hpp>
@@ -110,25 +111,24 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target, const tes4_bsa_write
         return validated.error();
     }
 
-    auto version = tes4_version_for(target);
-    if (!version) {
-        return version.error();
+    auto profile = make_tes4_bsa_profile_for_writer(target);
+    if (!profile) {
+        return profile.error();
     }
 
     const bool archive_default_is_compressed =
-        tes4_archive_default_compressed(target, options.compression_policy);
-    const bool emit_embedded_names = tes4_should_emit_embedded_names(options, version.value());
+        profile.value().archive_default_compressed(options.compression_policy);
+    const bool emit_embedded_names = profile.value().writer_emits_embedded_names(options);
 
     std::uint32_t file_flags = 0U;
     auto folders =
-        tes4_prepare_folders(entries, target, archive_default_is_compressed, emit_embedded_names,
-                             version.value(), worker_count, file_flags);
+        tes4_prepare_folders(entries, profile.value(), target, options, worker_count, file_flags);
     if (!folders) {
         return folders.error();
     }
 
-    auto layout =
-        tes4_assign_offsets(folders.value(), version.value(), options.deduplicate_payloads);
+    auto layout = tes4_assign_offsets(folders.value(), profile.value().version(),
+                                      options.deduplicate_payloads);
     if (!layout) {
         return layout.error();
     }
@@ -136,7 +136,7 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target, const tes4_bsa_write
     return detail::publish_writer_output(
         output_path.value().resolved, options.overwrite_existing, "TES4 BSA writer",
         [&](const std::filesystem::path& temp_path) -> result<void> {
-            return tes4_write_archive_bytes(folders.value(), version.value(),
+            return tes4_write_archive_bytes(folders.value(), profile.value().version(),
                                             archive_default_is_compressed, emit_embedded_names,
                                             file_flags, layout.value(), temp_path);
         });

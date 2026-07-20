@@ -7,6 +7,7 @@
 #include "formats/bsa/tes3_bsa_prepare.hpp"
 #include "formats/bsa/tes4_bsa_layout.hpp"
 #include "formats/bsa/tes4_bsa_prepare.hpp"
+#include "formats/bsa/tes4_bsa_profile.hpp"
 #include "formats/bsa/tes4_bsa_serialize.hpp"
 #include "texture/dds_layout.hpp"
 
@@ -77,6 +78,13 @@ libbsa::formats::ba2::ba2_profile require_dx10_profile(
     libbsa::ba2_dx10_target target = libbsa::ba2_dx10_target::fallout4,
     const libbsa::ba2_dx10_writer_options& options = {}) {
     auto profile = libbsa::formats::ba2::make_ba2_profile_for_dx10_writer(target, options);
+    REQUIRE(profile.has_value());
+    return profile.value();
+}
+
+libbsa::formats::bsa::tes4_bsa_profile require_tes4_profile(
+    libbsa::tes4_bsa_target target = libbsa::tes4_bsa_target::fallout3) {
+    auto profile = libbsa::formats::bsa::make_tes4_bsa_profile_for_writer(target);
     REQUIRE(profile.has_value());
     return profile.value();
 }
@@ -335,20 +343,14 @@ TEST_CASE("tes4 writer preparation stage prepares minimal memory folders",
     entry.value().memory_bytes = bytes_from_text("tes4-stage");
     entry.value().from_memory = true;
 
-    auto version = libbsa::formats::bsa::tes4_version_for(libbsa::tes4_bsa_target::fallout3);
-    REQUIRE(version.has_value());
+    const auto profile = require_tes4_profile();
     libbsa::tes4_bsa_writer_options options;
     options.compression_policy = libbsa::archive_compression_policy::all_raw;
-    const bool archive_default = libbsa::formats::bsa::tes4_archive_default_compressed(
-        libbsa::tes4_bsa_target::fallout3, options.compression_policy);
-    const bool emit_embedded_names =
-        libbsa::formats::bsa::tes4_should_emit_embedded_names(options, version.value());
     std::uint32_t file_flags = 0;
 
     auto folders = libbsa::formats::bsa::tes4_prepare_folders(
-        std::span<const libbsa::formats::bsa::tes4_writer_entry>{&entry.value(), 1U},
-        libbsa::tes4_bsa_target::fallout3, archive_default, emit_embedded_names, version.value(),
-        1U, file_flags);
+        std::span<const libbsa::formats::bsa::tes4_writer_entry>{&entry.value(), 1U}, profile,
+        libbsa::tes4_bsa_target::fallout3, options, 1U, file_flags);
 
     REQUIRE(folders.has_value());
     REQUIRE(folders.value().size() == 1U);
@@ -362,8 +364,7 @@ TEST_CASE("tes4 writer preparation stage prepares minimal memory folders",
 TEST_CASE("tes4 writer layout stage toggles duplicate payload reuse",
           "[unit][writer-stage][tes4_bsa_writer]") {
     const auto payload = bytes_from_text("shared");
-    auto version = libbsa::formats::bsa::tes4_version_for(libbsa::tes4_bsa_target::fallout3);
-    REQUIRE(version.has_value());
+    const auto profile = require_tes4_profile();
 
     std::vector<libbsa::formats::bsa::tes4_prepared_folder> distinct{
         libbsa::formats::bsa::tes4_prepared_folder{"Meshes",
@@ -372,7 +373,7 @@ TEST_CASE("tes4 writer layout stage toggles duplicate payload reuse",
                                                    {tes4_memory_stage_entry("A.nif", payload),
                                                     tes4_memory_stage_entry("B.nif", payload)}}};
     auto distinct_layout =
-        libbsa::formats::bsa::tes4_assign_offsets(distinct, version.value(), false);
+        libbsa::formats::bsa::tes4_assign_offsets(distinct, profile.version(), false);
 
     REQUIRE(distinct_layout.has_value());
     CHECK(distinct[0].entries[0].payload_offset != distinct[0].entries[1].payload_offset);
@@ -385,7 +386,8 @@ TEST_CASE("tes4 writer layout stage toggles duplicate payload reuse",
                                                    0U,
                                                    {tes4_memory_stage_entry("A.nif", payload),
                                                     tes4_memory_stage_entry("B.nif", payload)}}};
-    auto deduped_layout = libbsa::formats::bsa::tes4_assign_offsets(deduped, version.value(), true);
+    auto deduped_layout =
+        libbsa::formats::bsa::tes4_assign_offsets(deduped, profile.version(), true);
 
     REQUIRE(deduped_layout.has_value());
     CHECK(deduped[0].entries[0].payload_offset == deduped[0].entries[1].payload_offset);
@@ -418,8 +420,7 @@ TEST_CASE("tes4 writer layout stage compares raw disk and memory payloads",
 TEST_CASE("tes4 writer serialization stage rejects raw disk source size changes",
           "[unit][writer-stage][tes4_bsa_writer][writer-source-io]") {
     const auto payload = bytes_from_text("tes4 raw streaming payload");
-    auto version = libbsa::formats::bsa::tes4_version_for(libbsa::tes4_bsa_target::fallout3);
-    REQUIRE(version.has_value());
+    const auto profile = require_tes4_profile();
 
     SECTION("source grows after layout") {
         const auto source = stage_output_path("tes4-stream-grew.bin");
@@ -430,14 +431,14 @@ TEST_CASE("tes4 writer serialization stage rejects raw disk source size changes"
                 1U,
                 0U,
                 {tes4_disk_stage_entry(source, static_cast<std::uint32_t>(payload.size()))}}};
-        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, version.value(), false);
+        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile.version(), false);
         REQUIRE(layout.has_value());
 
         auto grown = payload;
         grown.push_back(std::byte{0x21});
         write_stage_binary_file(source, grown);
         auto written = libbsa::formats::bsa::tes4_write_archive_bytes(
-            folders, version.value(), false, false, 0U, layout.value(),
+            folders, profile.version(), false, false, 0U, layout.value(),
             stage_output_path("tes4-stream-grew.bsa"));
 
         REQUIRE_FALSE(written.has_value());
@@ -453,13 +454,13 @@ TEST_CASE("tes4 writer serialization stage rejects raw disk source size changes"
                 1U,
                 0U,
                 {tes4_disk_stage_entry(source, static_cast<std::uint32_t>(payload.size()))}}};
-        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, version.value(), false);
+        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile.version(), false);
         REQUIRE(layout.has_value());
 
         write_stage_binary_file(source,
                                 std::span<const std::byte>{payload.data(), payload.size() - 1U});
         auto written = libbsa::formats::bsa::tes4_write_archive_bytes(
-            folders, version.value(), false, false, 0U, layout.value(),
+            folders, profile.version(), false, false, 0U, layout.value(),
             stage_output_path("tes4-stream-shrank.bsa"));
 
         REQUIRE_FALSE(written.has_value());

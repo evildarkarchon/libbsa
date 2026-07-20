@@ -237,30 +237,6 @@ result<std::uint32_t> disk_payload_size(const std::string& host_path) {
     return checked_u32(size.value(), "TES4 BSA disk source size");
 }
 
-bool requested_entry_compression(bool archive_default, entry_compression_policy policy) noexcept {
-    switch (policy) {
-        case entry_compression_policy::inherit:
-            return archive_default;
-        case entry_compression_policy::raw:
-            return false;
-        case entry_compression_policy::compressed:
-            return true;
-    }
-    return false;
-}
-
-result<detail::compression_method> compression_method_for_target(tes4_bsa_target target) {
-    switch (target) {
-        case tes4_bsa_target::oblivion:
-        case tes4_bsa_target::fallout3:
-            return detail::compression_method::deflate;
-        case tes4_bsa_target::skyrim_se:
-            return detail::compression_method::lz4_frame;
-    }
-    return error{error_code::invalid_argument,
-                 "TES4 BSA writer target profile has no compression method"};
-}
-
 void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
     bytes.push_back(static_cast<std::byte>(value & 0xFFU));
     bytes.push_back(static_cast<std::byte>((value >> 8U) & 0xFFU));
@@ -287,7 +263,9 @@ result<std::vector<std::byte>> make_embedded_name_prefix(bool emit_embedded_name
     return stored;
 }
 
-result<std::vector<std::byte>> encode_stored_payload(tes4_bsa_target target,
+/// Encodes one memory-backed payload using the profile-selected codec and
+/// archive-specific embedded-name choice.
+result<std::vector<std::byte>> encode_stored_payload(const tes4_bsa_profile& profile,
                                                      std::span<const std::byte> raw_payload,
                                                      bool effective_compressed,
                                                      bool emit_embedded_name,
@@ -307,11 +285,7 @@ result<std::vector<std::byte>> encode_stored_payload(tes4_bsa_target target,
     if (!raw_size) {
         return raw_size.error();
     }
-    auto method = compression_method_for_target(target);
-    if (!method) {
-        return method.error();
-    }
-    auto compressed = detail::compress_payload(method.value(), raw_payload);
+    auto compressed = detail::compress_payload(profile.compressed_payload_method(), raw_payload);
     if (!compressed) {
         return compressed.error();
     }
@@ -340,10 +314,12 @@ std::string join_folder_file(std::string_view folder, std::string_view file_name
     return path;
 }
 
+/// Prepares one entry while leaving source probing and DDS analysis in the
+/// preparation stage and delegating compression/name policy to the profile.
 result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
-                                                tes4_bsa_target target,
-                                                bool archive_default_is_compressed,
-                                                bool emit_embedded_names, std::uint32_t version) {
+                                                const tes4_bsa_profile& profile,
+                                                tes4_bsa_target dds_target,
+                                                const tes4_bsa_writer_options& options) {
     auto [folder, file_name] = split_folder_file(entry.archive_path_original);
     auto [canonical_folder, canonical_file_name] = split_folder_file(entry.archive_path_canonical);
     if (folder.empty() || file_name.empty()) {
@@ -357,14 +333,12 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
     }
 
     const auto entry_extension = extension_of(file_name);
-    const auto entry_file_flags = file_flag_for_extension(entry_extension, version);
-    auto texture_format = validate_parseable_dds_texture_for_target(entry, entry_extension, target);
+    const auto entry_file_flags = file_flag_for_extension(entry_extension, profile.version());
+    auto texture_format =
+        validate_parseable_dds_texture_for_target(entry, entry_extension, dds_target);
     if (!texture_format) {
         return texture_format.error();
     }
-    const bool entry_wants_compression =
-        requested_entry_compression(archive_default_is_compressed, entry.compression);
-
     std::uint32_t raw_size = 0U;
     if (entry.from_memory) {
         auto memory_size = checked_u32(entry.memory_bytes.size(), "TES4 BSA raw payload size");
@@ -380,20 +354,17 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
         raw_size = file_size.value();
     }
 
-    const bool effective_compressed = entry_wants_compression && raw_size != 0U;
-    std::uint32_t record_flags = 0U;
-    if (archive_default_is_compressed != effective_compressed) {
-        // Zero-byte entries are forced raw, so they still need the XOR toggle when
-        // the archive default is compressed or readers will expect a size prefix.
-        record_flags |= tes4_bsa_file_size_compression_toggle;
-    }
+    const auto compression =
+        profile.writer_entry_compression(options.compression_policy, entry.compression, raw_size);
+    const bool effective_compressed = compression.compression != entry_compression::none;
+    const bool emit_embedded_names = profile.writer_emits_embedded_names(options);
 
     tes4_prepared_entry prepared;
     prepared.folder = folder;
     prepared.canonical_folder = std::move(canonical_folder);
     prepared.file_name = std::move(file_name);
     prepared.file_hash = file_hash_for(prepared.file_name);
-    prepared.record_flags = record_flags;
+    prepared.record_flags = compression.record_flags;
     const auto embedded_name = join_folder_file(prepared.folder, prepared.file_name);
 
     if (!entry.from_memory && !effective_compressed) {
@@ -425,7 +396,7 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
         return payload.error();
     }
 
-    auto stored_payload = encode_stored_payload(target, payload.value(), effective_compressed,
+    auto stored_payload = encode_stored_payload(profile, payload.value(), effective_compressed,
                                                 emit_embedded_names, embedded_name);
     if (!stored_payload) {
         return stored_payload.error();
@@ -454,36 +425,6 @@ result<tes4_writer_entry> tes4_make_writer_entry(std::string_view archive_path,
     entry.archive_path_canonical = std::move(canonical.value().value);
     entry.compression = compression;
     return entry;
-}
-
-result<std::uint32_t> tes4_version_for(tes4_bsa_target target) {
-    switch (target) {
-        case tes4_bsa_target::oblivion:
-            return tes4_bsa_oblivion_version;
-        case tes4_bsa_target::fallout3:
-            return tes4_bsa_fallout3_version;
-        case tes4_bsa_target::skyrim_se:
-            return tes4_bsa_skyrim_se_version;
-    }
-    return error{error_code::invalid_argument, "TES4 BSA writer target profile is not supported"};
-}
-
-bool tes4_archive_default_compressed(tes4_bsa_target target,
-                                     archive_compression_policy policy) noexcept {
-    switch (policy) {
-        case archive_compression_policy::target_default:
-            return target != tes4_bsa_target::oblivion;
-        case archive_compression_policy::all_raw:
-            return false;
-        case archive_compression_policy::all_compressed:
-            return true;
-    }
-    return false;
-}
-
-bool tes4_should_emit_embedded_names(const tes4_bsa_writer_options& options,
-                                     std::uint32_t version) noexcept {
-    return options.embed_file_names && version != tes4_bsa_oblivion_version;
 }
 
 result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries) {
@@ -515,14 +456,13 @@ result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries) {
 }
 
 result<std::vector<tes4_prepared_folder>> tes4_prepare_folders(
-    std::span<const tes4_writer_entry> entries, tes4_bsa_target target,
-    bool archive_default_is_compressed, bool emit_embedded_names, std::uint32_t version,
-    std::uint32_t worker_count, std::uint32_t& file_flags) {
+    std::span<const tes4_writer_entry> entries, const tes4_bsa_profile& profile,
+    tes4_bsa_target dds_target, const tes4_bsa_writer_options& options, std::uint32_t worker_count,
+    std::uint32_t& file_flags) {
     std::vector<std::optional<prepared_entry_result>> prepared_by_index(entries.size());
     auto prepared_work = detail::run_indexed_work(
         entries.size(), worker_count, [&](std::size_t index) -> result<void> {
-            auto prepared = prepare_one_entry(entries[index], target, archive_default_is_compressed,
-                                              emit_embedded_names, version);
+            auto prepared = prepare_one_entry(entries[index], profile, dds_target, options);
             if (!prepared) {
                 return prepared.error();
             }

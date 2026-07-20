@@ -458,6 +458,42 @@ TEST_CASE("TES4 BSA writer reports invalid archive paths as invalid arguments",
     }
 }
 
+TEST_CASE("TES4 BSA writer resolves invalid targets at the finalization policy seam",
+          "[unit][tes4_bsa_writer]") {
+    const auto invalid_target = static_cast<libbsa::tes4_bsa_target>(0xFFFFU);
+
+    SECTION("output path validation precedes target resolution") {
+        libbsa::tes4_bsa_writer writer{invalid_target};
+
+        auto written = writer.write_to("");
+
+        REQUIRE_FALSE(written.has_value());
+        CHECK(written.error().code == libbsa::error_code::invalid_argument);
+        CHECK(written.error().message == "TES4 BSA output host path must not be empty");
+    }
+
+    SECTION("entry validation precedes target resolution") {
+        libbsa::tes4_bsa_writer writer{invalid_target};
+
+        auto written = writer.write_to(output_path("invalid-target-empty-writer.bsa").string());
+
+        REQUIRE_FALSE(written.has_value());
+        CHECK(written.error().code == libbsa::error_code::invalid_argument);
+        CHECK(written.error().message == "TES4 BSA writer requires at least one file entry");
+    }
+
+    SECTION("validated finalization reports the established target diagnostic") {
+        libbsa::tes4_bsa_writer writer{invalid_target};
+        REQUIRE(writer.add_bytes("Meshes/InvalidTarget.nif", sample_bytes()).has_value());
+
+        auto written = writer.write_to(output_path("invalid-target-profile.bsa").string());
+
+        REQUIRE_FALSE(written.has_value());
+        CHECK(written.error().code == libbsa::error_code::invalid_argument);
+        CHECK(written.error().message == "TES4 BSA writer target profile is not supported");
+    }
+}
+
 TEST_CASE(
     "TES4 BSA writer refuses to overwrite existing output when "
     "overwrite_existing is false",

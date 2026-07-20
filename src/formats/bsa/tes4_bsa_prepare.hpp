@@ -1,5 +1,6 @@
 #pragma once
 
+#include "formats/bsa/tes4_bsa_profile.hpp"
 #include "formats/bsa/tes4_bsa_writer.hpp"
 
 #include <detail/host_file_path.hpp>
@@ -43,27 +44,25 @@ struct tes4_prepared_folder {
 result<tes4_writer_entry> tes4_make_writer_entry(std::string_view archive_path,
                                                  entry_compression_policy compression);
 
-/// Returns the TES4-family BSA archive version for a target profile.
-result<std::uint32_t> tes4_version_for(tes4_bsa_target target);
-
-/// Returns whether the target and policy make new entries compressed by
-/// default.
-bool tes4_archive_default_compressed(tes4_bsa_target target,
-                                     archive_compression_policy policy) noexcept;
-
-/// Returns whether file-name prefixes should be embedded in stored payloads for
-/// this target version.
-bool tes4_should_emit_embedded_names(const tes4_bsa_writer_options& options,
-                                     std::uint32_t version) noexcept;
-
 /// Validates TES4 BSA writer entries before source preparation.
 result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries);
 
 /// Prepares TES4 BSA folders by validating sources, routing compression,
 /// grouping, hashing, and sorting records.
+///
+/// \param entries Read-only staged entries whose sources are prepared independently.
+/// \param profile Profile resolved once at writer finalization; it owns
+/// compression and embedded-name policy.
+/// \param dds_target Public target retained for the existing DDS compatibility
+/// check, whose migration is outside this seam.
+/// \param options Per-archive compression and embedded-name requests.
+/// \param worker_count Positive number of parallel preparation workers. Results
+/// are joined by entry index before deterministic grouping and sorting.
+/// \param file_flags Receives the aggregate serialized file-classification mask.
+/// \return Prepared folders or the first source, format, or compression error.
 result<std::vector<tes4_prepared_folder>> tes4_prepare_folders(
-    std::span<const tes4_writer_entry> entries, tes4_bsa_target target,
-    bool archive_default_is_compressed, bool emit_embedded_names, std::uint32_t version,
-    std::uint32_t worker_count, std::uint32_t& file_flags);
+    std::span<const tes4_writer_entry> entries, const tes4_bsa_profile& profile,
+    tes4_bsa_target dds_target, const tes4_bsa_writer_options& options, std::uint32_t worker_count,
+    std::uint32_t& file_flags);
 
 }  // namespace libbsa::formats::bsa
