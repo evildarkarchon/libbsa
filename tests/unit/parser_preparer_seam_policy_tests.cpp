@@ -61,6 +61,15 @@ void require_absent_tokens(std::string_view body,
     }
 }
 
+std::size_t count_occurrences(std::string_view text, std::string_view token) {
+    std::size_t count = 0U;
+    for (auto position = text.find(token); position != std::string_view::npos;
+         position = text.find(token, position + token.size())) {
+        ++count;
+    }
+    return count;
+}
+
 }  // namespace
 
 TEST_CASE("parser_preparer_seam_policy requires dedicated TES4 parser seams",
@@ -82,6 +91,7 @@ TEST_CASE("parser_preparer_seam_policy requires dedicated TES4 parser seams",
     constexpr auto table_role_evidence = std::to_array<std::string_view>({
         "tes4_bsa_raw_table",
         "tes4_bsa_header_fields",
+        "const tes4_bsa_profile& profile",
         "metadata_table_size",
         "folder_records",
         "folder_blocks",
@@ -92,7 +102,9 @@ TEST_CASE("parser_preparer_seam_policy requires dedicated TES4 parser seams",
 
     constexpr auto payload_role_evidence = std::to_array<std::string_view>({
         "tes4_bsa_payload_descriptor",
-        "tes4_bsa_compression_for",
+        "const tes4_bsa_profile& profile",
+        "profile.reader_entry_compression",
+        "profile.reader_has_embedded_names",
         "tes4_bsa_stored_payload_size",
         "embedded_prefix_size",
         "raw_size",
@@ -116,6 +128,77 @@ TEST_CASE("parser_preparer_seam_policy requires dedicated TES4 parser seams",
         "hash_tes4",
     });
     require_absent_tokens(parse_body, collapsed_table_and_payload_tokens);
+}
+
+TEST_CASE("parser_preparer_seam_policy threads one TES4 BSA Profile through reader seams",
+          "[unit][parser_preparer_seam_policy][tes4_bsa_profile]") {
+    const auto root = source_root();
+    const auto detector_header = read_text_file(root / "src/formats/bsa/bsa_format_detector.hpp");
+    const auto detector = read_text_file(root / "src/formats/bsa/bsa_format_detector.cpp");
+    const auto parser = read_text_file(root / "src/formats/bsa/tes4_bsa_parser.cpp");
+    const auto table = read_text_file(root / "src/formats/bsa/tes4_bsa_table.cpp");
+    const auto payload_header =
+        read_text_file(root / "src/formats/bsa/tes4_bsa_payload_descriptor.hpp");
+    const auto payload = read_text_file(root / "src/formats/bsa/tes4_bsa_payload_descriptor.cpp");
+
+    constexpr auto detector_policy_tokens = std::to_array<std::string_view>({
+        "default_compression",
+        "entry_compression",
+        "tes4_bsa_oblivion_version",
+        "tes4_bsa_fallout3_version",
+        "tes4_bsa_skyrim_se_version",
+    });
+    require_absent_tokens(detector_header, detector_policy_tokens);
+    require_absent_tokens(detector, detector_policy_tokens);
+
+    const auto memory_entry =
+        function_body(parser, "result<tes4_bsa_archive> parse_tes4_bsa_archive(");
+    const auto file_entry =
+        function_body(parser, "result<tes4_bsa_archive> parse_tes4_bsa_archive_file(");
+    REQUIRE(count_occurrences(memory_entry, "make_tes4_bsa_profile_from_header") == 1U);
+    REQUIRE(count_occurrences(file_entry, "make_tes4_bsa_profile_from_header") == 1U);
+    const auto profile_position = file_entry.find("make_tes4_bsa_profile_from_header");
+    const auto table_size_position = file_entry.find("tes4_bsa_metadata_table_size");
+    REQUIRE(profile_position != std::string::npos);
+    REQUIRE(table_size_position != std::string::npos);
+    CHECK(profile_position < table_size_position);
+
+    constexpr auto parser_profile_evidence = std::to_array<std::string_view>({
+        "const tes4_bsa_profile& profile",
+        "read_tes4_bsa_raw_table(table_bytes, archive_size, profile)",
+        "materialize_entries(archive_size, table.value(), profile",
+        "make_tes4_bsa_payload_descriptor(profile",
+        "profile.reader_has_embedded_names",
+        "profile.compressed_entry_metadata",
+        "profile.value().folder_record_size()",
+    });
+    require_all_tokens(parser, parser_profile_evidence);
+
+    constexpr auto moved_reader_policy_tokens = std::to_array<std::string_view>({
+        "tes4_bsa_compression_for",
+        "tes4_bsa_has_embedded_names",
+        "tes4_bsa_oblivion_version",
+        "tes4_bsa_fallout3_version",
+        "tes4_bsa_skyrim_se_version",
+    });
+    require_absent_tokens(parser, moved_reader_policy_tokens);
+    require_absent_tokens(table, moved_reader_policy_tokens);
+    require_absent_tokens(payload_header, moved_reader_policy_tokens);
+    require_absent_tokens(payload, moved_reader_policy_tokens);
+
+    constexpr auto table_profile_evidence = std::to_array<std::string_view>({
+        "const tes4_bsa_profile& profile",
+        "profile.folder_record_shape()",
+        "profile.folder_record_size()",
+        "profile.version()",
+    });
+    require_all_tokens(table, table_profile_evidence);
+    constexpr auto payload_profile_evidence = std::to_array<std::string_view>({
+        "const tes4_bsa_profile& profile",
+        "profile.reader_entry_compression",
+        "profile.reader_has_embedded_names",
+    });
+    require_all_tokens(payload_header, payload_profile_evidence);
 }
 
 TEST_CASE("parser_preparer_seam_policy requires dedicated BA2 DX10 preparer seams",

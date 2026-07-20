@@ -292,7 +292,6 @@ TEST_CASE("tes3_bsa_detector classifies Morrowind magic bytes before parser disp
     REQUIRE(detected.value().variant == libbsa::archive_variant::tes3);
     REQUIRE(detected.value().version == manifest.at("version").get<std::uint32_t>());
     REQUIRE(detected.value().version == 0x00000100U);
-    REQUIRE(detected.value().default_compression == libbsa::entry_compression::none);
 }
 
 TEST_CASE("tes3_bsa_detector leaves unrelated bytes unsupported", "[unit][tes3_bsa_detector]") {

@@ -4,6 +4,8 @@
 
 #include <detail/parser_primitives.hpp>
 
+#include "formats/bsa/bsa_format_detector.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -223,15 +225,28 @@ TEST_CASE("tes4_bsa_metadata exposes archive-level open state",
     }
 }
 
+TEST_CASE("tes4_bsa_detection carries future header versions to parser dispatch",
+          "[unit][fixture][tes4_bsa_detection][unsupported_future_bsa]") {
+    const auto bytes =
+        read_binary_file(generated_archive_path("malformed_unsupported_version.bsa"));
+
+    auto detected = libbsa::formats::bsa::detect_bsa_format(bytes);
+
+    REQUIRE(detected.has_value());
+    CHECK(detected.value().variant == libbsa::archive_variant::tes4);
+    CHECK(detected.value().version == 106U);
+}
+
 TEST_CASE(
-    "unsupported_future_bsa reports unsupported for recognized future "
+    "unsupported_future_bsa reports the established parser error for recognized future "
     "BSA versions",
     "[unit][fixture][unsupported_future_bsa]") {
     auto opened = libbsa::archive_reader::open(
         generated_archive_path("malformed_unsupported_version.bsa").string());
 
     REQUIRE_FALSE(opened.has_value());
-    REQUIRE(opened.error().code == libbsa::error_code::unsupported);
+    CHECK(opened.error().code == libbsa::error_code::unsupported);
+    CHECK(opened.error().message == "BSA header version is not supported");
 }
 
 TEST_CASE(

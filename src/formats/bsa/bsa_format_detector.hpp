@@ -13,10 +13,9 @@ namespace libbsa::formats::bsa {
 struct detected_bsa_format {
     archive_variant variant;
     std::uint32_t version;
-    entry_compression default_compression;
 };
 
-/// Classifies BSA bytes by magic and version without using the host filename.
+/// Classifies BSA bytes by syntax before resolving a TES4 BSA Profile.
 result<detected_bsa_format> detect_bsa_format(std::span<const std::byte> bytes);
 
 }  // namespace libbsa::formats::bsa

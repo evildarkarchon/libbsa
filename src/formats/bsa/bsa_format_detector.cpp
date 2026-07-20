@@ -24,8 +24,7 @@ result<detected_bsa_format> detect_bsa_format(std::span<const std::byte> bytes) 
                                      (static_cast<std::uint32_t>(magic_bytes[2]) << 16U) |
                                      (static_cast<std::uint32_t>(magic_bytes[3]) << 24U);
     if (little_endian_magic == tes3_magic_version) {
-        return detected_bsa_format{archive_variant::tes3, tes3_magic_version,
-                                   entry_compression::none};
+        return detected_bsa_format{archive_variant::tes3, tes3_magic_version};
     }
 
     if (little_endian_magic != tes4_bsa_magic) {
@@ -37,17 +36,7 @@ result<detected_bsa_format> detect_bsa_format(std::span<const std::byte> bytes) 
         return version.error();
     }
 
-    switch (version.value()) {
-        case tes4_bsa_oblivion_version:
-        case tes4_bsa_fallout3_version:
-            return detected_bsa_format{archive_variant::tes4, version.value(),
-                                       entry_compression::deflate};
-        case tes4_bsa_skyrim_se_version:
-            return detected_bsa_format{archive_variant::tes4, version.value(),
-                                       entry_compression::lz4_frame};
-        default:
-            return error{error_code::unsupported, "BSA header version is not supported"};
-    }
+    return detected_bsa_format{archive_variant::tes4, version.value()};
 }
 
 }  // namespace libbsa::formats::bsa

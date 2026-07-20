@@ -354,7 +354,7 @@ result<tes3_bsa_archive> parse_tes3_bsa_archive_impl(std::span<const std::byte> 
 
     return tes3_bsa_archive{
         archive_metadata{archive_type::bsa, archive_variant::tes3, header.value().version, 0U,
-                         header.value().file_count, detected.default_compression},
+                         header.value().file_count, entry_compression::none},
         std::move(entries.value())};
 }
 

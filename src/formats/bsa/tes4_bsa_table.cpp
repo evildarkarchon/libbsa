@@ -95,7 +95,8 @@ result<void> validate_folder_file_counts(const tes4_bsa_header_fields& header,
 }
 
 result<std::vector<tes4_bsa_folder_record>> read_folder_records(
-    detail::binary_reader& reader, const tes4_bsa_header_fields& header) {
+    detail::binary_reader& reader, const tes4_bsa_header_fields& header,
+    const tes4_bsa_profile& profile) {
     std::vector<tes4_bsa_folder_record> records;
     auto reserved =
         detail::reserve_metadata_vector(records, header.folder_count, "TES4 BSA folder records");
@@ -115,7 +116,7 @@ result<std::vector<tes4_bsa_folder_record>> read_folder_records(
         }
 
         std::uint64_t offset = 0;
-        if (header.version == tes4_bsa_skyrim_se_version) {
+        if (profile.folder_record_shape() == tes4_folder_record_shape::sse_64_bit_offset) {
             const auto unknown = reader.read_u32_le();
             const auto wide_offset = reader.read_u64_le();
             if (!unknown || !wide_offset) {
@@ -353,7 +354,7 @@ result<tes4_bsa_header_fields> read_tes4_bsa_header(std::span<const std::byte> h
 
 result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> table_bytes,
                                                    std::size_t archive_size,
-                                                   detected_bsa_format detected) {
+                                                   const tes4_bsa_profile& profile) {
     auto header = read_tes4_bsa_header(table_bytes);
     if (!header) {
         return header.error();
@@ -363,7 +364,7 @@ result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> ta
     if (!skipped_header) {
         return skipped_header.error();
     }
-    if (header.value().version != detected.version) {
+    if (header.value().version != profile.version()) {
         return error{error_code::format_error,
                      "TES4 BSA detected version does not match parsed header"};
     }
@@ -390,9 +391,7 @@ result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> ta
         return file_count_limit.error();
     }
 
-    const auto folder_record_size = detected.version == tes4_bsa_skyrim_se_version
-                                        ? tes4_bsa_sse_folder_record_size
-                                        : tes4_bsa_legacy_folder_record_size;
+    const auto folder_record_size = profile.folder_record_size();
     auto table_size =
         tes4_bsa_metadata_table_size(header.value(), folder_record_size, archive_size);
     if (!table_size) {
@@ -406,7 +405,7 @@ result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> ta
                      "TES4 BSA folder record span is outside the archive"};
     }
 
-    auto folder_records = read_folder_records(reader, header.value());
+    auto folder_records = read_folder_records(reader, header.value(), profile);
     if (!folder_records) {
         return folder_records.error();
     }

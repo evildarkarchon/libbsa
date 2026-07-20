@@ -1,6 +1,7 @@
 #pragma once
 
 #include "formats/bsa/tes4_bsa_constants.hpp"
+#include "formats/bsa/tes4_bsa_profile.hpp"
 #include "formats/bsa/tes4_bsa_table.hpp"
 
 #include <detail/parser_primitives.hpp>
@@ -24,15 +25,6 @@ struct tes4_bsa_payload_descriptor {
     entry_compression compression;
 };
 
-/// Interprets TES4 archive default compression and the per-file toggle bit for
-/// a raw file record.
-entry_compression tes4_bsa_compression_for(const tes4_bsa_header_fields& header,
-                                           std::uint32_t size_flags) noexcept;
-
-/// Returns whether TES4 payloads carry embedded filenames for this checked
-/// header.
-bool tes4_bsa_has_embedded_names(const tes4_bsa_header_fields& header) noexcept;
-
 /// Rejects archive-controlled TES4 payload spans outside the archive or
 /// overlapping metadata.
 result<std::uint32_t> tes4_bsa_stored_payload_size(const tes4_bsa_file_record& record,
@@ -43,16 +35,18 @@ result<std::uint32_t> tes4_bsa_stored_payload_size(const tes4_bsa_file_record& r
 /// archive/host-file callback.
 template <typename PayloadReader>
 result<tes4_bsa_payload_descriptor> make_tes4_bsa_payload_descriptor(
-    const tes4_bsa_header_fields& header, const tes4_bsa_file_record& record,
-    std::size_t archive_size, std::size_t metadata_size, PayloadReader& read_payload_bytes) {
+    const tes4_bsa_profile& profile, const tes4_bsa_header_fields& header,
+    const tes4_bsa_file_record& record, std::size_t archive_size, std::size_t metadata_size,
+    PayloadReader& read_payload_bytes) {
     auto stored_size = tes4_bsa_stored_payload_size(record, archive_size, metadata_size);
     if (!stored_size) {
         return stored_size.error();
     }
 
-    const auto compression = tes4_bsa_compression_for(header, record.size_flags);
+    const auto compression =
+        profile.reader_entry_compression(header.archive_flags, record.size_flags);
     std::uint32_t embedded_prefix = 0;
-    if (tes4_bsa_has_embedded_names(header)) {
+    if (profile.reader_has_embedded_names(header.archive_flags)) {
         if (!detail::span_fits(record.offset, 1U, archive_size)) {
             return error{error_code::format_error,
                          "TES4 BSA embedded-name prefix is outside the archive"};

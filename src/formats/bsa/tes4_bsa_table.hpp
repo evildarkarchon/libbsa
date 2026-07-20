@@ -1,6 +1,6 @@
 #pragma once
 
-#include "formats/bsa/bsa_format_detector.hpp"
+#include "formats/bsa/tes4_bsa_profile.hpp"
 
 #include <libbsa/result.hpp>
 
@@ -67,9 +67,9 @@ result<std::size_t> tes4_bsa_metadata_table_size(const tes4_bsa_header_fields& h
 result<tes4_bsa_header_fields> read_tes4_bsa_header(std::span<const std::byte> header_bytes);
 
 /// Reads and validates TES4 header, folder records/blocks, and file names
-/// without materializing entries.
+/// through one resolved TES4 BSA Profile without materializing entries.
 result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> table_bytes,
                                                    std::size_t archive_size,
-                                                   detected_bsa_format detected);
+                                                   const tes4_bsa_profile& profile);
 
 }  // namespace libbsa::formats::bsa

@@ -2,6 +2,7 @@
 
 #include "formats/bsa/tes4_bsa_constants.hpp"
 #include "formats/bsa/tes4_bsa_payload_descriptor.hpp"
+#include "formats/bsa/tes4_bsa_profile.hpp"
 #include "formats/bsa/tes4_bsa_table.hpp"
 
 #include <detail/archive_path.hpp>
@@ -33,6 +34,7 @@ struct stored_payload_span {
 template <typename PayloadReader>
 result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size,
                                                         const tes4_bsa_raw_table& table,
+                                                        const tes4_bsa_profile& profile,
                                                         PayloadReader& read_payload_bytes) {
     try {
         std::vector<entry_metadata> entries;
@@ -80,7 +82,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                 }
 
                 auto payload =
-                    make_tes4_bsa_payload_descriptor(table.header, record, archive_size,
+                    make_tes4_bsa_payload_descriptor(profile, table.header, record, archive_size,
                                                      table.metadata_table_size, read_payload_bytes);
                 if (!payload) {
                     return payload.error();
@@ -109,7 +111,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                     payload.value().stored_size, payload.value().payload_offset, record.hash,
                     payload.value().compression,
                     record.size_flags & tes4_bsa_file_size_compression_toggle,
-                    tes4_bsa_has_embedded_names(table.header),
+                    profile.reader_has_embedded_names(table.header.archive_flags),
                     payload.value().embedded_prefix_size});
             }
         }
@@ -129,21 +131,21 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
 template <typename PayloadReader>
 result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> table_bytes,
                                                      std::size_t archive_size,
-                                                     detected_bsa_format detected,
+                                                     const tes4_bsa_profile& profile,
                                                      PayloadReader& read_payload_bytes) {
-    auto table = read_tes4_bsa_raw_table(table_bytes, archive_size, detected);
+    auto table = read_tes4_bsa_raw_table(table_bytes, archive_size, profile);
     if (!table) {
         return table.error();
     }
-    auto entries = materialize_entries(archive_size, table.value(), read_payload_bytes);
+    auto entries = materialize_entries(archive_size, table.value(), profile, read_payload_bytes);
     if (!entries) {
         return entries.error();
     }
     (void)table.value().header.file_flags;
     return tes4_bsa_archive{
-        archive_metadata{archive_type::bsa, detected.variant, table.value().header.version,
+        archive_metadata{archive_type::bsa, profile.variant(), table.value().header.version,
                          table.value().header.archive_flags, table.value().header.file_count,
-                         detected.default_compression},
+                         profile.compressed_entry_metadata()},
         std::move(entries.value())};
 }
 
@@ -151,6 +153,10 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> 
 
 result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes,
                                                 detected_bsa_format detected) {
+    auto profile = make_tes4_bsa_profile_from_header(detected.version);
+    if (!profile) {
+        return profile.error();
+    }
     auto read_payload_bytes = [bytes](std::uint64_t offset,
                                       std::size_t count) -> result<std::vector<std::byte>> {
         if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
@@ -169,12 +175,18 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes
         std::copy(payload.begin(), payload.end(), copied.value().begin());
         return std::move(copied).value();
     };
-    return parse_tes4_bsa_archive_impl(bytes, bytes.size(), detected, read_payload_bytes);
+    return parse_tes4_bsa_archive_impl(bytes, bytes.size(), profile.value(), read_payload_bytes);
 }
 
 result<tes4_bsa_archive> parse_tes4_bsa_archive_file(const detail::host_file_path& host_path,
                                                      std::uint64_t archive_size,
                                                      detected_bsa_format detected) {
+    // Generic detection carries only raw syntax. Resolve the TES4 BSA Profile before
+    // file-backed table sizing so every version-derived decision shares one owner.
+    auto profile = make_tes4_bsa_profile_from_header(detected.version);
+    if (!profile) {
+        return profile.error();
+    }
     if (archive_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
         return error{error_code::format_error, "TES4 BSA archive exceeds platform limits"};
     }
@@ -208,11 +220,9 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_file(const detail::host_file_pat
     if (!file_count_limit) {
         return file_count_limit.error();
     }
-    const auto folder_record_size = detected.version == tes4_bsa_skyrim_se_version
-                                        ? tes4_bsa_sse_folder_record_size
-                                        : tes4_bsa_legacy_folder_record_size;
-    auto table_size = tes4_bsa_metadata_table_size(header.value(), folder_record_size,
-                                                   static_cast<std::size_t>(archive_size));
+    auto table_size =
+        tes4_bsa_metadata_table_size(header.value(), profile.value().folder_record_size(),
+                                     static_cast<std::size_t>(archive_size));
     if (!table_size) {
         return table_size.error();
     }
@@ -228,7 +238,7 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_file(const detail::host_file_pat
         return read_file_bytes_at(input.value(), offset, count, "TES4 BSA payload prefix");
     };
     return parse_tes4_bsa_archive_impl(table_bytes.value(), static_cast<std::size_t>(archive_size),
-                                       detected, read_payload_bytes);
+                                       profile.value(), read_payload_bytes);
 }
 
 result<archive_metadata> parse_tes4_bsa_metadata(std::span<const std::byte> bytes,
