@@ -8,6 +8,10 @@ libbsa models Bethesda archive formats as reusable library concepts, with compat
 The ordered collection of canonical archive paths and parsed entry metadata materialized when an archive is opened. It is independent of archive family once established.
 _Avoid_: File list, backend entries
 
+**TES4 BSA Profile**:
+A resolved description of a TES4-family BSA format member: its version and version-dependent layout, compression, embedded-name, and file-classification semantics. The same profile applies whether an archive is being read or written.
+_Avoid_: TES4 mode, TES4 target behavior, raw version checks
+
 **BA2 Profile**:
 A resolved description of a BA2 archive family member: its variant, subtype, header shape, and payload compression meaning.
 _Avoid_: BA2 mode, BA2 target info, raw version fields
