@@ -201,6 +201,47 @@ TEST_CASE("parser_preparer_seam_policy threads one TES4 BSA Profile through read
     require_all_tokens(payload_header, payload_profile_evidence);
 }
 
+TEST_CASE(
+    "parser_preparer_seam_policy routes TES4 writer classification through the TES4 BSA Profile",
+    "[unit][parser_preparer_seam_policy][tes4_bsa_profile][writer]") {
+    const auto root = source_root();
+    const auto prepare_header = read_text_file(root / "src/formats/bsa/tes4_bsa_prepare.hpp");
+    const auto prepare = read_text_file(root / "src/formats/bsa/tes4_bsa_prepare.cpp");
+    const auto profile_header = read_text_file(root / "src/formats/bsa/tes4_bsa_profile.hpp");
+    const auto writer = read_text_file(root / "src/formats/bsa/tes4_bsa_writer.cpp");
+
+    constexpr auto profile_policy_evidence = std::to_array<std::string_view>({
+        "profile.file_flag_for_path",
+        "texture::analyze_dds_metadata",
+        "profile.validate_texture_metadata",
+    });
+    require_all_tokens(prepare, profile_policy_evidence);
+    CHECK(prepare.find("texture::analyze_dds_metadata") <
+          prepare.find("profile.validate_texture_metadata"));
+
+    constexpr auto moved_writer_policy_tokens = std::to_array<std::string_view>({
+        "tes4_bsa_target",
+        "tes4_bsa_oblivion_version",
+        "tes4_bsa_fallout3_version",
+        "tes4_bsa_skyrim_se_version",
+        "file_flag_for_extension",
+        "validate_bsa_texture_format_for_target",
+        "is_dx9_bsa_texture_format",
+        "is_fallout4_compatible_bsa_texture_format",
+    });
+    require_absent_tokens(prepare_header, moved_writer_policy_tokens);
+    require_absent_tokens(prepare, moved_writer_policy_tokens);
+
+    constexpr auto directxtex_identity_tokens =
+        std::to_array<std::string_view>({"DirectXTex", "DirectX::", "DXGI_FORMAT"});
+    require_absent_tokens(profile_header, directxtex_identity_tokens);
+
+    constexpr auto writer_profile_evidence = std::to_array<std::string_view>({
+        "tes4_prepare_folders(entries, profile.value(), options, worker_count, file_flags)",
+    });
+    require_all_tokens(writer, writer_profile_evidence);
+}
+
 TEST_CASE("parser_preparer_seam_policy requires dedicated BA2 DX10 preparer seams",
           "[unit][parser_preparer_seam_policy]") {
     const auto root = source_root();

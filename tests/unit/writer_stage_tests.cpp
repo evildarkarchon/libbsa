@@ -350,7 +350,7 @@ TEST_CASE("tes4 writer preparation stage prepares minimal memory folders",
 
     auto folders = libbsa::formats::bsa::tes4_prepare_folders(
         std::span<const libbsa::formats::bsa::tes4_writer_entry>{&entry.value(), 1U}, profile,
-        libbsa::tes4_bsa_target::fallout3, options, 1U, file_flags);
+        options, 1U, file_flags);
 
     REQUIRE(folders.has_value());
     REQUIRE(folders.value().size() == 1U);

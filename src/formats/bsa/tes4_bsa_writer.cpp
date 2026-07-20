@@ -122,7 +122,7 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target, const tes4_bsa_write
 
     std::uint32_t file_flags = 0U;
     auto folders =
-        tes4_prepare_folders(entries, profile.value(), target, options, worker_count, file_flags);
+        tes4_prepare_folders(entries, profile.value(), options, worker_count, file_flags);
     if (!folders) {
         return folders.error();
     }

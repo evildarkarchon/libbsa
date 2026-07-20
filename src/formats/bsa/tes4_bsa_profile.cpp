@@ -7,17 +7,12 @@
 namespace libbsa::formats::bsa {
 namespace {
 
-constexpr std::uint32_t dxgi_format_r8g8b8a8_unorm = 28U;  // DXGI_FORMAT_R8G8B8A8_UNORM.
-constexpr std::uint32_t dxgi_format_r8_unorm = 61U;        // DXGI_FORMAT_R8_UNORM.
-constexpr std::uint32_t dxgi_format_a8_unorm = 65U;        // DXGI_FORMAT_A8_UNORM.
-constexpr std::uint32_t dxgi_format_bc1_unorm = 71U;       // DXGI_FORMAT_BC1_UNORM.
-constexpr std::uint32_t dxgi_format_bc2_unorm = 74U;       // DXGI_FORMAT_BC2_UNORM.
-constexpr std::uint32_t dxgi_format_bc3_unorm = 77U;       // DXGI_FORMAT_BC3_UNORM.
-constexpr std::uint32_t dxgi_format_bc4_unorm = 80U;       // DXGI_FORMAT_BC4_UNORM.
-constexpr std::uint32_t dxgi_format_bc5_unorm = 83U;       // DXGI_FORMAT_BC5_UNORM.
-constexpr std::uint32_t dxgi_format_b8g8r8a8_unorm = 87U;  // DXGI_FORMAT_B8G8R8A8_UNORM.
-constexpr std::uint32_t dxgi_format_b8g8r8x8_unorm = 88U;  // DXGI_FORMAT_B8G8R8X8_UNORM.
-constexpr std::uint32_t dxgi_format_bc7_unorm = 98U;       // DXGI_FORMAT_BC7_UNORM.
+constexpr std::uint32_t dxgi_format_bc1_unorm = 71U;  // DXGI_FORMAT_BC1_UNORM.
+constexpr std::uint32_t dxgi_format_bc2_unorm = 74U;  // DXGI_FORMAT_BC2_UNORM.
+constexpr std::uint32_t dxgi_format_bc3_unorm = 77U;  // DXGI_FORMAT_BC3_UNORM.
+constexpr std::uint32_t dxgi_format_bc4_unorm = 80U;  // DXGI_FORMAT_BC4_UNORM.
+constexpr std::uint32_t dxgi_format_bc5_unorm = 83U;  // DXGI_FORMAT_BC5_UNORM.
+constexpr std::uint32_t dxgi_format_bc7_unorm = 98U;  // DXGI_FORMAT_BC7_UNORM.
 
 std::string_view extension_for_path(std::string_view archive_path) noexcept {
     const auto separator = archive_path.find_last_of("/\\");
@@ -45,16 +40,13 @@ bool extension_is(std::string_view extension, std::string_view expected_lowercas
     return true;
 }
 
-bool is_dx9_bsa_texture_format(std::uint32_t dxgi_format) noexcept {
+bool is_legacy_bsa_texture_format(std::uint32_t dxgi_format) noexcept {
+    // Oblivion, Fallout 3/New Vegas, and classic Skyrim BSA textures are
+    // limited to the DXT1-DXT5 family represented by BC1, BC2, and BC3.
     switch (dxgi_format) {
-        case dxgi_format_r8g8b8a8_unorm:  // Used as a D3D9-era 32-bit color equivalent.
-        case dxgi_format_r8_unorm:        // Used as an L8-style single-channel equivalent.
-        case dxgi_format_a8_unorm:
         case dxgi_format_bc1_unorm:  // DXT1.
-        case dxgi_format_bc2_unorm:  // DXT3.
-        case dxgi_format_bc3_unorm:  // DXT5.
-        case dxgi_format_b8g8r8a8_unorm:
-        case dxgi_format_b8g8r8x8_unorm:
+        case dxgi_format_bc2_unorm:  // DXT2/DXT3.
+        case dxgi_format_bc3_unorm:  // DXT4/DXT5.
             return true;
         default:
             return false;
@@ -62,10 +54,9 @@ bool is_dx9_bsa_texture_format(std::uint32_t dxgi_format) noexcept {
 }
 
 bool is_sse_bsa_texture_format(std::uint32_t dxgi_format) noexcept {
-    // The established Skyrim SE writer contract reuses the Fallout 4-compatible
-    // set, adding BC4, BC5, and BC7 to the pre-SSE DX9 formats without widening
-    // the public API to DirectX/DXGI types.
-    if (is_dx9_bsa_texture_format(dxgi_format)) {
+    // Skyrim SE retains the legacy DXT family and adds the established BC4,
+    // BC5, and BC7 formats without widening the public API to DirectX types.
+    if (is_legacy_bsa_texture_format(dxgi_format)) {
         return true;
     }
     switch (dxgi_format) {
@@ -205,7 +196,7 @@ result<void> tes4_bsa_profile::validate_texture_metadata(const texture_metadata&
         return {};
     }
 
-    if (!is_dx9_bsa_texture_format(metadata.dxgi_format)) {
+    if (!is_legacy_bsa_texture_format(metadata.dxgi_format)) {
         return error{error_code::format_error,
                      "TES4-family BSA target supports only DX9 DDS texture formats before "
                      "Skyrim SE"};

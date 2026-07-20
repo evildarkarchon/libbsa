@@ -52,9 +52,8 @@ result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries);
 ///
 /// \param entries Read-only staged entries whose sources are prepared independently.
 /// \param profile Profile resolved once at writer finalization; it owns
-/// compression and embedded-name policy.
-/// \param dds_target Public target retained for the existing DDS compatibility
-/// check, whose migration is outside this seam.
+/// compression, embedded-name, file-classification, and analyzed-texture
+/// compatibility policy.
 /// \param options Per-archive compression and embedded-name requests.
 /// \param worker_count Positive number of parallel preparation workers. Results
 /// are joined by entry index before deterministic grouping and sorting.
@@ -62,7 +61,6 @@ result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries);
 /// \return Prepared folders or the first source, format, or compression error.
 result<std::vector<tes4_prepared_folder>> tes4_prepare_folders(
     std::span<const tes4_writer_entry> entries, const tes4_bsa_profile& profile,
-    tes4_bsa_target dds_target, const tes4_bsa_writer_options& options, std::uint32_t worker_count,
-    std::uint32_t& file_flags);
+    const tes4_bsa_writer_options& options, std::uint32_t worker_count, std::uint32_t& file_flags);
 
 }  // namespace libbsa::formats::bsa

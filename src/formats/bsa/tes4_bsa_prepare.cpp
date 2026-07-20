@@ -11,7 +11,6 @@
 #include "texture/directxtex_analyzer.hpp"
 
 #include <algorithm>
-#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -70,104 +69,12 @@ result<std::uint8_t> checked_name_size(std::size_t size, std::string_view descri
     return static_cast<std::uint8_t>(size);
 }
 
-std::string lower_ascii(std::string_view value) {
-    std::string lowered{value};
-    std::transform(lowered.begin(), lowered.end(), lowered.begin(),
-                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
-    return lowered;
-}
-
-std::string extension_of(std::string_view file_name) {
-    const auto dot = file_name.find_last_of('.');
-    if (dot == std::string_view::npos) {
-        return {};
-    }
-    return lower_ascii(file_name.substr(dot));
-}
-
-bool is_dx9_bsa_texture_format(std::uint32_t dxgi_format) noexcept {
-    switch (dxgi_format) {
-        case 28U:  // DXGI_FORMAT_R8G8B8A8_UNORM, used as a D3D9-era 32-bit color
-                   // equivalent.
-        case 61U:  // DXGI_FORMAT_R8_UNORM, used as an L8-style single-channel
-                   // equivalent.
-        case 65U:  // DXGI_FORMAT_A8_UNORM.
-        case 71U:  // DXGI_FORMAT_BC1_UNORM / DXT1.
-        case 74U:  // DXGI_FORMAT_BC2_UNORM / DXT3.
-        case 77U:  // DXGI_FORMAT_BC3_UNORM / DXT5.
-        case 87U:  // DXGI_FORMAT_B8G8R8A8_UNORM.
-        case 88U:  // DXGI_FORMAT_B8G8R8X8_UNORM.
-            return true;
-        default:
-            return false;
-    }
-}
-
-bool is_fallout4_compatible_bsa_texture_format(std::uint32_t dxgi_format) noexcept {
-    if (is_dx9_bsa_texture_format(dxgi_format)) {
-        return true;
-    }
-
-    switch (dxgi_format) {
-        case 80U:  // DXGI_FORMAT_BC4_UNORM.
-        case 83U:  // DXGI_FORMAT_BC5_UNORM.
-        case 98U:  // DXGI_FORMAT_BC7_UNORM.
-            return true;
-        default:
-            return false;
-    }
-}
-
-result<void> validate_bsa_texture_format_for_target(tes4_bsa_target target,
-                                                    std::uint32_t dxgi_format) {
-    switch (target) {
-        case tes4_bsa_target::oblivion:
-        case tes4_bsa_target::fallout3:
-            if (!is_dx9_bsa_texture_format(dxgi_format)) {
-                return error{error_code::format_error,
-                             "TES4-family BSA target supports only DX9 DDS texture "
-                             "formats before Skyrim SE"};
-            }
-            return {};
-        case tes4_bsa_target::skyrim_se:
-            if (!is_fallout4_compatible_bsa_texture_format(dxgi_format)) {
-                return error{error_code::format_error,
-                             "Skyrim SE BSA target supports the same DDS texture format "
-                             "set as Fallout 4"};
-            }
-            return {};
-    }
-    return error{error_code::invalid_argument, "TES4 BSA writer target profile is not supported"};
-}
-
 std::uint64_t file_hash_for(std::string_view file_name) {
     const auto dot = file_name.find_last_of('.');
     if (dot == std::string_view::npos) {
         return detail::hash_tes4(file_name, {});
     }
     return detail::hash_tes4(file_name.substr(0, dot), file_name.substr(dot));
-}
-
-std::uint32_t file_flag_for_extension(std::string_view extension, std::uint32_t version) noexcept {
-    if (extension == ".nif" || extension == ".kf") {
-        return tes4_bsa_file_flag_meshes;
-    }
-    if (extension == ".dds") {
-        return tes4_bsa_file_flag_textures;
-    }
-    if (extension == ".wav") {
-        return tes4_bsa_file_flag_sounds;
-    }
-    if (extension == ".pex" || extension == ".psc") {
-        return tes4_bsa_file_flag_scripts;
-    }
-    if (extension == ".xml") {
-        return version == tes4_bsa_oblivion_version ? tes4_bsa_file_flag_menus : 0U;
-    }
-    if (extension == ".txt" || extension == ".html" || extension == ".bat" || extension == ".scc") {
-        return version == tes4_bsa_skyrim_se_version ? 0U : tes4_bsa_file_flag_misc;
-    }
-    return 0U;
 }
 
 constexpr detail::host_file_context tes4_prepare_source_context{
@@ -194,10 +101,12 @@ result<std::vector<std::byte>> read_source_bytes(const tes4_writer_entry& entry,
                                         tes4_prepare_source_context);
 }
 
-result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& entry,
-                                                       std::string_view file_extension,
-                                                       tes4_bsa_target target) {
-    if (file_extension != ".dds") {
+/// Analyzes texture-classified source bytes and delegates compatibility of the
+/// resulting libbsa-native metadata to the resolved TES4 BSA Profile.
+result<void> validate_parseable_dds_texture(const tes4_writer_entry& entry,
+                                            std::uint32_t file_flags,
+                                            const tes4_bsa_profile& profile) {
+    if ((file_flags & tes4_bsa_file_flag_textures) == 0U) {
         return {};
     }
 
@@ -222,7 +131,7 @@ result<void> validate_parseable_dds_texture_for_target(const tes4_writer_entry& 
         return {};
     }
 
-    return validate_bsa_texture_format_for_target(target, metadata.value().dxgi_format);
+    return profile.validate_texture_metadata(metadata.value());
 }
 
 result<std::uint32_t> disk_payload_size(const std::string& host_path) {
@@ -315,10 +224,9 @@ std::string join_folder_file(std::string_view folder, std::string_view file_name
 }
 
 /// Prepares one entry while leaving source probing and DDS analysis in the
-/// preparation stage and delegating compression/name policy to the profile.
+/// preparation stage and delegating version-dependent policy to the TES4 BSA Profile.
 result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
                                                 const tes4_bsa_profile& profile,
-                                                tes4_bsa_target dds_target,
                                                 const tes4_bsa_writer_options& options) {
     auto [folder, file_name] = split_folder_file(entry.archive_path_original);
     auto [canonical_folder, canonical_file_name] = split_folder_file(entry.archive_path_canonical);
@@ -332,10 +240,8 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
                      "and files"};
     }
 
-    const auto entry_extension = extension_of(file_name);
-    const auto entry_file_flags = file_flag_for_extension(entry_extension, profile.version());
-    auto texture_format =
-        validate_parseable_dds_texture_for_target(entry, entry_extension, dds_target);
+    const auto entry_file_flags = profile.file_flag_for_path(entry.archive_path_original);
+    auto texture_format = validate_parseable_dds_texture(entry, entry_file_flags, profile);
     if (!texture_format) {
         return texture_format.error();
     }
@@ -457,12 +363,11 @@ result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries) {
 
 result<std::vector<tes4_prepared_folder>> tes4_prepare_folders(
     std::span<const tes4_writer_entry> entries, const tes4_bsa_profile& profile,
-    tes4_bsa_target dds_target, const tes4_bsa_writer_options& options, std::uint32_t worker_count,
-    std::uint32_t& file_flags) {
+    const tes4_bsa_writer_options& options, std::uint32_t worker_count, std::uint32_t& file_flags) {
     std::vector<std::optional<prepared_entry_result>> prepared_by_index(entries.size());
     auto prepared_work = detail::run_indexed_work(
         entries.size(), worker_count, [&](std::size_t index) -> result<void> {
-            auto prepared = prepare_one_entry(entries[index], profile, dds_target, options);
+            auto prepared = prepare_one_entry(entries[index], profile, options);
             if (!prepared) {
                 return prepared.error();
             }

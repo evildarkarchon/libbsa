@@ -385,6 +385,51 @@ TEST_CASE("TES4 BSA writer serializes derived file flags and hash-sorted tables"
     }
 }
 
+TEST_CASE("TES4 BSA writer preserves each TES4 BSA Profile's aggregate file flags and payloads",
+          "[unit][tes4_bsa_writer][file-flags]") {
+    struct target_expectation {
+        libbsa::tes4_bsa_target target;
+        std::uint32_t file_flags;
+    };
+    constexpr std::array targets{
+        target_expectation{libbsa::tes4_bsa_target::oblivion, 0x011FU},
+        target_expectation{libbsa::tes4_bsa_target::fallout3, 0x010FU},
+        target_expectation{libbsa::tes4_bsa_target::skyrim_se, 0x000FU},
+    };
+    const std::array entries{
+        std::pair{std::string_view{"Meshes/Flags/Model.NIF"}, bytes_from_text("mesh")},
+        std::pair{std::string_view{"Textures/Flags/Diffuse.DDS"}, bytes_from_text("texture")},
+        std::pair{std::string_view{"Sound/Flags/Voice.WAV"}, bytes_from_text("sound")},
+        std::pair{std::string_view{"Scripts/Flags/Quest.PEX"}, bytes_from_text("script")},
+        std::pair{std::string_view{"Interface/Flags/Menu.XML"}, bytes_from_text("menu")},
+        std::pair{std::string_view{"Docs/Flags/Readme.TXT"}, bytes_from_text("misc")},
+        std::pair{std::string_view{"Unknown/Flags/Payload.BIN"}, bytes_from_text("unclassified")},
+    };
+
+    for (const auto& expected : targets) {
+        INFO("target: " << target_name(expected.target));
+        libbsa::tes4_bsa_writer_options options;
+        options.compression_policy = libbsa::archive_compression_policy::all_raw;
+        options.overwrite_existing = true;
+        libbsa::tes4_bsa_writer writer{expected.target, options};
+        for (const auto& [path, payload] : entries) {
+            REQUIRE(writer.add_bytes(path, payload).has_value());
+        }
+
+        const auto archive = output_path(target_name(expected.target) + "-aggregate-flags.bsa");
+        REQUIRE(writer.write_to(archive.string()).has_value());
+
+        const auto bytes = read_binary_file(archive);
+        CHECK(read_u32_le_at(bytes, 32U) == expected.file_flags);
+
+        auto opened = libbsa::archive_reader::open(archive.string());
+        REQUIRE(opened.has_value());
+        for (const auto& [path, payload] : entries) {
+            require_extracted_bytes(opened.value(), path, payload);
+        }
+    }
+}
+
 TEST_CASE("TES4 BSA writer copies memory entries into writer-owned state",
           "[unit][tes4_bsa_writer]") {
     libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::oblivion};
@@ -562,26 +607,54 @@ TEST_CASE("TES4 BSA writer gates parseable DDS texture formats by target profile
             auto written = writer.write_to(archive.string());
 
             REQUIRE(written.has_value());
+            auto opened = libbsa::archive_reader::open(archive.string());
+            REQUIRE(opened.has_value());
+            require_extracted_bytes(opened.value(), "Textures/Formats/BC3.dds", bc3_dds);
         }
     }
 
-    SECTION("DX10 BC7 DDS payloads require the Skyrim SE BSA target") {
-        const auto bc7_dds = read_generated_dds("ba2_dx10_bc7_unorm.dds");
-        const auto bc7_source = generated_source_dir() / "ba2_dx10_bc7_unorm.dds";
+    SECTION("DX10 BC4 BC5 and BC7 DDS payloads require the Skyrim SE BSA target") {
+        const std::array extended_formats{
+            std::pair{std::string_view{"ba2_dx10_bc4_unorm.dds"},
+                      std::string_view{"Textures/Formats/BC4.dds"}},
+            std::pair{std::string_view{"ba2_dx10_bc5_unorm.dds"},
+                      std::string_view{"Textures/Formats/BC5.dds"}},
+            std::pair{std::string_view{"ba2_dx10_bc7_unorm.dds"},
+                      std::string_view{"Textures/Formats/BC7.dds"}},
+        };
+        constexpr std::string_view legacy_diagnostic =
+            "TES4-family BSA target supports only DX9 DDS texture formats before Skyrim SE";
 
-        for (const auto target :
-             {libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3}) {
-            INFO("target: " << target_name(target));
-            libbsa::tes4_bsa_writer writer{target, options};
-            REQUIRE(writer.add_bytes("Textures/Formats/BC7.dds", bc7_dds).has_value());
+        for (const auto& [fixture_name, archive_path] : extended_formats) {
+            const auto dds = read_generated_dds(fixture_name);
+            for (const auto target :
+                 {libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3}) {
+                INFO("target: " << target_name(target));
+                INFO("source DDS: " << fixture_name);
+                libbsa::tes4_bsa_writer writer{target, options};
+                REQUIRE(writer.add_bytes(archive_path, dds).has_value());
 
-            const auto archive = output_path(target_name(target) + "-bc7-texture.bsa");
-            auto written = writer.write_to(archive.string());
+                const auto archive =
+                    output_path(target_name(target) + "-" + std::string{fixture_name} + ".bsa");
+                auto written = writer.write_to(archive.string());
 
-            REQUIRE_FALSE(written.has_value());
-            CHECK(written.error().code == libbsa::error_code::format_error);
+                REQUIRE_FALSE(written.has_value());
+                CHECK(written.error().code == libbsa::error_code::format_error);
+                CHECK(written.error().message == legacy_diagnostic);
+            }
+
+            libbsa::tes4_bsa_writer skyrim_se_writer{libbsa::tes4_bsa_target::skyrim_se, options};
+            REQUIRE(skyrim_se_writer.add_bytes(archive_path, dds).has_value());
+
+            const auto archive = output_path("skyrim-se-" + std::string{fixture_name} + ".bsa");
+            REQUIRE(skyrim_se_writer.write_to(archive.string()).has_value());
+
+            auto opened = libbsa::archive_reader::open(archive.string());
+            REQUIRE(opened.has_value());
+            require_extracted_bytes(opened.value(), archive_path, dds);
         }
 
+        const auto bc7_source = generated_source_dir() / "ba2_dx10_bc7_unorm.dds";
         libbsa::tes4_bsa_writer disk_writer{libbsa::tes4_bsa_target::fallout3, options};
         REQUIRE(
             disk_writer.add_file("Textures/Formats/DiskBC7.dds", bc7_source.string()).has_value());
@@ -591,17 +664,12 @@ TEST_CASE("TES4 BSA writer gates parseable DDS texture formats by target profile
 
         REQUIRE_FALSE(disk_written.has_value());
         CHECK(disk_written.error().code == libbsa::error_code::format_error);
-
-        libbsa::tes4_bsa_writer skyrim_se_writer{libbsa::tes4_bsa_target::skyrim_se, options};
-        REQUIRE(skyrim_se_writer.add_bytes("Textures/Formats/BC7.dds", bc7_dds).has_value());
-
-        const auto archive = output_path("skyrim-se-bc7-texture.bsa");
-        auto written = skyrim_se_writer.write_to(archive.string());
-
-        REQUIRE(written.has_value());
+        CHECK(disk_written.error().message == legacy_diagnostic);
     }
 
     SECTION("Skyrim SE rejects DDS formats outside the Fallout 4-compatible set") {
+        constexpr std::string_view skyrim_se_diagnostic =
+            "Skyrim SE BSA target supports the same DDS texture format set as Fallout 4";
         for (const auto& source : {std::pair{"ba2_dx10_bc6h_uf16.dds", "Textures/Formats/BC6.dds"},
                                    std::pair{"ba2_dx10_unsupported_r32g32b32a32_float.dds",
                                              "Textures/Formats/R32G32B32A32.dds"}}) {
@@ -614,6 +682,50 @@ TEST_CASE("TES4 BSA writer gates parseable DDS texture formats by target profile
 
             REQUIRE_FALSE(written.has_value());
             CHECK(written.error().code == libbsa::error_code::format_error);
+            CHECK(written.error().message == skyrim_se_diagnostic);
+        }
+    }
+
+    SECTION("analyzable uncompressed DDS formats remain outside the DXT and BC allowlists") {
+        const auto uncompressed_dds = read_generated_dds("ba2_dx10_r8g8b8a8_unorm.dds");
+        for (const auto target :
+             {libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3,
+              libbsa::tes4_bsa_target::skyrim_se}) {
+            INFO("target: " << target_name(target));
+            libbsa::tes4_bsa_writer writer{target, options};
+            REQUIRE(writer.add_bytes("Textures/Formats/Uncompressed.dds", uncompressed_dds)
+                        .has_value());
+
+            auto written = writer.write_to(
+                output_path(target_name(target) + "-uncompressed-dds.bsa").string());
+
+            REQUIRE_FALSE(written.has_value());
+            CHECK(written.error().code == libbsa::error_code::format_error);
+            CHECK(
+                written.error().message ==
+                (target == libbsa::tes4_bsa_target::skyrim_se
+                     ? "Skyrim SE BSA target supports the same DDS texture format set as Fallout 4"
+                     : "TES4-family BSA target supports only DX9 DDS texture formats before "
+                       "Skyrim SE"));
+        }
+    }
+
+    SECTION("malformed DDS bytes remain arbitrary payloads for every target") {
+        const auto malformed_dds = read_generated_dds("ba2_dx10_malformed_truncated.dds");
+        for (const auto target :
+             {libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3,
+              libbsa::tes4_bsa_target::skyrim_se}) {
+            INFO("target: " << target_name(target));
+            libbsa::tes4_bsa_writer writer{target, options};
+            REQUIRE(writer.add_bytes("Textures/Formats/Malformed.dds", malformed_dds).has_value());
+
+            const auto archive = output_path(target_name(target) + "-malformed-texture.bsa");
+            REQUIRE(writer.write_to(archive.string()).has_value());
+
+            auto opened = libbsa::archive_reader::open(archive.string());
+            REQUIRE(opened.has_value());
+            require_extracted_bytes(opened.value(), "Textures/Formats/Malformed.dds",
+                                    malformed_dds);
         }
     }
 }
