@@ -8,6 +8,10 @@ libbsa models Bethesda archive formats as reusable library concepts, with compat
 The ordered collection of canonical archive paths and parsed entry metadata materialized when an archive is opened. It is independent of archive family once established.
 _Avoid_: File list, backend entries
 
+**Stored Payload**:
+The exact byte sequence an archive entry references in the archive payload area, after any format-required prefixing and compression. It is distinct from the decoded entry bytes and from the location assigned during archive layout.
+_Avoid_: Source payload, raw payload, final stored buffer
+
 **TES4 BSA Profile**:
 A resolved description of a TES4-family BSA format member: its version and version-dependent layout, compression, embedded-name, and file-classification semantics. The same profile applies whether an archive is being read or written.
 _Avoid_: TES4 mode, TES4 target behavior, raw version checks
@@ -27,3 +31,11 @@ _Avoid_: BA2 detection pass, BA2 parser dispatch
 **BA2 Record Identity**:
 The subtype-specific lookup facts that bind a BA2 archive path to its stored record fields, including hash input, extension FourCC, and canonical path matching.
 _Avoid_: BA2 record key pieces, path helper fields, hash tuple
+
+## Relationships
+
+- Archive layout assigns a Stored Payload to a payload-area location. The location and any sharing of that location are not properties of the Stored Payload itself.
+
+## Behaviors
+
+- Stored Payload equality is exact byte equality. A fingerprint may narrow equality candidates but never establishes equality on its own.

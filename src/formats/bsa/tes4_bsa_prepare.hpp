@@ -44,7 +44,10 @@ struct tes4_prepared_folder {
 result<tes4_writer_entry> tes4_make_writer_entry(std::string_view archive_path,
                                                  entry_compression_policy compression);
 
-/// Validates TES4 BSA writer entries before source preparation.
+/// Validates TES4 BSA writer entry structure without opening disk sources.
+///
+/// Source paths are authoritatively resolved and opened only after the
+/// Finalization Workspace has been reserved.
 result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries);
 
 /// Prepares TES4 BSA folders by validating sources, routing compression,

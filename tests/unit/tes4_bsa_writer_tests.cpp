@@ -572,6 +572,26 @@ TEST_CASE("TES4 BSA writer reports missing disk sources as I/O errors", "[unit][
     REQUIRE(written.error().code == libbsa::error_code::io_error);
 }
 
+TEST_CASE("TES4 BSA writer validates the destination before opening disk sources",
+          "[unit][tes4_bsa_writer][publish][workspace]") {
+    const auto missing_source = output_path("destination-first-missing-source.dds");
+    const auto archive = output_path("destination-first-existing.bsa");
+    const auto sentinel = bytes_from_text("existing archive");
+    std::error_code fs_error;
+    std::filesystem::remove(missing_source, fs_error);
+    write_binary_file(archive, sentinel);
+
+    libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::skyrim_se};
+    REQUIRE(writer.add_file("Textures/DestinationFirst.dds", missing_source.string()).has_value());
+
+    auto written = writer.write_to(archive.string());
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::io_error);
+    CHECK(written.error().message.find("output host path already exists") != std::string::npos);
+    CHECK(read_binary_file(archive) == sentinel);
+}
+
 TEST_CASE("TES4 BSA writer requires explicit archive paths for disk entries",
           "[unit][tes4_bsa_writer]") {
     const auto source = output_path("disk-source.dds");

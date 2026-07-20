@@ -128,23 +128,25 @@ result<void> write_ba2_gnrl_archive(ba2_gnrl_target target, const ba2_gnrl_write
         return validated.error();
     }
 
-    auto prepared = ba2_gnrl_prepare_entries(profile.value(), options, entries, worker_count);
-    if (!prepared) {
-        return prepared.error();
-    }
-
-    std::uint64_t file_table_offset = 0;
-    auto offsets = ba2_gnrl_assign_payload_offsets(prepared.value(), profile.value(),
-                                                   options.deduplicate_payloads, file_table_offset);
-    if (!offsets) {
-        return offsets.error();
-    }
-
     return detail::publish_writer_output(
         output_path.value().resolved, options.overwrite_existing, "BA2 GNRL writer",
-        [&](const std::filesystem::path& temp_path) -> result<void> {
+        [&](const detail::finalization_workspace& workspace) -> result<void> {
+            auto prepared =
+                ba2_gnrl_prepare_entries(profile.value(), options, entries, worker_count);
+            if (!prepared) {
+                return prepared.error();
+            }
+
+            std::uint64_t file_table_offset = 0;
+            auto offsets = ba2_gnrl_assign_payload_offsets(
+                prepared.value(), profile.value(), options.deduplicate_payloads, file_table_offset);
+            if (!offsets) {
+                return offsets.error();
+            }
+
             return ba2_gnrl_write_archive_bytes(profile.value(), options, prepared.value(),
-                                                file_table_offset, temp_path);
+                                                file_table_offset,
+                                                workspace.temporary_archive_path());
         });
 }
 

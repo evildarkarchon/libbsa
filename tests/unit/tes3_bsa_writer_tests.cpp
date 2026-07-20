@@ -548,6 +548,26 @@ TEST_CASE("tes3_bsa_writer reports missing disk sources from write_to", "[unit][
     REQUIRE(written.error().code == libbsa::error_code::io_error);
 }
 
+TEST_CASE("tes3_bsa_writer validates the destination before opening disk sources",
+          "[unit][tes3_bsa_writer][publish][workspace]") {
+    const auto missing_source = output_path("destination-first-missing-source.nif");
+    const auto archive = output_path("destination-first-existing.bsa");
+    const auto sentinel = bytes_from_text("existing archive");
+    std::error_code fs_error;
+    std::filesystem::remove(missing_source, fs_error);
+    write_binary_file(archive, sentinel);
+
+    libbsa::tes3_bsa_writer writer;
+    REQUIRE(writer.add_file("Meshes/DestinationFirst.NIF", missing_source.string()).has_value());
+
+    auto written = writer.write_to(archive.string());
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::io_error);
+    CHECK(written.error().message.find("output host path already exists") != std::string::npos);
+    CHECK(read_binary_file(archive) == sentinel);
+}
+
 TEST_CASE("tes3_bsa_writer rejects invalid archive paths", "[unit][tes3_bsa_writer]") {
     const std::array invalid_paths{"/rooted/file.txt", "C:/drive/file.txt", "folder/../file.txt",
                                    ""};

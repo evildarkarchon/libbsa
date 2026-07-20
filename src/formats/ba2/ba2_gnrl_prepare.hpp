@@ -44,7 +44,10 @@ struct ba2_gnrl_prepared_entry {
 result<ba2_gnrl_writer_entry> ba2_gnrl_make_writer_entry(std::string_view archive_path,
                                                          ba2_gnrl_entry_options options);
 
-/// Validates BA2 GNRL writer entries before source preparation.
+/// Validates BA2 GNRL writer entry structure without opening disk sources.
+///
+/// Source paths are authoritatively resolved and opened only after the
+/// Finalization Workspace has been reserved.
 result<void> ba2_gnrl_validate_entries(std::span<const ba2_gnrl_writer_entry> entries);
 
 /// Prepares BA2 GNRL entries by routing compression, hashing payloads, and

@@ -561,6 +561,26 @@ TEST_CASE("BA2 GNRL writer reports missing disk sources as I/O errors", "[unit][
     REQUIRE(written.error().code == libbsa::error_code::io_error);
 }
 
+TEST_CASE("BA2 GNRL writer validates the destination before opening disk sources",
+          "[unit][ba2_gnrl_writer][publish][workspace]") {
+    const auto missing_source = output_path("destination-first-missing-source.nif");
+    const auto archive = output_path("destination-first-existing.ba2");
+    const std::vector<std::byte> sentinel{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
+    std::error_code fs_error;
+    std::filesystem::remove(missing_source, fs_error);
+    write_binary_file(archive, sentinel);
+
+    libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4};
+    REQUIRE(writer.add_file("Meshes/DestinationFirst.nif", missing_source.string()).has_value());
+
+    auto written = writer.write_to(archive.string());
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::io_error);
+    CHECK(written.error().message.find("output host path already exists") != std::string::npos);
+    CHECK(read_binary_file(archive) == sentinel);
+}
+
 TEST_CASE("BA2 GNRL writer accepts explicit Fallout 4 disk archive paths",
           "[unit][ba2_gnrl_writer]") {
     const auto source = output_path("disk-source.nif");

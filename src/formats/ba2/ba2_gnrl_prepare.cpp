@@ -251,18 +251,6 @@ result<void> ba2_gnrl_validate_entries(std::span<const ba2_gnrl_writer_entry> en
         if (!identity) {
             return identity.error();
         }
-
-        if (!entry.from_memory) {
-            auto source_path = resolve_ba2_gnrl_source_path(entry.host_path);
-            if (!source_path) {
-                return source_path.error();
-            }
-            auto input =
-                detail::open_host_file(source_path.value(), ba2_gnrl_prepare_source_context);
-            if (!input) {
-                return error{error_code::io_error, "BA2 GNRL writer failed to open disk source"};
-            }
-        }
     }
 
     return {};

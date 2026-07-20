@@ -345,17 +345,6 @@ result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries) {
             return error{error_code::format_error,
                          "TES4 BSA writer has duplicate canonical archive paths"};
         }
-
-        if (!entry.from_memory) {
-            auto source_path = resolve_tes4_source_path(entry.host_path);
-            if (!source_path) {
-                return source_path.error();
-            }
-            auto input = detail::open_host_file(source_path.value(), tes4_prepare_source_context);
-            if (!input) {
-                return error{error_code::io_error, "TES4 BSA writer failed to open disk source"};
-            }
-        }
     }
 
     return {};

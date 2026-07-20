@@ -977,6 +977,33 @@ TEST_CASE("BA2 DX10 writer cleans snapshot directories on missing snapshot failu
     require_snapshot_directories_removed(created);
 }
 
+TEST_CASE("BA2 DX10 writer validates the destination before reading add-time snapshots",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup][publish][workspace]") {
+    const auto before = snapshot_directories();
+    const auto manifest =
+        read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+    const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+    const auto source_path =
+        (generated_source_dir() / source_case.at("file").get<std::string>()).string();
+    const auto output = unique_output_path("dx10-destination-before-snapshot");
+    const std::vector<std::byte> sentinel{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
+    write_binary_file(output, sentinel);
+    libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+    REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(), source_path)
+                .has_value());
+    const auto created = new_snapshot_directories_since(before);
+    std::filesystem::remove(first_snapshot_file(created));
+
+    auto written = writer.write_to(output.string());
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::io_error);
+    CHECK(written.error().message.find("output host path already exists") != std::string::npos);
+    CHECK(read_binary_file(output) == sentinel);
+    require_snapshot_directories_removed(created);
+}
+
 TEST_CASE(
     "BA2 DX10 writer cleans snapshot directories on truncated snapshot "
     "failure and preserves destination bytes",
