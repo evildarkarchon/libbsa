@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -848,10 +849,18 @@ TEST_CASE(
         text.find("result<std::vector<std::byte>> archive_reader::extract_bytes");
     REQUIRE(function_pos != std::string::npos);
 
-    const auto preflight_pos = text.find("checked_materialized_payload_size", function_pos);
-    const auto extraction_pos = text.find("extract_entry_payload", function_pos);
+    const auto function_end =
+        text.find("result<std::vector<bulk_extract_entry_result>> archive_reader::extract_entries",
+                  function_pos);
+    REQUIRE(function_end != std::string::npos);
+    const auto function_text = text.substr(function_pos, function_end - function_pos);
+
+    const auto preflight_pos = function_text.find("checked_materialized_payload_size");
+    const std::regex direct_state_invocation{
+        R"([A-Za-z_][A-Za-z0-9_]*->[A-Za-z_][A-Za-z0-9_]*\([^;]*\))"};
+    std::smatch extraction;
 
     REQUIRE(preflight_pos != std::string::npos);
-    REQUIRE(extraction_pos != std::string::npos);
-    REQUIRE(preflight_pos < extraction_pos);
+    REQUIRE(std::regex_search(function_text, extraction, direct_state_invocation));
+    REQUIRE(preflight_pos < static_cast<std::size_t>(extraction.position()));
 }

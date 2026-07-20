@@ -2,17 +2,13 @@
 
 #include "formats/ba2/ba2_profile.hpp"
 
-#include <detail/archive_path.hpp>
 #include <detail/compression_router.hpp>
 #include <detail/host_file.hpp>
 #include <detail/payload_stream.hpp>
 
 #include "texture/dds_layout.hpp"
 
-#include <algorithm>
-#include <span>
-#include <string>
-#include <vector>
+#include <cstddef>
 
 namespace libbsa::formats::ba2 {
 namespace {
@@ -51,35 +47,6 @@ result<void> extract_compressed_chunk(std::ifstream& input, const texture_chunk_
 }
 
 }  // namespace
-
-result<std::vector<entry_metadata>> ba2_dx10_entries(std::span<const entry_metadata> entries) {
-    return std::vector<entry_metadata>{entries.begin(), entries.end()};
-}
-
-result<std::optional<entry_metadata>> find_ba2_dx10_entry(std::span<const entry_metadata> entries,
-                                                          std::string_view path) {
-    auto normalized = detail::normalize_archive_path(path);
-    if (!normalized) {
-        return normalized.error();
-    }
-
-    const auto found = std::lower_bound(
-        entries.begin(), entries.end(), normalized.value().value,
-        [](const entry_metadata& entry, const std::string& key) { return entry.path < key; });
-    if (found == entries.end() || found->path != normalized.value().value) {
-        return std::optional<entry_metadata>{};
-    }
-    return std::optional<entry_metadata>{*found};
-}
-
-result<bool> contains_ba2_dx10_entry(std::span<const entry_metadata> entries,
-                                     std::string_view path) {
-    auto found = find_ba2_dx10_entry(entries, path);
-    if (!found) {
-        return found.error();
-    }
-    return found.value().has_value();
-}
 
 result<void> extract_ba2_dx10_payload(const detail::host_file_path& host_path,
                                       const entry_metadata& entry, payload_sink& sink) {

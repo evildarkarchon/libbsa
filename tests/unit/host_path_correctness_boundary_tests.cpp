@@ -342,10 +342,10 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "host_path_correctness_boundary non-ASCII host path exercises reader "
-    "dispatch surface",
-    "[unit][fixture][host_path_correctness_boundary][reader_backend_"
-    "dispatch]") {
+    "host_path_correctness_boundary non-ASCII host path exercises Archive Entry Catalog and "
+    "extraction surfaces",
+    "[unit][fixture][host_path_correctness_boundary][archive_entry_catalog]"
+    "[reader_extraction_dispatch]") {
     for (const auto& archive_case : representative_archive_cases()) {
         INFO(archive_case.archive_file);
         const auto manifest =
