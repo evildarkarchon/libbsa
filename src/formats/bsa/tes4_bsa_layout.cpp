@@ -225,15 +225,14 @@ result<bool> tes4_stored_payloads_equal(const tes4_prepared_entry& lhs,
 }
 
 result<tes4_layout_result> tes4_assign_offsets(std::span<tes4_prepared_folder> folders,
-                                               std::uint32_t version, bool deduplicate_payloads) {
+                                               const tes4_bsa_profile& profile,
+                                               bool deduplicate_payloads) {
     auto layout = calculate_table_lengths(folders);
     if (!layout) {
         return layout.error();
     }
 
-    const std::uint64_t folder_record_size = version == tes4_bsa_skyrim_se_version
-                                                 ? tes4_bsa_sse_folder_record_size
-                                                 : tes4_bsa_legacy_folder_record_size;
+    const auto folder_record_size = static_cast<std::uint64_t>(profile.folder_record_size());
     const std::uint64_t folder_records_size = folder_record_size * folders.size();
     std::uint64_t folder_block_cursor = tes4_bsa_header_size + folder_records_size;
     std::uint64_t folder_blocks_size = 0;

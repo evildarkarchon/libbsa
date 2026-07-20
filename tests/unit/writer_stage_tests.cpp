@@ -15,6 +15,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -64,6 +65,15 @@ std::vector<std::byte> read_stage_binary_file(const std::filesystem::path& path)
     }
     REQUIRE_FALSE(input.bad());
     return bytes;
+}
+
+std::uint32_t read_stage_u32_le_at(std::span<const std::byte> bytes, std::size_t offset) {
+    REQUIRE(offset <= bytes.size());
+    REQUIRE(bytes.size() - offset >= sizeof(std::uint32_t));
+    return std::to_integer<std::uint32_t>(bytes[offset]) |
+           (std::to_integer<std::uint32_t>(bytes[offset + 1U]) << 8U) |
+           (std::to_integer<std::uint32_t>(bytes[offset + 2U]) << 16U) |
+           (std::to_integer<std::uint32_t>(bytes[offset + 3U]) << 24U);
 }
 
 libbsa::formats::ba2::ba2_profile require_gnrl_profile(
@@ -372,8 +382,7 @@ TEST_CASE("tes4 writer layout stage toggles duplicate payload reuse",
                                                    0U,
                                                    {tes4_memory_stage_entry("A.nif", payload),
                                                     tes4_memory_stage_entry("B.nif", payload)}}};
-    auto distinct_layout =
-        libbsa::formats::bsa::tes4_assign_offsets(distinct, profile.version(), false);
+    auto distinct_layout = libbsa::formats::bsa::tes4_assign_offsets(distinct, profile, false);
 
     REQUIRE(distinct_layout.has_value());
     CHECK(distinct[0].entries[0].payload_offset != distinct[0].entries[1].payload_offset);
@@ -386,14 +395,104 @@ TEST_CASE("tes4 writer layout stage toggles duplicate payload reuse",
                                                    0U,
                                                    {tes4_memory_stage_entry("A.nif", payload),
                                                     tes4_memory_stage_entry("B.nif", payload)}}};
-    auto deduped_layout =
-        libbsa::formats::bsa::tes4_assign_offsets(deduped, profile.version(), true);
+    auto deduped_layout = libbsa::formats::bsa::tes4_assign_offsets(deduped, profile, true);
 
     REQUIRE(deduped_layout.has_value());
     CHECK(deduped[0].entries[0].payload_offset == deduped[0].entries[1].payload_offset);
     CHECK(deduped[0].entries[0].owns_payload_bytes);
     CHECK_FALSE(deduped[0].entries[1].owns_payload_bytes);
     CHECK(deduped_layout.value().file_count == 2U);
+}
+
+TEST_CASE("tes4 writer layout stage uses resolved profile folder record sizing",
+          "[unit][writer-stage][tes4_bsa_writer]") {
+    struct layout_expectation {
+        libbsa::tes4_bsa_target target;
+        std::uint64_t folder_block_offset;
+        std::uint32_t payload_offset;
+    };
+    constexpr std::array expectations{
+        layout_expectation{libbsa::tes4_bsa_target::oblivion, 58U, 82U},
+        layout_expectation{libbsa::tes4_bsa_target::fallout3, 58U, 82U},
+        layout_expectation{libbsa::tes4_bsa_target::skyrim_se, 66U, 90U},
+    };
+
+    for (const auto& expected : expectations) {
+        const auto profile = require_tes4_profile(expected.target);
+        std::vector<libbsa::formats::bsa::tes4_prepared_folder> folders{
+            libbsa::formats::bsa::tes4_prepared_folder{
+                "Meshes", 1U, 0U, {tes4_memory_stage_entry("A.nif", bytes_from_text("data"))}}};
+
+        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile, false);
+
+        REQUIRE(layout.has_value());
+        CHECK(layout.value().total_file_name_length == 6U);
+        CHECK(folders[0].folder_block_offset == expected.folder_block_offset);
+        CHECK(folders[0].entries[0].payload_offset == expected.payload_offset);
+    }
+}
+
+TEST_CASE("tes4 writer serialization stage emits profile-selected folder record bytes",
+          "[unit][writer-stage][tes4_bsa_writer]") {
+    struct serialization_expectation {
+        libbsa::tes4_bsa_target target;
+        std::uint32_t version;
+        std::uint32_t archive_flags;
+        std::vector<std::byte> folder_record;
+    };
+    const std::array expectations{
+        serialization_expectation{
+            libbsa::tes4_bsa_target::oblivion,
+            103U,
+            0x0003U,
+            {std::byte{0x01}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00},
+             std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x01}, std::byte{0x00},
+             std::byte{0x00}, std::byte{0x00}, std::byte{0x3A}, std::byte{0x00}, std::byte{0x00},
+             std::byte{0x00}}},
+        serialization_expectation{
+            libbsa::tes4_bsa_target::fallout3,
+            104U,
+            0x0103U,
+            {std::byte{0x01}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00},
+             std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x01}, std::byte{0x00},
+             std::byte{0x00}, std::byte{0x00}, std::byte{0x3A}, std::byte{0x00}, std::byte{0x00},
+             std::byte{0x00}}},
+        serialization_expectation{
+            libbsa::tes4_bsa_target::skyrim_se,
+            105U,
+            0x0103U,
+            {std::byte{0x01}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00},
+             std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x01}, std::byte{0x00},
+             std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00},
+             std::byte{0x00}, std::byte{0x42}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00},
+             std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00}}},
+    };
+
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    options.embed_file_names = true;
+    for (const auto& expected : expectations) {
+        const auto profile = require_tes4_profile(expected.target);
+        std::vector<libbsa::formats::bsa::tes4_prepared_folder> folders{
+            libbsa::formats::bsa::tes4_prepared_folder{
+                "Meshes", 1U, 0U, {tes4_memory_stage_entry("A.nif", bytes_from_text("data"))}}};
+        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile, false);
+        REQUIRE(layout.has_value());
+
+        const auto output =
+            stage_output_path("tes4-profile-record-v" + std::to_string(expected.version) + ".bsa");
+        auto written = libbsa::formats::bsa::tes4_write_archive_bytes(folders, profile, options, 0U,
+                                                                      layout.value(), output);
+
+        REQUIRE(written.has_value());
+        const auto bytes = read_stage_binary_file(output);
+        CHECK(read_stage_u32_le_at(bytes, 4U) == expected.version);
+        CHECK(read_stage_u32_le_at(bytes, 12U) == expected.archive_flags);
+        REQUIRE(bytes.size() >= 36U + expected.folder_record.size());
+        CHECK(std::vector<std::byte>{bytes.begin() + 36U,
+                                     bytes.begin() + 36U + expected.folder_record.size()} ==
+              expected.folder_record);
+    }
 }
 
 TEST_CASE("tes4 writer layout stage compares raw disk and memory payloads",
@@ -421,6 +520,8 @@ TEST_CASE("tes4 writer serialization stage rejects raw disk source size changes"
           "[unit][writer-stage][tes4_bsa_writer][writer-source-io]") {
     const auto payload = bytes_from_text("tes4 raw streaming payload");
     const auto profile = require_tes4_profile();
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
 
     SECTION("source grows after layout") {
         const auto source = stage_output_path("tes4-stream-grew.bin");
@@ -431,14 +532,14 @@ TEST_CASE("tes4 writer serialization stage rejects raw disk source size changes"
                 1U,
                 0U,
                 {tes4_disk_stage_entry(source, static_cast<std::uint32_t>(payload.size()))}}};
-        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile.version(), false);
+        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile, false);
         REQUIRE(layout.has_value());
 
         auto grown = payload;
         grown.push_back(std::byte{0x21});
         write_stage_binary_file(source, grown);
         auto written = libbsa::formats::bsa::tes4_write_archive_bytes(
-            folders, profile.version(), false, false, 0U, layout.value(),
+            folders, profile, options, 0U, layout.value(),
             stage_output_path("tes4-stream-grew.bsa"));
 
         REQUIRE_FALSE(written.has_value());
@@ -454,13 +555,13 @@ TEST_CASE("tes4 writer serialization stage rejects raw disk source size changes"
                 1U,
                 0U,
                 {tes4_disk_stage_entry(source, static_cast<std::uint32_t>(payload.size()))}}};
-        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile.version(), false);
+        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile, false);
         REQUIRE(layout.has_value());
 
         write_stage_binary_file(source,
                                 std::span<const std::byte>{payload.data(), payload.size() - 1U});
         auto written = libbsa::formats::bsa::tes4_write_archive_bytes(
-            folders, profile.version(), false, false, 0U, layout.value(),
+            folders, profile, options, 0U, layout.value(),
             stage_output_path("tes4-stream-shrank.bsa"));
 
         REQUIRE_FALSE(written.has_value());

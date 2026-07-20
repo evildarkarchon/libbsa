@@ -18,9 +18,10 @@ struct tes4_layout_result {
 result<bool> tes4_stored_payloads_equal(const tes4_prepared_entry& lhs,
                                         const tes4_prepared_entry& rhs);
 
-/// Assigns TES4 folder and payload offsets and returns the table-size values
-/// used by serialization.
+/// Assigns TES4 folder and payload offsets using the resolved profile's folder
+/// record size and returns the table-size values used by serialization.
 result<tes4_layout_result> tes4_assign_offsets(std::span<tes4_prepared_folder> folders,
-                                               std::uint32_t version, bool deduplicate_payloads);
+                                               const tes4_bsa_profile& profile,
+                                               bool deduplicate_payloads);
 
 }  // namespace libbsa::formats::bsa

@@ -120,16 +120,16 @@ result<void> stream_disk_payload_to_output(const detail::host_file_path& host_pa
 }  // namespace
 
 result<void> tes4_write_archive_bytes(std::span<const tes4_prepared_folder> folders,
-                                      std::uint32_t version, bool archive_default_is_compressed,
-                                      bool emit_embedded_names, std::uint32_t file_flags,
-                                      const tes4_layout_result& layout,
+                                      const tes4_bsa_profile& profile,
+                                      const tes4_bsa_writer_options& options,
+                                      std::uint32_t file_flags, const tes4_layout_result& layout,
                                       const std::filesystem::path& output_path) {
     std::uint32_t archive_flags =
         tes4_bsa_archive_include_directory_names | tes4_bsa_archive_include_file_names;
-    if (archive_default_is_compressed) {
+    if (profile.archive_default_compressed(options.compression_policy)) {
         archive_flags |= tes4_bsa_archive_compress_by_default;
     }
-    if (emit_embedded_names) {
+    if (profile.writer_emits_embedded_names(options)) {
         archive_flags |= tes4_bsa_archive_embed_names;
     }
 
@@ -138,7 +138,7 @@ result<void> tes4_write_archive_bytes(std::span<const tes4_prepared_folder> fold
     if (!written) {
         return written.error();
     }
-    if (!(written = writer.write_u32_le(version)) ||
+    if (!(written = writer.write_u32_le(profile.version())) ||
         !(written = writer.write_u32_le(tes4_bsa_header_size)) ||
         !(written = writer.write_u32_le(archive_flags)) ||
         !(written = writer.write_u32_le(static_cast<std::uint32_t>(folders.size()))) ||
@@ -154,19 +154,25 @@ result<void> tes4_write_archive_bytes(std::span<const tes4_prepared_folder> fold
             !(written = writer.write_u32_le(static_cast<std::uint32_t>(folder.entries.size())))) {
             return written.error();
         }
-        if (version == tes4_bsa_skyrim_se_version) {
-            if (!(written = writer.write_u32_le(0U)) ||
-                !(written = writer.write_u64_le(folder.folder_block_offset))) {
-                return written.error();
+        switch (profile.folder_record_shape()) {
+            case tes4_folder_record_shape::legacy_32_bit_offset: {
+                auto offset = checked_u32(folder.folder_block_offset, "TES4 BSA folder offset");
+                if (!offset) {
+                    return offset.error();
+                }
+                if (!(written = writer.write_u32_le(offset.value()))) {
+                    return written.error();
+                }
+                break;
             }
-        } else {
-            auto offset = checked_u32(folder.folder_block_offset, "TES4 BSA folder offset");
-            if (!offset) {
-                return offset.error();
-            }
-            if (!(written = writer.write_u32_le(offset.value()))) {
-                return written.error();
-            }
+            case tes4_folder_record_shape::sse_64_bit_offset:
+                // v105 keeps the established zero unknown field before its
+                // widened folder offset.
+                if (!(written = writer.write_u32_le(0U)) ||
+                    !(written = writer.write_u64_le(folder.folder_block_offset))) {
+                    return written.error();
+                }
+                break;
         }
     }
 

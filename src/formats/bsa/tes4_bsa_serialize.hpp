@@ -8,12 +8,15 @@
 
 namespace libbsa::formats::bsa {
 
-/// Writes prepared TES4 BSA archive bytes to the temporary output path supplied
-/// by the publish helper.
+/// Writes prepared TES4 BSA archive bytes using policy from the resolved
+/// profile and archive-specific writer options.
+///
+/// The serializer retains ownership of byte emission, offset narrowing, and
+/// payload streaming; the profile supplies version-dependent decisions only.
 result<void> tes4_write_archive_bytes(std::span<const tes4_prepared_folder> folders,
-                                      std::uint32_t version, bool archive_default_is_compressed,
-                                      bool emit_embedded_names, std::uint32_t file_flags,
-                                      const tes4_layout_result& layout,
+                                      const tes4_bsa_profile& profile,
+                                      const tes4_bsa_writer_options& options,
+                                      std::uint32_t file_flags, const tes4_layout_result& layout,
                                       const std::filesystem::path& output_path);
 
 }  // namespace libbsa::formats::bsa

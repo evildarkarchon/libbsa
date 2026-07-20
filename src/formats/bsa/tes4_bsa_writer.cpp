@@ -116,10 +116,6 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target, const tes4_bsa_write
         return profile.error();
     }
 
-    const bool archive_default_is_compressed =
-        profile.value().archive_default_compressed(options.compression_policy);
-    const bool emit_embedded_names = profile.value().writer_emits_embedded_names(options);
-
     std::uint32_t file_flags = 0U;
     auto folders =
         tes4_prepare_folders(entries, profile.value(), options, worker_count, file_flags);
@@ -127,8 +123,8 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target, const tes4_bsa_write
         return folders.error();
     }
 
-    auto layout = tes4_assign_offsets(folders.value(), profile.value().version(),
-                                      options.deduplicate_payloads);
+    auto layout =
+        tes4_assign_offsets(folders.value(), profile.value(), options.deduplicate_payloads);
     if (!layout) {
         return layout.error();
     }
@@ -136,9 +132,8 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target, const tes4_bsa_write
     return detail::publish_writer_output(
         output_path.value().resolved, options.overwrite_existing, "TES4 BSA writer",
         [&](const std::filesystem::path& temp_path) -> result<void> {
-            return tes4_write_archive_bytes(folders.value(), profile.value().version(),
-                                            archive_default_is_compressed, emit_embedded_names,
-                                            file_flags, layout.value(), temp_path);
+            return tes4_write_archive_bytes(folders.value(), profile.value(), options, file_flags,
+                                            layout.value(), temp_path);
         });
 }
 
