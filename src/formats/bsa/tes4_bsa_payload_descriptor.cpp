@@ -1,5 +1,7 @@
 #include "formats/bsa/tes4_bsa_payload_descriptor.hpp"
 
+#include "formats/bsa/tes4_bsa_constants.hpp"
+
 namespace libbsa::formats::bsa {
 namespace {
 

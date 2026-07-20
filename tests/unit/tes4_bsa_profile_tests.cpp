@@ -61,10 +61,7 @@ libbsa::texture_metadata texture_with_format(std::uint32_t dxgi_format) {
 }  // namespace
 
 static_assert(!std::is_default_constructible_v<tes4_bsa_profile>);
-static_assert(
-    !std::is_constructible_v<
-        tes4_bsa_profile, std::uint32_t, libbsa::formats::bsa::tes4_folder_record_shape,
-        std::size_t, libbsa::entry_compression, libbsa::detail::compression_method, bool, bool>);
+static_assert(!std::is_aggregate_v<tes4_bsa_profile>);
 
 TEST_CASE("tes4_bsa_profile resolves every supported header version", "[unit][tes4_bsa_profile]") {
     for (const auto& expected : profile_matrix) {
@@ -77,7 +74,6 @@ TEST_CASE("tes4_bsa_profile resolves every supported header version", "[unit][te
         CHECK(profile.value().folder_record_size() == expected.folder_record_size);
         CHECK(profile.value().compressed_entry_metadata() == expected.compressed_entry_metadata);
         CHECK(profile.value().compressed_payload_method() == expected.compressed_payload_method);
-        CHECK(profile.value().supports_embedded_names() == expected.supports_embedded_names);
     }
 }
 
@@ -95,7 +91,6 @@ TEST_CASE("tes4_bsa_profile resolves every public writer target",
         CHECK(profile.value().archive_default_compressed(
                   libbsa::archive_compression_policy::target_default) ==
               expected.target_default_compressed);
-        CHECK(profile.value().supports_embedded_names() == expected.supports_embedded_names);
     }
 }
 

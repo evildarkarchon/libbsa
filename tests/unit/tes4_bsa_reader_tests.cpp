@@ -37,11 +37,6 @@ libbsa::entry_compression expected_default_compression(std::uint32_t version) {
                            : libbsa::entry_compression::deflate;
 }
 
-libbsa::archive_variant expected_variant(std::uint32_t version) {
-    (void)version;
-    return libbsa::archive_variant::tes4;
-}
-
 struct success_fixture {
     std::string archive_filename;
     std::uint32_t version;
@@ -216,7 +211,7 @@ TEST_CASE("tes4_bsa_metadata exposes archive-level open state",
         auto metadata = opened.value().metadata();
         REQUIRE(metadata.has_value());
         REQUIRE(metadata.value().type == libbsa::archive_type::bsa);
-        REQUIRE(metadata.value().variant == expected_variant(fixture.version));
+        REQUIRE(metadata.value().variant == libbsa::archive_variant::tes4);
         REQUIRE(metadata.value().version == fixture.version);
         REQUIRE(metadata.value().archive_flags == fixture.flags);
         REQUIRE(metadata.value().file_count == fixture.file_count);

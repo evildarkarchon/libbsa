@@ -146,8 +146,6 @@ entry_compression tes4_bsa_profile::reader_entry_compression(
     return archive_default ^ record_toggle ? compressed_entry_metadata_ : entry_compression::none;
 }
 
-bool tes4_bsa_profile::supports_embedded_names() const noexcept { return supports_embedded_names_; }
-
 bool tes4_bsa_profile::reader_has_embedded_names(std::uint32_t archive_flags) const noexcept {
     // BSArchPro suppresses v103 payload prefixes even when the archive flag is
     // present, so support must be checked in addition to the per-archive bit.

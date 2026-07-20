@@ -1,6 +1,5 @@
 #pragma once
 
-#include "formats/bsa/tes4_bsa_constants.hpp"
 #include "formats/bsa/tes4_bsa_profile.hpp"
 #include "formats/bsa/tes4_bsa_table.hpp"
 
@@ -11,7 +10,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <vector>
 
 namespace libbsa::formats::bsa {
 

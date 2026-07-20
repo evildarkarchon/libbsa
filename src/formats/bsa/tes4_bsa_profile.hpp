@@ -71,9 +71,6 @@ class tes4_bsa_profile {
     [[nodiscard]] entry_compression reader_entry_compression(
         std::uint32_t archive_flags, std::uint32_t record_flags) const noexcept;
 
-    /// Returns whether this version supports embedded payload name prefixes.
-    [[nodiscard]] bool supports_embedded_names() const noexcept;
-
     /// Interprets the embedded-name archive flag for a reader.
     [[nodiscard]] bool reader_has_embedded_names(std::uint32_t archive_flags) const noexcept;
 
