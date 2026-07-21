@@ -101,6 +101,7 @@ add_executable(libbsa_tests
   unit/deflate_codec_tests.cpp
   unit/lz4_codec_tests.cpp
   unit/compression_router_tests.cpp
+  unit/stored_payload_tests.cpp
   unit/host_file_tests.cpp
   unit/host_file_path_tests.cpp
   unit/host_file_writer_name_tests.cpp

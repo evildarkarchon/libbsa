@@ -140,6 +140,7 @@ set(libbsa_library_sources
   src/detail/parallel_work.cpp
   src/detail/parser_primitives.cpp
   src/detail/payload_stream.cpp
+  src/detail/stored_payload.cpp
   src/detail/writer_publish.cpp
   src/detail/host_file.cpp
   src/detail/host_file_path.cpp
