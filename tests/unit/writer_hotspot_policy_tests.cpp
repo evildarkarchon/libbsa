@@ -92,48 +92,51 @@ std::vector<std::string> public_declaration_lines(std::string_view class_public_
 
 }  // namespace
 
-TEST_CASE(
-    "writer_hotspot_policy requires TES4 dedupe candidate narrowing "
-    "before exact equality",
-    "[unit][writer_hotspot_policy]") {
-    const auto source = read_text_file(source_root() / "src/formats/bsa/tes4_bsa_layout.cpp");
-    const auto assign_offsets_body =
-        function_body(source, "result<tes4_layout_result> tes4_assign_offsets(");
+TEST_CASE("writer_hotspot_policy requires TES4 Stored Payload placement before serialization",
+          "[unit][writer_hotspot_policy]") {
+    const auto root = source_root();
+    const auto prepare_header = read_text_file(root / "src/formats/bsa/tes4_bsa_prepare.hpp");
+    const auto layout_source = read_text_file(root / "src/formats/bsa/tes4_bsa_layout.cpp");
+    const auto serialize_source = read_text_file(root / "src/formats/bsa/tes4_bsa_serialize.cpp");
+    const auto plan_body =
+        function_body(layout_source, "result<tes4_placement_plan> tes4_plan_placements(");
 
     constexpr auto narrowing_evidence = std::to_array<std::string_view>({
         "std::map<",
-        "stored_size",
-        "fingerprint",
-        "make_tes4_dedupe_identity",
-        "deduplicated_payloads.find",
-        "deduplicated_payloads[",
-        "tes4_stored_payloads_equal",
+        "payload.size()",
+        "payload.fingerprint()",
+        "candidate_buckets.find",
+        "payload.exactly_equals(",
     });
-    require_all_tokens(source, narrowing_evidence);
+    require_all_tokens(plan_body, narrowing_evidence);
 
-    constexpr auto assignment_path_evidence = std::to_array<std::string_view>({
-        "deduplicated_payloads.find",
-        "deduplicated_payloads[",
-        "tes4_stored_payloads_equal",
+    constexpr auto exact_equality_gate = std::to_array<std::string_view>({
+        "auto equal =",
+        "payload.exactly_equals(plan.payloads[candidate_index].payload)",
+        "if (!equal)",
+        "if (equal.value())",
+        "payload_index = candidate_index;",
     });
-    require_all_tokens(assign_offsets_body, assignment_path_evidence);
+    require_all_tokens(plan_body, exact_equality_gate);
 
-    constexpr auto exact_equality_share_gate = std::to_array<std::string_view>({
-        "auto duplicate = tes4_stored_payloads_equal(entry, *candidate.entry);",
-        "if (!duplicate)",
-        "if (duplicate.value())",
-        "entry.payload_offset = candidate.assignment.offset;",
-        "entry.stored_size = candidate.assignment.stored_size;",
-        "entry.owns_payload_bytes = false;",
+    constexpr auto legacy_prepare_tokens = std::to_array<std::string_view>({
+        "payload_offset",
+        "owns_payload_bytes",
+        "stream_raw_disk",
+        "raw_disk_size",
+        "raw_disk_host_path",
+        "resolved_raw_disk_host_path",
     });
-    require_all_tokens(assign_offsets_body, exact_equality_share_gate);
+    require_absent_tokens(prepare_header, legacy_prepare_tokens);
 
-    constexpr auto all_prior_scan_tokens = std::to_array<std::string_view>({
-        "std::vector<assigned_payload> deduplicated_payloads;",
-        "for (const auto& candidate : deduplicated_payloads)",
-        "deduplicated_payloads.push_back(assigned_payload",
+    constexpr auto serializer_source_tokens = std::to_array<std::string_view>({
+        "open_host_file(",
+        "raw_disk",
+        "stream_disk_payload",
+        "owns_payload_bytes",
     });
-    require_absent_tokens(assign_offsets_body, all_prior_scan_tokens);
+    require_absent_tokens(serialize_source, serializer_source_tokens);
+    REQUIRE(serialize_source.find("placement.payload.emit(output)") != std::string::npos);
 }
 
 TEST_CASE(

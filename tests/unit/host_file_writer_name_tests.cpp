@@ -41,8 +41,8 @@ constexpr auto writer_host_path_inventory_cases = std::to_array<writer_host_path
     {"tes4_bsa", "src/formats/bsa/tes4_bsa_prepare.cpp",
      "resolve_tes4_source_path(entry.host_path)", "src/formats/bsa/tes4_bsa_writer.cpp",
      "output_path.value().resolved", "src/formats/bsa/tes4_bsa_serialize.cpp",
-     "open_host_file(host_path", "src/formats/bsa/tes4_bsa_layout.cpp",
-     "resolve_tes4_dedupe_source_path(entry.raw_disk_host_path)", ""},
+     "placement.payload.emit(output)", "src/formats/bsa/tes4_bsa_layout.cpp",
+     "payload.exactly_equals(", "raw_disk_host_path"},
     {"ba2_gnrl", "src/formats/ba2/ba2_gnrl_prepare.cpp",
      "resolve_ba2_gnrl_source_path(entry.host_path)", "src/formats/ba2/ba2_gnrl_writer.cpp",
      "output_path.value().resolved", "src/formats/ba2/ba2_gnrl_serialize.cpp",
@@ -66,7 +66,6 @@ TEST_CASE("writer call sites use the neutral host_file helper seam", "[unit][hos
     constexpr auto cases = std::to_array<std::pair<std::string_view, std::string_view>>({
         {"src/formats/bsa/tes3_bsa_prepare.cpp", "tes3_prepare_source_context"},
         {"src/formats/bsa/tes4_bsa_prepare.cpp", "tes4_prepare_source_context"},
-        {"src/formats/bsa/tes4_bsa_layout.cpp", "tes4_dedupe_source_context"},
         {"src/formats/ba2/ba2_gnrl_prepare.cpp", "ba2_gnrl_prepare_source_context"},
         {"src/formats/ba2/ba2_dx10_snapshot_builder.cpp", "ba2_dx10_dds_source_context"},
     });
@@ -112,8 +111,6 @@ TEST_CASE(
         std::to_array<std::pair<std::string_view, std::string_view>>({
             {"src/formats/bsa/tes3_bsa_prepare.cpp", "resolve_tes3_source_path(entry.host_path)"},
             {"src/formats/bsa/tes4_bsa_prepare.cpp", "resolve_tes4_source_path(entry.host_path)"},
-            {"src/formats/bsa/tes4_bsa_layout.cpp",
-             "resolve_tes4_dedupe_source_path(entry.raw_disk_host_path)"},
             {"src/formats/ba2/ba2_gnrl_prepare.cpp",
              "resolve_ba2_gnrl_source_path(entry.host_path)"},
             {"src/formats/ba2/ba2_dx10_snapshot_builder.cpp",
@@ -129,13 +126,12 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "raw writer serializers reopen disk sources through the shared "
+    "remaining raw writer serializers reopen disk sources through the shared "
     "host_file seam",
     "[unit][host_file]") {
     const auto root = source_root();
     constexpr auto serializer_sources = std::to_array<std::string_view>(
-        {"src/formats/ba2/ba2_gnrl_serialize.cpp", "src/formats/bsa/tes3_bsa_serialize.cpp",
-         "src/formats/bsa/tes4_bsa_serialize.cpp"});
+        {"src/formats/ba2/ba2_gnrl_serialize.cpp", "src/formats/bsa/tes3_bsa_serialize.cpp"});
 
     for (const auto relative_path : serializer_sources) {
         const auto text = read_text_file(root / relative_path);
@@ -143,6 +139,10 @@ TEST_CASE(
         REQUIRE(text.find("open_host_file(") != std::string::npos);
         REQUIRE(text.find("std::ifstream input{host_path, std::ios::binary}") == std::string::npos);
     }
+
+    const auto tes4_serializer = read_text_file(root / "src/formats/bsa/tes4_bsa_serialize.cpp");
+    REQUIRE(tes4_serializer.find("placement.payload.emit(output)") != std::string::npos);
+    REQUIRE(tes4_serializer.find("open_host_file(") == std::string::npos);
 }
 
 TEST_CASE("public writer output paths resolve UTF-8 text before native publish",

@@ -14,6 +14,7 @@
 #include <detail/host_file_path.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+#include <libbsa/archive.hpp>
 
 #include <array>
 #include <cstddef>
@@ -128,28 +129,31 @@ libbsa::formats::ba2::ba2_gnrl_prepared_entry ba2_gnrl_disk_stage_entry(
 
 libbsa::formats::bsa::tes4_prepared_entry tes4_memory_stage_entry(std::string file_name,
                                                                   std::vector<std::byte> bytes) {
-    libbsa::formats::bsa::tes4_prepared_entry entry;
-    entry.folder = "Meshes";
-    entry.canonical_folder = "meshes";
-    entry.file_name = std::move(file_name);
-    entry.file_hash = static_cast<std::uint64_t>(entry.file_name.size());
-    entry.stored_size = static_cast<std::uint32_t>(bytes.size());
-    entry.stored_payload = std::move(bytes);
-    return entry;
+    const auto file_hash = static_cast<std::uint64_t>(file_name.size());
+    return libbsa::formats::bsa::tes4_prepared_entry{
+        "Meshes",  "meshes", std::move(file_name),
+        file_hash, 0U,       libbsa::detail::stored_payload::from_owned_bytes(std::move(bytes))};
 }
 
-libbsa::formats::bsa::tes4_prepared_entry tes4_disk_stage_entry(const std::filesystem::path& path,
-                                                                std::uint32_t raw_size) {
-    libbsa::formats::bsa::tes4_prepared_entry entry;
-    entry.folder = "Meshes";
-    entry.canonical_folder = "meshes";
-    entry.file_name = "Disk.nif";
-    entry.file_hash = 0xD15CU;
-    entry.stored_size = raw_size;
-    entry.raw_disk_size = raw_size;
-    entry.raw_disk_host_path = path.string();
-    entry.stream_raw_disk = true;
-    return entry;
+libbsa::detail::finalization_workspace reserve_stage_workspace(std::string output_name) {
+    auto workspace = libbsa::detail::finalization_workspace::reserve(
+        stage_output_path(std::move(output_name)), "TES4 writer stage test");
+    REQUIRE(workspace.has_value());
+    return std::move(workspace).value();
+}
+
+std::vector<libbsa::formats::bsa::tes4_prepared_folder> tes4_stage_folders(
+    std::vector<std::pair<std::string, std::vector<std::byte>>> entries) {
+    std::vector<libbsa::formats::bsa::tes4_prepared_entry> prepared_entries;
+    prepared_entries.reserve(entries.size());
+    for (auto& [file_name, bytes] : entries) {
+        prepared_entries.push_back(tes4_memory_stage_entry(std::move(file_name), std::move(bytes)));
+    }
+
+    std::vector<libbsa::formats::bsa::tes4_prepared_folder> folders;
+    folders.push_back(
+        libbsa::formats::bsa::tes4_prepared_folder{"Meshes", 1U, std::move(prepared_entries)});
+    return folders;
 }
 
 std::vector<std::byte> repeated_bytes(std::size_t size, std::uint8_t seed) {
@@ -357,54 +361,57 @@ TEST_CASE("tes4 writer preparation stage prepares minimal memory folders",
     libbsa::tes4_bsa_writer_options options;
     options.compression_policy = libbsa::archive_compression_policy::all_raw;
     std::uint32_t file_flags = 0;
+    auto workspace = reserve_stage_workspace("tes4-memory-prepare.bsa");
 
     auto folders = libbsa::formats::bsa::tes4_prepare_folders(
         std::span<const libbsa::formats::bsa::tes4_writer_entry>{&entry.value(), 1U}, profile,
-        options, 1U, file_flags);
+        options, 1U, file_flags, workspace);
 
     REQUIRE(folders.has_value());
     REQUIRE(folders.value().size() == 1U);
     REQUIRE(folders.value()[0].entries.size() == 1U);
     CHECK(folders.value()[0].name == "Meshes\\Stage");
     CHECK(folders.value()[0].entries[0].file_name == "Probe.nif");
-    CHECK(folders.value()[0].entries[0].stored_payload == bytes_from_text("tes4-stage"));
+    CHECK(folders.value()[0].entries[0].payload.size() == 10U);
     CHECK(file_flags != 0U);
 }
 
-TEST_CASE("tes4 writer layout stage toggles duplicate payload reuse",
+TEST_CASE("tes4 writer placement plan toggles exact Stored Payload reuse",
           "[unit][writer-stage][tes4_bsa_writer]") {
     const auto payload = bytes_from_text("shared");
     const auto profile = require_tes4_profile();
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
 
-    std::vector<libbsa::formats::bsa::tes4_prepared_folder> distinct{
-        libbsa::formats::bsa::tes4_prepared_folder{"Meshes",
-                                                   1U,
-                                                   0U,
-                                                   {tes4_memory_stage_entry("A.nif", payload),
-                                                    tes4_memory_stage_entry("B.nif", payload)}}};
-    auto distinct_layout = libbsa::formats::bsa::tes4_assign_offsets(distinct, profile, false);
+    auto distinct = tes4_stage_folders({{"A.nif", payload}, {"B.nif", payload}});
+    options.deduplicate_payloads = false;
+    auto distinct_plan =
+        libbsa::formats::bsa::tes4_plan_placements(std::move(distinct), profile, options, 0U);
 
-    REQUIRE(distinct_layout.has_value());
-    CHECK(distinct[0].entries[0].payload_offset != distinct[0].entries[1].payload_offset);
-    CHECK(distinct[0].entries[0].owns_payload_bytes);
-    CHECK(distinct[0].entries[1].owns_payload_bytes);
+    REQUIRE(distinct_plan.has_value());
+    REQUIRE(distinct_plan.value().payloads.size() == 2U);
+    REQUIRE(distinct_plan.value().folders.size() == 1U);
+    REQUIRE(distinct_plan.value().folders[0].entries.size() == 2U);
+    const auto distinct_first_index = distinct_plan.value().folders[0].entries[0].payload_index;
+    const auto distinct_second_index = distinct_plan.value().folders[0].entries[1].payload_index;
+    CHECK(distinct_first_index != distinct_second_index);
+    CHECK(distinct_plan.value().payloads[distinct_first_index].offset !=
+          distinct_plan.value().payloads[distinct_second_index].offset);
 
-    std::vector<libbsa::formats::bsa::tes4_prepared_folder> deduped{
-        libbsa::formats::bsa::tes4_prepared_folder{"Meshes",
-                                                   1U,
-                                                   0U,
-                                                   {tes4_memory_stage_entry("A.nif", payload),
-                                                    tes4_memory_stage_entry("B.nif", payload)}}};
-    auto deduped_layout = libbsa::formats::bsa::tes4_assign_offsets(deduped, profile, true);
+    auto deduped = tes4_stage_folders({{"A.nif", payload}, {"B.nif", payload}});
+    options.deduplicate_payloads = true;
+    auto deduped_plan =
+        libbsa::formats::bsa::tes4_plan_placements(std::move(deduped), profile, options, 0U);
 
-    REQUIRE(deduped_layout.has_value());
-    CHECK(deduped[0].entries[0].payload_offset == deduped[0].entries[1].payload_offset);
-    CHECK(deduped[0].entries[0].owns_payload_bytes);
-    CHECK_FALSE(deduped[0].entries[1].owns_payload_bytes);
-    CHECK(deduped_layout.value().file_count == 2U);
+    REQUIRE(deduped_plan.has_value());
+    REQUIRE(deduped_plan.value().payloads.size() == 1U);
+    REQUIRE(deduped_plan.value().folders.size() == 1U);
+    CHECK(deduped_plan.value().folders[0].entries[0].payload_index ==
+          deduped_plan.value().folders[0].entries[1].payload_index);
+    CHECK(deduped_plan.value().file_count == 2U);
 }
 
-TEST_CASE("tes4 writer layout stage uses resolved profile folder record sizing",
+TEST_CASE("tes4 writer placement plan uses resolved profile folder record sizing",
           "[unit][writer-stage][tes4_bsa_writer]") {
     struct layout_expectation {
         libbsa::tes4_bsa_target target;
@@ -419,16 +426,18 @@ TEST_CASE("tes4 writer layout stage uses resolved profile folder record sizing",
 
     for (const auto& expected : expectations) {
         const auto profile = require_tes4_profile(expected.target);
-        std::vector<libbsa::formats::bsa::tes4_prepared_folder> folders{
-            libbsa::formats::bsa::tes4_prepared_folder{
-                "Meshes", 1U, 0U, {tes4_memory_stage_entry("A.nif", bytes_from_text("data"))}}};
+        libbsa::tes4_bsa_writer_options options;
+        options.compression_policy = libbsa::archive_compression_policy::all_raw;
+        auto folders = tes4_stage_folders({{"A.nif", bytes_from_text("data")}});
 
-        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile, false);
+        auto plan =
+            libbsa::formats::bsa::tes4_plan_placements(std::move(folders), profile, options, 0U);
 
-        REQUIRE(layout.has_value());
-        CHECK(layout.value().total_file_name_length == 6U);
-        CHECK(folders[0].folder_block_offset == expected.folder_block_offset);
-        CHECK(folders[0].entries[0].payload_offset == expected.payload_offset);
+        REQUIRE(plan.has_value());
+        CHECK(plan.value().total_file_name_length == 6U);
+        CHECK(plan.value().folders[0].folder_block_offset == expected.folder_block_offset);
+        const auto payload_index = plan.value().folders[0].entries[0].payload_index;
+        CHECK(plan.value().payloads[payload_index].offset == expected.payload_offset);
     }
 }
 
@@ -473,16 +482,14 @@ TEST_CASE("tes4 writer serialization stage emits profile-selected folder record 
     options.embed_file_names = true;
     for (const auto& expected : expectations) {
         const auto profile = require_tes4_profile(expected.target);
-        std::vector<libbsa::formats::bsa::tes4_prepared_folder> folders{
-            libbsa::formats::bsa::tes4_prepared_folder{
-                "Meshes", 1U, 0U, {tes4_memory_stage_entry("A.nif", bytes_from_text("data"))}}};
-        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile, false);
-        REQUIRE(layout.has_value());
+        auto folders = tes4_stage_folders({{"A.nif", bytes_from_text("data")}});
+        auto plan =
+            libbsa::formats::bsa::tes4_plan_placements(std::move(folders), profile, options, 0U);
+        REQUIRE(plan.has_value());
 
         const auto output =
             stage_output_path("tes4-profile-record-v" + std::to_string(expected.version) + ".bsa");
-        auto written = libbsa::formats::bsa::tes4_write_archive_bytes(folders, profile, options, 0U,
-                                                                      layout.value(), output);
+        auto written = libbsa::formats::bsa::tes4_write_archive_bytes(plan.value(), output);
 
         REQUIRE(written.has_value());
         const auto bytes = read_stage_binary_file(output);
@@ -495,77 +502,85 @@ TEST_CASE("tes4 writer serialization stage emits profile-selected folder record 
     }
 }
 
-TEST_CASE("tes4 writer layout stage compares raw disk and memory payloads",
+TEST_CASE("tes4 writer placement preserves distinct zero-length entries without dedupe",
           "[unit][writer-stage][tes4_bsa_writer]") {
-    const auto payload = bytes_from_text("disk");
-    const auto source = stage_output_path("tes4-payload-equal.bin");
-    write_stage_binary_file(source, payload);
-
-    auto equal = libbsa::formats::bsa::tes4_stored_payloads_equal(
-        tes4_disk_stage_entry(source, static_cast<std::uint32_t>(payload.size())),
-        tes4_memory_stage_entry("Memory.nif", payload));
-
-    REQUIRE(equal.has_value());
-    CHECK(equal.value());
-
-    auto mismatch = libbsa::formats::bsa::tes4_stored_payloads_equal(
-        tes4_disk_stage_entry(source, static_cast<std::uint32_t>(payload.size())),
-        tes4_memory_stage_entry("Memory.nif", bytes_from_text("dusk")));
-
-    REQUIRE(mismatch.has_value());
-    CHECK_FALSE(mismatch.value());
-}
-
-TEST_CASE("tes4 writer serialization stage rejects raw disk source size changes",
-          "[unit][writer-stage][tes4_bsa_writer][writer-source-io]") {
-    const auto payload = bytes_from_text("tes4 raw streaming payload");
     const auto profile = require_tes4_profile();
     libbsa::tes4_bsa_writer_options options;
     options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    auto folders = tes4_stage_folders({{"EmptyA.nif", {}}, {"EmptyB.nif", {}}});
 
-    SECTION("source grows after layout") {
-        const auto source = stage_output_path("tes4-stream-grew.bin");
-        write_stage_binary_file(source, payload);
-        std::vector<libbsa::formats::bsa::tes4_prepared_folder> folders{
-            libbsa::formats::bsa::tes4_prepared_folder{
-                "Meshes",
-                1U,
-                0U,
-                {tes4_disk_stage_entry(source, static_cast<std::uint32_t>(payload.size()))}}};
-        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile, false);
-        REQUIRE(layout.has_value());
+    auto plan =
+        libbsa::formats::bsa::tes4_plan_placements(std::move(folders), profile, options, 0U);
 
-        auto grown = payload;
-        grown.push_back(std::byte{0x21});
-        write_stage_binary_file(source, grown);
-        auto written = libbsa::formats::bsa::tes4_write_archive_bytes(
-            folders, profile, options, 0U, layout.value(),
-            stage_output_path("tes4-stream-grew.bsa"));
+    REQUIRE(plan.has_value());
+    REQUIRE(plan.value().payloads.size() == 2U);
+    const auto first_index = plan.value().folders[0].entries[0].payload_index;
+    const auto second_index = plan.value().folders[0].entries[1].payload_index;
+    CHECK(first_index != second_index);
+    CHECK(plan.value().payloads[first_index].stored_size == 0U);
+    CHECK(plan.value().payloads[second_index].stored_size == 0U);
+    // BSArchPro records the same current data cursor for adjacent empty payloads.
+    CHECK(plan.value().payloads[first_index].offset == plan.value().payloads[second_index].offset);
+}
 
-        REQUIRE_FALSE(written.has_value());
-        CHECK(written.error().code == libbsa::error_code::io_error);
+TEST_CASE("tes4 writer serialization uses snapshots after original sources change",
+          "[unit][writer-stage][tes4_bsa_writer][writer-source-io]") {
+    const auto payload = bytes_from_text("tes4 raw snapshot payload");
+    const auto modified_source = stage_output_path("tes4-snapshot-modified.bin");
+    const auto deleted_source = stage_output_path("tes4-snapshot-deleted.bin");
+    write_stage_binary_file(modified_source, payload);
+    write_stage_binary_file(deleted_source, payload);
+
+    std::vector<libbsa::formats::bsa::tes4_writer_entry> entries;
+    for (const auto& [archive_path, source] :
+         std::array{std::pair{std::string_view{"Meshes/Snapshot/Modified.nif"}, modified_source},
+                    std::pair{std::string_view{"Meshes/Snapshot/Deleted.nif"}, deleted_source}}) {
+        auto entry = libbsa::formats::bsa::tes4_make_writer_entry(
+            archive_path, libbsa::entry_compression_policy::raw);
+        REQUIRE(entry.has_value());
+        entry.value().host_path = source.string();
+        entry.value().from_memory = false;
+        entries.push_back(std::move(entry).value());
     }
+    auto memory_entry = libbsa::formats::bsa::tes4_make_writer_entry(
+        "Meshes/Snapshot/Memory.nif", libbsa::entry_compression_policy::raw);
+    REQUIRE(memory_entry.has_value());
+    memory_entry.value().memory_bytes = payload;
+    memory_entry.value().from_memory = true;
+    entries.push_back(std::move(memory_entry).value());
 
-    SECTION("source shrinks after layout") {
-        const auto source = stage_output_path("tes4-stream-shrank.bin");
-        write_stage_binary_file(source, payload);
-        std::vector<libbsa::formats::bsa::tes4_prepared_folder> folders{
-            libbsa::formats::bsa::tes4_prepared_folder{
-                "Meshes",
-                1U,
-                0U,
-                {tes4_disk_stage_entry(source, static_cast<std::uint32_t>(payload.size()))}}};
-        auto layout = libbsa::formats::bsa::tes4_assign_offsets(folders, profile, false);
-        REQUIRE(layout.has_value());
+    const auto profile = require_tes4_profile();
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    options.deduplicate_payloads = true;
+    std::uint32_t file_flags = 0U;
+    const auto output = stage_output_path("tes4-snapshot-stable.bsa");
+    auto workspace = reserve_stage_workspace("tes4-snapshot-stable-final.bsa");
 
-        write_stage_binary_file(source,
-                                std::span<const std::byte>{payload.data(), payload.size() - 1U});
-        auto written = libbsa::formats::bsa::tes4_write_archive_bytes(
-            folders, profile, options, 0U, layout.value(),
-            stage_output_path("tes4-stream-shrank.bsa"));
+    auto folders = libbsa::formats::bsa::tes4_prepare_folders(entries, profile, options, 2U,
+                                                              file_flags, workspace);
+    REQUIRE(folders.has_value());
 
-        REQUIRE_FALSE(written.has_value());
-        CHECK(written.error().code == libbsa::error_code::io_error);
+    write_stage_binary_file(modified_source, bytes_from_text("mutated original source"));
+    std::error_code removal_error;
+    REQUIRE(std::filesystem::remove(deleted_source, removal_error));
+    REQUIRE_FALSE(removal_error);
+
+    auto plan = libbsa::formats::bsa::tes4_plan_placements(std::move(folders).value(), profile,
+                                                           options, file_flags);
+    REQUIRE(plan.has_value());
+    CHECK(plan.value().payloads.size() == 1U);
+
+    auto written = libbsa::formats::bsa::tes4_write_archive_bytes(plan.value(), output);
+    REQUIRE(written.has_value());
+
+    auto opened = libbsa::archive_reader::open(output.string());
+    REQUIRE(opened.has_value());
+    for (const auto path : {"Meshes/Snapshot/Modified.nif", "Meshes/Snapshot/Deleted.nif",
+                            "Meshes/Snapshot/Memory.nif"}) {
+        auto extracted = opened.value().extract_bytes(path);
+        REQUIRE(extracted.has_value());
+        CHECK(extracted.value() == payload);
     }
 }
 

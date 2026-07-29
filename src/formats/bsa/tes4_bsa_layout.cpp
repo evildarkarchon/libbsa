@@ -2,29 +2,24 @@
 
 #include "formats/bsa/tes4_bsa_constants.hpp"
 
-#include <detail/host_file.hpp>
-
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace libbsa::formats::bsa {
 
 namespace {
 
-struct payload_assignment {
-    std::uint32_t offset{0};
-    std::uint32_t stored_size{0};
-};
-
-struct assigned_payload {
-    const tes4_prepared_entry* entry{nullptr};
-    payload_assignment assignment;
+struct tes4_table_lengths {
+    std::uint32_t total_folder_name_length{0};
+    std::uint32_t total_file_name_length{0};
+    std::uint32_t file_count{0};
 };
 
 struct tes4_dedupe_identity {
@@ -55,6 +50,17 @@ result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view descript
     return static_cast<std::uint32_t>(value);
 }
 
+result<std::uint32_t> checked_stored_size(std::uint64_t value) {
+    if (value > std::numeric_limits<std::uint32_t>::max() ||
+        (value & tes4_bsa_file_size_compression_toggle) != 0U) {
+        // The compression toggle occupies bit 30 of the serialized size field,
+        // so an otherwise uint32-sized payload can still be unrepresentable.
+        return error{error_code::format_error,
+                     "TES4 BSA stored payload size exceeds size-flag limits"};
+    }
+    return static_cast<std::uint32_t>(value);
+}
+
 result<std::uint8_t> checked_name_size(std::size_t size, std::string_view description) {
     if (size > static_cast<std::size_t>(std::numeric_limits<std::uint8_t>::max())) {
         return error{error_code::format_error,
@@ -63,18 +69,21 @@ result<std::uint8_t> checked_name_size(std::size_t size, std::string_view descri
     return static_cast<std::uint8_t>(size);
 }
 
-constexpr detail::host_file_context tes4_dedupe_source_context{
-    "TES4 BSA writer failed to open disk source", "TES4 BSA writer failed to inspect disk source",
-    "TES4 BSA writer failed while reading disk source",
-    "TES4 BSA disk source changed during dedupe preparation", "TES4 BSA disk source"};
-
-/// Resolves TES4 dedupe disk sources once so equality checks reuse the shared
-/// host-file contract.
-result<detail::host_file_path> resolve_tes4_dedupe_source_path(std::string_view host_path) {
-    return detail::resolve_host_file_path(host_path);
+std::uint32_t archive_flags_for(const tes4_bsa_profile& profile,
+                                const tes4_bsa_writer_options& options) noexcept {
+    std::uint32_t archive_flags =
+        tes4_bsa_archive_include_directory_names | tes4_bsa_archive_include_file_names;
+    if (profile.archive_default_compressed(options.compression_policy)) {
+        archive_flags |= tes4_bsa_archive_compress_by_default;
+    }
+    if (profile.writer_emits_embedded_names(options)) {
+        archive_flags |= tes4_bsa_archive_embed_names;
+    }
+    return archive_flags;
 }
 
-result<tes4_layout_result> calculate_table_lengths(std::span<const tes4_prepared_folder> folders) {
+result<tes4_table_lengths> calculate_table_lengths(
+    const std::vector<tes4_prepared_folder>& folders) {
     std::uint64_t total_folder_name_length64 = 0;
     std::uint64_t total_file_name_length64 = 0;
     std::uint64_t file_count64 = 0;
@@ -115,126 +124,44 @@ result<tes4_layout_result> calculate_table_lengths(std::span<const tes4_prepared
                                                                     : file_count.error());
     }
 
-    return tes4_layout_result{total_folder_name_length.value(), total_file_name_length.value(),
+    return tes4_table_lengths{total_folder_name_length.value(), total_file_name_length.value(),
                               file_count.value()};
-}
-
-result<bool> disk_payload_equals_bytes(const tes4_prepared_entry& entry,
-                                       std::span<const std::byte> expected) {
-    if (expected.size() != entry.raw_disk_size) {
-        return false;
-    }
-
-    bool equal = true;
-    std::size_t offset = 0;
-    auto source_path = resolve_tes4_dedupe_source_path(entry.raw_disk_host_path);
-    if (!source_path) {
-        return source_path.error();
-    }
-    auto compared = detail::for_each_host_file_chunk(
-        source_path.value(), entry.raw_disk_size, tes4_dedupe_source_context,
-        [&](std::span<const std::byte> chunk) -> result<void> {
-            if (equal && !std::equal(chunk.begin(), chunk.end(),
-                                     expected.begin() + static_cast<std::ptrdiff_t>(offset))) {
-                equal = false;
-            }
-            offset += chunk.size();
-            return {};
-        });
-    if (!compared) {
-        return compared.error();
-    }
-    return equal;
-}
-
-result<bool> disk_stored_payload_equals_bytes(const tes4_prepared_entry& entry,
-                                              std::span<const std::byte> expected) {
-    if (expected.size() !=
-        static_cast<std::size_t>(entry.stored_payload.size()) + entry.raw_disk_size) {
-        return false;
-    }
-    if (!std::equal(entry.stored_payload.begin(), entry.stored_payload.end(), expected.begin())) {
-        return false;
-    }
-    return disk_payload_equals_bytes(entry, expected.subspan(entry.stored_payload.size()));
-}
-
-result<bool> disk_stored_payloads_equal(const tes4_prepared_entry& lhs,
-                                        const tes4_prepared_entry& rhs) {
-    if (lhs.stored_payload != rhs.stored_payload || lhs.raw_disk_size != rhs.raw_disk_size) {
-        return false;
-    }
-
-    auto rhs_source_path = resolve_tes4_dedupe_source_path(rhs.raw_disk_host_path);
-    if (!rhs_source_path) {
-        return rhs_source_path.error();
-    }
-    auto rhs_payload = detail::read_host_file_exact(rhs_source_path.value(), rhs.raw_disk_size,
-                                                    tes4_dedupe_source_context);
-    if (!rhs_payload) {
-        return rhs_payload.error();
-    }
-    return disk_payload_equals_bytes(lhs, rhs_payload.value());
-}
-
-void hash_payload_bytes(std::uint64_t& hash, std::span<const std::byte> bytes) noexcept {
-    for (const auto byte : bytes) {
-        hash ^= std::to_integer<std::uint8_t>(byte);
-        hash *= 1099511628211ULL;
-    }
-}
-
-result<tes4_dedupe_identity> make_tes4_dedupe_identity(const tes4_prepared_entry& entry) {
-    std::uint64_t hash = 14695981039346656037ULL;
-    hash_payload_bytes(hash, entry.stored_payload);
-    if (entry.stream_raw_disk) {
-        auto source_path = resolve_tes4_dedupe_source_path(entry.raw_disk_host_path);
-        if (!source_path) {
-            return source_path.error();
-        }
-        auto hashed = detail::for_each_host_file_chunk(
-            source_path.value(), entry.raw_disk_size, tes4_dedupe_source_context,
-            [&](std::span<const std::byte> chunk) -> result<void> {
-                hash_payload_bytes(hash, chunk);
-                return {};
-            });
-        if (!hashed) {
-            return hashed.error();
-        }
-    }
-    return tes4_dedupe_identity{entry.stored_size, hash};
 }
 
 }  // namespace
 
-result<bool> tes4_stored_payloads_equal(const tes4_prepared_entry& lhs,
-                                        const tes4_prepared_entry& rhs) {
-    if (lhs.stored_size != rhs.stored_size) {
-        return false;
+result<tes4_placement_plan> tes4_plan_placements(std::vector<tes4_prepared_folder> folders,
+                                                 const tes4_bsa_profile& profile,
+                                                 const tes4_bsa_writer_options& options,
+                                                 std::uint32_t file_flags) {
+    auto table_lengths = calculate_table_lengths(folders);
+    if (!table_lengths) {
+        return table_lengths.error();
     }
-    if (!lhs.stream_raw_disk && !rhs.stream_raw_disk) {
-        return lhs.stored_payload == rhs.stored_payload;
+    auto folder_count = checked_u32(folders.size(), "TES4 BSA folder count");
+    if (!folder_count) {
+        return folder_count.error();
     }
-    if (lhs.stream_raw_disk && rhs.stream_raw_disk) {
-        return disk_stored_payloads_equal(lhs, rhs);
-    }
-    if (lhs.stream_raw_disk) {
-        return disk_stored_payload_equals_bytes(lhs, rhs.stored_payload);
-    }
-    return disk_stored_payload_equals_bytes(rhs, lhs.stored_payload);
-}
 
-result<tes4_layout_result> tes4_assign_offsets(std::span<tes4_prepared_folder> folders,
-                                               const tes4_bsa_profile& profile,
-                                               bool deduplicate_payloads) {
-    auto layout = calculate_table_lengths(folders);
-    if (!layout) {
-        return layout.error();
-    }
+    tes4_placement_plan plan;
+    plan.version = profile.version();
+    plan.archive_flags = archive_flags_for(profile, options);
+    plan.file_flags = file_flags;
+    plan.folder_record_shape = profile.folder_record_shape();
+    plan.total_folder_name_length = table_lengths.value().total_folder_name_length;
+    plan.total_file_name_length = table_lengths.value().total_file_name_length;
+    plan.file_count = table_lengths.value().file_count;
+    plan.folders.reserve(folders.size());
 
     const auto folder_record_size = static_cast<std::uint64_t>(profile.folder_record_size());
+    if (folders.size() > std::numeric_limits<std::uint64_t>::max() / folder_record_size) {
+        return error{error_code::format_error, "TES4 BSA folder record table size overflows"};
+    }
     const std::uint64_t folder_records_size = folder_record_size * folders.size();
-    std::uint64_t folder_block_cursor = tes4_bsa_header_size + folder_records_size;
+    std::uint64_t folder_block_cursor = 0;
+    if (!add_fits_u64(tes4_bsa_header_size, folder_records_size, folder_block_cursor)) {
+        return error{error_code::format_error, "TES4 BSA folder record table size overflows"};
+    }
     std::uint64_t folder_blocks_size = 0;
 
     for (auto& folder : folders) {
@@ -242,84 +169,104 @@ result<tes4_layout_result> tes4_assign_offsets(std::span<tes4_prepared_folder> f
         if (!add_fits_u64(static_cast<std::uint64_t>(folder.name.size()), 2U, folder_name_size)) {
             return error{error_code::format_error, "TES4 BSA folder name size overflows"};
         }
-        std::uint64_t file_record_bytes = 0;
         if (folder.entries.size() >
             std::numeric_limits<std::uint64_t>::max() / tes4_bsa_file_record_size) {
             return error{error_code::format_error, "TES4 BSA file record table size overflows"};
         }
-        file_record_bytes =
+        const auto file_record_bytes =
             static_cast<std::uint64_t>(folder.entries.size()) * tes4_bsa_file_record_size;
 
-        // Reference-compatible folder offsets include the later file-name table
-        // length, even though the folder block bytes are serialized before that
-        // table.
-        if (!add_fits_u64(folder_block_cursor, layout.value().total_file_name_length,
-                          folder.folder_block_offset)) {
+        std::uint64_t folder_block_offset = 0;
+        // BSArchPro-compatible offsets include the later file-name table even
+        // though folder block bytes are physically serialized before that table.
+        if (!add_fits_u64(folder_block_cursor, plan.total_file_name_length, folder_block_offset)) {
             return error{error_code::format_error, "TES4 BSA folder offset overflows"};
         }
+        if (profile.folder_record_shape() == tes4_folder_record_shape::legacy_32_bit_offset) {
+            auto narrowed = checked_u32(folder_block_offset, "TES4 BSA folder offset");
+            if (!narrowed) {
+                return narrowed.error();
+            }
+        }
+
         std::uint64_t folder_block_size = 0;
         if (!add_fits_u64(folder_name_size, file_record_bytes, folder_block_size) ||
             !add_fits_u64(folder_blocks_size, folder_block_size, folder_blocks_size) ||
             !add_fits_u64(folder_block_cursor, folder_block_size, folder_block_cursor)) {
             return error{error_code::format_error, "TES4 BSA folder block size overflows"};
         }
+
+        tes4_placed_folder placed_folder;
+        placed_folder.name = std::move(folder.name);
+        placed_folder.hash = folder.hash;
+        placed_folder.folder_block_offset = folder_block_offset;
+        placed_folder.entries.reserve(folder.entries.size());
+        for (auto& entry : folder.entries) {
+            placed_folder.entries.push_back(tes4_placed_entry{
+                std::move(entry.file_name), entry.file_hash, entry.record_flags, 0U});
+        }
+        plan.folders.push_back(std::move(placed_folder));
     }
 
     std::uint64_t payload_cursor = 0;
     if (!add_fits_u64(tes4_bsa_header_size, folder_records_size, payload_cursor) ||
         !add_fits_u64(payload_cursor, folder_blocks_size, payload_cursor) ||
-        !add_fits_u64(payload_cursor, layout.value().total_file_name_length, payload_cursor)) {
+        !add_fits_u64(payload_cursor, plan.total_file_name_length, payload_cursor)) {
         return error{error_code::format_error, "TES4 BSA metadata size overflows"};
     }
 
-    std::map<tes4_dedupe_identity, std::vector<assigned_payload>> deduplicated_payloads;
-    for (auto& folder : folders) {
-        for (auto& entry : folder.entries) {
-            tes4_dedupe_identity identity{};
-            if (deduplicate_payloads) {
-                auto entry_identity = make_tes4_dedupe_identity(entry);
-                if (!entry_identity) {
-                    return entry_identity.error();
-                }
-                identity = entry_identity.value();
-                auto duplicate_bucket = deduplicated_payloads.find(identity);
-                if (duplicate_bucket != deduplicated_payloads.end()) {
-                    // Dedupe keys narrow expensive comparisons only; D-08 still requires
-                    // exact final stored-byte equality.
-                    for (const auto& candidate : duplicate_bucket->second) {
-                        auto duplicate = tes4_stored_payloads_equal(entry, *candidate.entry);
-                        if (!duplicate) {
-                            return duplicate.error();
+    std::map<tes4_dedupe_identity, std::vector<std::size_t>> candidate_buckets;
+    for (std::size_t folder_index = 0U; folder_index < folders.size(); ++folder_index) {
+        auto& prepared_entries = folders[folder_index].entries;
+        auto& placed_entries = plan.folders[folder_index].entries;
+        for (std::size_t entry_index = 0U; entry_index < prepared_entries.size(); ++entry_index) {
+            auto& payload = prepared_entries[entry_index].payload;
+            auto stored_size = checked_stored_size(payload.size());
+            if (!stored_size) {
+                return stored_size.error();
+            }
+
+            std::size_t payload_index = plan.payloads.size();
+            std::optional<tes4_dedupe_identity> identity;
+            if (options.deduplicate_payloads) {
+                identity.emplace(tes4_dedupe_identity{stored_size.value(), payload.fingerprint()});
+                const auto bucket = candidate_buckets.find(*identity);
+                if (bucket != candidate_buckets.end()) {
+                    // Fingerprints are only narrowing keys; prefix bytes and
+                    // snapshot bodies both participate in authoritative equality.
+                    for (const auto candidate_index : bucket->second) {
+                        auto equal = payload.exactly_equals(plan.payloads[candidate_index].payload);
+                        if (!equal) {
+                            return equal.error();
                         }
-                        if (duplicate.value()) {
-                            entry.payload_offset = candidate.assignment.offset;
-                            entry.stored_size = candidate.assignment.stored_size;
-                            entry.owns_payload_bytes = false;
+                        if (equal.value()) {
+                            payload_index = candidate_index;
                             break;
                         }
                     }
                 }
-                if (!entry.owns_payload_bytes) {
-                    continue;
+            }
+
+            if (payload_index == plan.payloads.size()) {
+                auto offset = checked_u32(payload_cursor, "TES4 BSA payload offset");
+                if (!offset) {
+                    return offset.error();
+                }
+                plan.payloads.push_back(tes4_payload_placement{offset.value(), stored_size.value(),
+                                                               std::move(payload)});
+                if (identity.has_value()) {
+                    candidate_buckets[*identity].push_back(payload_index);
+                }
+                if (!add_fits_u64(payload_cursor, stored_size.value(), payload_cursor)) {
+                    return error{error_code::format_error, "TES4 BSA payload span overflows"};
                 }
             }
 
-            auto offset = checked_u32(payload_cursor, "TES4 BSA payload offset");
-            if (!offset) {
-                return offset.error();
-            }
-            entry.payload_offset = offset.value();
-            entry.owns_payload_bytes = true;
-            if (deduplicate_payloads) {
-                deduplicated_payloads[identity].push_back(assigned_payload{
-                    &entry, payload_assignment{entry.payload_offset, entry.stored_size}});
-            }
-            if (!add_fits_u64(payload_cursor, entry.stored_size, payload_cursor)) {
-                return error{error_code::format_error, "TES4 BSA payload span overflows"};
-            }
+            placed_entries[entry_index].payload_index = payload_index;
         }
     }
-    return layout.value();
+
+    return plan;
 }
 
 }  // namespace libbsa::formats::bsa

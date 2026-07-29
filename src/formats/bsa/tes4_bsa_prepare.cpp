@@ -11,8 +11,6 @@
 #include "texture/directxtex_analyzer.hpp"
 
 #include <algorithm>
-#include <filesystem>
-#include <fstream>
 #include <limits>
 #include <map>
 #include <optional>
@@ -51,16 +49,6 @@ result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view descript
     return static_cast<std::uint32_t>(value);
 }
 
-result<std::uint32_t> checked_size_flags_payload_size(std::uint64_t value,
-                                                      std::string_view description) {
-    if (value >
-        (std::numeric_limits<std::uint32_t>::max() & ~tes4_bsa_file_size_compression_toggle)) {
-        return error{error_code::format_error,
-                     std::string{description} + " exceeds TES4 BSA size-flag limits"};
-    }
-    return static_cast<std::uint32_t>(value);
-}
-
 result<std::uint8_t> checked_name_size(std::size_t size, std::string_view description) {
     if (size > static_cast<std::size_t>(std::numeric_limits<std::uint8_t>::max())) {
         return error{error_code::format_error,
@@ -82,48 +70,21 @@ constexpr detail::host_file_context tes4_prepare_source_context{
     "TES4 BSA writer failed while reading disk source",
     "TES4 BSA disk source changed during finalization", "TES4 BSA disk source"};
 
-/// Resolves a TES4 writer disk source once so writer seams share the same
-/// host-file contract as later reader work.
+/// Resolves a TES4 writer disk source before opening its one stable session.
 result<detail::host_file_path> resolve_tes4_source_path(std::string_view host_path) {
     return detail::resolve_host_file_path(host_path);
 }
 
-result<std::vector<std::byte>> read_source_bytes(const tes4_writer_entry& entry,
-                                                 std::uint32_t expected_size) {
-    if (entry.from_memory) {
-        return entry.memory_bytes;
-    }
-    auto source_path = resolve_tes4_source_path(entry.host_path);
-    if (!source_path) {
-        return source_path.error();
-    }
-    return detail::read_host_file_exact(source_path.value(), expected_size,
-                                        tes4_prepare_source_context);
-}
-
 /// Analyzes texture-classified source bytes and delegates compatibility of the
 /// resulting libbsa-native metadata to the resolved TES4 BSA Profile.
-result<void> validate_parseable_dds_texture(const tes4_writer_entry& entry,
+result<void> validate_parseable_dds_texture(std::span<const std::byte> probe,
                                             std::uint32_t file_flags,
                                             const tes4_bsa_profile& profile) {
     if ((file_flags & tes4_bsa_file_flag_textures) == 0U) {
         return {};
     }
 
-    result<std::vector<std::byte>> probe = entry.memory_bytes;
-    if (!entry.from_memory) {
-        auto source_path = resolve_tes4_source_path(entry.host_path);
-        if (!source_path) {
-            return source_path.error();
-        }
-        probe = detail::read_host_file_prefix(source_path.value(), dds_metadata_probe_size,
-                                              tes4_prepare_source_context);
-    }
-    if (!probe) {
-        return probe.error();
-    }
-
-    auto metadata = texture::analyze_dds_metadata(probe.value());
+    auto metadata = texture::analyze_dds_metadata(probe);
     if (!metadata) {
         // The generic BSA writer can store arbitrary payloads under .dds paths.
         // Only parseable DDS metadata is target-gated so malformed or synthetic
@@ -132,18 +93,6 @@ result<void> validate_parseable_dds_texture(const tes4_writer_entry& entry,
     }
 
     return profile.validate_texture_metadata(metadata.value());
-}
-
-result<std::uint32_t> disk_payload_size(const std::string& host_path) {
-    auto source_path = resolve_tes4_source_path(host_path);
-    if (!source_path) {
-        return source_path.error();
-    }
-    auto size = detail::inspect_host_file_size(source_path.value(), tes4_prepare_source_context);
-    if (!size) {
-        return size.error();
-    }
-    return checked_u32(size.value(), "TES4 BSA disk source size");
 }
 
 void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
@@ -172,7 +121,7 @@ result<std::vector<std::byte>> make_embedded_name_prefix(bool emit_embedded_name
     return stored;
 }
 
-/// Encodes one memory-backed payload using the profile-selected codec and
+/// Encodes one owned payload using the profile-selected codec and
 /// archive-specific embedded-name choice.
 result<std::vector<std::byte>> encode_stored_payload(const tes4_bsa_profile& profile,
                                                      std::span<const std::byte> raw_payload,
@@ -223,11 +172,15 @@ std::string join_folder_file(std::string_view folder, std::string_view file_name
     return path;
 }
 
-/// Prepares one entry while leaving source probing and DDS analysis in the
-/// preparation stage and delegating version-dependent policy to the TES4 BSA Profile.
+/// Prepares one entry from one coherent source observation.
+///
+/// Disk-backed work opens one stable Windows session for sizing, optional DDS
+/// probing, and either complete compression input or workspace snapshotting.
 result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
                                                 const tes4_bsa_profile& profile,
-                                                const tes4_bsa_writer_options& options) {
+                                                const tes4_bsa_writer_options& options,
+                                                const detail::finalization_workspace& workspace,
+                                                std::size_t preparation_index) {
     auto [folder, file_name] = split_folder_file(entry.archive_path_original);
     auto [canonical_folder, canonical_file_name] = split_folder_file(entry.archive_path_canonical);
     if (folder.empty() || file_name.empty()) {
@@ -241,80 +194,100 @@ result<prepared_entry_result> prepare_one_entry(const tes4_writer_entry& entry,
     }
 
     const auto entry_file_flags = profile.file_flag_for_path(entry.archive_path_original);
-    auto texture_format = validate_parseable_dds_texture(entry, entry_file_flags, profile);
-    if (!texture_format) {
-        return texture_format.error();
-    }
     std::uint32_t raw_size = 0U;
+    std::optional<detail::stable_host_file_session> disk_source;
     if (entry.from_memory) {
         auto memory_size = checked_u32(entry.memory_bytes.size(), "TES4 BSA raw payload size");
         if (!memory_size) {
             return memory_size.error();
         }
         raw_size = memory_size.value();
+
+        auto texture_format =
+            validate_parseable_dds_texture(entry.memory_bytes, entry_file_flags, profile);
+        if (!texture_format) {
+            return texture_format.error();
+        }
     } else {
-        auto file_size = disk_payload_size(entry.host_path);
+        auto source_path = resolve_tes4_source_path(entry.host_path);
+        if (!source_path) {
+            return source_path.error();
+        }
+        auto opened = detail::stable_host_file_session::open(source_path.value(),
+                                                             tes4_prepare_source_context);
+        if (!opened) {
+            return opened.error();
+        }
+        auto file_size = checked_u32(opened.value().size(), "TES4 BSA disk source size");
         if (!file_size) {
             return file_size.error();
         }
         raw_size = file_size.value();
+        disk_source.emplace(std::move(opened).value());
+
+        if ((entry_file_flags & tes4_bsa_file_flag_textures) != 0U) {
+            auto probe = disk_source->read_prefix(dds_metadata_probe_size);
+            if (!probe) {
+                return probe.error();
+            }
+            auto texture_format =
+                validate_parseable_dds_texture(probe.value(), entry_file_flags, profile);
+            if (!texture_format) {
+                return texture_format.error();
+            }
+            auto rewound = disk_source->rewind();
+            if (!rewound) {
+                return rewound.error();
+            }
+        }
     }
 
     const auto compression =
         profile.writer_entry_compression(options.compression_policy, entry.compression, raw_size);
     const bool effective_compressed = compression.compression != entry_compression::none;
     const bool emit_embedded_names = profile.writer_emits_embedded_names(options);
-
-    tes4_prepared_entry prepared;
-    prepared.folder = folder;
-    prepared.canonical_folder = std::move(canonical_folder);
-    prepared.file_name = std::move(file_name);
-    prepared.file_hash = file_hash_for(prepared.file_name);
-    prepared.record_flags = compression.record_flags;
-    const auto embedded_name = join_folder_file(prepared.folder, prepared.file_name);
+    const auto file_hash = file_hash_for(file_name);
+    const auto embedded_name = join_folder_file(folder, file_name);
 
     if (!entry.from_memory && !effective_compressed) {
         auto prefix = make_embedded_name_prefix(emit_embedded_names, embedded_name);
         if (!prefix) {
             return prefix.error();
         }
-        auto source_path = resolve_tes4_source_path(entry.host_path);
-        if (!source_path) {
-            return source_path.error();
+        auto payload = detail::stored_payload::from_workspace_snapshot(
+            std::move(prefix).value(), std::move(*disk_source), workspace, preparation_index);
+        if (!payload) {
+            return payload.error();
         }
-        const auto stored_size64 = static_cast<std::uint64_t>(prefix.value().size()) + raw_size;
-        auto stored_size =
-            checked_size_flags_payload_size(stored_size64, "TES4 BSA stored payload size");
-        if (!stored_size) {
-            return stored_size.error();
-        }
-        prepared.stored_size = stored_size.value();
-        prepared.stored_payload = std::move(prefix.value());
-        prepared.raw_disk_host_path = entry.host_path;
-        prepared.resolved_raw_disk_host_path = std::move(source_path.value());
-        prepared.raw_disk_size = raw_size;
-        prepared.stream_raw_disk = true;
-        return prepared_entry_result{std::move(prepared), entry_file_flags};
+        return prepared_entry_result{
+            tes4_prepared_entry{std::move(folder), std::move(canonical_folder),
+                                std::move(file_name), file_hash, compression.record_flags,
+                                std::move(payload).value()},
+            entry_file_flags};
     }
 
-    auto payload = read_source_bytes(entry, raw_size);
-    if (!payload) {
-        return payload.error();
+    std::span<const std::byte> raw_payload = entry.memory_bytes;
+    std::vector<std::byte> disk_payload;
+    if (!entry.from_memory) {
+        auto read = disk_source->read_exact(raw_size);
+        if (!read) {
+            return read.error();
+        }
+        disk_payload = std::move(read).value();
+        raw_payload = disk_payload;
     }
 
-    auto stored_payload = encode_stored_payload(profile, payload.value(), effective_compressed,
-                                                emit_embedded_names, embedded_name);
-    if (!stored_payload) {
-        return stored_payload.error();
+    auto stored_bytes = encode_stored_payload(profile, raw_payload, effective_compressed,
+                                              emit_embedded_names, embedded_name);
+    if (!stored_bytes) {
+        return stored_bytes.error();
     }
-    auto stored_size = checked_size_flags_payload_size(stored_payload.value().size(),
-                                                       "TES4 BSA stored payload size");
-    if (!stored_size) {
-        return stored_size.error();
-    }
-    prepared.stored_size = stored_size.value();
-    prepared.stored_payload = std::move(stored_payload.value());
-    return prepared_entry_result{std::move(prepared), entry_file_flags};
+    return prepared_entry_result{
+        tes4_prepared_entry{
+            std::move(folder), std::move(canonical_folder), std::move(file_name), file_hash,
+            compression.record_flags,
+            detail::stored_payload::from_owned_bytes(std::move(stored_bytes).value())},
+        entry_file_flags};
 }
 
 }  // namespace
@@ -352,11 +325,12 @@ result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries) {
 
 result<std::vector<tes4_prepared_folder>> tes4_prepare_folders(
     std::span<const tes4_writer_entry> entries, const tes4_bsa_profile& profile,
-    const tes4_bsa_writer_options& options, std::uint32_t worker_count, std::uint32_t& file_flags) {
+    const tes4_bsa_writer_options& options, std::uint32_t worker_count, std::uint32_t& file_flags,
+    const detail::finalization_workspace& workspace) {
     std::vector<std::optional<prepared_entry_result>> prepared_by_index(entries.size());
     auto prepared_work = detail::run_indexed_work(
         entries.size(), worker_count, [&](std::size_t index) -> result<void> {
-            auto prepared = prepare_one_entry(entries[index], profile, options);
+            auto prepared = prepare_one_entry(entries[index], profile, options, workspace, index);
             if (!prepared) {
                 return prepared.error();
             }
@@ -393,7 +367,7 @@ result<std::vector<tes4_prepared_folder>> tes4_prepare_folders(
                       return lhs.file_hash < rhs.file_hash;
                   });
         folders.push_back(tes4_prepared_folder{folder_group.display_name,
-                                               detail::hash_tes4(folder_group.display_name, {}), 0U,
+                                               detail::hash_tes4(folder_group.display_name, {}),
                                                std::move(folder_entries)});
     }
     std::sort(folders.begin(), folders.end(),

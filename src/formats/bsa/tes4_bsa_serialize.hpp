@@ -4,19 +4,15 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <span>
 
 namespace libbsa::formats::bsa {
 
-/// Writes prepared TES4 BSA archive bytes using policy from the resolved
-/// profile and archive-specific writer options.
+/// Writes TES4 BSA archive bytes from a complete format-owned placement plan.
 ///
-/// The serializer retains ownership of byte emission, offset narrowing, and
-/// payload streaming; the profile supplies version-dependent decisions only.
-result<void> tes4_write_archive_bytes(std::span<const tes4_prepared_folder> folders,
-                                      const tes4_bsa_profile& profile,
-                                      const tes4_bsa_writer_options& options,
-                                      std::uint32_t file_flags, const tes4_layout_result& layout,
+/// Header and record metadata come only from `plan`, and each unique Stored
+/// Payload is emitted once in physical plan order without reopening original
+/// sources.
+result<void> tes4_write_archive_bytes(const tes4_placement_plan& plan,
                                       const std::filesystem::path& output_path);
 
 }  // namespace libbsa::formats::bsa

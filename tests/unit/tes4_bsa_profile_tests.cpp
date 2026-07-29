@@ -250,8 +250,7 @@ TEST_CASE("tes4_bsa_profile classifies file flags by version",
 
 TEST_CASE("tes4_bsa_profile validates native DDS metadata against target allowlists",
           "[unit][tes4_bsa_profile][dds]") {
-    constexpr std::array legacy_dxt_formats{71U, 74U, 77U};
-    constexpr std::array analyzable_but_disallowed_formats{28U, 61U, 65U, 87U, 88U};
+    constexpr std::array dx9_compatible_formats{28U, 61U, 65U, 71U, 74U, 77U, 87U, 88U};
     constexpr std::array skyrim_se_added_formats{80U, 83U, 98U};
 
     for (const auto& expected : profile_matrix) {
@@ -259,11 +258,9 @@ TEST_CASE("tes4_bsa_profile validates native DDS metadata against target allowli
         REQUIRE(resolved.has_value());
         const auto& profile = resolved.value();
 
-        for (const auto format : legacy_dxt_formats) {
+        for (const auto format : dx9_compatible_formats) {
+            INFO("DXGI format: " << format);
             CHECK(profile.validate_texture_metadata(texture_with_format(format)).has_value());
-        }
-        for (const auto format : analyzable_but_disallowed_formats) {
-            CHECK_FALSE(profile.validate_texture_metadata(texture_with_format(format)).has_value());
         }
         for (const auto format : skyrim_se_added_formats) {
             const auto validation = profile.validate_texture_metadata(texture_with_format(format));

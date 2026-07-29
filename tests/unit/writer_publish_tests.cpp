@@ -556,7 +556,7 @@ TEST_CASE(
                                   "tes3_write_archive_bytes("},
         writer_source_expectation{"src/formats/bsa/tes4_bsa_writer.cpp", "TES4 BSA writer",
                                   "tes4_validate_entries(", "make_tes4_bsa_profile_for_writer(",
-                                  "tes4_prepare_folders(", "tes4_assign_offsets(",
+                                  "tes4_prepare_folders(", "tes4_plan_placements(",
                                   "tes4_write_archive_bytes("},
         writer_source_expectation{"src/formats/ba2/ba2_gnrl_writer.cpp", "BA2 GNRL writer",
                                   "ba2_gnrl_validate_entries(", "make_ba2_profile_for_gnrl_writer(",

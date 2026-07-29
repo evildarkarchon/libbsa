@@ -120,20 +120,19 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target, const tes4_bsa_write
         output_path.value().resolved, options.overwrite_existing, "TES4 BSA writer",
         [&](const detail::finalization_workspace& workspace) -> result<void> {
             std::uint32_t file_flags = 0U;
-            auto folders =
-                tes4_prepare_folders(entries, profile.value(), options, worker_count, file_flags);
+            auto folders = tes4_prepare_folders(entries, profile.value(), options, worker_count,
+                                                file_flags, workspace);
             if (!folders) {
                 return folders.error();
             }
 
-            auto layout =
-                tes4_assign_offsets(folders.value(), profile.value(), options.deduplicate_payloads);
-            if (!layout) {
-                return layout.error();
+            auto plan = tes4_plan_placements(std::move(folders).value(), profile.value(), options,
+                                             file_flags);
+            if (!plan) {
+                return plan.error();
             }
 
-            return tes4_write_archive_bytes(folders.value(), profile.value(), options, file_flags,
-                                            layout.value(), workspace.temporary_archive_path());
+            return tes4_write_archive_bytes(plan.value(), workspace.temporary_archive_path());
         });
 }
 
