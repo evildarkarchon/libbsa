@@ -105,7 +105,8 @@ void require_gnrl_outputs_match(const std::filesystem::path& serial_output,
                                 std::span<const gnrl_case> entries,
                                 libbsa::archive_variant expected_variant,
                                 std::uint32_t expected_version,
-                                libbsa::entry_compression expected_compression) {
+                                libbsa::entry_compression expected_compression,
+                                libbsa::entry_compression expected_default_compression) {
     auto serial_reader = libbsa::archive_reader::open(serial_output.string());
     REQUIRE(serial_reader.has_value());
     auto parallel_reader = libbsa::archive_reader::open(parallel_output.string());
@@ -119,7 +120,7 @@ void require_gnrl_outputs_match(const std::filesystem::path& serial_output,
     CHECK(parallel_metadata.value().variant == expected_variant);
     CHECK(parallel_metadata.value().version == expected_version);
     CHECK(parallel_metadata.value().file_count == serial_metadata.value().file_count);
-    CHECK(parallel_metadata.value().default_compression == expected_compression);
+    CHECK(parallel_metadata.value().default_compression == expected_default_compression);
 
     for (const auto& entry : entries) {
         auto serial_found = serial_reader.value().find(entry.archive_path);
@@ -132,6 +133,8 @@ void require_gnrl_outputs_match(const std::filesystem::path& serial_output,
         CHECK(parallel_found.value()->compression == expected_compression);
         CHECK(serial_found.value()->raw_size == entry.bytes.size());
         CHECK(parallel_found.value()->raw_size == entry.bytes.size());
+        CHECK(parallel_found.value()->payload_offset == serial_found.value()->payload_offset);
+        CHECK(parallel_found.value()->stored_size == serial_found.value()->stored_size);
 
         auto serial_bytes = serial_reader.value().extract_bytes(entry.archive_path);
         auto parallel_bytes = parallel_reader.value().extract_bytes(entry.archive_path);
@@ -219,6 +222,52 @@ void require_dx10_outputs_match(const std::filesystem::path& serial_output,
 
 }  // namespace
 
+TEST_CASE("ba2_writer_execution GNRL raw snapshots preserve serial placement order",
+          "[unit][ba2_writer_execution][bounded_memory_policy][ba2_gnrl_writer]"
+          "[worker_count][snapshot]") {
+    const auto shared = repeated_bytes((72U * 1024U) + 11U, 0x31U);
+    const std::vector<gnrl_case> entries{
+        {"Meshes/Raw/SharedA.nif", shared},
+        {"Meshes/Raw/SharedB.nif", shared},
+        {"Scripts/Raw/Unique.pex", repeated_bytes((65U * 1024U) + 3U, 0x61U)},
+    };
+    const auto root = output_path("gnrl-raw-snapshot-sources").parent_path();
+    const auto serial_output = root / "gnrl-raw-snapshot-serial.ba2";
+    const auto parallel_output = root / "gnrl-raw-snapshot-parallel.ba2";
+
+    libbsa::ba2_gnrl_writer_options options;
+    options.compression = libbsa::archive_compression_policy::all_raw;
+    options.deduplicate_payloads = true;
+    options.overwrite_existing = true;
+
+    libbsa::ba2_gnrl_writer serial_writer{libbsa::ba2_gnrl_target::fallout4, options};
+    add_gnrl_disk_sources(serial_writer, root, entries);
+    libbsa::write_execution_options serial_execution;
+    serial_execution.worker_count = 1U;
+    REQUIRE(serial_writer.write_to(serial_output.string(), serial_execution).has_value());
+
+    libbsa::ba2_gnrl_writer parallel_writer{libbsa::ba2_gnrl_target::fallout4, options};
+    add_gnrl_disk_sources(parallel_writer, root, entries);
+    libbsa::write_execution_options parallel_execution;
+    parallel_execution.worker_count = 4U;
+    REQUIRE(parallel_writer.write_to(parallel_output.string(), parallel_execution).has_value());
+
+    CHECK(read_binary_file(parallel_output) == read_binary_file(serial_output));
+    require_gnrl_outputs_match(serial_output, parallel_output, entries,
+                               libbsa::archive_variant::fallout4, 1U,
+                               libbsa::entry_compression::none, libbsa::entry_compression::deflate);
+
+    auto opened = libbsa::archive_reader::open(parallel_output.string());
+    REQUIRE(opened.has_value());
+    auto first = opened.value().find("Meshes/Raw/SharedA.nif");
+    auto second = opened.value().find("Meshes/Raw/SharedB.nif");
+    REQUIRE(first.has_value());
+    REQUIRE(second.has_value());
+    REQUIRE(first.value().has_value());
+    REQUIRE(second.value().has_value());
+    CHECK(first.value()->payload_offset == second.value()->payload_offset);
+}
+
 TEST_CASE("ba2_writer_execution GNRL worker_count preserves Fallout 4 deflate output",
           "[unit][ba2_writer_execution][bounded_memory_policy][ba2_gnrl_writer]["
           "worker_count]") {
@@ -247,9 +296,9 @@ TEST_CASE("ba2_writer_execution GNRL worker_count preserves Fallout 4 deflate ou
     REQUIRE(parallel_writer.write_to(parallel_output.string(), parallel_execution).has_value());
 
     CHECK(read_binary_file(parallel_output) == read_binary_file(serial_output));
-    require_gnrl_outputs_match(serial_output, parallel_output, entries,
-                               libbsa::archive_variant::fallout4, 1U,
-                               libbsa::entry_compression::deflate);
+    require_gnrl_outputs_match(
+        serial_output, parallel_output, entries, libbsa::archive_variant::fallout4, 1U,
+        libbsa::entry_compression::deflate, libbsa::entry_compression::deflate);
 }
 
 TEST_CASE(
@@ -281,9 +330,9 @@ TEST_CASE(
     REQUIRE(parallel_writer.write_to(parallel_output.string(), execution).has_value());
 
     CHECK(read_binary_file(parallel_output) == read_binary_file(serial_output));
-    require_gnrl_outputs_match(serial_output, parallel_output, entries,
-                               libbsa::archive_variant::starfield, 3U,
-                               libbsa::entry_compression::lz4_block);
+    require_gnrl_outputs_match(
+        serial_output, parallel_output, entries, libbsa::archive_variant::starfield, 3U,
+        libbsa::entry_compression::lz4_block, libbsa::entry_compression::lz4_block);
 }
 
 TEST_CASE(
@@ -385,23 +434,33 @@ TEST_CASE(
     "[unit][ba2_writer_execution][bounded_memory_policy][ba2_gnrl_writer]"
     "[worker_count][publish]") {
     const auto archive = output_path("missing-source-no-partial.ba2");
+    const auto valid_source = output_path("valid-raw-source-before-missing.nif");
     const auto missing_source = output_path("missing-gnrl-source-no-partial.nif");
+    write_binary_file(valid_source, bytes_from_text("snapshotted before later source failure"));
     std::error_code fs_error;
     std::filesystem::remove(archive, fs_error);
     std::filesystem::remove(missing_source, fs_error);
 
     libbsa::ba2_gnrl_writer_options options;
-    options.compression = libbsa::archive_compression_policy::all_compressed;
+    options.compression = libbsa::archive_compression_policy::all_raw;
     libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, options};
+    REQUIRE(
+        writer.add_file("Meshes/Prepared/BeforeFailure.nif", valid_source.string()).has_value());
     REQUIRE(writer.add_file("Meshes/Missing/NoPartial.nif", missing_source.string()).has_value());
 
     libbsa::write_execution_options execution;
-    execution.worker_count = 4U;
+    // One worker guarantees snapshot 0 exists before source 1 fails, so this
+    // observes cleanup of a real GNRL snapshot rather than only an empty workspace.
+    execution.worker_count = 1U;
     auto written = writer.write_to(archive.string(), execution);
 
     REQUIRE_FALSE(written.has_value());
     REQUIRE(written.error().code == libbsa::error_code::io_error);
     CHECK_FALSE(std::filesystem::exists(archive));
+    const auto workspace_prefix = archive.filename().string() + ".libbsa-tmp-";
+    for (const auto& child : std::filesystem::directory_iterator{archive.parent_path()}) {
+        CHECK_FALSE(child.path().filename().string().starts_with(workspace_prefix));
+    }
 }
 
 TEST_CASE(

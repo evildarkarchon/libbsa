@@ -1,0 +1,95 @@
+{
+  "scope": [
+    "src",
+    "include",
+    "tests",
+    "tools",
+    "benchmarks"
+  ],
+  "graphify_version": "0.9.28",
+  "raw_extraction": {
+    "components": {
+      "src": {
+        "nodes": 1534,
+        "raw_edges": 3932,
+        "dangling_endpoint_edges": 468,
+        "directed_same_endpoint_collapsed_edges": 22,
+        "undirected_same_endpoint_collapsed_edges": 37,
+        "final_edges": 3461
+      },
+      "include": {
+        "nodes": 166,
+        "raw_edges": 310,
+        "dangling_endpoint_edges": 26,
+        "directed_same_endpoint_collapsed_edges": 68,
+        "undirected_same_endpoint_collapsed_edges": 72,
+        "final_edges": 224
+      },
+      "tests": {
+        "nodes": 1885,
+        "raw_edges": 5059,
+        "dangling_endpoint_edges": 625,
+        "directed_same_endpoint_collapsed_edges": 300,
+        "undirected_same_endpoint_collapsed_edges": 308,
+        "final_edges": 4126
+      },
+      "tools": {
+        "nodes": 145,
+        "raw_edges": 560,
+        "dangling_endpoint_edges": 23,
+        "directed_same_endpoint_collapsed_edges": 55,
+        "undirected_same_endpoint_collapsed_edges": 57,
+        "final_edges": 480
+      },
+      "benchmarks": {
+        "nodes": 74,
+        "raw_edges": 231,
+        "dangling_endpoint_edges": 13,
+        "directed_same_endpoint_collapsed_edges": 8,
+        "undirected_same_endpoint_collapsed_edges": 8,
+        "final_edges": 210
+      }
+    },
+    "totals": {
+      "nodes": 3804,
+      "raw_edges": 10092,
+      "dangling_endpoint_edges": 1155,
+      "directed_same_endpoint_collapsed_edges": 453,
+      "undirected_same_endpoint_collapsed_edges": 482,
+      "structural_final_edges": 8501
+    }
+  },
+  "semantic_extraction": {
+    "documents": 4,
+    "nodes": 36,
+    "edges": 48,
+    "hyperedges": 2,
+    "token_metering": "unavailable"
+  },
+  "final_graph": {
+    "nodes": 3840,
+    "edges": 8549,
+    "communities": 165,
+    "hyperedges": 2
+  },
+  "zero_node_source_files": [
+    "tests/fixtures/ba2_dx10_fo4_manifest.json",
+    "tests/fixtures/ba2_dx10_malformed_manifest.json",
+    "tests/fixtures/ba2_dx10_sfv3_manifest.json",
+    "tests/fixtures/ba2_gnrl_fo4_manifest.json",
+    "tests/fixtures/ba2_gnrl_malformed_manifest.json",
+    "tests/fixtures/ba2_gnrl_sfv2_manifest.json",
+    "tests/fixtures/ba2_gnrl_sfv3_manifest.json",
+    "tests/fixtures/ba2_gnrl_sfv3_zlib_manifest.json",
+    "tests/fixtures/ba2_gnrl_sfv3_lz4_manifest.json",
+    "tests/fixtures/tes3_bsa_manifest.json",
+    "tests/fixtures/tes3_bsa_writer_manifest.json",
+    "tests/fixtures/tes4_bsa_fo3_manifest.json",
+    "tests/fixtures/tes4_bsa_malformed_manifest.json",
+    "tests/fixtures/tes4_bsa_sse_manifest.json",
+    "tests/fixtures/tes4_bsa_tes4_manifest.json",
+    "tests/fixtures/writer_failure_manifest.json",
+    "tests/fixtures/writer_hotspot_manifest.json"
+  ],
+  "warning": "Use this graph for navigation only: raw endpoint loss and same-pair edge collapse occur before final graph serialization."
+}

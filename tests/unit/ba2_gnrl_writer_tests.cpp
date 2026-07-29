@@ -2,12 +2,13 @@
 
 #include <libbsa/libbsa.hpp>
 
-#include "formats/ba2/ba2_gnrl_layout.hpp"
-#include "formats/ba2/ba2_profile.hpp"
-#include "formats/ba2/ba2_gnrl_serialize.hpp"
-#include "formats/ba2/ba2_gnrl_writer.hpp"
-
-#include <detail/host_file_path.hpp>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
 
 #include <algorithm>
 #include <array>
@@ -28,6 +29,27 @@ namespace {
 
 constexpr auto non_ascii_path_token_wide = L"libbsa-Angstrom-日本語";
 
+class native_handle_guard final {
+   public:
+    explicit native_handle_guard(HANDLE handle) noexcept : handle_{handle} {}
+    ~native_handle_guard() noexcept { reset(); }
+
+    native_handle_guard(const native_handle_guard&) = delete;
+    native_handle_guard& operator=(const native_handle_guard&) = delete;
+
+    [[nodiscard]] bool valid() const noexcept { return handle_ != INVALID_HANDLE_VALUE; }
+
+    void reset() noexcept {
+        if (handle_ != INVALID_HANDLE_VALUE) {
+            ::CloseHandle(handle_);
+            handle_ = INVALID_HANDLE_VALUE;
+        }
+    }
+
+   private:
+    HANDLE handle_{INVALID_HANDLE_VALUE};
+};
+
 std::filesystem::path writer_test_dir() {
     auto path = std::filesystem::temp_directory_path() / "libbsa_ba2_gnrl_writer_tests";
     std::filesystem::create_directories(path);
@@ -35,14 +57,6 @@ std::filesystem::path writer_test_dir() {
 }
 
 std::filesystem::path output_path(std::string name) { return writer_test_dir() / std::move(name); }
-
-libbsa::formats::ba2::ba2_profile require_gnrl_profile(
-    const libbsa::ba2_gnrl_writer_options& options = {}) {
-    auto profile = libbsa::formats::ba2::make_ba2_profile_for_gnrl_writer(
-        libbsa::ba2_gnrl_target::fallout4, options);
-    REQUIRE(profile.has_value());
-    return profile.value();
-}
 
 std::filesystem::path non_ascii_output_path(std::string_view name) {
     auto path = writer_test_dir() / std::filesystem::path{std::wstring{non_ascii_path_token_wide}} /
@@ -77,31 +91,13 @@ std::vector<std::byte> sample_bytes() {
     return {std::byte{0x42}, std::byte{0x41}, std::byte{0x32}, std::byte{0x21}};
 }
 
-libbsa::formats::ba2::ba2_gnrl_prepared_entry disk_stage_entry(const std::filesystem::path& source,
-                                                               std::uint32_t prepared_size) {
-    libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
-    entry.archive_path_original = "Meshes/Payload.bin";
-    entry.archive_path_canonical = "meshes/payload.bin";
-    entry.source_path = utf8_string_from_path(source);
-    auto resolved = libbsa::detail::resolve_host_file_path(entry.source_path);
-    REQUIRE(resolved.has_value());
-    entry.resolved_source_path = std::move(resolved).value();
-    entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
-    entry.raw_size = prepared_size;
-    entry.stream_from_disk = true;
-    entry.owns_payload_bytes = true;
-    return entry;
-}
-
-libbsa::formats::ba2::ba2_gnrl_prepared_entry memory_stage_entry(std::vector<std::byte> bytes) {
-    libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
-    entry.archive_path_original = "Meshes/Payload.bin";
-    entry.archive_path_canonical = "meshes/payload.bin";
-    entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
-    entry.raw_size = static_cast<std::uint32_t>(bytes.size());
-    entry.stored_payload = std::move(bytes);
-    entry.owns_payload_bytes = true;
-    return entry;
+std::vector<std::byte> bytes_from_text(std::string_view text) {
+    std::vector<std::byte> bytes;
+    bytes.reserve(text.size());
+    for (const char ch : text) {
+        bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+    }
+    return bytes;
 }
 
 std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
@@ -113,102 +109,6 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
     }
     REQUIRE_FALSE(input.bad());
     return bytes;
-}
-
-TEST_CASE("BA2 GNRL disk payload streaming rejects source size changes",
-          "[unit][ba2_gnrl_writer][bounded_memory_policy][stream]") {
-    const std::vector<std::byte> expected{std::byte{0x47}, std::byte{0x4E}, std::byte{0x52},
-                                          std::byte{0x4C}};
-
-    SECTION("source grows after preparation") {
-        auto grown = expected;
-        grown.push_back(std::byte{0x21});
-        const auto source = output_path("stream-source-grew.bin");
-        write_binary_file(source, expected);
-        auto entries =
-            std::vector{disk_stage_entry(source, static_cast<std::uint32_t>(expected.size()))};
-        const auto profile = require_gnrl_profile();
-        std::uint64_t file_table_offset = 0;
-        REQUIRE(libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(entries, profile, false,
-                                                                      file_table_offset)
-                    .has_value());
-        write_binary_file(source, grown);
-
-        auto streamed = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            profile, {}, entries, file_table_offset, output_path("stream-source-grew.ba2"));
-
-        REQUIRE_FALSE(streamed.has_value());
-        CHECK(streamed.error().code == libbsa::error_code::io_error);
-    }
-
-    SECTION("source shrinks after preparation") {
-        const std::vector<std::byte> truncated{expected.begin(), expected.end() - 1};
-        const auto source = output_path("stream-source-shrank.bin");
-        write_binary_file(source, expected);
-        auto entries =
-            std::vector{disk_stage_entry(source, static_cast<std::uint32_t>(expected.size()))};
-        const auto profile = require_gnrl_profile();
-        std::uint64_t file_table_offset = 0;
-        REQUIRE(libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(entries, profile, false,
-                                                                      file_table_offset)
-                    .has_value());
-        write_binary_file(source, truncated);
-
-        auto streamed = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            profile, {}, entries, file_table_offset, output_path("stream-source-shrank.ba2"));
-
-        REQUIRE_FALSE(streamed.has_value());
-        CHECK(streamed.error().code == libbsa::error_code::io_error);
-    }
-}
-
-TEST_CASE("BA2 GNRL dedupe disk comparisons reject source size changes",
-          "[unit][ba2_gnrl_writer][bounded_memory_policy][dedupe]") {
-    const std::vector<std::byte> expected{std::byte{0x44}, std::byte{0x45}, std::byte{0x44},
-                                          std::byte{0x55}};
-
-    SECTION("disk-to-memory source grows beyond the prepared payload") {
-        auto grown = expected;
-        grown.push_back(std::byte{0x50});
-        const auto source = output_path("dedupe-source-grew.bin");
-        write_binary_file(source, grown);
-
-        auto equal = libbsa::formats::ba2::ba2_gnrl_payloads_equal(
-            disk_stage_entry(source, static_cast<std::uint32_t>(expected.size())),
-            memory_stage_entry(expected));
-
-        REQUIRE_FALSE(equal.has_value());
-        CHECK(equal.error().code == libbsa::error_code::io_error);
-    }
-
-    SECTION("disk-to-memory source shrinks below the prepared payload") {
-        const std::vector<std::byte> truncated{expected.begin(), expected.end() - 1};
-        const auto source = output_path("dedupe-source-shrank.bin");
-        write_binary_file(source, truncated);
-
-        auto equal = libbsa::formats::ba2::ba2_gnrl_payloads_equal(
-            disk_stage_entry(source, static_cast<std::uint32_t>(expected.size())),
-            memory_stage_entry(expected));
-
-        REQUIRE_FALSE(equal.has_value());
-        CHECK(equal.error().code == libbsa::error_code::io_error);
-    }
-
-    SECTION("disk-to-disk sources grow beyond the prepared payload") {
-        auto grown = expected;
-        grown.push_back(std::byte{0x50});
-        const auto lhs = output_path("dedupe-lhs-grew.bin");
-        const auto rhs = output_path("dedupe-rhs-grew.bin");
-        write_binary_file(lhs, grown);
-        write_binary_file(rhs, grown);
-
-        auto equal = libbsa::formats::ba2::ba2_gnrl_payloads_equal(
-            disk_stage_entry(lhs, static_cast<std::uint32_t>(expected.size())),
-            disk_stage_entry(rhs, static_cast<std::uint32_t>(expected.size())));
-
-        REQUIRE_FALSE(equal.has_value());
-        CHECK(equal.error().code == libbsa::error_code::io_error);
-    }
 }
 
 std::uint16_t read_u16_le(std::span<const std::byte> bytes, std::size_t& offset) {
@@ -470,6 +370,27 @@ TEST_CASE("BA2 GNRL writer rejects duplicate canonical archive paths at write ti
     REQUIRE(written.error().code == libbsa::error_code::format_error);
 }
 
+TEST_CASE("BA2 GNRL structural validation does not preflight-open disk sources",
+          "[unit][ba2_gnrl_writer][writer-source-io]") {
+    const auto missing_first = output_path("duplicate-missing-first.bin");
+    const auto missing_second = output_path("duplicate-missing-second.bin");
+    const auto archive = output_path("duplicate-missing-sources.ba2");
+    std::error_code fs_error;
+    std::filesystem::remove(missing_first, fs_error);
+    std::filesystem::remove(missing_second, fs_error);
+    std::filesystem::remove(archive, fs_error);
+
+    libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4};
+    REQUIRE(writer.add_file("Meshes/Duplicate.bin", missing_first.string()).has_value());
+    REQUIRE(writer.add_file("meshes/duplicate.bin", missing_second.string()).has_value());
+
+    auto written = writer.write_to(archive.string());
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::format_error);
+    CHECK_FALSE(std::filesystem::exists(archive));
+}
+
 TEST_CASE(
     "BA2 GNRL writer refuses to overwrite existing output when "
     "overwrite_existing is false",
@@ -559,6 +480,56 @@ TEST_CASE("BA2 GNRL writer reports missing disk sources as I/O errors", "[unit][
 
     REQUIRE_FALSE(written.has_value());
     REQUIRE(written.error().code == libbsa::error_code::io_error);
+}
+
+TEST_CASE(
+    "BA2 GNRL writer rejects disk sources already open for writing through stable preparation",
+    "[unit][ba2_gnrl_writer][writer-source-io][stable-session]") {
+    const auto payload = bytes_from_text("stable BA2 GNRL source bytes");
+
+    for (const auto& [compression, expected_compression, source_name, archive_name] : std::array{
+             std::tuple{libbsa::archive_compression_policy::all_raw,
+                        libbsa::entry_compression::none, "stable-session-raw-source.bin",
+                        "stable-session-raw-output.ba2"},
+             std::tuple{libbsa::archive_compression_policy::all_compressed,
+                        libbsa::entry_compression::deflate, "stable-session-compressed-source.bin",
+                        "stable-session-compressed-output.ba2"}}) {
+        const auto source = output_path(source_name);
+        const auto archive = output_path(archive_name);
+        write_binary_file(source, payload);
+        std::error_code fs_error;
+        std::filesystem::remove(archive, fs_error);
+
+        // A permissive existing writer proves GNRL preparation obtains one
+        // stable read session that denies write-sharing for both snapshot and
+        // compression routes.
+        native_handle_guard existing_writer{::CreateFileW(
+            source.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
+        REQUIRE(existing_writer.valid());
+
+        libbsa::ba2_gnrl_writer_options options;
+        options.compression = compression;
+        options.overwrite_existing = true;
+        libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, options};
+        REQUIRE(writer.add_file("Meshes/Stable/Source.bin", source.string()).has_value());
+
+        auto denied = writer.write_to(archive.string());
+
+        REQUIRE_FALSE(denied.has_value());
+        CHECK(denied.error().code == libbsa::error_code::io_error);
+        CHECK_FALSE(std::filesystem::exists(archive));
+
+        existing_writer.reset();
+        REQUIRE(writer.write_to(archive.string()).has_value());
+        auto opened = libbsa::archive_reader::open(archive.string());
+        REQUIRE(opened.has_value());
+        auto found = opened.value().find("Meshes/Stable/Source.bin");
+        REQUIRE(found.has_value());
+        REQUIRE(found.value().has_value());
+        CHECK(found.value()->compression == expected_compression);
+        CHECK(opened.value().extract_bytes("Meshes/Stable/Source.bin").value() == payload);
+    }
 }
 
 TEST_CASE("BA2 GNRL writer validates the destination before opening disk sources",
@@ -904,6 +875,48 @@ TEST_CASE(
     CHECK(first.value()->stored_size == second.value()->stored_size);
     CHECK(opened.value().extract_bytes("Meshes/SharedA.nif").value() == bytes);
     CHECK(opened.value().extract_bytes("Meshes/SharedB.nif").value() == bytes);
+}
+
+TEST_CASE("BA2 GNRL writer dedupes exact owned and snapshot payloads only",
+          "[unit][ba2_gnrl_writer][dedupe][writer-source-io]") {
+    auto options = overwriting_raw_options();
+    options.deduplicate_payloads = true;
+    libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, options};
+
+    const auto shared = bytes_from_text("owned snapshot");
+    const auto mismatch = bytes_from_text("owned snapsh0t");
+    REQUIRE(shared.size() == mismatch.size());
+    const auto shared_source = output_path("owned-snapshot-shared.bin");
+    const auto mismatch_source = output_path("owned-snapshot-mismatch.bin");
+    write_binary_file(shared_source, shared);
+    write_binary_file(mismatch_source, mismatch);
+
+    REQUIRE(
+        writer.add_file("Meshes/OwnedSnapshot/DiskShared.bin", shared_source.string()).has_value());
+    REQUIRE(writer.add_bytes("Meshes/OwnedSnapshot/MemoryShared.bin", shared).has_value());
+    REQUIRE(writer.add_file("Meshes/OwnedSnapshot/DiskMismatch.bin", mismatch_source.string())
+                .has_value());
+
+    const auto output = output_path("dedupe-owned-snapshot.ba2");
+    REQUIRE(writer.write_to(output.string()).has_value());
+
+    auto opened = libbsa::archive_reader::open(output.string());
+    REQUIRE(opened.has_value());
+    auto disk_shared = opened.value().find("Meshes/OwnedSnapshot/DiskShared.bin");
+    auto memory_shared = opened.value().find("Meshes/OwnedSnapshot/MemoryShared.bin");
+    auto disk_mismatch = opened.value().find("Meshes/OwnedSnapshot/DiskMismatch.bin");
+    REQUIRE(disk_shared.has_value());
+    REQUIRE(memory_shared.has_value());
+    REQUIRE(disk_mismatch.has_value());
+    REQUIRE(disk_shared.value().has_value());
+    REQUIRE(memory_shared.value().has_value());
+    REQUIRE(disk_mismatch.value().has_value());
+    CHECK(disk_shared.value()->payload_offset == memory_shared.value()->payload_offset);
+    CHECK(disk_shared.value()->payload_offset != disk_mismatch.value()->payload_offset);
+    CHECK(opened.value().extract_bytes("Meshes/OwnedSnapshot/DiskShared.bin").value() == shared);
+    CHECK(opened.value().extract_bytes("Meshes/OwnedSnapshot/MemoryShared.bin").value() == shared);
+    CHECK(opened.value().extract_bytes("Meshes/OwnedSnapshot/DiskMismatch.bin").value() ==
+          mismatch);
 }
 
 TEST_CASE("BA2 GNRL writer dedupes raw disk sources under non-ASCII host paths",

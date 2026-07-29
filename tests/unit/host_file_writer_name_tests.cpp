@@ -46,8 +46,8 @@ constexpr auto writer_host_path_inventory_cases = std::to_array<writer_host_path
     {"ba2_gnrl", "src/formats/ba2/ba2_gnrl_prepare.cpp",
      "resolve_ba2_gnrl_source_path(entry.host_path)", "src/formats/ba2/ba2_gnrl_writer.cpp",
      "output_path.value().resolved", "src/formats/ba2/ba2_gnrl_serialize.cpp",
-     "open_host_file(host_path", "src/formats/ba2/ba2_gnrl_layout.cpp",
-     "compare_disk_payloads(lhs.resolved_source_path, rhs.resolved_source_path", ""},
+     "entry.payload.emit(output)", "src/formats/ba2/ba2_gnrl_layout.cpp",
+     "entry.payload.exactly_equals(", "resolved_source_path"},
     {"ba2_dx10", "src/formats/ba2/ba2_dx10_snapshot_builder.cpp",
      "resolve_host_file_path(dds_host_path)", "src/formats/ba2/ba2_dx10_writer.cpp",
      "output_path.value().resolved", "src/formats/ba2/ba2_dx10_serialize.cpp",
@@ -125,24 +125,21 @@ TEST_CASE(
     }
 }
 
-TEST_CASE(
-    "remaining raw writer serializers reopen disk sources through the shared "
-    "host_file seam",
-    "[unit][host_file]") {
+TEST_CASE("only remaining path-backed raw writer serializers reopen disk sources",
+          "[unit][host_file]") {
     const auto root = source_root();
-    constexpr auto serializer_sources = std::to_array<std::string_view>(
-        {"src/formats/ba2/ba2_gnrl_serialize.cpp", "src/formats/bsa/tes3_bsa_serialize.cpp"});
-
-    for (const auto relative_path : serializer_sources) {
-        const auto text = read_text_file(root / relative_path);
-        INFO("Source file: " << relative_path);
-        REQUIRE(text.find("open_host_file(") != std::string::npos);
-        REQUIRE(text.find("std::ifstream input{host_path, std::ios::binary}") == std::string::npos);
-    }
+    const auto tes3_serializer = read_text_file(root / "src/formats/bsa/tes3_bsa_serialize.cpp");
+    REQUIRE(tes3_serializer.find("open_host_file(") != std::string::npos);
+    REQUIRE(tes3_serializer.find("std::ifstream input{host_path, std::ios::binary}") ==
+            std::string::npos);
 
     const auto tes4_serializer = read_text_file(root / "src/formats/bsa/tes4_bsa_serialize.cpp");
     REQUIRE(tes4_serializer.find("placement.payload.emit(output)") != std::string::npos);
     REQUIRE(tes4_serializer.find("open_host_file(") == std::string::npos);
+
+    const auto gnrl_serializer = read_text_file(root / "src/formats/ba2/ba2_gnrl_serialize.cpp");
+    REQUIRE(gnrl_serializer.find("entry.payload.emit(output)") != std::string::npos);
+    REQUIRE(gnrl_serializer.find("open_host_file(") == std::string::npos);
 }
 
 TEST_CASE("public writer output paths resolve UTF-8 text before native publish",

@@ -131,8 +131,8 @@ result<void> write_ba2_gnrl_archive(ba2_gnrl_target target, const ba2_gnrl_write
     return detail::publish_writer_output(
         output_path.value().resolved, options.overwrite_existing, "BA2 GNRL writer",
         [&](const detail::finalization_workspace& workspace) -> result<void> {
-            auto prepared =
-                ba2_gnrl_prepare_entries(profile.value(), options, entries, worker_count);
+            auto prepared = ba2_gnrl_prepare_entries(profile.value(), options, entries,
+                                                     worker_count, workspace);
             if (!prepared) {
                 return prepared.error();
             }

@@ -1,0 +1,37 @@
+{
+  "libbsa/archive.hpp": {
+    "mtime": 1781760450.4304173,
+    "ast_hash": "3f0e6a8b83ced00ecb42cde107f9776b",
+    "semantic_hash": "3f0e6a8b83ced00ecb42cde107f9776b"
+  },
+  "libbsa/export.hpp": {
+    "mtime": 1779177361.5131202,
+    "ast_hash": "a478ddca3e5dc88f56a719c4ef6f4a76",
+    "semantic_hash": "a478ddca3e5dc88f56a719c4ef6f4a76"
+  },
+  "libbsa/libbsa.hpp": {
+    "mtime": 1779177361.5131202,
+    "ast_hash": "0f1477e13645a66955a8f010dcd94699",
+    "semantic_hash": "0f1477e13645a66955a8f010dcd94699"
+  },
+  "libbsa/result.hpp": {
+    "mtime": 1781748187.5336518,
+    "ast_hash": "3d2d413a749ea48826fd6288cadf599e",
+    "semantic_hash": "3d2d413a749ea48826fd6288cadf599e"
+  },
+  "libbsa/validation.hpp": {
+    "mtime": 1781748187.5506508,
+    "ast_hash": "a28e72a4aab2ef0edc459b49deeee935",
+    "semantic_hash": "a28e72a4aab2ef0edc459b49deeee935"
+  },
+  "libbsa/version.hpp": {
+    "mtime": 1781748187.5666518,
+    "ast_hash": "b06c55156adf4b8dac77be2f0b0a9561",
+    "semantic_hash": "b06c55156adf4b8dac77be2f0b0a9561"
+  },
+  "libbsa/writer.hpp": {
+    "mtime": 1781748187.585158,
+    "ast_hash": "f64cdc67394f38f91c8ee977e5dc1eb1",
+    "semantic_hash": "f64cdc67394f38f91c8ee977e5dc1eb1"
+  }
+}

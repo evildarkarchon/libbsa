@@ -1,0 +1,211 @@
+{
+  "communities": {
+    "0": [
+      "byte",
+      "libbsa_benchmarks_build_rgba8_dds",
+      "libbsa_benchmarks_byte_buffer",
+      "libbsa_benchmarks_byte_buffer_ascii4",
+      "libbsa_benchmarks_byte_buffer_bytes",
+      "libbsa_benchmarks_byte_buffer_raw",
+      "libbsa_benchmarks_byte_buffer_u32",
+      "libbsa_benchmarks_byte_buffer_u8",
+      "libbsa_benchmarks_patterned_bytes",
+      "libbsa_benchmarks_run_ba2_dx10_pack_extract",
+      "libbsa_benchmarks_vector_sink_write",
+      "libbsa_benchmarks_write_binary_file",
+      "size_t",
+      "span",
+      "uint32_t",
+      "uint8_t",
+      "vector"
+    ],
+    "1": [
+      "bulk_extract_sink_factory",
+      "entry_metadata",
+      "libbsa_benchmarks_benchmark_sink_factory",
+      "libbsa_benchmarks_benchmark_sink_factory_bytes_by_path",
+      "libbsa_benchmarks_benchmark_sink_factory_captures",
+      "libbsa_benchmarks_benchmark_sink_factory_create",
+      "libbsa_benchmarks_benchmark_sink_factory_mutex",
+      "libbsa_benchmarks_capture",
+      "libbsa_benchmarks_capture_bytes",
+      "libbsa_benchmarks_vector_sink",
+      "libbsa_benchmarks_vector_sink_target",
+      "libbsa_benchmarks_vector_sink_vector_sink",
+      "map",
+      "payload_sink",
+      "shared_ptr",
+      "unique_ptr"
+    ],
+    "2": [
+      "ba2_gnrl_writer",
+      "libbsa_benchmarks_add_disk_payloads",
+      "libbsa_benchmarks_json_escape",
+      "libbsa_benchmarks_named_payload",
+      "libbsa_benchmarks_named_payload_archive_path",
+      "libbsa_benchmarks_named_payload_bytes",
+      "libbsa_benchmarks_payload_total",
+      "libbsa_benchmarks_run_ba2_gnrl_pack_extract",
+      "libbsa_benchmarks_run_tes4_bsa_pack_extract",
+      "libbsa_benchmarks_verify_archive_payloads",
+      "libbsa_benchmarks_write_json_report",
+      "path",
+      "string",
+      "tes4_bsa_writer"
+    ],
+    "3": [
+      "error",
+      "error_code",
+      "libbsa_benchmarks_bytes_from_text",
+      "libbsa_benchmarks_describe_error",
+      "libbsa_benchmarks_error_code_name",
+      "libbsa_benchmarks_require_success",
+      "libbsa_benchmarks_require_value",
+      "libbsa_benchmarks_run_bulk_extract",
+      "result",
+      "string_view",
+      "t"
+    ],
+    "4": [
+      "libbsa_benchmarks",
+      "libbsa_benchmarks_cli_options",
+      "libbsa_benchmarks_cli_options_output_json",
+      "libbsa_benchmarks_cli_options_output_markdown",
+      "libbsa_benchmarks_main",
+      "libbsa_benchmarks_make_work_dir",
+      "libbsa_benchmarks_parse_cli",
+      "libbsa_benchmarks_run_benchmarks",
+      "libbsa_benchmarks_write_markdown_report"
+    ],
+    "5": [
+      "libbsa_benchmarks_benchmark_result",
+      "libbsa_benchmarks_benchmark_result_bytes_processed",
+      "libbsa_benchmarks_benchmark_result_correctness_passed",
+      "libbsa_benchmarks_benchmark_result_elapsed_ms",
+      "libbsa_benchmarks_benchmark_result_scenario",
+      "libbsa_benchmarks_benchmark_result_worker_count",
+      "uint64_t"
+    ]
+  },
+  "cohesion": {
+    "0": 0.25735294117647056,
+    "1": 0.16666666666666666,
+    "2": 0.2857142857142857,
+    "3": 0.2909090909090909,
+    "4": 0.3611111111111111,
+    "5": 0.2857142857142857
+  },
+  "gods": [
+    {
+      "id": "libbsa_benchmarks_benchmark_result",
+      "label": "benchmark_result",
+      "degree": 16
+    },
+    {
+      "id": "libbsa_benchmarks_run_tes4_bsa_pack_extract",
+      "label": "run_tes4_bsa_pack_extract()",
+      "degree": 12
+    },
+    {
+      "id": "libbsa_benchmarks_run_bulk_extract",
+      "label": "run_bulk_extract()",
+      "degree": 12
+    },
+    {
+      "id": "libbsa_benchmarks_add_disk_payloads",
+      "label": "add_disk_payloads()",
+      "degree": 11
+    },
+    {
+      "id": "libbsa_benchmarks_run_ba2_gnrl_pack_extract",
+      "label": "run_ba2_gnrl_pack_extract()",
+      "degree": 11
+    },
+    {
+      "id": "libbsa_benchmarks_run_ba2_dx10_pack_extract",
+      "label": "run_ba2_dx10_pack_extract()",
+      "degree": 11
+    },
+    {
+      "id": "libbsa_benchmarks_require_success",
+      "label": "require_success()",
+      "degree": 10
+    },
+    {
+      "id": "libbsa_benchmarks_build_rgba8_dds",
+      "label": "build_rgba8_dds()",
+      "degree": 10
+    },
+    {
+      "id": "libbsa_benchmarks_benchmark_sink_factory",
+      "label": "benchmark_sink_factory",
+      "degree": 10
+    },
+    {
+      "id": "libbsa_benchmarks_named_payload",
+      "label": "named_payload",
+      "degree": 9
+    }
+  ],
+  "surprises": [
+    {
+      "source": "benchmark_result",
+      "target": "string",
+      "source_files": [
+        "libbsa_benchmarks.cpp",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 5 \u2192 community 2"
+    },
+    {
+      "source": "benchmark_result",
+      "target": "uint32_t",
+      "source_files": [
+        "libbsa_benchmarks.cpp",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 5 \u2192 community 0"
+    },
+    {
+      "source": "run_benchmarks()",
+      "target": "benchmark_result",
+      "source_files": [
+        "libbsa_benchmarks.cpp",
+        "libbsa_benchmarks.cpp"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 5 \u2192 community 4"
+    },
+    {
+      "source": "run_bulk_extract()",
+      "target": "benchmark_result",
+      "source_files": [
+        "libbsa_benchmarks.cpp",
+        "libbsa_benchmarks.cpp"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 5 \u2192 community 3"
+    },
+    {
+      "source": "benchmark_sink_factory",
+      "target": "string",
+      "source_files": [
+        "libbsa_benchmarks.cpp",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 2 \u2192 community 1"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}

@@ -8,8 +8,6 @@
 #include <detail/parallel_work.hpp>
 
 #include <algorithm>
-#include <filesystem>
-#include <fstream>
 #include <limits>
 #include <optional>
 #include <unordered_set>
@@ -38,66 +36,6 @@ result<detail::host_file_path> resolve_ba2_gnrl_source_path(std::string_view hos
     return detail::resolve_host_file_path(host_path);
 }
 
-result<std::vector<std::byte>> read_source_bytes(const ba2_gnrl_writer_entry& entry,
-                                                 std::uint64_t expected_size) {
-    if (entry.from_memory) {
-        return entry.memory_bytes;
-    }
-    auto source_path = resolve_ba2_gnrl_source_path(entry.host_path);
-    if (!source_path) {
-        return source_path.error();
-    }
-    return detail::read_host_file_exact(source_path.value(), expected_size,
-                                        ba2_gnrl_prepare_source_context);
-}
-
-result<std::uint64_t> disk_file_size(const std::string& host_path) {
-    auto source_path = resolve_ba2_gnrl_source_path(host_path);
-    if (!source_path) {
-        return source_path.error();
-    }
-    auto size =
-        detail::inspect_host_file_size(source_path.value(), ba2_gnrl_prepare_source_context);
-    if (!size) {
-        return size.error();
-    }
-    return size.value();
-}
-
-std::uint64_t hash_bytes(std::span<const std::byte> bytes) noexcept {
-    std::uint64_t hash = 14695981039346656037ULL;
-    for (const auto byte : bytes) {
-        hash ^= std::to_integer<std::uint8_t>(byte);
-        hash *= 1099511628211ULL;
-    }
-    return hash;
-}
-
-result<std::uint64_t> hash_disk_payload(const std::string& host_path, std::uint64_t expected_size) {
-    std::uint64_t hash = 14695981039346656037ULL;
-    auto source_path = resolve_ba2_gnrl_source_path(host_path);
-    if (!source_path) {
-        return source_path.error();
-    }
-    auto hashed = detail::for_each_host_file_chunk(
-        source_path.value(), expected_size, ba2_gnrl_prepare_source_context,
-        [&](std::span<const std::byte> chunk) -> result<void> {
-            for (const auto byte : chunk) {
-                hash ^= std::to_integer<std::uint8_t>(byte);
-                hash *= 1099511628211ULL;
-            }
-            return {};
-        });
-    if (!hashed) {
-        return hashed.error();
-    }
-    return hash;
-}
-
-std::uint64_t ba2_gnrl_final_stored_dedupe_hash(std::uint64_t payload_hash) noexcept {
-    return payload_hash;
-}
-
 bool archive_default_compressed(archive_compression_policy policy) noexcept {
     switch (policy) {
         case archive_compression_policy::target_default:
@@ -122,20 +60,36 @@ bool requested_entry_compression(bool archive_compressed,
     return archive_compressed;
 }
 
+/// Prepares one GNRL entry from one coherent source observation.
+///
+/// Disk-backed work opens exactly one stable session for sizing and either full
+/// compression input or transfer into a workspace-owned raw snapshot.
 result<ba2_gnrl_prepared_entry> prepare_entry(const ba2_profile& profile,
                                               const ba2_gnrl_writer_options& options,
-                                              const ba2_gnrl_writer_entry& entry) {
+                                              const ba2_gnrl_writer_entry& entry,
+                                              const detail::finalization_workspace& workspace,
+                                              std::size_t preparation_index) {
     const bool archive_compressed = archive_default_compressed(options.compression);
-    std::vector<std::byte> stored_payload;
     std::uint64_t source_size = entry.from_memory ? entry.memory_bytes.size() : 0U;
+    std::optional<detail::stable_host_file_session> disk_source;
     if (!entry.from_memory) {
-        auto disk_size = disk_file_size(entry.host_path);
-        if (!disk_size) {
-            return disk_size.error();
+        auto source_path = resolve_ba2_gnrl_source_path(entry.host_path);
+        if (!source_path) {
+            return source_path.error();
         }
-        source_size = disk_size.value();
+        // The session denies writers and delete-capable handles until the
+        // authoritative bytes have become writer-owned final state.
+        auto opened = detail::stable_host_file_session::open(source_path.value(),
+                                                             ba2_gnrl_prepare_source_context);
+        if (!opened) {
+            return opened.error();
+        }
+        source_size = opened.value().size();
+        disk_source.emplace(std::move(opened).value());
     }
 
+    // Compression remains format policy upstream of Stored Payload. Empty
+    // entries stay raw so PackedSize == 0 retains existing BA2 semantics.
     const bool entry_compressed =
         source_size != 0U &&
         requested_entry_compression(archive_compressed, entry.options.compression);
@@ -145,17 +99,33 @@ result<ba2_gnrl_prepared_entry> prepare_entry(const ba2_profile& profile,
     }
 
     std::uint32_t packed_size = ba2_packed_size_raw;
-    bool stream_from_disk = !entry.from_memory && !entry_compressed;
-    std::uint64_t payload_hash = 0U;
-    std::uint64_t final_stored_dedupe_hash = 0U;
-    if (entry_compressed || entry.from_memory) {
-        auto payload = read_source_bytes(entry, source_size);
-        if (!payload) {
-            return payload.error();
+    detail::stored_payload stored_payload =
+        detail::stored_payload::from_owned_bytes(std::vector<std::byte>{});
+    if (!entry.from_memory && !entry_compressed) {
+        // Raw disk bytes are copied once through bounded memory; the workspace,
+        // not Stored Payload, owns snapshot cleanup through publication.
+        auto snapshotted = detail::stored_payload::from_workspace_snapshot(
+            {}, std::move(*disk_source), workspace, preparation_index);
+        if (!snapshotted) {
+            return snapshotted.error();
         }
+        stored_payload = std::move(snapshotted).value();
+    } else {
+        std::span<const std::byte> raw_payload = entry.memory_bytes;
+        std::vector<std::byte> disk_payload;
+        if (!entry.from_memory) {
+            auto read = disk_source->read_exact(source_size);
+            if (!read) {
+                return read.error();
+            }
+            disk_payload = std::move(read).value();
+            raw_payload = disk_payload;
+        }
+
+        std::vector<std::byte> final_bytes;
         if (entry_compressed) {
             auto compressed =
-                detail::compress_payload(profile.compressed_payload_method(), payload.value());
+                detail::compress_payload(profile.compressed_payload_method(), raw_payload);
             if (!compressed) {
                 return compressed.error();
             }
@@ -164,20 +134,12 @@ result<ba2_gnrl_prepared_entry> prepare_entry(const ba2_profile& profile,
                 return packed.error();
             }
             packed_size = packed.value();
-            stored_payload = std::move(compressed.value());
+            final_bytes = std::move(compressed).value();
         } else {
-            stored_payload = std::move(payload.value());
+            final_bytes.assign(raw_payload.begin(), raw_payload.end());
         }
-        payload_hash = hash_bytes(stored_payload);
-    } else {
-        auto hash = hash_disk_payload(entry.host_path, source_size);
-        if (!hash) {
-            return hash.error();
-        }
-        payload_hash = hash.value();
+        stored_payload = detail::stored_payload::from_owned_bytes(std::move(final_bytes));
     }
-
-    final_stored_dedupe_hash = ba2_gnrl_final_stored_dedupe_hash(payload_hash);
 
     auto identity = make_ba2_record_identity(
         ba2_subtype::gnrl,
@@ -187,30 +149,14 @@ result<ba2_gnrl_prepared_entry> prepare_entry(const ba2_profile& profile,
         return identity.error();
     }
 
-    detail::host_file_path resolved_source_path;
-    if (stream_from_disk) {
-        auto source_path = resolve_ba2_gnrl_source_path(entry.host_path);
-        if (!source_path) {
-            return source_path.error();
-        }
-        resolved_source_path = std::move(source_path.value());
-    }
-
     return ba2_gnrl_prepared_entry{identity.value().display_path,
                                    identity.value().canonical_path,
-                                   entry.host_path,
-                                   std::move(resolved_source_path),
                                    identity.value().extension,
                                    identity.value().name_hash,
                                    identity.value().directory_hash,
                                    entry.options.record_flags.value_or(0U),
-                                   0U,
                                    packed_size,
                                    raw_size.value(),
-                                   payload_hash,
-                                   final_stored_dedupe_hash,
-                                   stream_from_disk,
-                                   true,
                                    std::move(stored_payload)};
 }
 
@@ -258,14 +204,15 @@ result<void> ba2_gnrl_validate_entries(std::span<const ba2_gnrl_writer_entry> en
 
 result<std::vector<ba2_gnrl_prepared_entry>> ba2_gnrl_prepare_entries(
     const ba2_profile& profile, const ba2_gnrl_writer_options& options,
-    std::span<const ba2_gnrl_writer_entry> entries, std::uint32_t worker_count) {
+    std::span<const ba2_gnrl_writer_entry> entries, std::uint32_t worker_count,
+    const detail::finalization_workspace& workspace) {
     if (!profile.is_gnrl()) {
         return error{error_code::invalid_argument, "BA2 GNRL writer profile is not GNRL"};
     }
 
     std::vector<std::optional<ba2_gnrl_prepared_entry>> prepared_by_index(entries.size());
     auto work = [&](std::size_t index) -> result<void> {
-        auto prepared = prepare_entry(profile, options, entries[index]);
+        auto prepared = prepare_entry(profile, options, entries[index], workspace, index);
         if (!prepared) {
             return prepared.error();
         }

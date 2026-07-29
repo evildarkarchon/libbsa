@@ -1,0 +1,288 @@
+{
+  "communities": {
+    "0": [
+      "bulk_extract_sink_factory",
+      "byte",
+      "cli_main_discard_staged",
+      "cli_main_file_payload_sink",
+      "cli_main_file_payload_sink_file_payload_sink",
+      "cli_main_file_payload_sink_staged",
+      "cli_main_file_payload_sink_stream",
+      "cli_main_file_payload_sink_write",
+      "cli_main_file_sink_factory",
+      "cli_main_file_sink_factory_by_path",
+      "cli_main_file_sink_factory_file_sink_factory",
+      "cli_main_file_sink_factory_finish",
+      "cli_main_file_sink_factory_mutex",
+      "cli_main_file_sink_factory_output_root",
+      "cli_main_file_sink_factory_overwrite",
+      "cli_main_file_sink_factory_staged",
+      "cli_main_file_sink_factory_take_staged",
+      "cli_main_file_sink_factory_untrack_staged",
+      "cli_main_staged_extraction",
+      "cli_main_staged_extraction_final_path",
+      "cli_main_staged_extraction_finished",
+      "cli_main_staged_extraction_overwrite",
+      "cli_main_staged_extraction_temp_path",
+      "less",
+      "map",
+      "ofstream",
+      "shared_ptr",
+      "size_t",
+      "span"
+    ],
+    "1": [
+      "cli_main",
+      "cli_main_add_help_argument",
+      "cli_main_add_positionals_argument",
+      "cli_main_add_thread_argument",
+      "cli_main_ascii_iequals",
+      "cli_main_dispatch",
+      "cli_main_format_table_help",
+      "cli_main_is_global_option",
+      "cli_main_is_known_subcommand",
+      "cli_main_is_windows_reserved_device_name",
+      "cli_main_is_within_root",
+      "cli_main_lower_ascii",
+      "cli_main_path_from_utf8",
+      "cli_main_print_format_table",
+      "cli_main_print_version",
+      "cli_main_reject_windows_unsafe_destination_components",
+      "cli_main_safe_destination_path",
+      "cli_main_valid_format_tokens",
+      "cli_main_version_text",
+      "cli_main_windows_reserved_device_stem",
+      "ostream",
+      "string_view"
+    ],
+    "2": [
+      "archive_type",
+      "archive_variant",
+      "argumentparser",
+      "cli_main_archive_type_name",
+      "cli_main_archive_variant_name",
+      "cli_main_compression_name",
+      "cli_main_escaped_cli_text",
+      "cli_main_main",
+      "cli_main_make_usage_error",
+      "cli_main_positional_values",
+      "cli_main_render_error",
+      "cli_main_resolve_worker_count",
+      "cli_main_run_info",
+      "cli_main_run_list",
+      "cli_main_run_pack",
+      "cli_main_run_unpack",
+      "cli_main_run_validate",
+      "cli_main_unique_windows_handle_value",
+      "cli_main_usage_failure",
+      "entry_compression",
+      "error"
+    ],
+    "3": [
+      "cli_main_command_line_arguments",
+      "cli_main_error_code_name",
+      "cli_main_file_sink_factory_create",
+      "cli_main_is_reparse_point",
+      "cli_main_make_error",
+      "cli_main_open_file_payload_sink",
+      "cli_main_prepare_output_root",
+      "cli_main_reject_reparse_ancestors",
+      "cli_main_reject_reparse_point",
+      "cli_main_warning_code_name",
+      "cli_main_warning_severity_name",
+      "cli_main_wide_argument_to_utf8",
+      "compatibility_warning_code",
+      "compatibility_warning_severity",
+      "entry_metadata",
+      "error_code",
+      "payload_sink",
+      "result",
+      "string",
+      "unique_ptr"
+    ],
+    "4": [
+      "archive_compression_policy",
+      "cli_main_archive_policy_from",
+      "cli_main_collect_input_files",
+      "cli_main_generic_utf8_path",
+      "cli_main_input_file",
+      "cli_main_input_file_archive_path",
+      "cli_main_input_file_host_path",
+      "cli_main_pack_ba2_dx10",
+      "cli_main_pack_ba2_gnrl",
+      "cli_main_pack_tes3",
+      "cli_main_pack_tes4",
+      "cli_main_parse_compression",
+      "cli_main_path_to_utf8",
+      "compression_choice",
+      "path",
+      "uint32_t",
+      "vector"
+    ],
+    "5": [
+      "cli_main_clear_delete_on_close",
+      "cli_main_commit_staged",
+      "cli_main_final_path_for_handle",
+      "cli_main_handle_is_reparse_point",
+      "cli_main_mark_delete_on_close",
+      "cli_main_open_staged_destination",
+      "cli_main_unique_windows_handle",
+      "cli_main_unique_windows_handle_reset",
+      "cli_main_unique_windows_handle_unique_windows_handle",
+      "cli_main_windows_error_message",
+      "cli_main_windows_io_error",
+      "dword",
+      "handle"
+    ],
+    "6": [
+      "cli_main_find_format",
+      "cli_main_format_descriptor",
+      "cli_main_format_descriptor_ba2_dx10_target",
+      "cli_main_format_descriptor_ba2_gnrl_target",
+      "cli_main_format_descriptor_description",
+      "cli_main_format_descriptor_family",
+      "cli_main_format_descriptor_supports_compressed",
+      "cli_main_format_descriptor_supports_raw",
+      "cli_main_format_descriptor_tes4_target",
+      "cli_main_format_descriptor_token",
+      "tes4_bsa_target",
+      "writer_family"
+    ],
+    "7": [
+      "cli_main_final_path_is_within_root",
+      "cli_main_is_separator",
+      "cli_main_local_command_line_argv",
+      "cli_main_local_command_line_argv_local_command_line_argv",
+      "cli_main_local_command_line_argv_value",
+      "cli_main_make_staged_temp_path",
+      "cli_main_same_windows_prefix",
+      "cli_main_trim_final_path",
+      "wchar_t",
+      "wstring",
+      "wstring_view"
+    ]
+  },
+  "cohesion": {
+    "0": 0.09852216748768473,
+    "1": 0.2077922077922078,
+    "2": 0.28095238095238095,
+    "3": 0.22105263157894736,
+    "4": 0.2647058823529412,
+    "5": 0.2948717948717949,
+    "6": 0.16666666666666666,
+    "7": 0.23636363636363636
+  },
+  "gods": [
+    {
+      "id": "cli_main_make_error",
+      "label": "make_error()",
+      "degree": 20
+    },
+    {
+      "id": "cli_main_run_pack",
+      "label": "run_pack()",
+      "degree": 19
+    },
+    {
+      "id": "cli_main_file_sink_factory",
+      "label": "file_sink_factory",
+      "degree": 19
+    },
+    {
+      "id": "cli_main_format_descriptor",
+      "label": "format_descriptor",
+      "degree": 16
+    },
+    {
+      "id": "cli_main_staged_extraction",
+      "label": "staged_extraction",
+      "degree": 15
+    },
+    {
+      "id": "cli_main_open_staged_destination",
+      "label": "open_staged_destination()",
+      "degree": 15
+    },
+    {
+      "id": "cli_main_render_error",
+      "label": "render_error()",
+      "degree": 14
+    },
+    {
+      "id": "cli_main_run_validate",
+      "label": "run_validate()",
+      "degree": 14
+    },
+    {
+      "id": "cli_main_dispatch",
+      "label": "dispatch()",
+      "degree": 14
+    },
+    {
+      "id": "cli_main_reject_reparse_point",
+      "label": "reject_reparse_point()",
+      "degree": 13
+    }
+  ],
+  "surprises": [
+    {
+      "source": "format_descriptor",
+      "target": "string_view",
+      "source_files": [
+        "cli/main.cpp",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 6 \u2192 community 1"
+    },
+    {
+      "source": "pack_ba2_dx10()",
+      "target": "format_descriptor",
+      "source_files": [
+        "cli/main.cpp",
+        "cli/main.cpp"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 6 \u2192 community 4"
+    },
+    {
+      "source": "escaped_cli_text()",
+      "target": "string_view",
+      "source_files": [
+        "cli/main.cpp",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 1 \u2192 community 2"
+    },
+    {
+      "source": "final_path_for_handle()",
+      "target": "string_view",
+      "source_files": [
+        "cli/main.cpp",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 1 \u2192 community 5"
+    },
+    {
+      "source": "is_reparse_point()",
+      "target": "string_view",
+      "source_files": [
+        "cli/main.cpp",
+        ""
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "note": "Bridges community 1 \u2192 community 3"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}

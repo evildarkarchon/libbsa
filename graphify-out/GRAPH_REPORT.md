@@ -1,907 +1,842 @@
-# Graph Report - libbsa  (2026-07-28)
+# Graph Report - src, include, tests, tools, benchmarks  (2026-07-28)
 
 ## Corpus Check
-- 226 files · ~150,813 words
+- 209 files · ~134,048 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3775 nodes · 8774 edges · 174 communities (171 shown, 3 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 182 edges (avg confidence: 0.83)
+- 3840 nodes · 8549 edges · 165 communities (164 shown, 1 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 149 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
+## Graph Health
+- Final export integrity is clean: 0 dangling endpoints and 0 duplicate endpoint pairs.
+- Pre-build extraction is lossy: 1,155 raw relationships had unresolved endpoints and 482 raw relationships shared an undirected endpoint pair.
+- 17 JSON fixture manifests produced zero structural nodes.
+- Use this graph for navigation, not as complete behavioral authority. See `.graphify_health.json` for per-scope counts.
+
 ## Graph Freshness
-- Built from commit: `048fa8fe`
+- Built from commit: `ecbefb98`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- bulk_extraction_tests.cpp
-- string
-- libbsa_benchmarks.cpp
-- generate_tes4_bsa_fixtures.cpp
-- ba2_record_identity.cpp
-- generate_ba2_gnrl_fixtures.cpp
-- package-consumer/main.cpp
-- ba2_dx10_reader_tests.cpp
-- archive_reader_dispatch_tests.cpp
-- tes4_bsa_profile
-- dds_layout.cpp
-- host_path_correctness_boundary_tests.cpp
-- ba2_gnrl_writer_tests.cpp
-- stored_payload.cpp
-- ba2_gnrl_reader_tests.cpp
-- tes3_bsa_reader_tests.cpp
-- tes3_bsa_writer_tests.cpp
-- tes3_prepared_entry
-- Public API Core
-- generate_tes3_bsa_fixtures.cpp
-- entry_metadata
-- tes4_bsa_reader_tests.cpp
-- result
-- tes4_bsa_profile_ownership_policy_tests.cpp
-- generate_tes3_bsa_writer_fixtures.cpp
-- ba2_writer_execution_tests.cpp
-- tes4_bsa_profile.cpp
-- tes4_bsa_header_fields
-- local_game_fixture_tests.cpp
-- writer_stage_tests.cpp
-- binary_reader
-- tes3_bsa_parser.cpp
-- ba2_archive_opening_tests.cpp
-- ba2_dx10_prepared_entry
-- host_file.cpp
-- ba2_dx10_record
-- ba2_profile
-- validation_policy_tests.cpp
-- byte
-- ba2_dx10_writer_tests.cpp
-- tes4_bsa_prepare.cpp
-- writer_publish_tests.cpp
-- archive_metadata
-- archive_reader::extract_entries
-- file_sink_factory
-- stored_payload_tests.cpp
-- ba2_dx10_extraction_tests.cpp
-- cli/main.cpp
-- unordered_set
-- ba2_gnrl_prepare.cpp
-- writer_publish.cpp
-- tes4_placement_plan
-- ba2_gnrl_prepared_entry
-- byte
-- ba2_dx10_chunk_assembler.cpp
-- ba2_dx10_writer::state
-- ba2_gnrl_layout.cpp
-- ba2_gnrl_write_archive_bytes
-- tes4_bsa_raw_table
-- validation.cpp
-- materialize_entries
-- ba2_dx10_write_archive_bytes
-- bsa_writer_execution_tests.cpp
-- compatibility_warning_tests.cpp
-- validation_report
-- ba2_dx10_writer_entry
-- detected_bsa_format
-- host_file_path
-- string
-- Archive Entry Catalog
-- error
-- path
-- materialize_entries
-- tes4_prepared_entry
-- make_byte_vector
-- source_dds_spec
-- payload_stream.cpp
-- ba2_dx10_build_writer_entry_snapshot
-- make_tes4_bsa_payload_descriptor
-- tes4_bsa_serialize.cpp
-- chunk_spec
-- ba2_record_identity
-- host_file_tests.cpp
-- validate_fixture_manifests.py
-- ba2_dx10_writer
-- write_ba2_gnrl_archive
-- tes3_bsa_writer.cpp
-- dedupe_key
-- string
-- payload_sink
-- validation_api_tests.cpp
-- bethesda_hash.cpp
-- ba2_archive_source
-- opened_ba2_archive
-- generate_ba2_dx10_fixtures.cpp
-- texture_spec
-- recording_sink
-- decompress_deflate_exact
-- decompress_payload_exact_to_sink
-- parser_primitives.cpp
-- collecting_sink
-- recording_sink
-- profile_expectation
-- format_case
-- validation_archive_case
-- commit_staged
-- analyze_dds_source
-- bulk_extract_entry_result
-- ba2_gnrl_writer_options
-- uint32_t
-- build_archive
-- byte
-- writer_execution_options_tests.cpp
-- writer_hotspot_policy_tests.cpp
-- deflate_codec_tests.cpp
-- writer_entry_compression
-- extract_file_payload
-- vector
-- archive_reader_dispatch_policy_tests.cpp
-- native_handle_guard
-- writer_host_path_inventory_case
-- format_descriptor
-- texture_metadata
-- ba2_gnrl_writer.cpp
-- write_tes4_bsa_archive
-- tes4_writer_entry
-- archive_spec
-- read_u32_le
-- writer_ownership_tests.cpp
-- Build.ps1
-- tes4_bsa_target
-- normalize_archive_path
-- decompress_lz4_block_exact
-- ba2_gnrl_writer_entry
-- coverage_audit_matrix_docs_tests.cpp
-- docs_policy_tests.cpp
-- host_file_path_tests.cpp
-- parser_preparer_seam_policy_tests.cpp
-- string_view
-- final_path_is_within_root
-- dependencies
-- ba2_dx10_subresource_snapshot
-- tes4_bsa_constants.hpp
-- tes4_bsa_writer::state
-- ba2_dx10_malformed_tests.cpp
-- benchmark_policy_tests.cpp
-- target_format_policy_tests.cpp
-- validation_options
-- collecting_sink
-- tes4_bsa_writer_tests.cpp
-- thread_safety_docs_policy_tests.cpp
-- Distinct Sink Contract
-- ba2_dx10_writer_options
-- bulk_request_group
-- read_ba2_dx10_names
-- .write
-- TES5Edit Read-Only Boundary
-- GitHub Issues as Tracker
-- archive_policy_expectation
-- find_source_root_from
-- host_file_writer_name_tests.cpp
-- payload_sink
-- read_text_file
-- read_text_file
-- fourcc
-- Validation Result and Report Contract
-- Optional Local Corpus Evidence
-- libbsa Library
-- Stored Payload
+- Host File Path
+- Result Cluster
+- Path Cluster
+- Normalize Archive Path
+- String Cluster
+- Bethesda Hash Cpp
+- Binary Reader
+- Make Byte Vector
+- Decompress Payload Exact To Sink
+- Decompress Deflate Exact
+- Host File Cpp
+- Decompress Lz4 Block Exact
+- Decompress Lz4 Frame Exact To
+- Optional Cluster
+- Parser Primitives Cpp
+- Tes4 Bsa Header Fields
+- Materialize Entries
+- Reserve Metadata Set
+- Payload Stream Cpp
+- Payload Sink
+- Payload Source
+- Stored Payload Cpp
+- Ba2 Archive Header
+- Ba2 Archive Source
+- Opened Ba2 Archive
+- Ba2 Dx10 Chunk Assembler Cpp
+- Ba2 Profile
+- Dedupe Key
+- Ba2 Dx10 Writer Entry
+- Ba2 Dx10 Prepared Entry
+- Ba2 Dx10 Record
+- Ba2 Dx10 Write Archive Bytes
+- Ba2 Dx10 Build Writer Entry
+- Ba2 Dx10 Subresource Snapshot
+- Ba2 Gnrl Assign Payload Offsets
+- Ba2 Record Identity Cpp
+- Prepare Entry
+- Ba2 Gnrl Prepared Entry
+- Ba2 Gnrl Write Archive Bytes
+- Ba2 Gnrl Writer State
+- Write Ba2 Gnrl Archive
+- Ba2 Gnrl Writer Entry
+- Make Tes4 Bsa Payload Descriptor
+- Detected Bsa Format
+- Checked U32
+- Tes3 Bsa Parser Cpp
+- Tes3 Prepare Entries
+- Tes3 Prepared Entry
+- Stream From Host
+- Tes3 Write Archive Bytes
+- Tes3 Writer Entry
+- Write Tes3 Bsa Archive
+- Tes4 Plan Placements
+- Tes4 Placement Plan
+- Tes4 Bsa Prepare Cpp
+- Tes4 Prepared Entry
+- Tes4 Bsa Profile
+- Writer Entry Compression
+- Write Tes4 Bsa Archive
+- Extract File Payload
+- Tes4 Bsa Raw Table
+- Tes4 Bsa Writer Cpp
+- Tes4 Writer Entry
+- Dds Layout Cpp
+- Dds Source Analysis
+- Validation Cpp
+- Archive Hpp
+- Archive Metadata
+- Texture Metadata
+- Error Cluster Include
+- Entry Metadata
+- Archive Reader
+- Validation Report
+- Ba2 Dx10 Writer Options
+- Ba2 Gnrl Writer Options
+- Ba2 Dx10 Writer
+- Generate Ba2 Dx10 Fixtures Cpp
+- Build Archive
+- Vector Cluster
+- Texture Spec
+- Chunk Spec
+- Uint32 T
+- Archive Spec
+- Source Dds Spec
+- Generate Malformed
+- Generate Ba2 Gnrl Fixtures Cpp
+- Generate Tes3 Bsa Fixtures Cpp
+- Generate Tes3 Bsa Writer Fixtures
+- Generate Tes4 Bsa Fixtures Cpp
+- Validate Fixture Manifests Py
+- Main Cpp
+- Archive Reader Dispatch Policy Tests
+- Archive Reader Dispatch Tests Cpp
+- Archive Reader Tests Cpp
+- Supported Profile Case
+- Ba2 Dx10 Extraction Tests Cpp
+- Ba2 Dx10 Malformed Tests Cpp
+- Ba2 Dx10 Preparer Seam Tests
+- Ba2 Dx10 Reader Tests Cpp
+- Ba2 Dx10 Writer Tests Cpp
+- Ba2 Gnrl Reader Tests Cpp
+- Ba2 Gnrl Writer Tests Cpp
+- Fourcc Cluster
+- Ba2 Writer Execution Tests Cpp
+- Benchmark Policy Tests Cpp
+- Bounded Memory Policy Tests Cpp
+- Bsa Writer Execution Tests Cpp
+- Bulk Extraction Tests Cpp
+- Compatibility Warning Tests Cpp
+- Recording Sink
+- Coverage Audit Matrix Docs Tests
+- Format Case
+- Deflate Codec Tests Cpp
+- Docs Policy Tests Cpp
+- Export Surface Policy Tests Cpp
+- Host File Path Tests Cpp
+- Host File Tests Cpp
+- Writer Host Path Inventory Case
+- Host Path Correctness Boundary Tests
+- Local Game Fixture Tests Cpp
+- Recording Sink Tests
+- Parser Preparer Seam Policy Tests
+- Parser Primitives Tests Cpp
+- Byte Cluster
+- Stored Payload Tests Cpp
+- Target Format Policy Tests Cpp
+- Tes3 Bsa Reader Tests Cpp
+- Tes3 Bsa Writer Tests Cpp
+- Tes4 Bsa Parser Seam Tests
+- Tes4 Bsa Profile Ownership Policy
+- Archive Policy Expectation
+- Profile Expectation
+- Tes4 Bsa Reader Tests Cpp
+- Tes4 Bsa Writer Tests Cpp
+- Find Source Root From
+- Thread Safety Docs Policy Tests
+- Validation Api Tests Cpp
+- Validation Policy Tests Cpp
+- Writer Execution Options Tests Cpp
+- Writer Hotspot Policy Tests Cpp
+- Writer Ownership Tests Cpp
+- Writer Publish Tests Cpp
+- Writer Stage Tests Cpp
+- Byte Cluster Tests
+- Serialization Expectation
+- Main Cpp Tools
+- Format Descriptor
+- Path Cluster Tools
+- String Cluster Tools
+- Error Cluster
+- Final Path Is Within Root
+- Open Staged Destination
+- File Sink Factory
+- Libbsa Benchmarks Cpp
+- Libbsa Fixture Policy
 
 ## God Nodes (most connected - your core abstractions)
-1. `result` - 414 edges
-2. `host_file_path` - 60 edges
-3. `ba2_profile` - 57 edges
-4. `entry_metadata` - 55 edges
-5. `tes4_bsa_profile` - 45 edges
-6. `ba2_gnrl_prepared_entry` - 33 edges
-7. `binary_reader` - 29 edges
-8. `archive_metadata` - 28 edges
-9. `ba2_dx10_prepared_entry` - 27 edges
-10. `archive_reader` - 25 edges
+1. `ba2_profile` - 49 edges
+2. `host_file_path` - 46 edges
+3. `tes4_bsa_profile` - 41 edges
+4. `path` - 30 edges
+5. `binary_reader` - 29 edges
+6. `ba2_dx10_prepared_entry` - 26 edges
+7. `make_byte_vector()` - 25 edges
+8. `ba2_dx10_record` - 25 edges
+9. `texture_spec` - 24 edges
+10. `entry_spec` - 24 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `libbsa Library` --semantically_similar_to--> `Reusable Bethesda Archive Library`  [INFERRED] [semantically similar]
-  AGENTS.md → README.md
-- `TES5Edit Read-Only Boundary` --semantically_similar_to--> `TES5Edit Boundary`  [INFERRED] [semantically similar]
-  AGENTS.md → CLAUDE.md
-- `TES5Edit Read-Only Boundary` --semantically_similar_to--> `TES5Edit Reference Boundary`  [INFERRED] [semantically similar]
-  AGENTS.md → README.md
-- `TES5Edit Read-Only Boundary` --semantically_similar_to--> `TES5Edit Fixture Boundary`  [INFERRED] [semantically similar]
-  AGENTS.md → tests/fixtures/README.md
-- `TES4 BSA Profile` --semantically_similar_to--> `TES4-Family BSA Target Profiles`  [INFERRED] [semantically similar]
-  CONTEXT.md → docs/target-format-guide.md
+- `Committed Generated Fixtures` --semantically_similar_to--> `Synthetic Benchmark Scenarios`  [INFERRED] [semantically similar]
+  tests/fixtures/README.md → benchmarks/README.md
+- `Benchmark Generated Data Policy` --references--> `libbsa Benchmarks`  [EXTRACTED]
+  tests/fixtures/README.md → benchmarks/README.md
+- `byte_vector_allocation_error()` --calls--> `checked_buffer_size()`  [INFERRED]
+  src/detail/byte_vector.hpp → src/detail/host_file.cpp
+- `byte_vector_allocation_error()` --calls--> `read_exact`  [INFERRED]
+  src/detail/byte_vector.hpp → src/detail/host_file.hpp
+- `byte_vector_allocation_error()` --calls--> `checked_materialized_payload_size()`  [INFERRED]
+  src/detail/byte_vector.hpp → src/detail/payload_stream.cpp
 
 ## Import Cycles
 - None detected.
 
 ## Hyperedges (group relationships)
-- **Default Support Proof Ecosystem** — docs_coverage_audit_matrix_four_family_default_proof, docs_compatibility_evidence_default_reproducible_evidence, docs_api_mainpage_installed_package_proof, tests_cmakelists_package_consumer_smoke, tests_fixtures_readme_committed_generated_fixtures [EXTRACTED 1.00]
-- **Supported Archive Family Profiles** — docs_target_format_guide_tes3_bsa, docs_target_format_guide_tes4_family_bsa, docs_target_format_guide_ba2_gnrl, docs_target_format_guide_ba2_dx10, docs_coverage_audit_matrix_four_family_default_proof [EXTRACTED 1.00]
-- **BA2 DX10 Lifecycle Contract** — docs_api_mainpage_ba2_dx10_one_shot_lifecycle, docs_integration_examples_ba2_dx10_one_shot_lifecycle, docs_target_format_guide_ba2_dx10_snapshot_lifecycle [INFERRED 0.95]
+- **Legal Synthetic Evidence Boundary** — tests::tests_fixtures_readme_committed_generated_fixtures, tests::tests_fixtures_readme_benchmark_generated_data_policy, benchmarks::benchmarks_readme_benchmark_harness, benchmarks::benchmarks_readme_synthetic_benchmark_scenarios [EXTRACTED 1.00]
+- **Windows Package Consumer Proof** — tests::tests_fixtures_readme_windows_msvc_verification_matrix, tests::tests_cmakelists_package_consumer_smoke, tests::tests_package_consumer_cmakelists_libbsa_package_consumer [INFERRED 0.95]
 
-## Communities (174 total, 3 thin omitted)
+## Communities (165 total, 1 thin omitted)
 
-### Community 0 - "bulk_extraction_tests.cpp"
-Cohesion: 0.06
-Nodes (67): archive_reader, state_, LIBBSA_API, shared_ptr, state, build_raw_ba2_dx10_fixture(), bulk_extraction_test_dir(), byte_buffer (+59 more)
+### Community 37 - "Host File Path"
+Cohesion: 0.12
+Nodes (12): archive_open_host_context(), read_detection_prefix(), archive_file_size(), archive_reader::open(), archive_reader, result, resolve_host_file_path(), result (+4 more)
 
-### Community 1 - "string"
-Cohesion: 0.07
-Nodes (13): bulk_extract_request, path, optional, string, vector, span, string_view, payload_sink (+5 more)
-
-### Community 2 - "libbsa_benchmarks.cpp"
-Cohesion: 0.08
-Nodes (64): add_disk_payloads(), benchmark_result, bytes_processed, correctness_passed, elapsed_ms, scenario, worker_count, benchmark_sink_factory (+56 more)
-
-### Community 3 - "generate_tes4_bsa_fixtures.cpp"
-Cohesion: 0.07
-Nodes (63): archive_spec, entries, file_flags, flags, folder, folder_hash, folder_offset, stem (+55 more)
-
-### Community 4 - "ba2_record_identity.cpp"
-Cohesion: 0.18
-Nodes (31): ba2_record_identity_source, ascii_lower_byte(), ba2_record_path, canonical_path, display_path, array, ba2_subtype, byte (+23 more)
-
-### Community 5 - "generate_ba2_gnrl_fixtures.cpp"
-Cohesion: 0.08
-Nodes (62): archive_spec, compression_method, entries, starfield_unknown1, starfield_unknown2, stem, variant, version (+54 more)
-
-### Community 6 - "package-consumer/main.cpp"
-Cohesion: 0.07
-Nodes (57): archive_runtime_case, archive_host_path, archive_virtual_path, expect_texture_metadata, expected_ba2_compression_method, expected_default_compression, expected_payload, expected_type (+49 more)
-
-### Community 7 - "ba2_dx10_reader_tests.cpp"
-Cohesion: 0.10
-Nodes (60): append_ascii(), append_dx10_chunk_record(), append_dx10_record_for_path(), append_dx10_record_header(), append_u16_le(), append_u32_le(), append_u64_le(), append_u8() (+52 more)
-
-### Community 8 - "archive_reader_dispatch_tests.cpp"
-Cohesion: 0.06
-Nodes (53): archive_format_fixture, archive_filename, expected_extract_path, expected_missing_path, invalid_archive_path, manifest_filename, name, archive_format_fixtures() (+45 more)
-
-### Community 9 - "tes4_bsa_profile"
-Cohesion: 0.11
-Nodes (29): add_fits_u64(), archive_flags_for(), calculate_table_lengths(), checked_name_size(), checked_stored_size(), checked_u32(), size_t, string_view (+21 more)
-
-### Community 10 - "dds_layout.cpp"
-Cohesion: 0.05
-Nodes (80): append_chunks_for_ranges(), build_dds_dxt10_header(), capped_mip_ranges(), checked_add(), checked_mul(), byte, error, planned_texture_chunk (+72 more)
-
-### Community 11 - "host_path_correctness_boundary_tests.cpp"
-Cohesion: 0.07
-Nodes (52): bytes_from_hex(), capture_report, create_count_by_path, sink_bytes_by_path, capturing_sink, capture_, collecting_sink, bytes_ (+44 more)
-
-### Community 12 - "ba2_gnrl_writer_tests.cpp"
-Cohesion: 0.08
-Nodes (55): compression_case, compression_method, expected_compression, file_name, target, version, archive_variant, ba2_gnrl_target (+47 more)
-
-### Community 13 - "stored_payload.cpp"
-Cohesion: 0.08
-Nodes (43): logical_reader, byte, error, finalization_workspace, optional, ostream, size_t, span (+35 more)
-
-### Community 14 - "ba2_gnrl_reader_tests.cpp"
+### Community 24 - "Result Cluster"
 Cohesion: 0.09
-Nodes (47): append_ascii(), append_u16_le(), append_u32_le(), append_u64_le(), archive_original_path_from_manifest(), ba2_success_fixture, archive, manifest (+39 more)
+Nodes (37): archive_reader::archive_reader(), archive_metadata, archive_reader::state, metadata, vector, entry_metadata, entries, host_path (+29 more)
 
-### Community 15 - "tes3_bsa_reader_tests.cpp"
-Cohesion: 0.09
-Nodes (47): append_u32_le(), append_u64_le(), archive_original_path_from_manifest(), build_synthetic_tes3_archive(), bytes_from_hex(), bytes_from_text(), checked_test_u32(), collecting_sink (+39 more)
-
-### Community 16 - "tes3_bsa_writer_tests.cpp"
-Cohesion: 0.10
-Nodes (49): bytes_from_hex(), bytes_from_text(), collecting_sink, bytes_, byte, json, path, payload_sink (+41 more)
-
-### Community 17 - "tes3_prepared_entry"
-Cohesion: 0.05
-Nodes (61): add_fits_u64(), checked_add_u32(), checked_mul_u32(), checked_u32(), span, string_view, uint32_t, uint64_t (+53 more)
-
-### Community 18 - "Public API Core"
-Cohesion: 0.04
-Nodes (47): Windows MSVC AddressSanitizer Lane, Windows MSVC Verification Matrix, Compression and Texture Dependency Policy, Fixture-Based Compatibility Validation, Minimal Dependency-Light Public API, Windows-Only Platform Contract, Report-Only Timing Policy, Synthetic Archive Benchmark Harness (+39 more)
-
-### Community 19 - "generate_tes3_bsa_fixtures.cpp"
-Cohesion: 0.13
-Nodes (40): build_tes3_archive(), byte_buffer, bytes, bytes_from_string(), canonicalize(), checked_u32(), byte, path (+32 more)
-
-### Community 20 - "entry_metadata"
-Cohesion: 0.13
-Nodes (17): entry_metadata, archive_hash, compression, embedded_name_prefix_size, has_embedded_name, original_path, path, payload_offset (+9 more)
-
-### Community 21 - "tes4_bsa_reader_tests.cpp"
-Cohesion: 0.10
-Nodes (39): archive_original_path_from_manifest(), bytes_from_hex(), collecting_sink, bytes_, byte, entry_compression, error_code, json (+31 more)
-
-### Community 22 - "result"
-Cohesion: 0.08
-Nodes (20): error, code, message, error_code, string, T, result, storage_ (+12 more)
-
-### Community 23 - "tes4_bsa_profile_ownership_policy_tests.cpp"
-Cohesion: 0.13
-Nodes (39): branches_on_direct_tes4_identity(), code_only(), contains_integer_literal(), contains_word(), control_condition, keyword, text, control_conditions() (+31 more)
-
-### Community 24 - "generate_tes3_bsa_writer_fixtures.cpp"
-Cohesion: 0.13
-Nodes (37): bytes_from_text(), canonicalize(), byte, path, size_t, span, string, string_view (+29 more)
-
-### Community 25 - "ba2_writer_execution_tests.cpp"
-Cohesion: 0.13
-Nodes (34): add_dx10_sources(), add_gnrl_disk_sources(), bytes_from_text(), archive_variant, ba2_dx10_writer, ba2_gnrl_writer, byte, entry_compression (+26 more)
-
-### Community 26 - "tes4_bsa_profile.cpp"
-Cohesion: 0.12
-Nodes (25): profile_facts, archive_variant, compression_method, entry_compression, size_t, string_view, tes4_bsa_writer_options, tes4_folder_record_shape (+17 more)
-
-### Community 27 - "tes4_bsa_header_fields"
-Cohesion: 0.12
-Nodes (33): add_fits(), size_t, uint32_t, multiply_fits(), span_fits(), byte, size_t, span (+25 more)
-
-### Community 28 - "local_game_fixture_tests.cpp"
-Cohesion: 0.12
-Nodes (29): archive_path_from_manifest(), archive_type_from_string(), archive_variant_from_string(), bsarchpro_expected_manifest_path(), bytes_from_hex(), archive_type, archive_variant, byte (+21 more)
-
-### Community 29 - "writer_stage_tests.cpp"
-Cohesion: 0.12
-Nodes (35): ba2_dx10_prepared_stage_entry(), ba2_dx10_stage_entry(), ba2_gnrl_disk_stage_entry(), ba2_gnrl_memory_stage_entry(), bytes_from_text(), byte, finalization_workspace, pair (+27 more)
-
-### Community 30 - "binary_reader"
-Cohesion: 0.14
-Nodes (31): binary_reader, binary_reader::binary_reader(), bytes_, can_read, position, read_bytes, read_u16_le, read_u32_le (+23 more)
-
-### Community 31 - "tes3_bsa_parser.cpp"
-Cohesion: 0.15
-Nodes (31): byte, size_t, span, string, uint32_t, uint64_t, vector, file_record (+23 more)
-
-### Community 32 - "ba2_archive_opening_tests.cpp"
-Cohesion: 0.10
-Nodes (29): append_placeholder_gnrl_record(), append_u16_le(), append_u32_le(), append_u64_le(), archive_variant, ba2_subtype, byte, entry_compression (+21 more)
-
-### Community 33 - "ba2_dx10_prepared_entry"
-Cohesion: 0.07
-Nodes (31): ba2_dx10_prepared_chunk, compression, end_mip, owns_payload_bytes, packed_size, payload_offset, raw_size, start_mip (+23 more)
-
-### Community 34 - "host_file.cpp"
-Cohesion: 0.13
-Nodes (48): checked_buffer_size(), byte, error, function, ifstream, path, session_diagnostics, size_t (+40 more)
-
-### Community 35 - "ba2_dx10_record"
-Cohesion: 0.07
-Nodes (29): ba2_dx10_chunk_record, end_mip, offset, packed_size, raw_size, start_mip, ba2_dx10_record, chunk_count (+21 more)
-
-### Community 36 - "ba2_profile"
-Cohesion: 0.06
-Nodes (62): ba2_archive_metadata, compression_method, starfield_unknown1, starfield_unknown2, ba2_archive_header, ba2_archive_header::ba2_archive_header(), file_count, filename_table_offset (+54 more)
-
-### Community 37 - "validation_policy_tests.cpp"
-Cohesion: 0.15
-Nodes (29): command_succeeds(), compatibility_warning_codes_from_public_header(), count_occurrences(), array, initializer_list, optional, path, size_t (+21 more)
-
-### Community 38 - "byte"
-Cohesion: 0.13
-Nodes (20): detail::payload_sink, detail::payload_source, byte, path, payload_sink, size_t, span, vector (+12 more)
-
-### Community 39 - "ba2_dx10_writer_tests.cpp"
-Cohesion: 0.05
-Nodes (85): set, dds_source_analysis, dds_bytes, image_payload_bytes, metadata, subresources, dds_source_subresource, array_index (+77 more)
-
-### Community 40 - "tes4_bsa_prepare.cpp"
-Cohesion: 0.13
-Nodes (34): append_u32_le(), checked_name_size(), checked_u32(), byte, entry_compression_policy, finalization_workspace, pair, size_t (+26 more)
-
-### Community 41 - "writer_publish_tests.cpp"
-Cohesion: 0.11
-Nodes (25): bytes_from_text(), byte, path, span, string, string_view, vector, is_reparse_point() (+17 more)
-
-### Community 42 - "archive_metadata"
-Cohesion: 0.12
-Nodes (17): extract_entry_callback, archive_metadata, archive_flags, ba2, default_compression, file_count, type, variant (+9 more)
-
-### Community 43 - "archive_reader::extract_entries"
-Cohesion: 0.20
-Nodes (18): bulk_extract_sink_factory(), archive_reader::contains(), archive_reader::extract(), archive_reader::extract_bytes(), archive_reader::extract_entries(), archive_reader::find(), extract, byte (+10 more)
-
-### Community 44 - "file_sink_factory"
-Cohesion: 0.11
-Nodes (21): less, bulk_extract_sink_factory, map, mutex, ofstream, shared_ptr, discard_staged(), file_payload_sink (+13 more)
-
-### Community 45 - "stored_payload_tests.cpp"
-Cohesion: 0.13
-Nodes (22): stored_payload, streambuf, streamsize, bytes_from_text(), collecting_stream_buffer, bytes_, byte, finalization_workspace (+14 more)
-
-### Community 46 - "ba2_dx10_extraction_tests.cpp"
-Cohesion: 0.15
-Nodes (23): ba2_dx10_fixture, archive, manifest, bytes_from_hex(), collecting_sink, bytes_, byte, json (+15 more)
-
-### Community 47 - "cli/main.cpp"
-Cohesion: 0.18
-Nodes (24): add_help_argument(), add_positionals_argument(), add_thread_argument(), ascii_iequals(), ostream, string_view, dispatch(), final_path_for_handle() (+16 more)
-
-### Community 48 - "unordered_set"
-Cohesion: 0.12
-Nodes (20): Allocator, Hash, Key, KeyEqual, error, size_t, string_view, T (+12 more)
-
-### Community 49 - "ba2_gnrl_prepare.cpp"
-Cohesion: 0.18
-Nodes (23): archive_default_compressed(), ba2_gnrl_final_stored_dedupe_hash(), ba2_gnrl_make_writer_entry(), ba2_gnrl_prepare_entries(), ba2_gnrl_validate_entries(), checked_u32(), archive_compression_policy, ba2_gnrl_writer_options (+15 more)
-
-### Community 50 - "writer_publish.cpp"
-Cohesion: 0.20
-Nodes (20): Finalize, finalization_workspace, path, size_t, string, string_view, finalization_workspace, cleanup (+12 more)
-
-### Community 51 - "tes4_placement_plan"
-Cohesion: 0.08
-Nodes (30): size_t, string, tes4_folder_record_shape, uint32_t, uint64_t, vector, tes4_payload_placement, offset (+22 more)
-
-### Community 52 - "ba2_gnrl_prepared_entry"
-Cohesion: 0.09
-Nodes (23): ba2_gnrl_prepared_entry, archive_path_canonical, archive_path_original, directory_hash, extension, final_stored_dedupe_hash, name_hash, owns_payload_bytes (+15 more)
-
-### Community 53 - "byte"
-Cohesion: 0.19
-Nodes (19): bytes_from_text(), collecting_sink, bytes_, byte, payload_sink, size_t, span, string_view (+11 more)
-
-### Community 54 - "ba2_dx10_chunk_assembler.cpp"
-Cohesion: 0.26
-Nodes (15): ba2_dx10_assemble_chunk(), ba2_dx10_assemble_planned_entry(), checked_size_t(), checked_u16(), checked_u32(), checked_u8(), collect_chunk_snapshots(), ba2_dx10_writer_options (+7 more)
-
-### Community 55 - "ba2_dx10_writer::state"
-Cohesion: 0.15
-Nodes (19): ba2_dx10_writer::add_file(), ba2_dx10_writer::ba2_dx10_writer(), ba2_dx10_writer::state, consumed, entries, options, snapshot_dir, target (+11 more)
-
-### Community 56 - "ba2_gnrl_layout.cpp"
-Cohesion: 0.16
-Nodes (20): add_fits_u64(), ba2_gnrl_assign_payload_offsets(), ba2_gnrl_final_stored_dedupe_key, final_stored_dedupe_hash, stored_size, ba2_gnrl_payloads_equal(), checked_u32(), compare_disk_payload_to_bytes() (+12 more)
-
-### Community 57 - "ba2_gnrl_write_archive_bytes"
-Cohesion: 0.18
-Nodes (16): ba2_gnrl_write_archive_bytes(), checked_u16(), checked_u32(), ba2_gnrl_writer_options, byte, ostream, path, span (+8 more)
-
-### Community 58 - "tes4_bsa_raw_table"
-Cohesion: 0.11
-Nodes (22): size_t, string, uint32_t, uint64_t, vector, tes4_bsa_file_record, hash, offset (+14 more)
-
-### Community 59 - "validation.cpp"
-Cohesion: 0.20
-Nodes (20): append_entry_warnings(), append_fatal(), append_target_family_warning(), append_warning(), ascii_lowercase(), compatibility_warning_code, compatibility_warning_severity, error (+12 more)
-
-### Community 60 - "materialize_entries"
-Cohesion: 0.14
-Nodes (24): compression_for(), array, byte, entry_compression, span, string, uint32_t, uint64_t (+16 more)
-
-### Community 61 - "ba2_dx10_write_archive_bytes"
-Cohesion: 0.19
-Nodes (15): ba2_dx10_write_archive_bytes(), checked_u16(), checked_u32(), ba2_dx10_writer_options, byte, ostream, path, span (+7 more)
-
-### Community 62 - "bsa_writer_execution_tests.cpp"
-Cohesion: 0.23
-Nodes (20): add_tes4_sources(), bytes_from_text(), byte, pair, path, size_t, span, string (+12 more)
-
-### Community 63 - "compatibility_warning_tests.cpp"
-Cohesion: 0.24
-Nodes (20): bytes_from_text(), compatibility_warning_codes_from_public_header(), byte, compatibility_warning_code, path, size_t, string, string_view (+12 more)
-
-### Community 64 - "validation_report"
-Cohesion: 0.11
-Nodes (20): compatibility_warning, archive_path, code, message, severity, compatibility_warning_code, compatibility_warning_severity, error_code (+12 more)
-
-### Community 65 - "ba2_dx10_writer_entry"
-Cohesion: 0.12
-Nodes (20): ba2_dx10_make_writer_entry(), ba2_dx10_prepare_chunk(), ba2_dx10_prepare_entries(), ba2_dx10_validate_entries(), ba2_dx10_target, ba2_dx10_writer_options, path, planned_texture_chunk (+12 more)
-
-### Community 66 - "detected_bsa_format"
-Cohesion: 0.13
-Nodes (24): detected_bsa_format, variant, version, archive_variant, uint32_t, byte, PayloadReader, size_t (+16 more)
-
-### Community 67 - "host_file_path"
-Cohesion: 0.19
-Nodes (10): archive_file_size(), archive_open_host_context(), archive_reader::open(), uint64_t, read_detection_prefix(), string_view, host_file_path, resolved (+2 more)
-
-### Community 68 - "string"
-Cohesion: 0.20
-Nodes (19): command_line_arguments(), compatibility_warning_code, compatibility_warning_severity, error_code, payload_sink, string, unique_ptr, error_code_name() (+11 more)
-
-### Community 69 - "Archive Entry Catalog"
-Cohesion: 0.11
-Nodes (19): Single-Context Domain Documentation, Archive Entry Catalog, BA2 Archive Header, BA2 Archive Opening, BA2 Profile, BA2 Record Identity, TES4 BSA Profile, ADR Conflict Policy (+11 more)
-
-### Community 70 - "error"
-Cohesion: 0.29
-Nodes (19): ArgumentParser, archive_type_name(), archive_variant_name(), compression_name(), archive_type, archive_variant, entry_compression, error (+11 more)
-
-### Community 71 - "path"
-Cohesion: 0.26
-Nodes (19): compression_choice, archive_policy_from(), collect_input_files(), archive_compression_policy, path, uint32_t, vector, generic_utf8_path() (+11 more)
-
-### Community 72 - "materialize_entries"
-Cohesion: 0.21
-Nodes (17): compression_for(), entry_compression, size_t, span, string, uint32_t, uint64_t, vector (+9 more)
-
-### Community 73 - "tes4_prepared_entry"
-Cohesion: 0.16
-Nodes (16): stored_payload, string, uint32_t, uint64_t, vector, tes4_prepared_entry, canonical_folder, file_hash (+8 more)
-
-### Community 74 - "make_byte_vector"
-Cohesion: 0.14
-Nodes (23): LZ4F_dctx, append_byte_vector(), byte_vector_allocation_error(), byte, error, size_t, span, vector (+15 more)
-
-### Community 75 - "source_dds_spec"
-Cohesion: 0.14
-Nodes (14): source_dds_spec, archive_path, array_size, depth, file, format_id, format_name, height (+6 more)
-
-### Community 76 - "payload_stream.cpp"
-Cohesion: 0.21
-Nodes (20): checked_materialized_payload_size(), checked_payload_size(), byte, ifstream, size_t, span, string_view, uint64_t (+12 more)
-
-### Community 77 - "ba2_dx10_build_writer_entry_snapshot"
-Cohesion: 0.20
-Nodes (17): ba2_dx10_build_writer_entry_snapshot(), ba2_dx10_ensure_snapshot_directory(), ba2_dx10_validate_texture_format_for_target(), ba2_dx10_target, byte, path, size_t, span (+9 more)
-
-### Community 78 - "make_tes4_bsa_payload_descriptor"
+### Community 49 - "Path Cluster"
 Cohesion: 0.17
-Nodes (12): entry_compression, PayloadReader, size_t, uint32_t, uint64_t, make_tes4_bsa_payload_descriptor(), tes4_bsa_payload_descriptor, compression (+4 more)
+Nodes (23): path, publish_file_without_replace(), replace_file_atomically(), prefixed_message(), string, string_view, path_exists_noexcept(), result (+15 more)
 
-### Community 79 - "tes4_bsa_serialize.cpp"
-Cohesion: 0.19
-Nodes (16): checked_name_size(), checked_u32(), byte, ofstream, path, size_t, span, string_view (+8 more)
+### Community 140 - "Normalize Archive Path"
+Cohesion: 0.39
+Nodes (7): invalid_path_error(), error, lower_ascii(), is_drive_rooted(), string_view, normalize_archive_path(), result
 
-### Community 80 - "chunk_spec"
-Cohesion: 0.12
-Nodes (17): chunk_spec, compression, decoded_payload, end_mip, packed_size, payload_offset, raw_size, segment (+9 more)
+### Community 19 - "String Cluster"
+Cohesion: 0.09
+Nodes (17): archive_path_key, string, value, span, vector, string_view, payload_sink, payload_sink (+9 more)
 
-### Community 81 - "ba2_record_identity"
-Cohesion: 0.18
-Nodes (13): ba2_record_identity, canonical_path, directory_hash, display_path, extension, name_hash, ba2_stored_record_identity, directory_hash (+5 more)
-
-### Community 82 - "host_file_tests.cpp"
-Cohesion: 0.20
-Nodes (16): bytes_from_text(), byte, DWORD, HANDLE, path, span, string_view, vector (+8 more)
-
-### Community 83 - "validate_fixture_manifests.py"
-Cohesion: 0.24
-Nodes (16): Any, find_manifest_case(), load_json(), main(), Path, Validate malformed fixture case IDs, expected errors, and referenced archive fil, Return a manifest case by ID, failing if the manifest case list is malformed or, Validate the consolidated malformed matrix and its manifest/test evidence refere (+8 more)
-
-### Community 84 - "ba2_dx10_writer"
-Cohesion: 0.16
-Nodes (17): ba2_dx10_writer, ba2_dx10_target, ba2_dx10_writer, state_, ba2_gnrl_writer, ba2_gnrl_target, ba2_gnrl_writer, state_ (+9 more)
-
-### Community 85 - "write_ba2_gnrl_archive"
-Cohesion: 0.15
-Nodes (17): ba2_gnrl_entry_options, compression, record_flags, entry_compression_policy, optional, uint32_t, write_execution_options, worker_count (+9 more)
-
-### Community 86 - "tes3_bsa_writer.cpp"
-Cohesion: 0.18
-Nodes (15): tes3_bsa_writer_options, overwrite_existing, byte, span, string_view, vector, tes3_bsa_writer::add_bytes(), tes3_bsa_writer::add_file() (+7 more)
-
-### Community 87 - "dedupe_key"
-Cohesion: 0.14
-Nodes (15): add_fits_u64(), ba2_dx10_assign_payload_offsets(), byte, compression_method, span, uint32_t, uint64_t, vector (+7 more)
-
-### Community 88 - "string"
-Cohesion: 0.23
-Nodes (13): ostringstream, canonicalize(), pair, string, string_view, extension_fourcc(), filename_stem(), hash_folder() (+5 more)
-
-### Community 89 - "payload_sink"
-Cohesion: 0.35
-Nodes (10): payload_sink(), ba2_dx10_extraction_host_context(), ifstream, extract_ba2_dx10_payload(), extract_compressed_chunk(), stream_raw_chunk(), ba2_gnrl_extraction_host_context(), extract_ba2_gnrl_payload() (+2 more)
-
-### Community 90 - "validation_api_tests.cpp"
-Cohesion: 0.30
-Nodes (15): bytes_from_text(), compatibility_matrix_path(), path, generated_source_dir(), read_json_file(), temp_file_cleanup, path_, unique_output_path() (+7 more)
-
-### Community 91 - "bethesda_hash.cpp"
+### Community 89 - "Bethesda Hash Cpp"
 Cohesion: 0.32
-Nodes (15): string_view, uint32_t, uint64_t, uint8_t, crc32_entry(), crc32_lookup(), extension_magic(), hash_fo4() (+7 more)
+Nodes (15): lower_byte(), uint8_t, rotate_right(), uint32_t, extension_magic(), string_view, crc32_entry(), crc32_lookup() (+7 more)
 
-### Community 92 - "ba2_archive_source"
-Cohesion: 0.13
-Nodes (14): ba2_archive_session_context(), ba2_stable_archive_source, session_, byte, size_t, stable_host_file_session, string_view, uint64_t (+6 more)
+### Community 38 - "Binary Reader"
+Cohesion: 0.16
+Nodes (31): truncated_error(), error, binary_reader::binary_reader(), span, byte, size_t, result, uint8_t (+23 more)
 
-### Community 93 - "opened_ba2_archive"
-Cohesion: 0.22
-Nodes (8): ba2_subtype, vector, opened_ba2_archive, entries, metadata, subtype, ba2_dx10_writer_options, ba2_gnrl_writer_options
+### Community 127 - "Make Byte Vector"
+Cohesion: 0.36
+Nodes (10): byte_vector_allocation_error(), error, make_byte_vector(), result, vector, byte, size_t, reserve_byte_vector() (+2 more)
 
-### Community 94 - "generate_ba2_dx10_fixtures.cpp"
-Cohesion: 0.35
-Nodes (15): path, generate_malformed(), generate_success(), generate_writer_sources(), main(), make_duplicate_canonical_path_malformed(), make_fo4(), make_sfv3() (+7 more)
-
-### Community 95 - "texture_spec"
-Cohesion: 0.12
-Nodes (16): uint8_t, texture_spec, array_size, chunks, cube_maps_raw, directory_hash, dxgi_format, ext (+8 more)
-
-### Community 96 - "recording_sink"
-Cohesion: 0.17
-Nodes (14): byte, path, payload_sink, size_t, span, string, vector, read_text_file() (+6 more)
-
-### Community 97 - "decompress_deflate_exact"
-Cohesion: 0.19
-Nodes (12): libdeflate_compressor, libdeflate_decompressor, codec_error(), compress_deflate(), compressor_deleter, byte, error, size_t (+4 more)
-
-### Community 98 - "decompress_payload_exact_to_sink"
-Cohesion: 0.30
-Nodes (14): compress_payload(), copy_bytes(), byte, compression_method, error, ifstream, size_t, span (+6 more)
-
-### Community 99 - "parser_primitives.cpp"
-Cohesion: 0.21
-Nodes (14): add_fits_u64(), archive_string_from_bytes(), byte, ifstream, span, string, string_view, uint64_t (+6 more)
-
-### Community 100 - "collecting_sink"
-Cohesion: 0.14
-Nodes (13): collecting_sink, bytes_, bulk_extract_sink_factory, byte, path, payload_sink, size_t, span (+5 more)
-
-### Community 101 - "recording_sink"
-Cohesion: 0.18
-Nodes (13): byte, path, payload_sink, size_t, span, vector, impossible_byte_vector_size(), lz4_vector() (+5 more)
-
-### Community 102 - "profile_expectation"
-Cohesion: 0.13
-Nodes (15): compression_method, entry_compression, size_t, tes4_folder_record_shape, uint32_t, profile_expectation, compressed_entry_metadata, compressed_payload_method (+7 more)
-
-### Community 103 - "format_case"
-Cohesion: 0.14
-Nodes (14): chunk(), byte, size_t, uint16_t, uint32_t, uint64_t, vector, format_case (+6 more)
-
-### Community 104 - "validation_archive_case"
-Cohesion: 0.12
-Nodes (20): append_u32_le(), archive_type, archive_variant, entry_compression, optional, uint32_t, require_metadata_matches_case(), require_starfield_v3_ba2_route() (+12 more)
-
-### Community 105 - "commit_staged"
-Cohesion: 0.21
-Nodes (11): clear_delete_on_close(), commit_staged(), byte, DWORD, HANDLE, size_t, span, mark_delete_on_close() (+3 more)
-
-### Community 106 - "analyze_dds_source"
+### Community 81 - "Decompress Payload Exact To Sink"
 Cohesion: 0.26
-Nodes (12): DXGI_FORMAT, analyze_dds_metadata(), analyze_dds_source(), checked_u32(), byte, size_t, span, uint32_t (+4 more)
+Nodes (16): copy_bytes(), result, vector, byte, span, unsupported_method_error(), error, compress_payload() (+8 more)
 
-### Community 107 - "bulk_extract_entry_result"
-Cohesion: 0.33
-Nodes (5): bulk_extract_entry_result, entry, failure, path, error
+### Community 90 - "Decompress Deflate Exact"
+Cohesion: 0.18
+Nodes (13): compressor_deleter, libdeflate_compressor, decompressor_deleter, libdeflate_decompressor, codec_error(), error, compress_deflate(), result (+5 more)
 
-### Community 108 - "ba2_gnrl_writer_options"
+### Community 20 - "Host File Cpp"
+Cohesion: 0.14
+Nodes (47): io_error(), error, string_view, checked_buffer_size(), result, size_t, uint64_t, validate_expected_host_file_size() (+39 more)
+
+### Community 119 - "Decompress Lz4 Block Exact"
+Cohesion: 0.38
+Nodes (10): block_error(), error, checked_int_size(), result, size_t, compress_lz4_block(), vector, byte (+2 more)
+
+### Community 74 - "Decompress Lz4 Frame Exact To"
+Cohesion: 0.18
+Nodes (16): frame_context_deleter, LZ4F_dctx, frame_error(), error, compress_lz4_frame(), result, vector, byte (+8 more)
+
+### Community 128 - "Optional Cluster"
+Cohesion: 0.20
+Nodes (8): run_indexed_work(), result, size_t, uint32_t, function, finalization_workspace, stable_host_file_session, optional
+
+### Community 91 - "Parser Primitives Cpp"
+Cohesion: 0.21
+Nodes (15): validate_metadata_count(), result, uint64_t, string_view, add_fits_u64(), span_fits_u64(), spans_overlap_u64(), read_file_bytes_at() (+7 more)
+
+### Community 35 - "Tes4 Bsa Header Fields"
+Cohesion: 0.13
+Nodes (33): multiply_fits(), uint32_t, size_t, span_fits(), skip_checked(), result, size_t, read_header() (+25 more)
+
+### Community 46 - "Materialize Entries"
+Cohesion: 0.13
+Nodes (25): add_fits(), stored_chunk_span, uint64_t, offset, size, compression_for(), entry_compression, record_table_size_for() (+17 more)
+
+### Community 99 - "Reserve Metadata Set"
+Cohesion: 0.20
+Nodes (14): metadata_allocation_error(), error, string_view, reserve_metadata_vector(), result, vector, T, size_t (+6 more)
+
+### Community 69 - "Payload Stream Cpp"
+Cohesion: 0.30
+Nodes (19): streamoff_limit(), uint64_t, streamsize_limit(), transfer_payload(), result, payload_sink, size_t, checked_payload_size() (+11 more)
+
+### Community 152 - "Payload Source"
+Cohesion: 0.50
+Nodes (3): payload_source, read, remaining
+
+### Community 17 - "Stored Payload Cpp"
+Cohesion: 0.09
+Nodes (43): fingerprint_bytes(), uint64_t, span, byte, snapshot_io_error(), error, string_view, stored_payload::logical_reader (+35 more)
+
+### Community 58 - "Ba2 Archive Header"
 Cohesion: 0.15
-Nodes (13): ba2_gnrl_writer_options, compression, deduplicate_payloads, overwrite_existing, starfield_compression_method, starfield_unknown1, starfield_unknown2, archive_compression_policy (+5 more)
+Nodes (21): read_required_u32(), result, uint32_t, string_view, read_required_u64(), uint64_t, ba2_archive_header::ba2_archive_header(), ba2_archive_metadata (+13 more)
 
-### Community 109 - "uint32_t"
-Cohesion: 0.43
-Nodes (7): bytes_per_block(), checked_u32(), uint32_t, dds_mip_size(), is_block_compressed(), mip_dimension(), name_table_size()
+### Community 47 - "Ba2 Archive Source"
+Cohesion: 0.10
+Nodes (21): ba2_archive_session_context(), ba2_stable_archive_source, result, uint64_t, vector, byte, size_t, string_view (+13 more)
 
-### Community 110 - "build_archive"
+### Community 143 - "Opened Ba2 Archive"
+Cohesion: 0.29
+Nodes (7): opened_ba2_archive, archive_metadata, metadata, vector, entry_metadata, entries, subtype
+
+### Community 59 - "Ba2 Dx10 Chunk Assembler Cpp"
+Cohesion: 0.20
+Nodes (21): checked_u32(), result, uint32_t, uint64_t, string_view, checked_u16(), uint16_t, checked_u8() (+13 more)
+
+### Community 9 - "Ba2 Profile"
+Cohesion: 0.07
+Nodes (55): ba2_dx10_extraction_host_context(), stream_raw_chunk(), result, ifstream, texture_chunk_metadata, payload_sink, extract_compressed_chunk(), extract_ba2_dx10_payload() (+47 more)
+
+### Community 75 - "Dedupe Key"
+Cohesion: 0.13
+Nodes (16): payload_assignment, uint64_t, offset, dedupe_key, vector, byte, stored_payload, uint32_t (+8 more)
+
+### Community 25 - "Ba2 Dx10 Writer Entry"
+Cohesion: 0.07
+Nodes (38): ba2_dx10_make_writer_entry(), result, string_view, ba2_dx10_target, size_t, ba2_dx10_validate_entries(), span, ba2_dx10_prepare_chunk() (+30 more)
+
+### Community 39 - "Ba2 Dx10 Prepared Entry"
+Cohesion: 0.07
+Nodes (31): ba2_dx10_prepared_chunk, uint64_t, payload_offset, uint32_t, packed_size, raw_size, uint16_t, start_mip (+23 more)
+
+### Community 50 - "Ba2 Dx10 Record"
+Cohesion: 0.08
+Nodes (26): ba2_dx10_chunk_record, uint64_t, offset, uint32_t, packed_size, raw_size, uint16_t, start_mip (+18 more)
+
+### Community 64 - "Ba2 Dx10 Write Archive Bytes"
+Cohesion: 0.25
+Nodes (14): stream_writer, ostream, result, span, byte, uint8_t, uint16_t, uint32_t (+6 more)
+
+### Community 76 - "Ba2 Dx10 Build Writer Entry"
+Cohesion: 0.22
+Nodes (17): is_starfield_only_dx10_format(), uint32_t, read_dds_file(), result, vector, byte, string_view, make_snapshot_random_suffix() (+9 more)
+
+### Community 141 - "Ba2 Dx10 Subresource Snapshot"
+Cohesion: 0.25
+Nodes (8): ba2_dx10_subresource_snapshot, uint32_t, array_index, face_index, mip, uint64_t, size, snapshot_path
+
+### Community 92 - "Ba2 Gnrl Assign Payload Offsets"
+Cohesion: 0.17
+Nodes (15): payload_assignment, uint64_t, offset, size_t, entry_index, ba2_gnrl_dedupe_identity, uint32_t, stored_size (+7 more)
+
+### Community 3 - "Ba2 Record Identity Cpp"
+Cohesion: 0.06
+Nodes (71): gnrl_record, uint32_t, name_hash, array, byte, extension, directory_hash, unknown (+63 more)
+
+### Community 65 - "Prepare Entry"
+Cohesion: 0.17
+Nodes (20): checked_u32(), result, uint32_t, uint64_t, string_view, resolve_ba2_gnrl_source_path(), archive_default_compressed(), archive_compression_policy (+12 more)
+
+### Community 77 - "Ba2 Gnrl Prepared Entry"
+Cohesion: 0.14
+Nodes (17): ba2_gnrl_prepared_entry, string, array, byte, uint32_t, archive_path_original, archive_path_canonical, extension (+9 more)
+
+### Community 66 - "Ba2 Gnrl Write Archive Bytes"
+Cohesion: 0.24
+Nodes (14): stream_writer, ostream, result, span, byte, uint8_t, uint16_t, uint32_t (+6 more)
+
+### Community 144 - "Ba2 Gnrl Writer State"
+Cohesion: 0.29
+Nodes (7): ba2_gnrl_writer::state, ba2_gnrl_target, target, options, vector, entries, ba2_gnrl_writer::target()
+
+### Community 114 - "Write Ba2 Gnrl Archive"
+Cohesion: 0.26
+Nodes (12): ba2_gnrl_writer::add_file(), result, string_view, entry_compression_policy, ba2_gnrl_entry_options, ba2_gnrl_writer::add_bytes(), span, byte (+4 more)
+
+### Community 120 - "Ba2 Gnrl Writer Entry"
+Cohesion: 0.18
+Nodes (11): ba2_gnrl_writer_entry, string, archive_path_original, archive_path_canonical, host_path, vector, byte, memory_bytes (+3 more)
+
+### Community 54 - "Make Tes4 Bsa Payload Descriptor"
+Cohesion: 0.09
+Nodes (22): detect_bsa_format(), result, span, byte, non_empty_span_intersects_prefix(), size_t, tes4_bsa_stored_payload_size(), result (+14 more)
+
+### Community 48 - "Detected Bsa Format"
+Cohesion: 0.11
+Nodes (28): detected_bsa_format, archive_variant, variant, uint32_t, version, stored_payload_span, uint64_t, offset (+20 more)
+
+### Community 121 - "Checked U32"
+Cohesion: 0.38
+Nodes (10): add_fits_u64(), uint64_t, checked_u32(), result, uint32_t, string_view, checked_add_u32(), checked_mul_u32() (+2 more)
+
+### Community 30 - "Tes3 Bsa Parser Cpp"
+Cohesion: 0.14
+Nodes (35): header_fields, uint32_t, version, hash_offset_minus_header, file_count, file_record, size, raw_offset (+27 more)
+
+### Community 93 - "Tes3 Prepare Entries"
+Cohesion: 0.27
+Nodes (15): preserved_archive_path(), string, string_view, checked_u32(), result, uint32_t, uint64_t, resolve_tes3_source_path() (+7 more)
+
+### Community 103 - "Tes3 Prepared Entry"
+Cohesion: 0.14
+Nodes (14): tes3_prepared_entry, string, archive_path_original, vector, byte, payload, host_path, resolved_host_path (+6 more)
+
+### Community 145 - "Stream From Host"
+Cohesion: 0.52
+Nodes (6): tes3_extraction_host_context(), stream_from_host(), result, entry_metadata, payload_sink, extract_tes3_bsa_payload()
+
+### Community 94 - "Tes3 Write Archive Bytes"
+Cohesion: 0.34
+Nodes (15): add_fits_u64(), uint64_t, checked_u32(), result, uint32_t, string_view, checked_add_u32(), checked_mul_u32() (+7 more)
+
+### Community 104 - "Tes3 Writer Entry"
+Cohesion: 0.14
+Nodes (14): tes3_bsa_writer::state, tes3_bsa_writer_options, options, vector, entries, tes3_writer_entry, string, archive_path_original (+6 more)
+
+### Community 135 - "Write Tes3 Bsa Archive"
+Cohesion: 0.33
+Nodes (9): tes3_bsa_writer::add_file(), result, string_view, tes3_bsa_writer::add_bytes(), span, byte, tes3_bsa_writer::write_to(), write_execution_options (+1 more)
+
+### Community 55 - "Tes4 Plan Placements"
+Cohesion: 0.18
+Nodes (21): tes4_table_lengths, uint32_t, total_folder_name_length, total_file_name_length, file_count, tes4_dedupe_identity, stored_size, uint64_t (+13 more)
+
+### Community 21 - "Tes4 Placement Plan"
+Cohesion: 0.06
+Nodes (47): tes4_payload_placement, uint32_t, offset, stored_size, stored_payload, payload, tes4_placed_entry, string (+39 more)
+
+### Community 33 - "Tes4 Bsa Prepare Cpp"
+Cohesion: 0.15
+Nodes (34): prepared_entry_result, entry, uint32_t, file_flags, prepared_folder_group, string, display_name, vector (+26 more)
+
+### Community 82 - "Tes4 Prepared Entry"
+Cohesion: 0.16
+Nodes (16): tes4_prepared_entry, string, uint64_t, uint32_t, stored_payload, folder, canonical_folder, file_name (+8 more)
+
+### Community 31 - "Tes4 Bsa Profile"
+Cohesion: 0.10
+Nodes (35): extension_for_path(), string_view, extension_is(), is_dx9_bsa_texture_format(), uint32_t, is_sse_bsa_texture_format(), tes4_bsa_profile::tes4_bsa_profile(), profile_facts (+27 more)
+
+### Community 129 - "Writer Entry Compression"
+Cohesion: 0.22
+Nodes (10): archive_compression_policy, entry_compression_policy, uint64_t, tes4_writer_compression_decision, entry_compression, compression, uint32_t, record_flags (+2 more)
+
+### Community 108 - "Write Tes4 Bsa Archive"
+Cohesion: 0.22
+Nodes (13): tes4_bsa_writer_options, writer_emits_embedded_names, tes4_bsa_writer::add_file(), result, string_view, entry_compression_policy, tes4_bsa_writer::add_bytes(), span (+5 more)
+
+### Community 100 - "Extract File Payload"
+Cohesion: 0.20
+Nodes (14): tes4_extraction_host_context(), read_u32_le(), uint32_t, span, byte, compression_method_for(), compression_method, entry_compression (+6 more)
+
+### Community 60 - "Tes4 Bsa Raw Table"
+Cohesion: 0.11
+Nodes (22): uint32_t, tes4_bsa_folder_record, uint64_t, hash, file_count, offset, tes4_bsa_file_record, hash (+14 more)
+
+### Community 130 - "Tes4 Bsa Writer Cpp"
+Cohesion: 0.27
+Nodes (9): tes4_bsa_writer::state, tes4_bsa_target, target, options, vector, entries, tes4_bsa_writer::tes4_bsa_writer(), tes4_bsa_writer (+1 more)
+
+### Community 122 - "Tes4 Writer Entry"
+Cohesion: 0.18
+Nodes (11): tes4_writer_entry, string, archive_path_original, archive_path_canonical, host_path, vector, byte, memory_bytes (+3 more)
+
+### Community 10 - "Dds Layout Cpp"
+Cohesion: 0.08
+Nodes (60): format_error(), error, string, validate_layout_shape(), checked_add(), uint64_t, checked_mul(), dxgi_format_descriptor (+52 more)
+
+### Community 43 - "Dds Source Analysis"
+Cohesion: 0.11
+Nodes (28): checked_u32(), result, uint32_t, size_t, is_supported_writer_source_format(), DXGI_FORMAT, validate_writer_source_shape(), TexMetadata (+20 more)
+
+### Community 34 - "Validation Cpp"
+Cohesion: 0.12
+Nodes (31): discard_payload_sink, payload_sink, result, size_t, span, byte, diagnostic_message_for(), string (+23 more)
+
+### Community 57 - "Archive Hpp"
+Cohesion: 0.15
+Nodes (12): optional, vector, string, bulk_extract_request, path, bulk_extract_entry_result, path, entry (+4 more)
+
+### Community 87 - "Archive Metadata"
+Cohesion: 0.13
+Nodes (16): ba2_archive_metadata, uint32_t, starfield_unknown1, starfield_unknown2, compression_method, archive_metadata, archive_type, type (+8 more)
+
+### Community 63 - "Texture Metadata"
+Cohesion: 0.10
+Nodes (21): texture_chunk_metadata, uint64_t, payload_offset, stored_size, raw_size, uint16_t, start_mip, end_mip (+13 more)
+
+### Community 88 - "Error Cluster Include"
+Cohesion: 0.16
+Nodes (11): variant, error, error_code, code, string, message, result, T (+3 more)
+
+### Community 113 - "Entry Metadata"
+Cohesion: 0.17
+Nodes (12): entry_metadata, path, original_path, raw_size, stored_size, payload_offset, archive_hash, compression (+4 more)
+
+### Community 148 - "Archive Reader"
+Cohesion: 0.40
+Nodes (5): archive_reader, LIBBSA_API, shared_ptr, state, state_
+
+### Community 45 - "Validation Report"
+Cohesion: 0.08
+Nodes (28): validation_diagnostic, error_code, code, string, message, compatibility_warning, compatibility_warning_code, code (+20 more)
+
+### Community 98 - "Ba2 Dx10 Writer Options"
+Cohesion: 0.13
+Nodes (15): write_execution_options, uint32_t, worker_count, ba2_dx10_writer_options, overwrite_existing, deduplicate_payloads, max_decoded_chunk_bytes, starfield_unknown1 (+7 more)
+
+### Community 107 - "Ba2 Gnrl Writer Options"
+Cohesion: 0.15
+Nodes (13): tes4_bsa_writer_options, archive_compression_policy, compression_policy, embed_file_names, deduplicate_payloads, overwrite_existing, ba2_gnrl_writer_options, compression (+5 more)
+
+### Community 73 - "Ba2 Dx10 Writer"
+Cohesion: 0.15
+Nodes (18): tes4_bsa_writer, tes4_bsa_writer, LIBBSA_API, tes4_bsa_target, unique_ptr, state, state_, tes3_bsa_writer (+10 more)
+
+### Community 67 - "Generate Ba2 Dx10 Fixtures Cpp"
+Cohesion: 0.22
+Nodes (20): span, string_view, string, to_hex(), json_escape(), canonicalize(), checked_u32(), write_source_case_json() (+12 more)
+
+### Community 109 - "Build Archive"
 Cohesion: 0.37
-Nodes (7): build_archive(), byte_buffer, bytes, uint64_t, record_table_size(), write_header(), write_records()
+Nodes (7): byte_buffer, bytes, uint64_t, record_table_size(), write_header(), write_records(), build_archive()
 
-### Community 111 - "byte"
-Cohesion: 0.38
-Nodes (7): append_ascii(), append_u16_le(), append_u64_le(), byte, uint16_t, uint64_t, vector
-
-### Community 112 - "writer_execution_options_tests.cpp"
-Cohesion: 0.29
-Nodes (12): bytes_from_text(), byte, path, span, string_view, vector, generated_dx10_source_path(), output_path() (+4 more)
-
-### Community 113 - "writer_hotspot_policy_tests.cpp"
-Cohesion: 0.27
-Nodes (12): path, span, string, string_view, vector, declaration_block(), function_body(), public_declaration_lines() (+4 more)
-
-### Community 114 - "deflate_codec_tests.cpp"
+### Community 115 - "Vector Cluster"
 Cohesion: 0.33
-Nodes (5): byte, size_t, vector, deflate_vector(), impossible_byte_vector_size()
+Nodes (11): vector, byte, bytes(), initializer_list, repeated_bytes(), size_t, build_source_dds(), decoded_payload_bytes() (+3 more)
 
-### Community 115 - "writer_entry_compression"
-Cohesion: 0.18
-Nodes (11): archive_compression_policy, entry_compression_policy, uint64_t, entry_compression, uint32_t, archive_default_compressed, writer_entry_compression, tes4_bsa_writer_options (+3 more)
+### Community 96 - "Texture Spec"
+Cohesion: 0.12
+Nodes (16): uint8_t, texture_spec, original_path, path, ext, name_hash, directory_hash, unknown_tex (+8 more)
 
-### Community 116 - "extract_file_payload"
-Cohesion: 0.23
-Nodes (11): compression_method_for(), byte, compression_method, entry_compression, ifstream, span, uint32_t, extract_file_payload() (+3 more)
+### Community 78 - "Chunk Spec"
+Cohesion: 0.12
+Nodes (18): uint16_t, logical_segment, array_index, face_index, start_mip, end_mip, source_chunk_index, chunk_spec (+10 more)
 
-### Community 117 - "vector"
-Cohesion: 0.29
-Nodes (11): build_source_dds(), bytes(), byte, initializer_list, size_t, span, vector, overwrite_u16() (+3 more)
-
-### Community 118 - "archive_reader_dispatch_policy_tests.cpp"
-Cohesion: 0.35
-Nodes (11): optional, path, string, string_view, declaration_body(), extraction_function_member_name(), production_source_text(), read_text_file() (+3 more)
-
-### Community 119 - "native_handle_guard"
+### Community 146 - "Uint32 T"
 Cohesion: 0.47
-Nodes (3): HANDLE, native_handle_guard, handle_
+Nodes (6): uint32_t, mip_dimension(), bytes_per_block(), is_block_compressed(), dds_mip_size(), header_size_for()
 
-### Community 120 - "writer_host_path_inventory_case"
-Cohesion: 0.17
-Nodes (12): string_view, writer_host_path_inventory_case, dedupe_absent_token, dedupe_file, dedupe_token, family, finalization_file, finalization_token (+4 more)
-
-### Community 121 - "format_descriptor"
-Cohesion: 0.17
-Nodes (12): ba2_dx10_target, ba2_gnrl_target, format_descriptor, ba2_dx10_target, ba2_gnrl_target, description, family, supports_compressed (+4 more)
-
-### Community 122 - "texture_metadata"
-Cohesion: 0.09
-Nodes (25): bulk_extract_options, worker_count, entry_compression, uint16_t, uint32_t, uint64_t, uint8_t, texture_chunk_metadata (+17 more)
-
-### Community 123 - "ba2_gnrl_writer.cpp"
-Cohesion: 0.25
-Nodes (10): ba2_gnrl_writer::ba2_gnrl_writer(), ba2_gnrl_writer::state, entries, options, target, ba2_gnrl_writer::target(), ba2_gnrl_target, ba2_gnrl_writer (+2 more)
-
-### Community 124 - "write_tes4_bsa_archive"
-Cohesion: 0.24
-Nodes (10): make_tes4_bsa_profile_for_writer(), byte, entry_compression_policy, span, string_view, uint32_t, tes4_bsa_writer::add_bytes(), tes4_bsa_writer::add_file() (+2 more)
-
-### Community 125 - "tes4_writer_entry"
-Cohesion: 0.18
-Nodes (11): byte, entry_compression_policy, string, vector, tes4_writer_entry, archive_path_canonical, archive_path_original, compression (+3 more)
-
-### Community 126 - "archive_spec"
-Cohesion: 0.17
-Nodes (13): archive_spec, compression_method, starfield_unknown1, starfield_unknown2, stem, textures, variant, version (+5 more)
-
-### Community 127 - "read_u32_le"
+### Community 124 - "Archive Spec"
 Cohesion: 0.20
-Nodes (10): byte, path, size_t, span, string_view, uint32_t, vector, generated_archive_path() (+2 more)
+Nodes (11): archive_spec, stem, variant, version, starfield_unknown1, starfield_unknown2, compression_method, textures (+3 more)
 
-### Community 128 - "writer_ownership_tests.cpp"
-Cohesion: 0.29
-Nodes (10): bytes_from_text(), byte, path, span, string_view, vector, generated_source_dir(), require_extracted_bytes() (+2 more)
+### Community 101 - "Source Dds Spec"
+Cohesion: 0.13
+Nodes (15): source_dds_spec, id, file, format_id, format_name, width, height, mip_count (+7 more)
 
-### Community 129 - "Build.ps1"
-Cohesion: 0.27
-Nodes (5): Assert-SafeCleanPath(), Get-SafePathForDisplay(), Invoke-CMakeBuildTarget(), Invoke-ExternalCommand(), Remove-BuildDirectory()
+### Community 136 - "Generate Malformed"
+Cohesion: 0.50
+Nodes (9): make_fo4(), write_file(), path, write_text(), generate_success(), generate_writer_sources(), generate_malformed(), parse_output_dir() (+1 more)
 
-### Community 130 - "tes4_bsa_target"
-Cohesion: 0.16
-Nodes (14): tes4_bsa_target, tes4_bsa_writer::target(), compressed_entry_method(), entry_compression, uint32_t, expected_target_default_compression(), expected_version(), target_expectation (+6 more)
+### Community 5 - "Generate Ba2 Gnrl Fixtures Cpp"
+Cohesion: 0.08
+Nodes (62): byte_buffer, vector, byte, bytes, uint8_t, uint16_t, uint32_t, uint64_t (+54 more)
 
-### Community 131 - "normalize_archive_path"
-Cohesion: 0.29
-Nodes (9): archive_path_key, value, error, string_view, string, invalid_path_error(), is_drive_rooted(), lower_ascii() (+1 more)
+### Community 22 - "Generate Tes3 Bsa Fixtures Cpp"
+Cohesion: 0.13
+Nodes (40): byte_buffer, vector, byte, bytes, uint8_t, uint32_t, uint64_t, span (+32 more)
 
-### Community 132 - "decompress_lz4_block_exact"
-Cohesion: 0.40
-Nodes (9): block_error(), checked_int_size(), compress_lz4_block(), byte, error, size_t, span, vector (+1 more)
-
-### Community 133 - "ba2_gnrl_writer_entry"
-Cohesion: 0.20
-Nodes (10): ba2_gnrl_writer_entry, archive_path_canonical, archive_path_original, from_memory, host_path, memory_bytes, options, byte (+2 more)
-
-### Community 134 - "coverage_audit_matrix_docs_tests.cpp"
-Cohesion: 0.31
-Nodes (9): initializer_list, path, string, string_view, read_text_file(), require_all_tokens(), require_markdown_section(), require_no_tokens() (+1 more)
-
-### Community 135 - "docs_policy_tests.cpp"
-Cohesion: 0.33
-Nodes (9): initializer_list, path, string, string_view, read_text_file(), require_all_tokens(), require_no_planning_identifier_patterns(), require_no_tokens() (+1 more)
-
-### Community 136 - "host_file_path_tests.cpp"
-Cohesion: 0.40
-Nodes (9): path, string, host_file_path_header_path(), host_file_path_source_path(), malformed_utf8_host_path(), project_root(), read_text_file(), unique_non_ascii_host_path() (+1 more)
-
-### Community 137 - "parser_preparer_seam_policy_tests.cpp"
-Cohesion: 0.31
-Nodes (9): path, span, string, string_view, function_body(), read_text_file(), require_absent_tokens(), require_all_tokens() (+1 more)
-
-### Community 138 - "string_view"
-Cohesion: 0.36
-Nodes (10): error_code, json, string_view, error_code_from_matrix(), generated_archive_dir(), report_has_error_code(), require_malformed_open_report(), require_matrix_extraction_report() (+2 more)
-
-### Community 139 - "final_path_is_within_root"
-Cohesion: 0.27
-Nodes (9): final_path_is_within_root(), is_separator(), local_command_line_argv, value, same_windows_prefix(), trim_final_path(), wchar_t, wstring (+1 more)
-
-### Community 140 - "dependencies"
-Cohesion: 0.22
-Nodes (8): argparse, catch2, directxtex, lz4, nlohmann-json, dependencies, name, version-semver
-
-### Community 141 - "ba2_dx10_subresource_snapshot"
+### Community 27 - "Generate Tes3 Bsa Writer Fixtures"
 Cohesion: 0.14
-Nodes (15): append_snapshot_bytes(), ba2_dx10_chunk_snapshot_batch, aggregate_size, snapshots, byte, vector, ba2_dx10_subresource_snapshot, array_index (+7 more)
+Nodes (37): source_entry, string, source_kind, original_path, canonical_path, vector, byte, expected_bytes (+29 more)
 
-### Community 142 - "tes4_bsa_constants.hpp"
+### Community 4 - "Generate Tes4 Bsa Fixtures Cpp"
+Cohesion: 0.07
+Nodes (63): byte_buffer, vector, byte, bytes, uint8_t, uint32_t, uint64_t, span (+55 more)
+
+### Community 83 - "Validate Fixture Manifests Py"
 Cohesion: 0.24
-Nodes (7): byte, span, detect_bsa_format(), size_t, uint32_t, non_empty_span_intersects_prefix(), tes4_bsa_stored_payload_size()
+Nodes (16): load_json(), Path, Any, require_keys(), validate_success_manifest(), validate_malformed_manifest(), find_manifest_case(), validate_compatibility_matrix() (+8 more)
 
-### Community 143 - "tes4_bsa_writer::state"
-Cohesion: 0.25
-Nodes (8): tes4_bsa_writer, tes4_bsa_writer_options, vector, tes4_bsa_writer::state, entries, options, target, tes4_bsa_writer::tes4_bsa_writer()
+### Community 6 - "Main Cpp"
+Cohesion: 0.07
+Nodes (61): byte_vector_sink, payload_sink, result, size_t, span, byte, vector, bytes_ (+53 more)
 
-### Community 144 - "ba2_dx10_malformed_tests.cpp"
+### Community 116 - "Archive Reader Dispatch Policy Tests"
+Cohesion: 0.39
+Nodes (11): source_root(), path, read_text_file(), string, production_source_text(), remove_whitespace(), string_view, remove_comments() (+3 more)
+
+### Community 8 - "Archive Reader Dispatch Tests Cpp"
+Cohesion: 0.06
+Nodes (56): generated_archive_dir(), path, generated_archive_path(), string_view, read_json_file(), json, bytes_from_hex(), vector (+48 more)
+
+### Community 71 - "Archive Reader Tests Cpp"
+Cohesion: 0.14
+Nodes (17): generated_archive_path(), path, string_view, collecting_sink, payload_sink, result, size_t, span (+9 more)
+
+### Community 36 - "Supported Profile Case"
+Cohesion: 0.10
+Nodes (31): temporary_archive, span, byte, path, path_, append_u32_le(), vector, uint32_t (+23 more)
+
+### Community 52 - "Ba2 Dx10 Extraction Tests Cpp"
+Cohesion: 0.15
+Nodes (24): generated_archive_dir(), path, generated_archive_path(), string_view, read_json_file(), json, bytes_from_hex(), vector (+16 more)
+
+### Community 79 - "Ba2 Dx10 Malformed Tests Cpp"
+Cohesion: 0.17
+Nodes (16): generated_archive_dir(), path, generated_archive_path(), string_view, read_json_file(), json, error_code_from_manifest(), error_code (+8 more)
+
+### Community 51 - "Ba2 Dx10 Preparer Seam Tests"
+Cohesion: 0.15
+Nodes (26): generated_source_dir(), path, seam_test_dir(), seam_output_path(), string, read_json_file(), json, read_binary_file() (+18 more)
+
+### Community 7 - "Ba2 Dx10 Reader Tests Cpp"
+Cohesion: 0.10
+Nodes (62): generated_archive_dir(), path, generated_archive_path(), string_view, read_json_file(), json, expected_default_compression(), entry_compression (+54 more)
+
+### Community 1 - "Ba2 Dx10 Writer Tests Cpp"
+Cohesion: 0.06
+Nodes (78): generated_source_dir(), path, read_json_file(), json, read_binary_file(), vector, byte, writer_test_dir() (+70 more)
+
+### Community 15 - "Ba2 Gnrl Reader Tests Cpp"
+Cohesion: 0.09
+Nodes (49): generated_archive_dir(), path, generated_archive_path(), string_view, read_json_file(), json, expected_default_compression(), entry_compression (+41 more)
+
+### Community 12 - "Ba2 Gnrl Writer Tests Cpp"
+Cohesion: 0.07
+Nodes (56): native_handle_guard, HANDLE, handle_, writer_test_dir(), path, output_path(), string, non_ascii_output_path() (+48 more)
+
+### Community 153 - "Fourcc Cluster"
+Cohesion: 0.67
+Nodes (3): fourcc(), array, byte
+
+### Community 32 - "Ba2 Writer Execution Tests Cpp"
+Cohesion: 0.13
+Nodes (35): writer_test_dir(), path, output_path(), string, generated_source_dir(), repeated_bytes(), vector, byte (+27 more)
+
+### Community 137 - "Benchmark Policy Tests Cpp"
+Cohesion: 0.39
+Nodes (8): source_root(), path, read_text_file(), string, require_all_tokens(), string_view, initializer_list, require_no_tokens()
+
+### Community 149 - "Bounded Memory Policy Tests Cpp"
+Cohesion: 0.60
+Nodes (4): source_root(), path, read_text_file(), string
+
+### Community 56 - "Bsa Writer Execution Tests Cpp"
+Cohesion: 0.21
+Nodes (22): writer_test_dir(), path, output_path(), string, patterned_bytes(), vector, byte, size_t (+14 more)
+
+### Community 0 - "Bulk Extraction Tests Cpp"
+Cohesion: 0.06
+Nodes (68): bulk_extraction_test_dir(), path, output_path(), string_view, bytes_from_text(), vector, byte, patterned_bytes() (+60 more)
+
+### Community 61 - "Compatibility Warning Tests Cpp"
+Cohesion: 0.23
+Nodes (21): warning_test_dir(), path, source_root(), unique_output_path(), string_view, bytes_from_text(), vector, byte (+13 more)
+
+### Community 80 - "Recording Sink"
+Cohesion: 0.18
+Nodes (15): router_vector(), vector, byte, read_text_file(), string, path, recording_sink, payload_sink (+7 more)
+
+### Community 131 - "Coverage Audit Matrix Docs Tests"
 Cohesion: 0.36
-Nodes (8): error_code, json, path, string_view, error_code_from_manifest(), generated_archive_dir(), generated_archive_path(), read_json_file()
+Nodes (9): source_root(), path, read_text_file(), string, require_all_tokens(), string_view, initializer_list, require_no_tokens() (+1 more)
 
-### Community 145 - "benchmark_policy_tests.cpp"
-Cohesion: 0.33
-Nodes (8): initializer_list, path, string, string_view, read_text_file(), require_all_tokens(), require_no_tokens(), source_root()
+### Community 97 - "Format Case"
+Cohesion: 0.15
+Nodes (15): read_u32_le(), uint32_t, vector, byte, size_t, chunk(), texture_chunk_metadata, uint16_t (+7 more)
 
-### Community 146 - "target_format_policy_tests.cpp"
-Cohesion: 0.42
-Nodes (8): compatibility_warning_codes_from_public_header(), path, string, vector, guide_has_warning_entry(), read_text_file(), source_root(), trim_copy()
+### Community 147 - "Deflate Codec Tests Cpp"
+Cohesion: 0.40
+Nodes (5): deflate_vector(), vector, byte, impossible_byte_vector_size(), size_t
 
-### Community 147 - "validation_options"
-Cohesion: 0.25
-Nodes (8): archive_type, archive_variant, uint64_t, validation_options, expected_type, expected_variant, max_extractability_entry_bytes, validate_entry_extractability
-
-### Community 148 - "collecting_sink"
-Cohesion: 0.29
-Nodes (7): collecting_sink, bytes_, byte, payload_sink, size_t, span, vector
-
-### Community 149 - "tes4_bsa_writer_tests.cpp"
+### Community 132 - "Docs Policy Tests Cpp"
 Cohesion: 0.38
-Nodes (10): path, string, generated_source_dir(), non_ascii_output_path(), non_ascii_source_dir(), output_path(), target_name(), utf8_string_from_path() (+2 more)
+Nodes (9): source_root(), path, read_text_file(), string, require_all_tokens(), string_view, initializer_list, require_no_tokens() (+1 more)
 
-### Community 150 - "thread_safety_docs_policy_tests.cpp"
-Cohesion: 0.32
-Nodes (7): initializer_list, path, string, string_view, read_text_file(), require_all_tokens(), source_root()
+### Community 150 - "Export Surface Policy Tests Cpp"
+Cohesion: 0.60
+Nodes (4): source_root(), path, read_text_file(), string
 
-### Community 151 - "Distinct Sink Contract"
-Cohesion: 0.33
-Nodes (7): Bulk Extraction Contract, Bulk Extract Flow, Distinct Sink Contract, Isolated Object Ownership, archive_reader Concurrency, Validation Concurrency, Writer Object Concurrency
+### Community 133 - "Host File Path Tests Cpp"
+Cohesion: 0.42
+Nodes (9): project_root(), path, host_file_path_source_path(), host_file_path_header_path(), read_text_file(), string, unique_non_ascii_host_path(), utf8_string_from_path() (+1 more)
 
-### Community 152 - "ba2_dx10_writer_options"
-Cohesion: 0.29
-Nodes (7): ba2_dx10_writer_options, deduplicate_payloads, max_decoded_chunk_bytes, overwrite_existing, starfield_compression_method, starfield_unknown1, starfield_unknown2
+### Community 70 - "Host File Tests Cpp"
+Cohesion: 0.18
+Nodes (18): test_context(), host_file_context, source_test_dir(), path, source_path(), string_view, unique_source_path(), bytes_from_text() (+10 more)
 
-### Community 153 - "bulk_request_group"
-Cohesion: 0.40
-Nodes (5): bulk_request_group, path, result_indices, size_t, string
+### Community 84 - "Writer Host Path Inventory Case"
+Cohesion: 0.14
+Nodes (16): source_root(), path, read_text_file(), string, writer_host_path_inventory_case, string_view, family, source_file (+8 more)
 
-### Community 154 - "read_ba2_dx10_names"
-Cohesion: 0.33
-Nodes (5): string, uint32_t, uint64_t, vector, read_ba2_dx10_names()
+### Community 11 - "Host Path Correctness Boundary Tests"
+Cohesion: 0.07
+Nodes (54): project_root(), path, suite_source_path(), tests_cmake_path(), generated_archive_dir(), read_text_file(), string, contains_text() (+46 more)
 
-### Community 155 - ".write"
-Cohesion: 0.33
-Nodes (5): byte, payload_sink, size_t, span, discard_payload_sink
+### Community 28 - "Local Game Fixture Tests Cpp"
+Cohesion: 0.11
+Nodes (33): local_fixture_root(), optional, path, bsarchpro_expected_manifest_path(), read_json_file(), json, archive_path_from_manifest(), archive_type_from_string() (+25 more)
 
-### Community 156 - "TES5Edit Read-Only Boundary"
-Cohesion: 0.40
-Nodes (5): TES5Edit Read-Only CI Gate, TES5Edit Read-Only Boundary, TES5Edit Boundary, TES5Edit Reference Boundary, TES5Edit Fixture Boundary
+### Community 85 - "Recording Sink Tests"
+Cohesion: 0.19
+Nodes (14): lz4_vector(), vector, byte, impossible_byte_vector_size(), size_t, recording_sink, payload_sink, result (+6 more)
 
-### Community 157 - "GitHub Issues as Tracker"
-Cohesion: 0.40
-Nodes (5): GitHub Issue Tracker Contract, GitHub Issues as Tracker, Pull Requests Excluded from Triage, Wayfinder Issue Map, Canonical Triage Roles
+### Community 134 - "Parser Preparer Seam Policy Tests"
+Cohesion: 0.38
+Nodes (9): source_root(), path, read_text_file(), string, function_body(), string_view, require_all_tokens(), span (+1 more)
 
-### Community 158 - "archive_policy_expectation"
-Cohesion: 0.40
-Nodes (5): archive_policy_expectation, later_default, oblivion_default, policy, archive_compression_policy
+### Community 138 - "Parser Primitives Tests Cpp"
+Cohesion: 0.31
+Nodes (7): impossible_string_size(), size_t, impossible_vector_capacity(), impossible_set_capacity(), temp_file_cleanup, path, path_
 
-### Community 159 - "find_source_root_from"
+### Community 40 - "Byte Cluster"
+Cohesion: 0.15
+Nodes (21): memory_source, detail::payload_source, vector, byte, result, size_t, span, bytes_ (+13 more)
+
+### Community 53 - "Stored Payload Tests Cpp"
+Cohesion: 0.14
+Nodes (21): unique_test_root(), path, scoped_test_root, path, collecting_stream_buffer, streambuf, size_t, streamsize (+13 more)
+
+### Community 139 - "Target Format Policy Tests Cpp"
+Cohesion: 0.47
+Nodes (8): source_root(), path, read_text_file(), string, trim_copy(), compatibility_warning_codes_from_public_header(), vector, guide_has_warning_entry()
+
+### Community 18 - "Tes3 Bsa Reader Tests Cpp"
+Cohesion: 0.10
+Nodes (48): generated_archive_dir(), path, generated_archive_path(), string_view, read_json_file(), json, hex_u64_from_manifest(), uint64_t (+40 more)
+
+### Community 14 - "Tes3 Bsa Writer Tests Cpp"
+Cohesion: 0.09
+Nodes (52): writer_test_dir(), path, output_path(), string, non_ascii_output_path(), string_view, utf8_string_from_path(), write_binary_file() (+44 more)
+
+### Community 125 - "Tes4 Bsa Parser Seam Tests"
+Cohesion: 0.27
+Nodes (10): generated_archive_path(), path, string_view, read_binary_file(), vector, byte, read_u32_le(), uint32_t (+2 more)
+
+### Community 26 - "Tes4 Bsa Profile Ownership Policy"
+Cohesion: 0.13
+Nodes (39): source_unit, path, path, string, text, code, source_range, size_t (+31 more)
+
+### Community 123 - "Archive Policy Expectation"
+Cohesion: 0.18
+Nodes (10): uint32_t, texture_with_format(), texture_metadata, archive_policy_expectation, archive_compression_policy, policy, oblivion_default, later_default (+2 more)
+
+### Community 105 - "Profile Expectation"
+Cohesion: 0.14
+Nodes (14): profile_expectation, version, tes4_bsa_target, target, tes4_folder_record_shape, folder_shape, size_t, folder_record_size (+6 more)
+
+### Community 23 - "Tes4 Bsa Reader Tests Cpp"
+Cohesion: 0.10
+Nodes (40): generated_archive_dir(), path, generated_archive_path(), string_view, expected_default_compression(), entry_compression, uint32_t, success_fixture (+32 more)
+
+### Community 16 - "Tes4 Bsa Writer Tests Cpp"
+Cohesion: 0.08
+Nodes (48): native_handle_guard, HANDLE, handle_, writer_test_dir(), path, generated_source_dir(), output_path(), string (+40 more)
+
+### Community 151 - "Find Source Root From"
 Cohesion: 0.80
-Nodes (4): find_source_root_from(), path, is_source_root(), source_root()
+Nodes (4): is_source_root(), path, find_source_root_from(), source_root()
 
-### Community 160 - "host_file_writer_name_tests.cpp"
-Cohesion: 0.50
-Nodes (4): path, string, read_text_file(), source_root()
+### Community 142 - "Thread Safety Docs Policy Tests"
+Cohesion: 0.39
+Nodes (7): source_root(), path, read_text_file(), string, require_all_tokens(), string_view, initializer_list
 
-### Community 162 - "read_text_file"
-Cohesion: 0.50
-Nodes (4): path, string, read_text_file(), source_root()
+### Community 13 - "Validation Api Tests Cpp"
+Cohesion: 0.09
+Nodes (53): validation_archive_case, string_view, file_name, archive_type, expected_type, archive_variant, expected_variant, uint32_t (+45 more)
 
-### Community 163 - "read_text_file"
-Cohesion: 0.50
-Nodes (4): path, string, read_text_file(), source_root()
+### Community 41 - "Validation Policy Tests Cpp"
+Cohesion: 0.16
+Nodes (29): source_root(), path, read_text_file(), string, command_succeeds(), quoted_path(), trim_copy(), compatibility_warning_codes_from_public_header() (+21 more)
 
-### Community 164 - "fourcc"
-Cohesion: 0.67
-Nodes (3): array, byte, fourcc()
+### Community 110 - "Writer Execution Options Tests Cpp"
+Cohesion: 0.33
+Nodes (12): writer_execution_test_dir(), path, output_path(), string_view, generated_dx10_source_path(), bytes_from_text(), vector, byte (+4 more)
 
-### Community 165 - "Validation Result and Report Contract"
-Cohesion: 0.67
-Nodes (3): Validation Result and Report Contract, Stable Result Error Branching, Validation Reports
+### Community 111 - "Writer Hotspot Policy Tests Cpp"
+Cohesion: 0.32
+Nodes (12): source_root(), path, read_text_file(), string, function_body(), string_view, require_all_tokens(), span (+4 more)
 
-### Community 166 - "Optional Local Corpus Evidence"
-Cohesion: 0.67
-Nodes (3): Optional Local Corpus Evidence, Deferred Compatibility Gaps, Optional Local Game Fixtures
+### Community 117 - "Writer Ownership Tests Cpp"
+Cohesion: 0.30
+Nodes (11): writer_test_dir(), path, unique_output_path(), string_view, generated_source_dir(), bytes_from_text(), vector, byte (+3 more)
+
+### Community 42 - "Writer Publish Tests Cpp"
+Cohesion: 0.11
+Nodes (26): path_only_publish_callback, result, path, writer_publish_test_dir(), output_path(), string, bytes_from_text(), vector (+18 more)
+
+### Community 102 - "Writer Stage Tests Cpp"
+Cohesion: 0.25
+Nodes (14): stage_test_dir(), path, stage_output_path(), string, write_stage_binary_file(), span, require_gnrl_profile(), ba2_profile (+6 more)
+
+### Community 95 - "Byte Cluster Tests"
+Cohesion: 0.18
+Nodes (16): bytes_from_text(), vector, byte, string_view, read_stage_binary_file(), ba2_gnrl_memory_stage_entry(), ba2_gnrl_prepared_entry, tes4_memory_stage_entry() (+8 more)
+
+### Community 106 - "Serialization Expectation"
+Cohesion: 0.15
+Nodes (14): read_stage_u32_le_at(), uint32_t, size_t, layout_expectation, tes4_bsa_target, target, uint64_t, folder_block_offset (+6 more)
+
+### Community 62 - "Main Cpp Tools"
+Cohesion: 0.21
+Nodes (21): string_view, valid_format_tokens(), path_from_utf8(), lower_ascii(), ascii_iequals(), windows_reserved_device_stem(), is_windows_reserved_device_name(), reject_windows_unsafe_destination_components() (+13 more)
+
+### Community 118 - "Format Descriptor"
+Cohesion: 0.17
+Nodes (12): format_descriptor, token, writer_family, family, description, tes4_bsa_target, tes4_target, ba2_gnrl_target (+4 more)
+
+### Community 86 - "Path Cluster Tools"
+Cohesion: 0.26
+Nodes (17): input_file, path, host_path, archive_path, path_to_utf8(), generic_utf8_path(), vector, parse_compression() (+9 more)
+
+### Community 72 - "String Cluster Tools"
+Cohesion: 0.22
+Nodes (19): string, make_error(), error_code, error_code_name(), warning_code_name(), compatibility_warning_code, warning_severity_name(), compatibility_warning_severity (+11 more)
+
+### Community 68 - "Error Cluster"
+Cohesion: 0.28
+Nodes (21): error, make_usage_error(), archive_type_name(), archive_type, archive_variant_name(), archive_variant, compression_name(), entry_compression (+13 more)
+
+### Community 126 - "Final Path Is Within Root"
+Cohesion: 0.24
+Nodes (10): local_command_line_argv, wchar_t, value, wstring_view, wstring, is_separator(), trim_final_path(), same_windows_prefix() (+2 more)
+
+### Community 112 - "Open Staged Destination"
+Cohesion: 0.29
+Nodes (11): unique_windows_handle, HANDLE, windows_error_message(), DWORD, windows_io_error(), final_path_for_handle(), handle_is_reparse_point(), mark_delete_on_close() (+3 more)
+
+### Community 44 - "File Sink Factory"
+Cohesion: 0.10
+Nodes (23): staged_extraction, temp_path, final_path, overwrite, finished, shared_ptr, discard_staged(), file_payload_sink (+15 more)
+
+### Community 2 - "Libbsa Benchmarks Cpp"
+Cohesion: 0.08
+Nodes (65): benchmark_result, string, scenario, uint32_t, worker_count, elapsed_ms, uint64_t, bytes_processed (+57 more)
+
+### Community 29 - "Libbsa Fixture Policy"
+Cohesion: 0.08
+Nodes (36): libbsa_link_internal_test_support, libbsa_tests, generate_tes4_bsa_fixtures_tool, generate_tes3_bsa_fixtures_tool, generate_tes3_bsa_writer_fixtures_tool, generate_ba2_gnrl_fixtures_tool, generate_ba2_dx10_fixtures_tool, generate_tes4_bsa_fixtures (+28 more)
 
 ## Knowledge Gaps
-- **798 isolated node(s):** `scenario`, `worker_count`, `elapsed_ms`, `bytes_processed`, `correctness_passed` (+793 more)
+- **760 isolated node(s):** `metadata`, `entries`, `host_path`, `bytes_`, `allocation_error_` (+755 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **1 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `result` connect `result` to `bulk_extraction_tests.cpp`, `string`, `libbsa_benchmarks.cpp`, `ba2_record_identity.cpp`, `package-consumer/main.cpp`, `archive_reader_dispatch_tests.cpp`, `tes4_bsa_profile`, `dds_layout.cpp`, `host_path_correctness_boundary_tests.cpp`, `stored_payload.cpp`, `ba2_gnrl_reader_tests.cpp`, `tes3_bsa_reader_tests.cpp`, `tes3_bsa_writer_tests.cpp`, `tes3_prepared_entry`, `entry_metadata`, `tes4_bsa_reader_tests.cpp`, `tes4_bsa_profile.cpp`, `tes4_bsa_header_fields`, `local_game_fixture_tests.cpp`, `binary_reader`, `tes3_bsa_parser.cpp`, `ba2_archive_opening_tests.cpp`, `host_file.cpp`, `ba2_dx10_record`, `ba2_profile`, `byte`, `ba2_dx10_writer_tests.cpp`, `tes4_bsa_prepare.cpp`, `writer_publish_tests.cpp`, `archive_metadata`, `archive_reader::extract_entries`, `file_sink_factory`, `ba2_dx10_extraction_tests.cpp`, `cli/main.cpp`, `unordered_set`, `ba2_gnrl_prepare.cpp`, `writer_publish.cpp`, `byte`, `ba2_dx10_chunk_assembler.cpp`, `ba2_dx10_writer::state`, `ba2_gnrl_layout.cpp`, `ba2_gnrl_write_archive_bytes`, `validation.cpp`, `materialize_entries`, `ba2_dx10_write_archive_bytes`, `ba2_dx10_writer_entry`, `detected_bsa_format`, `host_file_path`, `string`, `path`, `materialize_entries`, `make_byte_vector`, `payload_stream.cpp`, `ba2_dx10_build_writer_entry_snapshot`, `make_tes4_bsa_payload_descriptor`, `tes4_bsa_serialize.cpp`, `write_ba2_gnrl_archive`, `tes3_bsa_writer.cpp`, `dedupe_key`, `payload_sink`, `ba2_archive_source`, `opened_ba2_archive`, `recording_sink`, `decompress_deflate_exact`, `decompress_payload_exact_to_sink`, `parser_primitives.cpp`, `collecting_sink`, `recording_sink`, `commit_staged`, `analyze_dds_source`, `writer_entry_compression`, `extract_file_payload`, `write_tes4_bsa_archive`, `normalize_archive_path`, `decompress_lz4_block_exact`, `ba2_dx10_subresource_snapshot`, `tes4_bsa_constants.hpp`, `collecting_sink`, `read_ba2_dx10_names`, `.write`?**
-  _High betweenness centrality (0.298) - this node is a cross-community bridge._
-- **Why does `tes4_bsa_profile` connect `tes4_bsa_profile` to `string`, `detected_bsa_format`, `tes4_bsa_prepare.cpp`, `make_tes4_bsa_payload_descriptor`, `writer_entry_compression`, `tes4_bsa_profile.cpp`, `tes4_bsa_header_fields`, `write_tes4_bsa_archive`, `writer_stage_tests.cpp`?**
-  _High betweenness centrality (0.036) - this node is a cross-community bridge._
-- **Why does `host_file_path` connect `host_file_path` to `string`, `host_file_path_tests.cpp`, `ba2_gnrl_writer_tests.cpp`, `stored_payload.cpp`, `ba2_gnrl_reader_tests.cpp`, `tes3_bsa_reader_tests.cpp`, `tes3_prepared_entry`, `entry_metadata`, `writer_stage_tests.cpp`, `tes3_bsa_parser.cpp`, `ba2_archive_opening_tests.cpp`, `host_file.cpp`, `tes4_bsa_prepare.cpp`, `archive_metadata`, `stored_payload_tests.cpp`, `ba2_dx10_extraction_tests.cpp`, `ba2_gnrl_prepare.cpp`, `ba2_gnrl_prepared_entry`, `ba2_dx10_writer::state`, `ba2_gnrl_layout.cpp`, `ba2_gnrl_write_archive_bytes`, `detected_bsa_format`, `host_file_tests.cpp`, `tes3_bsa_writer.cpp`, `payload_sink`, `ba2_archive_source`, `extract_file_payload`, `ba2_gnrl_writer.cpp`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
-- **What connects `scenario`, `worker_count`, `elapsed_ms` to the rest of the system?**
-  _798 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `bulk_extraction_tests.cpp` be split into smaller, more focused modules?**
-  _Cohesion score 0.05798319327731093 - nodes in this community are weakly interconnected._
-- **Should `string` be split into smaller, more focused modules?**
-  _Cohesion score 0.07459505541346974 - nodes in this community are weakly interconnected._
-- **Should `libbsa_benchmarks.cpp` be split into smaller, more focused modules?**
-  _Cohesion score 0.07686453576864535 - nodes in this community are weakly interconnected._
+- **Which BA2 writer seams are exercised by both unit tests and fixture generators?**
+  _The scoped graph combines writer internals, test helpers, and generated compatibility evidence._
+- **Where do archive-format policies cross from public API into format-specific serialization?**
+  _The src and include components expose hubs around profile, planning, and serialization concepts._
+- **How do fixture provenance rules constrain benchmarks and package-consumer verification?**
+  _Semantic document edges connect the fixture policy, benchmark policy, CTest labels, and package smoke tests._

@@ -139,66 +139,101 @@ TEST_CASE("writer_hotspot_policy requires TES4 Stored Payload placement before s
     REQUIRE(serialize_source.find("placement.payload.emit(output)") != std::string::npos);
 }
 
-TEST_CASE(
-    "writer_hotspot_policy requires BA2 GNRL staged dedupe identity "
-    "before exact equality",
-    "[unit][writer_hotspot_policy]") {
+TEST_CASE("writer_hotspot_policy requires BA2 GNRL Stored Payload finalization",
+          "[unit][writer_hotspot_policy]") {
     const auto root = source_root();
     const auto prepare_header = read_text_file(root / "src/formats/ba2/ba2_gnrl_prepare.hpp");
     const auto prepare_source = read_text_file(root / "src/formats/ba2/ba2_gnrl_prepare.cpp");
     const auto layout_source = read_text_file(root / "src/formats/ba2/ba2_gnrl_layout.cpp");
+    const auto serialize_source = read_text_file(root / "src/formats/ba2/ba2_gnrl_serialize.cpp");
     const auto assign_offsets_body =
         function_body(layout_source, "result<void> ba2_gnrl_assign_payload_offsets(");
 
-    constexpr auto staged_identity_contract = std::to_array<std::string_view>({
-        "final_stored_dedupe_hash",
-        "payload_hash",
-        "stored_payload",
+    constexpr auto stored_payload_contract = std::to_array<std::string_view>({
+        "detail::stored_payload payload",
+        "bool is_payload_representative",
+        "std::uint64_t payload_offset",
     });
-    require_all_tokens(prepare_header, staged_identity_contract);
+    require_all_tokens(prepare_header, stored_payload_contract);
 
     constexpr auto prepare_evidence = std::to_array<std::string_view>({
-        "final_stored_dedupe_hash",
-        "ba2_gnrl_final_stored_dedupe_hash",
-        "payload_hash =",
-        "hash_disk_payload",
+        "stable_host_file_session::open",
+        "stored_payload::from_workspace_snapshot",
+        "stored_payload::from_owned_bytes",
+        "const detail::finalization_workspace& workspace",
     });
     require_all_tokens(prepare_source, prepare_evidence);
 
     constexpr auto layout_evidence = std::to_array<std::string_view>({
-        "make_ba2_gnrl_final_stored_dedupe_key",
-        "final_stored_dedupe_hash",
-        "deduplicated_payloads.find",
-        "deduplicated_payloads[",
-        "ba2_gnrl_payloads_equal",
+        "entry.payload.size()",
+        "entry.payload.fingerprint()",
+        "candidate_buckets.find",
+        "entry.payload.exactly_equals(",
     });
     require_all_tokens(assign_offsets_body, layout_evidence);
 
     constexpr auto exact_equality_share_gate = std::to_array<std::string_view>({
-        "auto equal = ba2_gnrl_payloads_equal(entry, "
-        "entries[candidate.entry_index]);",
+        "auto equal =",
+        "entry.payload.exactly_equals(entries[candidate.entry_index].payload)",
         "if (!equal)",
         "if (equal.value())",
         "entry.payload_offset = candidate.offset;",
-        "entry.owns_payload_bytes = false;",
+        "entry.is_payload_representative = false;",
     });
     require_all_tokens(assign_offsets_body, exact_equality_share_gate);
+
+    constexpr auto legacy_prepare_tokens = std::to_array<std::string_view>({
+        "source_path",
+        "resolved_source_path",
+        "stream_from_disk",
+        "owns_payload_bytes",
+        "payload_hash",
+        "final_stored_dedupe_hash",
+        "std::vector<std::byte> stored_payload",
+    });
+    require_absent_tokens(prepare_header, legacy_prepare_tokens);
+
+    constexpr auto legacy_prepare_source_tokens = std::to_array<std::string_view>({
+        "hash_disk_payload",
+        "ba2_gnrl_final_stored_dedupe_hash",
+        "inspect_host_file_size",
+        "for_each_host_file_chunk",
+    });
+    require_absent_tokens(prepare_source, legacy_prepare_source_tokens);
+
+    constexpr auto serializer_source_tokens = std::to_array<std::string_view>({
+        "open_host_file(",
+        "stream_disk_payload",
+        "stream_from_disk",
+        "resolved_source_path",
+    });
+    require_absent_tokens(serialize_source, serializer_source_tokens);
+    REQUIRE(serialize_source.find("entry.payload.emit(output)") != std::string::npos);
 }
 
-TEST_CASE("writer_hotspot_policy requires BA2 GNRL disk-source change diagnostics",
+TEST_CASE("writer_hotspot_policy keeps BA2 GNRL source validation inside stable preparation",
           "[unit][writer_hotspot_policy]") {
-    const auto layout_source =
-        read_text_file(source_root() / "src/formats/ba2/ba2_gnrl_layout.cpp");
+    const auto prepare_source =
+        read_text_file(source_root() / "src/formats/ba2/ba2_gnrl_prepare.cpp");
+    const auto validate_entries_body =
+        function_body(prepare_source, "result<void> ba2_gnrl_validate_entries(");
 
-    constexpr auto disk_change_evidence = std::to_array<std::string_view>({
-        "compare_disk_payload_to_bytes",
-        "compare_disk_payloads",
-        "BA2 GNRL disk source changed during dedupe preparation",
-        "A file that grew after preparation can otherwise compare equal for the",
-        "prepared prefix and corrupt offsets.",
-        "error_code::io_error",
+    constexpr auto stable_preparation_evidence = std::to_array<std::string_view>({
+        "stable_host_file_session::open",
+        "source_size = opened.value().size()",
+        "disk_source->read_exact(source_size)",
+        "stored_payload::from_workspace_snapshot",
+        "std::move(*disk_source)",
     });
-    require_all_tokens(layout_source, disk_change_evidence);
+    require_all_tokens(prepare_source, stable_preparation_evidence);
+
+    constexpr auto forbidden_preflight_tokens = std::to_array<std::string_view>({
+        "resolve_ba2_gnrl_source_path",
+        "stable_host_file_session::open",
+        "inspect_host_file_size",
+        "read_host_file",
+    });
+    require_absent_tokens(validate_entries_body, forbidden_preflight_tokens);
 }
 
 TEST_CASE("writer_hotspot_policy requires truthful BA2 DX10 lifecycle docs",

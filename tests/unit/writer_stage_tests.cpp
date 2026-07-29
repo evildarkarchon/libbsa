@@ -3,6 +3,7 @@
 #include "formats/ba2/ba2_gnrl_layout.hpp"
 #include "formats/ba2/ba2_gnrl_prepare.hpp"
 #include "formats/ba2/ba2_profile.hpp"
+#include "formats/ba2/ba2_gnrl_serialize.hpp"
 #include "formats/bsa/tes3_bsa_layout.hpp"
 #include "formats/bsa/tes3_bsa_prepare.hpp"
 #include "formats/bsa/tes4_bsa_layout.hpp"
@@ -101,30 +102,18 @@ libbsa::formats::bsa::tes4_bsa_profile require_tes4_profile(
 }
 
 libbsa::formats::ba2::ba2_gnrl_prepared_entry ba2_gnrl_memory_stage_entry(
-    std::vector<std::byte> bytes, std::uint64_t hash) {
-    libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
-    entry.archive_path_original = "Meshes/Stage.bin";
-    entry.archive_path_canonical = "meshes/stage.bin";
-    entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
-    entry.raw_size = static_cast<std::uint32_t>(bytes.size());
-    entry.payload_hash = hash;
-    entry.stored_payload = std::move(bytes);
-    return entry;
-}
-
-libbsa::formats::ba2::ba2_gnrl_prepared_entry ba2_gnrl_disk_stage_entry(
-    const std::filesystem::path& path, std::uint32_t raw_size) {
-    libbsa::formats::ba2::ba2_gnrl_prepared_entry entry;
-    entry.archive_path_original = "Meshes/Stage.bin";
-    entry.archive_path_canonical = "meshes/stage.bin";
-    entry.source_path = path.string();
-    auto resolved = libbsa::detail::resolve_host_file_path(entry.source_path);
-    REQUIRE(resolved.has_value());
-    entry.resolved_source_path = std::move(resolved).value();
-    entry.extension = {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}};
-    entry.raw_size = raw_size;
-    entry.stream_from_disk = true;
-    return entry;
+    std::vector<std::byte> bytes) {
+    const auto raw_size = static_cast<std::uint32_t>(bytes.size());
+    return libbsa::formats::ba2::ba2_gnrl_prepared_entry{
+        "Meshes/Stage.bin",
+        "meshes/stage.bin",
+        {std::byte{0x62}, std::byte{0x69}, std::byte{0x6E}, std::byte{0x00}},
+        0U,
+        0U,
+        0U,
+        0U,
+        raw_size,
+        libbsa::detail::stored_payload::from_owned_bytes(std::move(bytes))};
 }
 
 libbsa::formats::bsa::tes4_prepared_entry tes4_memory_stage_entry(std::string file_name,
@@ -281,15 +270,17 @@ TEST_CASE("ba2 gnrl writer preparation stage prepares minimal memory entries",
     libbsa::ba2_gnrl_writer_options options;
     options.compression = libbsa::archive_compression_policy::all_raw;
     const auto profile = require_gnrl_profile(libbsa::ba2_gnrl_target::fallout4, options);
+    auto workspace = reserve_stage_workspace("ba2-gnrl-memory-prepare.ba2");
     auto prepared = libbsa::formats::ba2::ba2_gnrl_prepare_entries(
         profile, options,
-        std::span<const libbsa::formats::ba2::ba2_gnrl_writer_entry>{&entry.value(), 1U}, 1U);
+        std::span<const libbsa::formats::ba2::ba2_gnrl_writer_entry>{&entry.value(), 1U}, 1U,
+        workspace);
 
     REQUIRE(prepared.has_value());
     REQUIRE(prepared.value().size() == 1U);
     CHECK(prepared.value()[0].archive_path_original == "Meshes/Stage/Probe.bin");
     CHECK(prepared.value()[0].raw_size == 9U);
-    CHECK(prepared.value()[0].stored_payload == bytes_from_text("ba2-stage"));
+    CHECK(prepared.value()[0].payload.size() == 9U);
     CHECK(prepared.value()[0].extension[0] == std::byte{0x62});
 }
 
@@ -298,55 +289,80 @@ TEST_CASE("ba2 gnrl writer layout stage toggles duplicate payload reuse",
     const auto payload = bytes_from_text("shared");
     const auto profile = require_gnrl_profile();
 
-    auto distinct = std::vector{ba2_gnrl_memory_stage_entry(payload, 0xA11CEU),
-                                ba2_gnrl_memory_stage_entry(payload, 0xA11CEU)};
+    std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> distinct;
+    distinct.push_back(ba2_gnrl_memory_stage_entry(payload));
+    distinct.push_back(ba2_gnrl_memory_stage_entry(payload));
     std::uint64_t distinct_file_table_offset = 0;
     auto assigned_distinct = libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(
         distinct, profile, false, distinct_file_table_offset);
 
     REQUIRE(assigned_distinct.has_value());
     CHECK(distinct[0].payload_offset != distinct[1].payload_offset);
-    CHECK(distinct[0].owns_payload_bytes);
-    CHECK(distinct[1].owns_payload_bytes);
+    CHECK(distinct[0].is_payload_representative);
+    CHECK(distinct[1].is_payload_representative);
 
-    auto deduped = std::vector{ba2_gnrl_memory_stage_entry(payload, 0xA11CEU),
-                               ba2_gnrl_memory_stage_entry(payload, 0xA11CEU)};
+    std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> deduped;
+    deduped.push_back(ba2_gnrl_memory_stage_entry(payload));
+    deduped.push_back(ba2_gnrl_memory_stage_entry(payload));
     std::uint64_t deduped_file_table_offset = 0;
     auto assigned_deduped = libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(
         deduped, profile, true, deduped_file_table_offset);
 
     REQUIRE(assigned_deduped.has_value());
     CHECK(deduped[0].payload_offset == deduped[1].payload_offset);
-    CHECK(deduped[0].owns_payload_bytes);
-    CHECK_FALSE(deduped[1].owns_payload_bytes);
+    CHECK(deduped[0].is_payload_representative);
+    CHECK_FALSE(deduped[1].is_payload_representative);
     CHECK(deduped_file_table_offset < distinct_file_table_offset);
 }
 
-TEST_CASE("ba2 gnrl writer layout stage compares prepared payload bytes",
-          "[unit][writer-stage][ba2_gnrl_writer]") {
-    const auto payload = bytes_from_text("equal");
-    auto memory_equal = libbsa::formats::ba2::ba2_gnrl_payloads_equal(
-        ba2_gnrl_memory_stage_entry(payload, 0xBEEFU),
-        ba2_gnrl_memory_stage_entry(payload, 0xBEEFU));
+TEST_CASE("ba2 gnrl writer serialization uses snapshots after original sources change",
+          "[unit][writer-stage][ba2_gnrl_writer][snapshot]") {
+    const auto payload = bytes_from_text("ba2 gnrl raw snapshot payload");
+    const auto modified_source = stage_output_path("ba2-gnrl-snapshot-modified.bin");
+    const auto deleted_source = stage_output_path("ba2-gnrl-snapshot-deleted.bin");
+    write_stage_binary_file(modified_source, payload);
+    write_stage_binary_file(deleted_source, payload);
 
-    REQUIRE(memory_equal.has_value());
-    CHECK(memory_equal.value());
+    std::vector<libbsa::formats::ba2::ba2_gnrl_writer_entry> entries;
+    for (const auto& [archive_path, source] :
+         std::array{std::pair{std::string_view{"Meshes/Snapshot/Modified.bin"}, modified_source},
+                    std::pair{std::string_view{"Meshes/Snapshot/Deleted.bin"}, deleted_source}}) {
+        auto entry = libbsa::formats::ba2::ba2_gnrl_make_writer_entry(archive_path, {});
+        REQUIRE(entry.has_value());
+        entry.value().host_path = source.string();
+        entry.value().from_memory = false;
+        entries.push_back(std::move(entry).value());
+    }
 
-    const auto source = stage_output_path("ba2-gnrl-payload-equal.bin");
-    write_stage_binary_file(source, payload);
-    auto disk_equal = libbsa::formats::ba2::ba2_gnrl_payloads_equal(
-        ba2_gnrl_disk_stage_entry(source, static_cast<std::uint32_t>(payload.size())),
-        ba2_gnrl_memory_stage_entry(payload, 0xBEEFU));
+    libbsa::ba2_gnrl_writer_options options;
+    options.compression = libbsa::archive_compression_policy::all_raw;
+    options.deduplicate_payloads = true;
+    const auto profile = require_gnrl_profile(libbsa::ba2_gnrl_target::fallout4, options);
+    auto workspace = reserve_stage_workspace("ba2-gnrl-snapshot-stable-final.ba2");
+    auto prepared =
+        libbsa::formats::ba2::ba2_gnrl_prepare_entries(profile, options, entries, 2U, workspace);
+    REQUIRE(prepared.has_value());
 
-    REQUIRE(disk_equal.has_value());
-    CHECK(disk_equal.value());
+    write_stage_binary_file(modified_source, bytes_from_text("mutated original source"));
+    std::error_code removal_error;
+    REQUIRE(std::filesystem::remove(deleted_source, removal_error));
 
-    auto mismatch = libbsa::formats::ba2::ba2_gnrl_payloads_equal(
-        ba2_gnrl_memory_stage_entry(payload, 0xBEEFU),
-        ba2_gnrl_memory_stage_entry(bytes_from_text("other"), 0xBEEFU));
+    std::uint64_t file_table_offset = 0U;
+    auto placed = libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(
+        prepared.value(), profile, options.deduplicate_payloads, file_table_offset);
+    REQUIRE(placed.has_value());
+    REQUIRE(prepared.value().size() == 2U);
+    CHECK(prepared.value()[0].payload_offset == prepared.value()[1].payload_offset);
 
-    REQUIRE(mismatch.has_value());
-    CHECK_FALSE(mismatch.value());
+    const auto output = stage_output_path("ba2-gnrl-snapshot-stable.ba2");
+    auto serialized = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
+        profile, options, prepared.value(), file_table_offset, output);
+    REQUIRE(serialized.has_value());
+
+    auto opened = libbsa::archive_reader::open(output.string());
+    REQUIRE(opened.has_value());
+    CHECK(opened.value().extract_bytes("Meshes/Snapshot/Modified.bin").value() == payload);
+    CHECK(opened.value().extract_bytes("Meshes/Snapshot/Deleted.bin").value() == payload);
 }
 
 TEST_CASE("tes4 writer preparation stage prepares minimal memory folders",
