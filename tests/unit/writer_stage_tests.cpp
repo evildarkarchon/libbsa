@@ -284,7 +284,7 @@ TEST_CASE("ba2 gnrl writer preparation stage prepares minimal memory entries",
     CHECK(prepared.value()[0].extension[0] == std::byte{0x62});
 }
 
-TEST_CASE("ba2 gnrl writer layout stage toggles duplicate payload reuse",
+TEST_CASE("ba2 gnrl writer layout stage plans distinct and shared payload placements",
           "[unit][writer-stage][ba2_gnrl_writer]") {
     const auto payload = bytes_from_text("shared");
     const auto profile = require_gnrl_profile();
@@ -292,27 +292,29 @@ TEST_CASE("ba2 gnrl writer layout stage toggles duplicate payload reuse",
     std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> distinct;
     distinct.push_back(ba2_gnrl_memory_stage_entry(payload));
     distinct.push_back(ba2_gnrl_memory_stage_entry(payload));
-    std::uint64_t distinct_file_table_offset = 0;
-    auto assigned_distinct = libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(
-        distinct, profile, false, distinct_file_table_offset);
+    auto distinct_plan =
+        libbsa::formats::ba2::ba2_gnrl_plan_placements(std::move(distinct), profile, false);
 
-    REQUIRE(assigned_distinct.has_value());
-    CHECK(distinct[0].payload_offset != distinct[1].payload_offset);
-    CHECK(distinct[0].is_payload_representative);
-    CHECK(distinct[1].is_payload_representative);
+    REQUIRE(distinct_plan.has_value());
+    REQUIRE(distinct_plan.value().records.size() == 2U);
+    REQUIRE(distinct_plan.value().payloads.size() == 2U);
+    CHECK(distinct_plan.value().records[0].payload_index == 0U);
+    CHECK(distinct_plan.value().records[1].payload_index == 1U);
+    CHECK(distinct_plan.value().payloads[0].offset != distinct_plan.value().payloads[1].offset);
 
     std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> deduped;
     deduped.push_back(ba2_gnrl_memory_stage_entry(payload));
     deduped.push_back(ba2_gnrl_memory_stage_entry(payload));
-    std::uint64_t deduped_file_table_offset = 0;
-    auto assigned_deduped = libbsa::formats::ba2::ba2_gnrl_assign_payload_offsets(
-        deduped, profile, true, deduped_file_table_offset);
+    auto deduped_plan =
+        libbsa::formats::ba2::ba2_gnrl_plan_placements(std::move(deduped), profile, true);
 
-    REQUIRE(assigned_deduped.has_value());
-    CHECK(deduped[0].payload_offset == deduped[1].payload_offset);
-    CHECK(deduped[0].is_payload_representative);
-    CHECK_FALSE(deduped[1].is_payload_representative);
-    CHECK(deduped_file_table_offset < distinct_file_table_offset);
+    REQUIRE(deduped_plan.has_value());
+    REQUIRE(deduped_plan.value().records.size() == 2U);
+    REQUIRE(deduped_plan.value().payloads.size() == 1U);
+    CHECK(deduped_plan.value().records[0].payload_index == 0U);
+    CHECK(deduped_plan.value().records[1].payload_index == 0U);
+    CHECK(deduped_plan.value().filename_table_offset <
+          distinct_plan.value().filename_table_offset);
 }
 
 TEST_CASE("ba2 gnrl writer serialization uses snapshots after original sources change",

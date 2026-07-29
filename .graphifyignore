@@ -129,3 +129,4 @@ ruff_output.json
 snapshot_report.html
 TestAppSnapshots*.raw
 Performance CI Test.txt
+*.json
