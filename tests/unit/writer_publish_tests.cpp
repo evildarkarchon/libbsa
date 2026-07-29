@@ -1,15 +1,22 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "formats/ba2/ba2_gnrl_layout.hpp"
+#include "formats/ba2/ba2_gnrl_prepare.hpp"
+#include "formats/ba2/ba2_gnrl_serialize.hpp"
+#include "formats/ba2/ba2_profile.hpp"
+
 #include <detail/writer_publish.hpp>
 #include <detail/parallel_work.hpp>
 
 #include <libbsa/result.hpp>
+#include <libbsa/writer.hpp>
 
 #include <array>
 #include <atomic>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <set>
 #include <span>
 #include <string>
@@ -65,6 +72,15 @@ std::vector<std::byte> bytes_from_text(std::string_view text) {
         bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
     }
     return bytes;
+}
+
+libbsa::formats::ba2::ba2_gnrl_writer_entry gnrl_disk_entry(
+    std::string_view archive_path, const std::filesystem::path& source_path) {
+    auto entry = libbsa::formats::ba2::ba2_gnrl_make_writer_entry(archive_path,
+                                                                  libbsa::ba2_gnrl_entry_options{});
+    REQUIRE(entry.has_value());
+    entry.value().host_path = source_path.string();
+    return std::move(entry).value();
 }
 
 void write_binary_file(const std::filesystem::path& path, std::span<const std::byte> bytes) {
@@ -510,25 +526,120 @@ TEST_CASE("writer_publish cleanup failure never replaces the callback error",
 #endif
 }
 
-TEST_CASE("writer_publish cleans temporary output after callback errors",
-          "[unit][writer_publish][publish]") {
-    const auto archive = output_path("callback-error.ba2");
-    std::filesystem::path observed_temp_dir;
+TEST_CASE("writer_publish cleans the workspace after every finalization stage failure",
+          "[unit][writer_publish][publish][workspace]") {
+    libbsa::ba2_gnrl_writer_options options;
+    options.compression = libbsa::archive_compression_policy::all_raw;
+    auto gnrl_profile = libbsa::formats::ba2::make_ba2_profile_for_gnrl_writer(
+        libbsa::ba2_gnrl_target::fallout4, options);
+    REQUIRE(gnrl_profile.has_value());
 
-    auto published = libbsa::detail::publish_writer_output(
-        archive, false, "BA2 GNRL writer",
-        [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
-            const auto& temp_path = workspace.temporary_archive_path();
-            observed_temp_dir = temp_path.parent_path();
-            write_binary_file(temp_path, bytes_from_text("partial archive"));
-            write_binary_file(workspace.snapshot_path(7U), bytes_from_text("partial snapshot"));
-            return libbsa::error{libbsa::error_code::io_error, "format writer failed"};
-        });
+    SECTION("preparation error after an earlier disk snapshot") {
+        const auto source = output_path("preparation-source.bin");
+        const auto missing_source = source.parent_path() / "missing-source.bin";
+        const auto archive = output_path("preparation-failure.ba2");
+        write_binary_file(source, bytes_from_text("snapshotted before preparation failure"));
+        std::vector<libbsa::formats::ba2::ba2_gnrl_writer_entry> entries;
+        entries.push_back(gnrl_disk_entry("A/Valid.bin", source));
+        entries.push_back(gnrl_disk_entry("B/Missing.bin", missing_source));
 
-    REQUIRE_FALSE(published.has_value());
-    CHECK(published.error().message == "format writer failed");
-    CHECK_FALSE(std::filesystem::exists(archive));
-    CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
+        std::filesystem::path observed_temp_dir;
+        std::optional<libbsa::error> stage_error;
+        auto published = libbsa::detail::publish_writer_output(
+            archive, false, "BA2 GNRL writer",
+            [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+                observed_temp_dir = workspace.temporary_archive_path().parent_path();
+                auto prepared = libbsa::formats::ba2::ba2_gnrl_prepare_entries(
+                    gnrl_profile.value(), options, entries, 1U, workspace);
+                REQUIRE_FALSE(prepared.has_value());
+                CHECK(std::filesystem::exists(workspace.snapshot_path(0U)));
+                stage_error = prepared.error();
+                return prepared.error();
+            });
+
+        REQUIRE_FALSE(published.has_value());
+        REQUIRE(stage_error.has_value());
+        CHECK(published.error().code == stage_error->code);
+        CHECK(published.error().message == stage_error->message);
+        CHECK_FALSE(std::filesystem::exists(archive));
+        CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
+    }
+
+    SECTION("layout error after successful preparation") {
+        const auto source = output_path("layout-source.bin");
+        const auto archive = output_path("layout-failure.ba2");
+        write_binary_file(source, bytes_from_text("snapshotted before layout failure"));
+        std::vector<libbsa::formats::ba2::ba2_gnrl_writer_entry> entries;
+        entries.push_back(gnrl_disk_entry("A/Layout.bin", source));
+        auto dx10_profile = libbsa::formats::ba2::make_ba2_profile_for_dx10_writer(
+            libbsa::ba2_dx10_target::fallout4, libbsa::ba2_dx10_writer_options{});
+        REQUIRE(dx10_profile.has_value());
+
+        std::filesystem::path observed_temp_dir;
+        std::optional<libbsa::error> stage_error;
+        auto published = libbsa::detail::publish_writer_output(
+            archive, false, "BA2 GNRL writer",
+            [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+                observed_temp_dir = workspace.temporary_archive_path().parent_path();
+                auto prepared = libbsa::formats::ba2::ba2_gnrl_prepare_entries(
+                    gnrl_profile.value(), options, entries, 1U, workspace);
+                REQUIRE(prepared.has_value());
+                REQUIRE(std::filesystem::exists(workspace.snapshot_path(0U)));
+
+                auto plan = libbsa::formats::ba2::ba2_gnrl_plan_placements(
+                    std::move(prepared).value(), dx10_profile.value(), false);
+                REQUIRE_FALSE(plan.has_value());
+                stage_error = plan.error();
+                return plan.error();
+            });
+
+        REQUIRE_FALSE(published.has_value());
+        REQUIRE(stage_error.has_value());
+        CHECK(published.error().code == stage_error->code);
+        CHECK(published.error().message == stage_error->message);
+        CHECK_FALSE(std::filesystem::exists(archive));
+        CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
+    }
+
+    SECTION("serialization error after the planned snapshot becomes unavailable") {
+        const auto source = output_path("serialization-source.bin");
+        const auto archive = output_path("serialization-failure.ba2");
+        write_binary_file(source, bytes_from_text("snapshotted before serialization failure"));
+        std::vector<libbsa::formats::ba2::ba2_gnrl_writer_entry> entries;
+        entries.push_back(gnrl_disk_entry("A/Serialization.bin", source));
+
+        std::filesystem::path observed_temp_dir;
+        std::optional<libbsa::error> stage_error;
+        auto published = libbsa::detail::publish_writer_output(
+            archive, false, "BA2 GNRL writer",
+            [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+                observed_temp_dir = workspace.temporary_archive_path().parent_path();
+                auto prepared = libbsa::formats::ba2::ba2_gnrl_prepare_entries(
+                    gnrl_profile.value(), options, entries, 1U, workspace);
+                REQUIRE(prepared.has_value());
+                auto plan = libbsa::formats::ba2::ba2_gnrl_plan_placements(
+                    std::move(prepared).value(), gnrl_profile.value(), false);
+                REQUIRE(plan.has_value());
+
+                std::error_code removal_error;
+                REQUIRE(std::filesystem::remove(workspace.snapshot_path(0U), removal_error));
+                REQUIRE_FALSE(removal_error);
+                auto serialized = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
+                    gnrl_profile.value(), options, plan.value(),
+                    workspace.temporary_archive_path());
+                REQUIRE_FALSE(serialized.has_value());
+                REQUIRE(std::filesystem::exists(workspace.temporary_archive_path()));
+                stage_error = serialized.error();
+                return serialized.error();
+            });
+
+        REQUIRE_FALSE(published.has_value());
+        REQUIRE(stage_error.has_value());
+        CHECK(published.error().code == stage_error->code);
+        CHECK(published.error().message == stage_error->message);
+        CHECK_FALSE(std::filesystem::exists(archive));
+        CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
+    }
 }
 
 TEST_CASE(
@@ -560,7 +671,7 @@ TEST_CASE(
                                   "tes4_write_archive_bytes("},
         writer_source_expectation{"src/formats/ba2/ba2_gnrl_writer.cpp", "BA2 GNRL writer",
                                   "ba2_gnrl_validate_entries(", "make_ba2_profile_for_gnrl_writer(",
-                                  "ba2_gnrl_prepare_entries(", "ba2_gnrl_assign_payload_offsets(",
+                                  "ba2_gnrl_prepare_entries(", "ba2_gnrl_plan_placements(",
                                   "ba2_gnrl_write_archive_bytes("},
         writer_source_expectation{"src/formats/ba2/ba2_dx10_writer.cpp", "BA2 DX10 writer",
                                   "ba2_dx10_validate_entries(", "make_ba2_profile_for_dx10_writer(",

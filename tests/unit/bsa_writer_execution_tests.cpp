@@ -165,23 +165,38 @@ TEST_CASE(
         const auto root = output_path(target_name(target) + "-sources").parent_path();
         const auto serial_output = root / (target_name(target) + "-serial.bsa");
         const auto parallel_output = root / (target_name(target) + "-parallel.bsa");
+        const auto memory_path = std::string{"Meshes/Large/MemoryDuplicate.nif"};
+        const auto& memory_payload = entries.front().second;
 
         libbsa::tes4_bsa_writer_options options;
         options.compression_policy = libbsa::archive_compression_policy::all_compressed;
+        options.deduplicate_payloads = true;
         options.overwrite_existing = true;
 
         libbsa::tes4_bsa_writer serial_writer{target, options};
         add_tes4_sources(serial_writer, root, entries);
+        REQUIRE(serial_writer.add_bytes(memory_path, memory_payload).has_value());
         REQUIRE(serial_writer.write_to(serial_output.string()).has_value());
 
         libbsa::tes4_bsa_writer parallel_writer{target, options};
         add_tes4_sources(parallel_writer, root, entries);
+        REQUIRE(parallel_writer.add_bytes(memory_path, memory_payload).has_value());
         libbsa::write_execution_options execution;
         execution.worker_count = 4U;
         REQUIRE(parallel_writer.write_to(parallel_output.string(), execution).has_value());
 
         CHECK(read_binary_file(parallel_output) == read_binary_file(serial_output));
         require_same_reopened_payloads(serial_output, parallel_output, entries);
+        auto reopened = libbsa::archive_reader::open(parallel_output.string());
+        REQUIRE(reopened.has_value());
+        require_extracted_bytes(reopened.value(), memory_path, memory_payload);
+        auto disk_entry = reopened.value().find(entries.front().first);
+        auto memory_entry = reopened.value().find(memory_path);
+        REQUIRE(disk_entry.has_value());
+        REQUIRE(memory_entry.has_value());
+        REQUIRE(disk_entry.value().has_value());
+        REQUIRE(memory_entry.value().has_value());
+        CHECK(disk_entry.value()->payload_offset == memory_entry.value()->payload_offset);
     }
 }
 

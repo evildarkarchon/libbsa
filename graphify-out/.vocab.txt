@@ -93,6 +93,7 @@ codec
 codes
 collect
 collecting
+collision
 command
 comment
 comments
@@ -181,6 +182,7 @@ discard
 disk
 dispatch
 display
+distinct
 docs
 documentation
 domain
@@ -322,7 +324,6 @@ integration
 internal
 intersects
 invalid
-inventory
 invoke
 isolated
 issue

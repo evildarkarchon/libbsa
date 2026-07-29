@@ -137,15 +137,13 @@ result<void> write_ba2_gnrl_archive(ba2_gnrl_target target, const ba2_gnrl_write
                 return prepared.error();
             }
 
-            std::uint64_t file_table_offset = 0;
-            auto offsets = ba2_gnrl_assign_payload_offsets(
-                prepared.value(), profile.value(), options.deduplicate_payloads, file_table_offset);
-            if (!offsets) {
-                return offsets.error();
+            auto plan = ba2_gnrl_plan_placements(std::move(prepared).value(), profile.value(),
+                                                 options.deduplicate_payloads);
+            if (!plan) {
+                return plan.error();
             }
 
-            return ba2_gnrl_write_archive_bytes(profile.value(), options, prepared.value(),
-                                                file_table_offset,
+            return ba2_gnrl_write_archive_bytes(profile.value(), options, plan.value(),
                                                 workspace.temporary_archive_path());
         });
 }

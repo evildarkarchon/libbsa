@@ -41,13 +41,8 @@ struct ba2_gnrl_prepared_entry {
     std::uint32_t name_hash{};
     std::uint32_t directory_hash{};
     std::uint32_t record_flags{};
-    std::uint64_t payload_offset{};
     std::uint32_t packed_size{};
     std::uint32_t raw_size{};
-    // This temporary expansion-stage marker describes only physical placement;
-    // Stored Payload owns its bytes regardless of whether another record reuses
-    // the representative's offset.
-    bool is_payload_representative{true};
     detail::stored_payload payload;
 };
 

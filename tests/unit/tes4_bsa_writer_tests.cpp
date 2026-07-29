@@ -672,6 +672,32 @@ TEST_CASE("TES4 BSA writer validates the destination before opening disk sources
     CHECK(read_binary_file(archive) == sentinel);
 }
 
+TEST_CASE("TES4 BSA writer validates the destination before an unusable disk source",
+          "[unit][tes4_bsa_writer][publish][workspace][stable-session]") {
+    const auto source = output_path("destination-first-locked-source.nif");
+    const auto archive = output_path("destination-first-locked-existing.bsa");
+    const auto sentinel = bytes_from_text("existing archive");
+    write_binary_file(source, sample_bytes());
+    write_binary_file(archive, sentinel);
+
+    // This handle makes the source unusable if preparation starts, so the
+    // destination diagnostic proves finalization never attempted source I/O.
+    native_handle_guard existing_writer{
+        ::CreateFileW(source.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+                      OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
+    REQUIRE(existing_writer.valid());
+
+    libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3};
+    REQUIRE(writer.add_file("Meshes/DestinationFirst.nif", source.string()).has_value());
+
+    auto written = writer.write_to(archive.string());
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::io_error);
+    CHECK(written.error().message.find("output host path already exists") != std::string::npos);
+    CHECK(read_binary_file(archive) == sentinel);
+}
+
 TEST_CASE("TES4 BSA writer requires explicit archive paths for disk entries",
           "[unit][tes4_bsa_writer]") {
     const auto source = output_path("disk-source.dds");

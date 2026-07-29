@@ -96,13 +96,21 @@ result<void> write_name(stream_writer& writer, std::string_view name) {
     return {};
 }
 
+result<const ba2_gnrl_payload_placement*> payload_for(const ba2_gnrl_placement_plan& plan,
+                                                      const ba2_gnrl_placed_record& record) {
+    if (record.payload_index >= plan.payloads.size()) {
+        return error{error_code::invalid_argument,
+                     "BA2 GNRL placement plan has an invalid payload reference"};
+    }
+    return &plan.payloads[record.payload_index];
+}
+
 }  // namespace
 
-/// Serializes finalized GNRL records and emits only writer-owned Stored Payloads.
+/// Serializes a finalized GNRL placement plan and emits each unique Stored Payload once.
 result<void> ba2_gnrl_write_archive_bytes(const ba2_profile& profile,
                                           const ba2_gnrl_writer_options& options,
-                                          std::span<const ba2_gnrl_prepared_entry> entries,
-                                          std::uint64_t file_table_offset,
+                                          const ba2_gnrl_placement_plan& plan,
                                           const std::filesystem::path& output_path) {
     if (!profile.is_gnrl()) {
         return error{error_code::invalid_argument, "BA2 GNRL serialization profile is not GNRL"};
@@ -119,12 +127,12 @@ result<void> ba2_gnrl_write_archive_bytes(const ba2_profile& profile,
         !(written = writer.write_u32_le(profile.subtype_magic()))) {
         return written.error();
     }
-    auto file_count = checked_u32(entries.size(), "BA2 GNRL file count");
+    auto file_count = checked_u32(plan.records.size(), "BA2 GNRL file count");
     if (!file_count) {
         return file_count.error();
     }
     if (!(written = writer.write_u32_le(file_count.value())) ||
-        !(written = writer.write_u64_le(file_table_offset))) {
+        !(written = writer.write_u64_le(plan.filename_table_offset))) {
         return written.error();
     }
     if (profile.version() >= ba2_starfield_v2_version) {
@@ -145,31 +153,32 @@ result<void> ba2_gnrl_write_archive_bytes(const ba2_profile& profile,
         }
     }
 
-    for (const auto& entry : entries) {
-        if (!(written = writer.write_u32_le(entry.name_hash)) ||
-            !(written = writer.write_bytes(entry.extension)) ||
-            !(written = writer.write_u32_le(entry.directory_hash)) ||
-            !(written = writer.write_u32_le(entry.record_flags)) ||
-            !(written = writer.write_u64_le(entry.payload_offset)) ||
-            !(written = writer.write_u32_le(entry.packed_size)) ||
-            !(written = writer.write_u32_le(entry.raw_size)) ||
+    for (const auto& record : plan.records) {
+        auto placement = payload_for(plan, record);
+        if (!placement) {
+            return placement.error();
+        }
+        if (!(written = writer.write_u32_le(record.name_hash)) ||
+            !(written = writer.write_bytes(record.extension)) ||
+            !(written = writer.write_u32_le(record.directory_hash)) ||
+            !(written = writer.write_u32_le(record.record_flags)) ||
+            !(written = writer.write_u64_le(placement.value()->offset)) ||
+            !(written = writer.write_u32_le(record.packed_size)) ||
+            !(written = writer.write_u32_le(record.raw_size)) ||
             !(written = writer.write_u32_le(ba2_record_sentinel))) {
             return written.error();
         }
     }
 
-    for (const auto& entry : entries) {
-        if (!entry.is_payload_representative) {
-            continue;
-        }
-        auto emitted = entry.payload.emit(output);
+    for (const auto& placement : plan.payloads) {
+        auto emitted = placement.payload.emit(output);
         if (!emitted) {
             return emitted.error();
         }
     }
 
-    for (const auto& entry : entries) {
-        if (!(written = write_name(writer, entry.archive_path_original))) {
+    for (const auto& record : plan.records) {
+        if (!(written = write_name(writer, record.archive_path_original))) {
             return written.error();
         }
     }

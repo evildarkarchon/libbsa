@@ -2,20 +2,51 @@
 
 #include "formats/ba2/ba2_gnrl_prepare.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <span>
+#include <string>
+#include <vector>
 
 namespace libbsa::formats::ba2 {
 
-/// Assigns BA2 GNRL payload offsets and filename-table offset, optionally
-/// reusing duplicate Stored Payloads.
+/// Owns one unique GNRL Stored Payload at its format-assigned archive location.
+struct ba2_gnrl_payload_placement {
+    std::uint64_t offset{};
+    std::uint32_t stored_size{};
+    detail::stored_payload payload;
+};
+
+/// Retains GNRL record metadata and a reference to its physical payload placement.
+struct ba2_gnrl_placed_record {
+    std::string archive_path_original;
+    std::array<std::byte, 4> extension{};
+    std::uint32_t name_hash{};
+    std::uint32_t directory_hash{};
+    std::uint32_t record_flags{};
+    std::uint32_t packed_size{};
+    std::uint32_t raw_size{};
+    std::size_t payload_index{};
+};
+
+/// Owns GNRL records, unique Stored Payloads in physical order, and archive geometry.
+///
+/// Record payload indices refer to placements selected by exact Stored Payload
+/// equality. Distinct zero-length placements intentionally may share the first
+/// payload offset because they emit no bytes and do not advance the cursor.
+struct ba2_gnrl_placement_plan {
+    std::vector<ba2_gnrl_placed_record> records;
+    std::vector<ba2_gnrl_payload_placement> payloads;
+    std::uint64_t filename_table_offset{};
+};
+
+/// Moves prepared GNRL Stored Payloads into a format-owned placement plan.
 ///
 /// Deduplication requests fingerprints only when enabled and treats them as
 /// candidate keys. Shared placement always requires exact Stored Payload
 /// equality.
-result<void> ba2_gnrl_assign_payload_offsets(std::span<ba2_gnrl_prepared_entry> entries,
-                                             const ba2_profile& profile, bool deduplicate_payloads,
-                                             std::uint64_t& file_table_offset);
+result<ba2_gnrl_placement_plan> ba2_gnrl_plan_placements(
+    std::vector<ba2_gnrl_prepared_entry> entries, const ba2_profile& profile,
+    bool deduplicate_payloads);
 
 }  // namespace libbsa::formats::ba2

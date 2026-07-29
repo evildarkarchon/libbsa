@@ -1,5 +1,38 @@
 {
-  "generated_at": "2026-07-29T03:41:53.170745+00:00",
-  "nodes": {},
+  "generated_at": "2026-07-29T11:43:29.905234+00:00",
+  "nodes": {
+    "src_formats_ba2_ba2_gnrl_layout_ba2_gnrl_placement_plan": {
+      "code_fingerprint": "24b16f9ccf23906e16fa70054292d1859617e8d92c8596a802393ae53d3435dc",
+      "label": "ba2_gnrl_placement_plan",
+      "last": "2026-07-29T04:44:27.390237+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-29T04:44:27.390237+00:00",
+          "outcome": "useful",
+          "q": "Implement libbsa issue #31 shared finalization boundary"
+        }
+      ],
+      "score": 0.993298994,
+      "source_file": "src/formats/ba2/ba2_gnrl_layout.hpp",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_formats_bsa_tes4_bsa_layout_tes4_placement_plan": {
+      "code_fingerprint": "3b3447c2854919a80053ef4ad8e76ad2bfc2e059c991121c631a34c9200fc819",
+      "label": "tes4_placement_plan",
+      "last": "2026-07-29T04:44:27.390237+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-29T04:44:27.390237+00:00",
+          "outcome": "useful",
+          "q": "Implement libbsa issue #31 shared finalization boundary"
+        }
+      ],
+      "score": 0.993298994,
+      "source_file": "src/formats/bsa/tes4_bsa_layout.hpp",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
   "version": 1
 }
