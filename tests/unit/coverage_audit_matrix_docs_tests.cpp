@@ -123,7 +123,7 @@ TEST_CASE(
         {"| Round-trip/reopen | Proven |", "`tests/unit/ba2_dx10_writer_tests.cpp`",
          "`tests/unit/archive_reader_dispatch_tests.cpp`", "`tests/unit/validation_api_tests.cpp`",
          "Writer-output archives reopen through `archive_reader`",
-         "Starfield routes preserve texture payload bytes through extraction",
+         "Starfield v2/v3 routes preserve texture payload bytes through extraction",
          "representative Fallout 4 writer output validates with extractability "
          "enabled",
          "`tests/fixtures/generated/archives/ba2_dx10_fo4_manifest.json`",
@@ -216,14 +216,14 @@ TEST_CASE(
                    "extracts it through sink, `extract_bytes`, and bulk extraction paths"});
 
     const auto ba2_dx10 = require_markdown_section(matrix, "### BA2 DX10");
-    require_all_tokens(
-        ba2_dx10, {"| Public/package-consumer API proof | Proven |",
-                   "`package_consumer_smoke` runtime generates a tiny legal "
-                   "BC1 DXT10 DDS input inline",
-                   "creates a writer-produced BA2 DX10 archive",
-                   "opens it through `archive_reader`", "validates it through `validate_archive`",
-                   "extracts the reconstructed DDS through sink, "
-                   "`extract_bytes`, and bulk extraction paths"});
+    require_all_tokens(ba2_dx10, {"| Public/package-consumer API proof | Proven |",
+                                  "`package_consumer_smoke` runtime generates a tiny legal "
+                                  "BC1 DXT10 DDS input inline",
+                                  "creates writer-produced Starfield v2 and v3 DX10 archives",
+                                  "opens them through `archive_reader`",
+                                  "validates them through `validate_archive`",
+                                  "extracts the reconstructed DDS through sink, "
+                                  "`extract_bytes`, and bulk extraction paths"});
 }
 
 TEST_CASE("coverage_audit_matrix preserves direct validation success evidence",
@@ -246,9 +246,10 @@ TEST_CASE("coverage_audit_matrix preserves direct validation success evidence",
     const auto ba2_dx10 = require_markdown_section(matrix, "### BA2 DX10");
     require_all_tokens(
         ba2_dx10, {"| Validation API behavior | Proven |", "`tests/unit/validation_api_tests.cpp`",
-                   "`ba2_dx10_fo4.ba2`", "`ba2_dx10_sfv3.ba2`", "writer-produced Starfield BA2 v3",
-                   "method 0 deflate", "method 3 raw LZ4 block texture routes",
-                   "malformed matrix rows cover BA2 DX10 failures"});
+                   "`ba2_dx10_fo4.ba2`", "`ba2_dx10_sfv3.ba2`",
+                   "writer-produced Starfield BA2 v2 fixed-deflate output",
+                   "Starfield BA2 v3 method 0 deflate", "method 3 raw LZ4 block texture routes",
+                   "covers BA2 DX10 failures through malformed matrix rows"});
 }
 
 TEST_CASE(

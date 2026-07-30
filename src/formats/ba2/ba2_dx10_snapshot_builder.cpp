@@ -139,6 +139,7 @@ result<void> ba2_dx10_validate_texture_format_for_target(ba2_dx10_target target,
                              "SNORM DDS formats"};
             }
             return {};
+        case ba2_dx10_target::starfield_v2:
         case ba2_dx10_target::starfield_v3:
             return {};
     }

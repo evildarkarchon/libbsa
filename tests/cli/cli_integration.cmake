@@ -330,6 +330,7 @@ foreach(token IN ITEMS
     ba2-gnrl-sf-v2
     ba2-gnrl-sf-v3
     ba2-dx10-fo4
+    ba2-dx10-sf-v2
     ba2-dx10-sf-v3)
   require_contains("${stdout}" "${token}" "pack help format table")
 endforeach()
@@ -649,5 +650,13 @@ if(EXISTS "${dx10_source}")
   run_cli(0 stdout stderr unpack "${dx10_archive}" "${dx10_output}")
   if(NOT EXISTS "${dx10_output}/textures/cli/bc1.dds")
     message(FATAL_ERROR "DX10 unpack did not write the expected DDS path")
+  endif()
+
+  set(dx10_v2_archive "${dx10_root}/texture-sf-v2.ba2")
+  set(dx10_v2_output "${dx10_root}/output-sf-v2")
+  run_cli(0 stdout stderr pack --format ba2-dx10-sf-v2 "${dx10_input}" "${dx10_v2_archive}")
+  run_cli(0 stdout stderr unpack "${dx10_v2_archive}" "${dx10_v2_output}")
+  if(NOT EXISTS "${dx10_v2_output}/textures/cli/bc1.dds")
+    message(FATAL_ERROR "Starfield v2 DX10 unpack did not write the expected DDS path")
   endif()
 endif()

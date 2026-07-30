@@ -725,8 +725,8 @@
     "semantic_hash": "9584d6262fa8da73c700e0ecd0a003a1"
   },
   "tests/unit/ba2_writer_execution_tests.cpp": {
-    "mtime": 1785326381.519932,
-    "ast_hash": "4d46f7e56e139980522d988c1e51aefa",
+    "mtime": 1785381327.2175872,
+    "ast_hash": "f891ec60bfa0ad01d98de96c57ea6c38",
     "semantic_hash": ""
   },
   "tests/unit/benchmark_policy_tests.cpp": {
@@ -940,8 +940,8 @@
     "semantic_hash": ""
   },
   "tests/unit/writer_stage_tests.cpp": {
-    "mtime": 1785380773.099466,
-    "ast_hash": "c04fcbe69911f2bf52c2715107f05980",
+    "mtime": 1785381327.2095768,
+    "ast_hash": "f6403541e87ba7c5b8eb3609e62b574e",
     "semantic_hash": ""
   },
   "tools/cli/main.cpp": {

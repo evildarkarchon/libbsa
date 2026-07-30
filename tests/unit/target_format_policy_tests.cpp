@@ -100,6 +100,8 @@ TEST_CASE(
     }
 
     REQUIRE(package_source.find("#include <libbsa/libbsa.hpp>") != std::string::npos);
+    REQUIRE(package_source.find("ba2_dx10_target::starfield_v2") != std::string::npos);
+    REQUIRE(docs.find("ba2_dx10_target::starfield_v2") != std::string::npos);
     constexpr std::array<std::string_view, 4> forbidden_direct_public_includes{
         "#include <libbsa/archive.hpp>",
         "#include <libbsa/writer.hpp>",
@@ -187,7 +189,7 @@ TEST_CASE(
     "[unit][target_format_policy][doc_structure]") {
     const auto guide = read_text_file(source_root() / "docs/target-format-guide.md");
 
-    constexpr std::array<std::string_view, 13> required_headings{
+    constexpr std::array<std::string_view, 14> required_headings{
         "## TES3 BSA",
         "## TES4-family BSA v103",
         "## TES4-family BSA v104",
@@ -195,6 +197,7 @@ TEST_CASE(
         "## Fallout 4 BA2 GNRL",
         "## Fallout 4 BA2 DX10",
         "## Starfield BA2 v2 GNRL",
+        "## Starfield BA2 v2 DX10",
         "## Starfield BA2 v3 GNRL",
         "## Starfield BA2 v3 DX10",
         "## deflate",
@@ -210,6 +213,7 @@ TEST_CASE(
 
     REQUIRE(guide.find("tes4_bsa_target::skyrim_se") != std::string::npos);
     REQUIRE(guide.find("ba2_gnrl_target::starfield_v3") != std::string::npos);
+    REQUIRE(guide.find("ba2_dx10_target::starfield_v2") != std::string::npos);
     REQUIRE(guide.find("ba2_dx10_target::starfield_v3") != std::string::npos);
     REQUIRE(guide.find("write_execution_options::worker_count") != std::string::npos);
     REQUIRE(guide.find("entry_compression::deflate") != std::string::npos);

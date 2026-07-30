@@ -134,10 +134,16 @@ result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
         !(written = writer.write_u64_le(plan.filename_table_offset))) {
         return written.error();
     }
-    if (profile.version() >= ba2_starfield_v3_version) {
+    // Starfield v2 introduced Unknown1 and Unknown2. V3 retains those fields
+    // and appends CompressionMethod, so the fields must be gated separately.
+    if (profile.version() >= ba2_starfield_v2_version) {
         if (!(written = writer.write_u32_le(header_options.starfield_unknown1)) ||
-            !(written = writer.write_u32_le(header_options.starfield_unknown2)) ||
-            !(written = writer.write_u32_le(header_options.starfield_compression_method))) {
+            !(written = writer.write_u32_le(header_options.starfield_unknown2))) {
+            return written.error();
+        }
+    }
+    if (profile.version() >= ba2_starfield_v3_version) {
+        if (!(written = writer.write_u32_le(header_options.starfield_compression_method))) {
             return written.error();
         }
     }

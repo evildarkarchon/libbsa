@@ -36,6 +36,8 @@ std::uint32_t version_for(ba2_dx10_target target) noexcept {
     switch (target) {
         case ba2_dx10_target::fallout4:
             return ba2_fallout4_version;
+        case ba2_dx10_target::starfield_v2:
+            return ba2_starfield_v2_version;
         case ba2_dx10_target::starfield_v3:
             return ba2_starfield_v3_version;
     }
@@ -174,6 +176,9 @@ result<ba2_profile> make_ba2_profile_for_dx10_writer(ba2_dx10_target target,
                                                      const ba2_dx10_writer_options& options) {
     switch (target) {
         case ba2_dx10_target::fallout4:
+            return make_profile(version_for(target), ba2_subtype::dx10,
+                                detail::compression_method::deflate);
+        case ba2_dx10_target::starfield_v2:
             return make_profile(version_for(target), ba2_subtype::dx10,
                                 detail::compression_method::deflate);
         case ba2_dx10_target::starfield_v3: {

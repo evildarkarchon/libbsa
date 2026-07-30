@@ -307,13 +307,16 @@ libbsa::result<void> example_create_ba2_gnrl(std::string_view source_host_path,
     return writer.write_to(output_host_path, execution);
 }
 
-libbsa::result<void> example_create_ba2_dx10(std::string_view dds_host_path,
+/// Creates one installed-package BA2 DX10 archive for the selected public
+/// target from a caller-owned DDS host file.
+libbsa::result<void> example_create_ba2_dx10(libbsa::ba2_dx10_target target,
+                                             std::string_view dds_host_path,
                                              std::string_view output_host_path) {
     libbsa::ba2_dx10_writer_options options;
     options.overwrite_existing = true;
     options.starfield_compression_method = 3U;
 
-    libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::starfield_v3, options};
+    libbsa::ba2_dx10_writer writer{target, options};
     if (auto added = writer.add_file("textures/example/example_d.dds", dds_host_path); !added) {
         return added.error();
     }
@@ -405,6 +408,10 @@ libbsa::result<void> verify_archive_runtime_case(const archive_runtime_case& tes
             return fail(libbsa::error_code::format_error,
                         std::string{test_case.label} + " BA2 compression method mismatch");
         }
+    } else if (metadata.value().ba2.has_value() &&
+               metadata.value().ba2->compression_method.has_value()) {
+        return fail(libbsa::error_code::format_error,
+                    std::string{test_case.label} + " has an unexpected BA2 compression method");
     }
 
     auto entries = reader.entries();
@@ -535,12 +542,14 @@ libbsa::result<void> run_installed_package_archive_runtime_smoke() {
     const auto tes3_archive = work_dir / "tes3-package-consumer.bsa";
     const auto tes4_archive = work_dir / "tes4-package-consumer.bsa";
     const auto ba2_gnrl_archive = work_dir / "ba2-gnrl-package-consumer.ba2";
-    const auto ba2_dx10_archive = work_dir / "ba2-dx10-package-consumer.ba2";
+    const auto ba2_dx10_v2_archive = work_dir / "ba2-dx10-v2-package-consumer.ba2";
+    const auto ba2_dx10_v3_archive = work_dir / "ba2-dx10-v3-package-consumer.ba2";
 
     const auto tes3_archive_host_path = host_path_string(tes3_archive);
     const auto tes4_archive_host_path = host_path_string(tes4_archive);
     const auto ba2_gnrl_archive_host_path = host_path_string(ba2_gnrl_archive);
-    const auto ba2_dx10_archive_host_path = host_path_string(ba2_dx10_archive);
+    const auto ba2_dx10_v2_archive_host_path = host_path_string(ba2_dx10_v2_archive);
+    const auto ba2_dx10_v3_archive_host_path = host_path_string(ba2_dx10_v3_archive);
 
     if (auto created = example_create_tes3_bsa(payload_source_host_path, tes3_archive_host_path);
         !created) {
@@ -555,7 +564,13 @@ libbsa::result<void> run_installed_package_archive_runtime_smoke() {
         !created) {
         return created.error();
     }
-    if (auto created = example_create_ba2_dx10(dds_source_host_path, ba2_dx10_archive_host_path);
+    if (auto created = example_create_ba2_dx10(libbsa::ba2_dx10_target::starfield_v2,
+                                               dds_source_host_path, ba2_dx10_v2_archive_host_path);
+        !created) {
+        return created.error();
+    }
+    if (auto created = example_create_ba2_dx10(libbsa::ba2_dx10_target::starfield_v3,
+                                               dds_source_host_path, ba2_dx10_v3_archive_host_path);
         !created) {
         return created.error();
     }
@@ -573,7 +588,11 @@ libbsa::result<void> run_installed_package_archive_runtime_smoke() {
                              libbsa::archive_type::ba2, libbsa::archive_variant::starfield,
                              libbsa::entry_compression::lz4_block, 3U,
                              std::optional<std::uint32_t>{3U}, &payload, false},
-        archive_runtime_case{"BA2 DX10", ba2_dx10_archive_host_path,
+        archive_runtime_case{"BA2 DX10 Starfield v2", ba2_dx10_v2_archive_host_path,
+                             "textures/example/example_d.dds", libbsa::archive_type::ba2,
+                             libbsa::archive_variant::starfield, libbsa::entry_compression::deflate,
+                             2U, std::nullopt, nullptr, true},
+        archive_runtime_case{"BA2 DX10 Starfield v3", ba2_dx10_v3_archive_host_path,
                              "textures/example/example_d.dds", libbsa::archive_type::ba2,
                              libbsa::archive_variant::starfield,
                              libbsa::entry_compression::lz4_block, 3U,
@@ -634,6 +653,8 @@ int example_link_representative_public_api() {
 
     libbsa::ba2_dx10_writer ba2_dx10_writer{libbsa::ba2_dx10_target::fallout4};
     [[maybe_unused]] const auto& ba2_dx10_options = ba2_dx10_writer.options();
+    [[maybe_unused]] const auto ba2_dx10_starfield_v2_target =
+        libbsa::ba2_dx10_target::starfield_v2;
 
     byte_vector_sink_factory factory;
     [[maybe_unused]] const auto& requested = factory.requested_paths();

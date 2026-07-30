@@ -91,6 +91,24 @@ TEST_CASE("ba2_profile writer factories preserve subtype-specific diagnostics",
     CHECK(dx10.error().message == "BA2 DX10 Starfield v3 compression method is unsupported");
 }
 
+TEST_CASE("ba2_profile builds Starfield v2 DX10 writers with fixed deflate semantics",
+          "[unit][ba2_profile][writer][starfield]") {
+    libbsa::ba2_dx10_writer_options options;
+    options.starfield_compression_method = 99U;
+
+    auto profile = libbsa::formats::ba2::make_ba2_profile_for_dx10_writer(
+        libbsa::ba2_dx10_target::starfield_v2, options);
+
+    REQUIRE(profile.has_value());
+    CHECK(profile.value().variant() == libbsa::archive_variant::starfield);
+    CHECK(profile.value().is_dx10());
+    CHECK(profile.value().version() == libbsa::formats::ba2::ba2_starfield_v2_version);
+    CHECK(profile.value().header_size() == libbsa::formats::ba2::ba2_starfield_v2_header_size);
+    CHECK(profile.value().default_compression() == libbsa::entry_compression::deflate);
+    CHECK(profile.value().compressed_payload_method() ==
+          libbsa::detail::compression_method::deflate);
+}
+
 TEST_CASE("ba2_profile maps public BA2 compression metadata to codec methods",
           "[unit][ba2_profile][reader]") {
     auto deflate = libbsa::formats::ba2::ba2_compressed_payload_method(

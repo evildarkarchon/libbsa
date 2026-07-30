@@ -268,7 +268,7 @@ std::vector<ba2_dx10_record_metadata> read_ba2_dx10_record_metadata(
 
     std::vector<ba2_dx10_record_metadata> records;
     records.reserve(file_count);
-    std::size_t record_cursor = version >= 3U ? 36U : 24U;
+    std::size_t record_cursor = version >= 3U ? 36U : (version >= 2U ? 32U : 24U);
     for (std::uint32_t index = 0; index < file_count; ++index) {
         const auto chunk_count = static_cast<unsigned char>(bytes[record_cursor + 13U]);
         records.push_back({{},
@@ -365,7 +365,10 @@ void add_matrix_cases(libbsa::ba2_dx10_writer& writer, const nlohmann::json& man
                       libbsa::ba2_dx10_target target,
                       std::vector<const nlohmann::json*>& added_cases) {
     for (const auto& matrix_case : writer_proof_matrix) {
-        if (matrix_case.target != target) {
+        const bool reuse_starfield_v3_case_for_v2 =
+            target == libbsa::ba2_dx10_target::starfield_v2 &&
+            matrix_case.target == libbsa::ba2_dx10_target::starfield_v3;
+        if (matrix_case.target != target && !reuse_starfield_v3_case_for_v2) {
             continue;
         }
         const auto& source_case = valid_source_case(manifest, matrix_case.id);
@@ -456,22 +459,34 @@ void require_writer_round_trip(libbsa::ba2_dx10_target target,
     CHECK(metadata.value().file_count == added_cases.size());
     CHECK(metadata.value().default_compression == expected_compression);
 
-    if (target == libbsa::ba2_dx10_target::fallout4) {
-        CHECK(metadata.value().variant == libbsa::archive_variant::fallout4);
-        CHECK(metadata.value().version == 1U);
-        REQUIRE(metadata.value().ba2.has_value());
-        CHECK_FALSE(metadata.value().ba2->starfield_unknown1.has_value());
-        CHECK_FALSE(metadata.value().ba2->compression_method.has_value());
-    } else {
-        CHECK(metadata.value().variant == libbsa::archive_variant::starfield);
-        CHECK(metadata.value().version == 3U);
-        REQUIRE(metadata.value().ba2.has_value());
-        REQUIRE(metadata.value().ba2->starfield_unknown1.has_value());
-        CHECK(metadata.value().ba2->starfield_unknown1.value() == 1U);
-        REQUIRE(metadata.value().ba2->starfield_unknown2.has_value());
-        CHECK(metadata.value().ba2->starfield_unknown2.value() == 0U);
-        REQUIRE(metadata.value().ba2->compression_method.has_value());
-        CHECK(metadata.value().ba2->compression_method.value() == starfield_compression_method);
+    REQUIRE(metadata.value().ba2.has_value());
+    switch (target) {
+        case libbsa::ba2_dx10_target::fallout4:
+            CHECK(metadata.value().variant == libbsa::archive_variant::fallout4);
+            CHECK(metadata.value().version == 1U);
+            CHECK_FALSE(metadata.value().ba2->starfield_unknown1.has_value());
+            CHECK_FALSE(metadata.value().ba2->starfield_unknown2.has_value());
+            CHECK_FALSE(metadata.value().ba2->compression_method.has_value());
+            break;
+        case libbsa::ba2_dx10_target::starfield_v2:
+            CHECK(metadata.value().variant == libbsa::archive_variant::starfield);
+            CHECK(metadata.value().version == 2U);
+            REQUIRE(metadata.value().ba2->starfield_unknown1.has_value());
+            CHECK(metadata.value().ba2->starfield_unknown1.value() == 1U);
+            REQUIRE(metadata.value().ba2->starfield_unknown2.has_value());
+            CHECK(metadata.value().ba2->starfield_unknown2.value() == 0U);
+            CHECK_FALSE(metadata.value().ba2->compression_method.has_value());
+            break;
+        case libbsa::ba2_dx10_target::starfield_v3:
+            CHECK(metadata.value().variant == libbsa::archive_variant::starfield);
+            CHECK(metadata.value().version == 3U);
+            REQUIRE(metadata.value().ba2->starfield_unknown1.has_value());
+            CHECK(metadata.value().ba2->starfield_unknown1.value() == 1U);
+            REQUIRE(metadata.value().ba2->starfield_unknown2.has_value());
+            CHECK(metadata.value().ba2->starfield_unknown2.value() == 0U);
+            REQUIRE(metadata.value().ba2->compression_method.has_value());
+            CHECK(metadata.value().ba2->compression_method.value() == starfield_compression_method);
+            break;
     }
 
     auto entries = opened.value().entries();
@@ -1130,6 +1145,14 @@ TEST_CASE(
     // avoid raw per-entry overrides.
     require_writer_round_trip(libbsa::ba2_dx10_target::fallout4, 3U, "fo4-dx10-writer",
                               libbsa::entry_compression::deflate);
+}
+
+TEST_CASE(
+    "ba2_dx10_writer reopens starfield v2 deflate compression archives "
+    "through archive_reader",
+    "[unit][ba2_dx10_writer][starfield][compression]") {
+    require_writer_round_trip(libbsa::ba2_dx10_target::starfield_v2, 99U,
+                              "starfield-v2-dx10-writer", libbsa::entry_compression::deflate);
 }
 
 TEST_CASE(

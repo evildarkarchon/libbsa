@@ -105,6 +105,7 @@ static_assert(requires(libbsa::ba2_gnrl_writer& writer, std::span<const std::byt
 // BEGIN ba2_dx10_public_contract_assertions
 static_assert(requires(libbsa::ba2_dx10_writer& writer) {
     { libbsa::ba2_dx10_target::fallout4 } -> std::same_as<libbsa::ba2_dx10_target>;
+    { libbsa::ba2_dx10_target::starfield_v2 } -> std::same_as<libbsa::ba2_dx10_target>;
     { libbsa::ba2_dx10_target::starfield_v3 } -> std::same_as<libbsa::ba2_dx10_target>;
     { writer.target() } -> std::same_as<libbsa::ba2_dx10_target>;
     { writer.options() } -> std::same_as<const libbsa::ba2_dx10_writer_options&>;
@@ -181,6 +182,7 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
     [[maybe_unused]] libbsa::ba2_gnrl_writer_options ba2_options{};
     [[maybe_unused]] libbsa::ba2_gnrl_entry_options ba2_entry_options{};
     [[maybe_unused]] auto ba2_dx10_target = libbsa::ba2_dx10_target::fallout4;
+    [[maybe_unused]] auto ba2_dx10_starfield_v2_target = libbsa::ba2_dx10_target::starfield_v2;
     [[maybe_unused]] auto ba2_dx10_starfield_target = libbsa::ba2_dx10_target::starfield_v3;
     [[maybe_unused]] libbsa::ba2_dx10_writer_options ba2_dx10_options{};
     [[maybe_unused]] auto compression = libbsa::entry_compression_policy::inherit;

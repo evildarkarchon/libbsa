@@ -32,6 +32,10 @@ Fallout 4 BA2 DX10 archives are texture archives created with `ba2_dx10_target::
 
 Starfield BA2 v2 GNRL archives expose `ba2_archive_metadata::starfield_unknown1` and `starfield_unknown2` and retain deflate routing for compressed entries. Consumers create this target with `ba2_gnrl_target::starfield_v2`; the Starfield header fields are supplied through `ba2_gnrl_writer_options`.
 
+## Starfield BA2 v2 DX10
+
+Starfield BA2 v2 DX10 archives are texture archives created with `ba2_dx10_target::starfield_v2`. They accept the same DDS texture formats and preserve the same dimensions, mip ranges, arrays, and cubemap metadata as the Starfield v3 target, but compressed chunks always use deflate. The v2 header stores `starfield_unknown1` and `starfield_unknown2` and has no `CompressionMethod`; `ba2_dx10_writer_options::starfield_compression_method` is therefore ignored for this target.
+
 ## Starfield BA2 v3 GNRL
 
 Starfield BA2 v3 GNRL archives add `ba2_archive_metadata::compression_method`. For writer targets using `ba2_gnrl_target::starfield_v3`, `ba2_gnrl_writer_options::starfield_compression_method == 3` routes compressed entries through raw LZ4 block compression; method `0` routes compressed entries through deflate.
@@ -42,7 +46,7 @@ Starfield BA2 v3 DX10 archives are texture archives created with `ba2_dx10_targe
 
 ## deflate
 
-Deflate is used for TES4-family v103/v104 BSA compressed entries, Fallout 4 BA2 compressed entries, Starfield BA2 v2 GNRL compressed entries, and Starfield BA2 v3 routes where the selected `CompressionMethod` is the deflate-compatible method. The public API reports this as `entry_compression::deflate` and keeps libdeflate private.
+Deflate is used for TES4-family v103/v104 BSA compressed entries, Fallout 4 BA2 compressed entries, Starfield BA2 v2 GNRL compressed entries and DX10 chunks, and Starfield BA2 v3 routes where the selected `CompressionMethod` is the deflate-compatible method. The public API reports this as `entry_compression::deflate` and keeps libdeflate private.
 
 ## LZ4 frame
 
@@ -59,7 +63,7 @@ Public writers use target enums instead of raw archive flags:
 - `tes3_bsa_writer` creates raw TES3/Morrowind BSA archives.
 - `tes4_bsa_writer` uses `tes4_bsa_target::oblivion`, `tes4_bsa_target::fallout3`, or `tes4_bsa_target::skyrim_se`.
 - `ba2_gnrl_writer` uses `ba2_gnrl_target::fallout4`, `ba2_gnrl_target::starfield_v2`, or `ba2_gnrl_target::starfield_v3`.
-- `ba2_dx10_writer` uses `ba2_dx10_target::fallout4` or `ba2_dx10_target::starfield_v3`.
+- `ba2_dx10_writer` uses `ba2_dx10_target::fallout4`, `ba2_dx10_target::starfield_v2`, or `ba2_dx10_target::starfield_v3`.
 - `write_execution_options::worker_count` is supplied at `write_to` time, must be positive, defaults to serial behavior, and is separate from target compatibility options.
 - `archive_compression_policy` and `entry_compression_policy` select target-default, raw, or compressed entry routing where the archive family supports those choices.
 

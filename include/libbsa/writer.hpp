@@ -57,9 +57,13 @@ enum class ba2_gnrl_target {
 /// The selected profile controls the serialized BA2 texture archive version and
 /// target-routed compressed chunk codec while keeping codec details out of the
 /// public C++20 header surface.
+///
+/// Existing enumerator values remain stable as targets are added; these values
+/// select profiles and are not serialized as archive versions.
 enum class ba2_dx10_target {
     fallout4,
     starfield_v3,
+    starfield_v2,
 };
 
 /// Write-call execution controls shared by public writer finalization APIs.
@@ -147,18 +151,18 @@ struct ba2_dx10_writer_options {
     /// is representable.
     std::uint32_t max_decoded_chunk_bytes = 0U;
 
-    /// Starfield v3 Unknown1 header value; ignored for Fallout 4 v1 targets.
+    /// Starfield v2/v3 Unknown1 header value; ignored for Fallout 4 v1 targets.
     ///
     /// xEdit/BSArchPro-derived Starfield write defaults use `1`, while callers
     /// can override this compatibility field when preserving known archive
     /// metadata.
     std::uint32_t starfield_unknown1 = 1U;
 
-    /// Starfield v3 Unknown2 header value; ignored for Fallout 4 v1 targets.
+    /// Starfield v2/v3 Unknown2 header value; ignored for Fallout 4 v1 targets.
     std::uint32_t starfield_unknown2 = 0U;
 
     /// Starfield v3 archive-wide compression method; ignored by Fallout 4 v1
-    /// targets.
+    /// and Starfield v2 targets.
     ///
     /// Method `3` is the default compressed chunk route for Starfield v3 texture
     /// archives, while method `0` remains available for compatibility cases.
