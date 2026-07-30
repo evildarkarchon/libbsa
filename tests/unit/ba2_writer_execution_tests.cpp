@@ -177,6 +177,7 @@ void require_dx10_outputs_match(const std::filesystem::path& serial_output,
     REQUIRE(serial_reader.has_value());
     auto parallel_reader = libbsa::archive_reader::open(parallel_output.string());
     REQUIRE(parallel_reader.has_value());
+    CHECK(read_binary_file(parallel_output) == read_binary_file(serial_output));
 
     auto serial_metadata = serial_reader.value().metadata();
     auto parallel_metadata = parallel_reader.value().metadata();
@@ -197,12 +198,23 @@ void require_dx10_outputs_match(const std::filesystem::path& serial_output,
         REQUIRE(parallel_found.value().has_value());
         REQUIRE(serial_found.value()->texture.has_value());
         REQUIRE(parallel_found.value()->texture.has_value());
+        const auto& serial_texture = serial_found.value()->texture.value();
+        const auto& parallel_texture = parallel_found.value()->texture.value();
         CHECK(parallel_found.value()->texture->dxgi_format == entry.source.metadata.dxgi_format);
         CHECK(parallel_found.value()->texture->mip_count == entry.source.metadata.mip_count);
         CHECK(parallel_found.value()->texture->array_size == entry.source.metadata.array_size);
 
-        for (const auto& chunk : parallel_found.value()->texture->chunks) {
-            CHECK(chunk.compression == expected_compression);
+        REQUIRE(parallel_texture.chunks.size() == serial_texture.chunks.size());
+        for (std::size_t index = 0; index < parallel_texture.chunks.size(); ++index) {
+            const auto& serial_chunk = serial_texture.chunks[index];
+            const auto& parallel_chunk = parallel_texture.chunks[index];
+            CHECK(parallel_chunk.payload_offset == serial_chunk.payload_offset);
+            CHECK(parallel_chunk.stored_size == serial_chunk.stored_size);
+            CHECK(parallel_chunk.raw_size == serial_chunk.raw_size);
+            CHECK(parallel_chunk.start_mip == serial_chunk.start_mip);
+            CHECK(parallel_chunk.end_mip == serial_chunk.end_mip);
+            CHECK(parallel_chunk.compression == expected_compression);
+            CHECK(parallel_chunk.compression == serial_chunk.compression);
         }
 
         auto serial_bytes = serial_reader.value().extract_bytes(entry.archive_path);

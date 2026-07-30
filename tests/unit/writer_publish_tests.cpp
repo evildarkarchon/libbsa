@@ -675,7 +675,7 @@ TEST_CASE(
                                   "ba2_gnrl_write_archive_bytes("},
         writer_source_expectation{"src/formats/ba2/ba2_dx10_writer.cpp", "BA2 DX10 writer",
                                   "ba2_dx10_validate_entries(", "make_ba2_profile_for_dx10_writer(",
-                                  "ba2_dx10_prepare_entries(", "ba2_dx10_assign_payload_offsets(",
+                                  "ba2_dx10_prepare_entries(", "ba2_dx10_plan_placements(",
                                   "ba2_dx10_write_archive_bytes("},
     };
 

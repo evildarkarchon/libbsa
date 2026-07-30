@@ -5,20 +5,24 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <span>
 
 namespace libbsa::formats::ba2 {
 
-/// Writes prepared BA2 DX10 archive bytes to the temporary output path supplied
-/// by the publish helper.
+/// Retains only the version-gated public option fields stored in a DX10 header.
+struct ba2_dx10_stored_header_options {
+    std::uint32_t starfield_unknown1{1U};
+    std::uint32_t starfield_unknown2{0U};
+    std::uint32_t starfield_compression_method{3U};
+};
+
+/// Writes a BA2 DX10 Placement Plan to the publish helper's temporary path.
 ///
-/// `options` supplies version-gated raw header fields without placing per-archive
-/// metadata in the reusable BA2 Profile. Representative chunk bytes are emitted
-/// only through their Stored Payload interface.
+/// `header_options` supplies only version-gated stored fields without placing
+/// per-archive metadata in the reusable BA2 Profile. The plan remains
+/// authoritative for offsets, sharing, filename geometry, and emission order.
 result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
-                                          const ba2_dx10_writer_options& options,
-                                          std::span<const ba2_dx10_prepared_entry> entries,
-                                          std::uint64_t file_table_offset,
+                                          const ba2_dx10_stored_header_options& header_options,
+                                          const ba2_dx10_placement_plan& plan,
                                           const std::filesystem::path& output_path);
 
 }  // namespace libbsa::formats::ba2

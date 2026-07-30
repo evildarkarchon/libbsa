@@ -1192,9 +1192,12 @@ TEST_CASE(
     REQUIRE(extracted_first.has_value());
     auto extracted_duplicate = opened.value().extract_bytes("textures/dedupe/b.dds");
     REQUIRE(extracted_duplicate.has_value());
-    const auto source = libbsa::texture::analyze_dds_source(
-        read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>()));
+    const auto source_bytes =
+        read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>());
+    const auto source = libbsa::texture::analyze_dds_source(source_bytes);
     REQUIRE(source.has_value());
+    CHECK(extracted_first.value() == source_bytes);
+    CHECK(extracted_duplicate.value() == source_bytes);
     require_extracted_matches_source(extracted_first.value(), source.value());
     require_extracted_matches_source(extracted_duplicate.value(), source.value());
 }
@@ -1229,9 +1232,12 @@ TEST_CASE(
     REQUIRE(extracted_first.has_value());
     auto extracted_duplicate = opened.value().extract_bytes("textures/dedupe/b.dds");
     REQUIRE(extracted_duplicate.has_value());
-    const auto source = libbsa::texture::analyze_dds_source(
-        read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>()));
+    const auto source_bytes =
+        read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>());
+    const auto source = libbsa::texture::analyze_dds_source(source_bytes);
     REQUIRE(source.has_value());
+    CHECK(extracted_first.value() == source_bytes);
+    CHECK(extracted_duplicate.value() == source_bytes);
     require_extracted_matches_source(extracted_first.value(), source.value());
     require_extracted_matches_source(extracted_duplicate.value(), source.value());
 }

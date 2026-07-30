@@ -145,6 +145,12 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target, const ba2_dx10_write
         return validated.error();
     }
 
+    const ba2_dx10_stored_header_options stored_header_options{
+        options.starfield_unknown1,
+        options.starfield_unknown2,
+        options.starfield_compression_method,
+    };
+
     return detail::publish_writer_output(
         output_path.value().resolved, options.overwrite_existing, "BA2 DX10 writer",
         [&](const detail::finalization_workspace& workspace) -> result<void> {
@@ -154,16 +160,14 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target, const ba2_dx10_write
                 return prepared.error();
             }
 
-            std::uint64_t file_table_offset = 0;
-            auto offsets = ba2_dx10_assign_payload_offsets(
-                prepared.value(), profile.value(), options.deduplicate_payloads, file_table_offset);
-            if (!offsets) {
-                return offsets.error();
+            auto plan = ba2_dx10_plan_placements(std::move(prepared).value(), profile.value(),
+                                                 options.deduplicate_payloads);
+            if (!plan) {
+                return plan.error();
             }
 
-            return ba2_dx10_write_archive_bytes(profile.value(), options, prepared.value(),
-                                                file_table_offset,
-                                                workspace.temporary_archive_path());
+            return ba2_dx10_write_archive_bytes(profile.value(), stored_header_options,
+                                                plan.value(), workspace.temporary_archive_path());
         });
 }
 

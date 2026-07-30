@@ -12,11 +12,6 @@ namespace libbsa::formats::ba2 {
 
 namespace {
 
-struct payload_assignment {
-    std::uint64_t offset{};
-    const detail::stored_payload* payload{};
-};
-
 struct dedupe_key {
     std::uint64_t stored_size{};
     std::uint64_t fingerprint{};
@@ -49,32 +44,72 @@ bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) no
     return true;
 }
 
+bool multiply_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& product) noexcept {
+    if (lhs != 0U && rhs > std::numeric_limits<std::uint64_t>::max() / lhs) {
+        return false;
+    }
+    product = lhs * rhs;
+    return true;
+}
+
+result<void> validate_entry_shape(const ba2_dx10_prepared_entry& entry) {
+    if (entry.chunks.empty()) {
+        return error{error_code::format_error, "BA2 DX10 record has no texture chunks"};
+    }
+    if (entry.chunks.size() > std::numeric_limits<std::uint8_t>::max()) {
+        return error{error_code::format_error, "BA2 DX10 chunk count exceeds UInt8 range"};
+    }
+    if (entry.chunk_count != entry.chunks.size()) {
+        return error{error_code::format_error,
+                     "BA2 DX10 prepared chunk count does not match record metadata"};
+    }
+    if (entry.archive_path_original.size() > std::numeric_limits<std::uint16_t>::max()) {
+        return error{error_code::format_error,
+                     "BA2 DX10 filename-table entry length exceeds UInt16 range"};
+    }
+    return {};
+}
+
 }  // namespace
 
-result<void> ba2_dx10_assign_payload_offsets(std::span<ba2_dx10_prepared_entry> entries,
-                                             const ba2_profile& profile, bool deduplicate_payloads,
-                                             std::uint64_t& file_table_offset) {
+result<ba2_dx10_placement_plan> ba2_dx10_plan_placements(
+    std::vector<ba2_dx10_prepared_entry> entries, const ba2_profile& profile,
+    bool deduplicate_payloads) {
     if (!profile.is_dx10()) {
         return error{error_code::invalid_argument, "BA2 DX10 layout profile is not DX10"};
     }
+    if (entries.size() > std::numeric_limits<std::uint32_t>::max()) {
+        return error{error_code::format_error, "BA2 DX10 file count exceeds UInt32 range"};
+    }
 
     std::uint64_t record_bytes = 0;
+    std::size_t total_chunks = 0;
     for (const auto& entry : entries) {
+        auto valid = validate_entry_shape(entry);
+        if (!valid) {
+            return valid.error();
+        }
+        std::uint64_t chunk_bytes = 0;
+        if (!multiply_fits_u64(entry.chunks.size(), ba2_dx10_chunk_header_size, chunk_bytes)) {
+            return error{error_code::format_error, "BA2 DX10 chunk table size overflows"};
+        }
         std::uint64_t entry_record_bytes = 0;
-        if (!add_fits_u64(
-                ba2_dx10_record_size,
-                static_cast<std::uint64_t>(entry.chunks.size()) * ba2_dx10_chunk_header_size,
-                entry_record_bytes) ||
+        if (!add_fits_u64(ba2_dx10_record_size, chunk_bytes, entry_record_bytes) ||
             !add_fits_u64(record_bytes, entry_record_bytes, record_bytes)) {
             return error{error_code::format_error, "BA2 DX10 record table size overflows"};
         }
+        if (total_chunks > std::numeric_limits<std::size_t>::max() - entry.chunks.size()) {
+            return error{error_code::format_error, "BA2 DX10 total chunk count overflows"};
+        }
+        total_chunks += entry.chunks.size();
     }
 
-    if (!add_fits_u64(profile.header_size(), record_bytes, file_table_offset)) {
+    ba2_dx10_placement_plan plan;
+    if (!add_fits_u64(profile.header_size(), record_bytes, plan.filename_table_offset)) {
         return error{error_code::format_error, "BA2 DX10 metadata size overflows"};
     }
 
-    std::uint64_t cursor = file_table_offset;
+    std::uint64_t cursor = plan.filename_table_offset;
     for (const auto& entry : entries) {
         std::uint64_t name_bytes = 0;
         if (!add_fits_u64(2U, entry.archive_path_original.size(), name_bytes) ||
@@ -83,48 +118,86 @@ result<void> ba2_dx10_assign_payload_offsets(std::span<ba2_dx10_prepared_entry> 
         }
     }
 
-    std::map<dedupe_key, std::vector<payload_assignment>> candidate_buckets;
+    plan.records.reserve(entries.size());
+    plan.payloads.reserve(total_chunks);
+    std::map<dedupe_key, std::vector<std::size_t>> candidate_buckets;
     for (auto& entry : entries) {
+        ba2_dx10_placed_record record{
+            std::move(entry.archive_path_original),
+            entry.extension,
+            entry.name_hash,
+            entry.directory_hash,
+            entry.unknown_tex,
+            entry.chunk_count,
+            entry.height,
+            entry.width,
+            entry.mip_count,
+            entry.dxgi_format,
+            entry.cube_maps_raw,
+            {},
+        };
+        record.chunks.reserve(entry.chunks.size());
+
         for (auto& chunk : entry.chunks) {
-            chunk.is_payload_representative = true;
+            if (chunk.payload.size() == 0U) {
+                return error{error_code::format_error,
+                             "BA2 DX10 writer refuses to place an empty texture chunk"};
+            }
+
+            std::size_t payload_index = plan.payloads.size();
             std::optional<dedupe_key> identity;
             if (deduplicate_payloads) {
-                // Size, fingerprint, and decode facts only narrow candidates.
-                // Sharing still requires authoritative exact Stored Payload
-                // equality so fingerprint collisions cannot corrupt an archive.
+                // Decode facts join immutable byte facts in the candidate key
+                // because equal stored bytes are not shareable under different
+                // decompression contracts.
                 identity.emplace(dedupe_key{chunk.payload.size(), chunk.payload.fingerprint(),
                                             chunk.raw_size, chunk.packed_size, chunk.compression});
                 const auto bucket = candidate_buckets.find(*identity);
                 if (bucket != candidate_buckets.end()) {
-                    for (const auto& candidate : bucket->second) {
-                        auto equal = chunk.payload.exactly_equals(*candidate.payload);
+                    for (const auto candidate_index : bucket->second) {
+                        // Fingerprints never establish equality; the Stored
+                        // Payload comparison remains the sharing authority.
+                        auto equal =
+                            chunk.payload.exactly_equals(plan.payloads[candidate_index].payload);
                         if (!equal) {
                             return equal.error();
                         }
                         if (equal.value()) {
-                            chunk.payload_offset = candidate.offset;
-                            chunk.is_payload_representative = false;
+                            payload_index = candidate_index;
                             break;
                         }
                     }
-                    if (!chunk.is_payload_representative) {
-                        continue;
-                    }
                 }
             }
-            chunk.payload_offset = cursor;
-            if (identity.has_value()) {
-                // Layout never changes the fully materialized entry/chunk
-                // vectors, so representative payload addresses remain stable
-                // for the duration of this candidate search.
-                candidate_buckets[*identity].push_back(payload_assignment{cursor, &chunk.payload});
+
+            if (payload_index == plan.payloads.size()) {
+                const auto stored_size = chunk.payload.size();
+                plan.payloads.push_back(
+                    ba2_dx10_payload_placement{cursor, stored_size, std::move(chunk.payload)});
+                if (identity.has_value()) {
+                    candidate_buckets[*identity].push_back(payload_index);
+                }
+                if (!add_fits_u64(cursor, stored_size, cursor)) {
+                    return error{error_code::format_error, "BA2 DX10 payload span overflows"};
+                }
             }
-            if (!add_fits_u64(cursor, chunk.payload.size(), cursor)) {
-                return error{error_code::format_error, "BA2 DX10 payload span overflows"};
-            }
+
+            record.chunks.push_back(ba2_dx10_placed_chunk{
+                chunk.packed_size,
+                chunk.raw_size,
+                chunk.start_mip,
+                chunk.end_mip,
+                chunk.compression,
+                payload_index,
+            });
         }
+
+        // Preparation establishes canonical record order. Appending records and
+        // new placements preserves first occurrence as representative and
+        // physical emission authority.
+        plan.records.push_back(std::move(record));
     }
-    return {};
+    return plan;
 }
 
 }  // namespace libbsa::formats::ba2

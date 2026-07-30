@@ -2,13 +2,12 @@
 
 #include "formats/ba2/ba2_constants.hpp"
 
-#include <libbsa/writer.hpp>
-
 #include <array>
 #include <cstddef>
 #include <fstream>
 #include <limits>
 #include <ostream>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -96,12 +95,21 @@ result<void> write_name(stream_writer& writer, std::string_view name) {
     return {};
 }
 
+result<const ba2_dx10_payload_placement*> payload_for(const ba2_dx10_placement_plan& plan,
+                                                      const ba2_dx10_placed_chunk& chunk) {
+    if (chunk.payload_index >= plan.payloads.size()) {
+        return error{error_code::invalid_argument,
+                     "BA2 DX10 placement plan has an invalid payload reference"};
+    }
+    return &plan.payloads[chunk.payload_index];
+}
+
 }  // namespace
 
+/// Serializes a finalized DX10 Placement Plan and emits each Stored Payload once.
 result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
-                                          const ba2_dx10_writer_options& options,
-                                          std::span<const ba2_dx10_prepared_entry> entries,
-                                          std::uint64_t file_table_offset,
+                                          const ba2_dx10_stored_header_options& header_options,
+                                          const ba2_dx10_placement_plan& plan,
                                           const std::filesystem::path& output_path) {
     if (!profile.is_dx10()) {
         return error{error_code::invalid_argument, "BA2 DX10 serialization profile is not DX10"};
@@ -118,38 +126,46 @@ result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
         !(written = writer.write_u32_le(profile.subtype_magic()))) {
         return written.error();
     }
-    auto file_count = checked_u32(entries.size(), "BA2 DX10 file count");
+    auto file_count = checked_u32(plan.records.size(), "BA2 DX10 file count");
     if (!file_count) {
         return file_count.error();
     }
     if (!(written = writer.write_u32_le(file_count.value())) ||
-        !(written = writer.write_u64_le(file_table_offset))) {
+        !(written = writer.write_u64_le(plan.filename_table_offset))) {
         return written.error();
     }
     if (profile.version() >= ba2_starfield_v3_version) {
-        if (!(written = writer.write_u32_le(options.starfield_unknown1)) ||
-            !(written = writer.write_u32_le(options.starfield_unknown2)) ||
-            !(written = writer.write_u32_le(options.starfield_compression_method))) {
+        if (!(written = writer.write_u32_le(header_options.starfield_unknown1)) ||
+            !(written = writer.write_u32_le(header_options.starfield_unknown2)) ||
+            !(written = writer.write_u32_le(header_options.starfield_compression_method))) {
             return written.error();
         }
     }
 
-    for (const auto& entry : entries) {
-        if (!(written = writer.write_u32_le(entry.name_hash)) ||
-            !(written = writer.write_bytes(entry.extension)) ||
-            !(written = writer.write_u32_le(entry.directory_hash)) ||
-            !(written = writer.write_u8(entry.unknown_tex)) ||
-            !(written = writer.write_u8(entry.chunk_count)) ||
+    for (const auto& record : plan.records) {
+        if (record.chunk_count != record.chunks.size()) {
+            return error{error_code::invalid_argument,
+                         "BA2 DX10 placement plan chunk count does not match record geometry"};
+        }
+        if (!(written = writer.write_u32_le(record.name_hash)) ||
+            !(written = writer.write_bytes(record.extension)) ||
+            !(written = writer.write_u32_le(record.directory_hash)) ||
+            !(written = writer.write_u8(record.unknown_tex)) ||
+            !(written = writer.write_u8(record.chunk_count)) ||
             !(written = writer.write_u16_le(ba2_dx10_chunk_header_size)) ||
-            !(written = writer.write_u16_le(entry.height)) ||
-            !(written = writer.write_u16_le(entry.width)) ||
-            !(written = writer.write_u8(entry.mip_count)) ||
-            !(written = writer.write_u8(entry.dxgi_format)) ||
-            !(written = writer.write_u16_le(entry.cube_maps_raw))) {
+            !(written = writer.write_u16_le(record.height)) ||
+            !(written = writer.write_u16_le(record.width)) ||
+            !(written = writer.write_u8(record.mip_count)) ||
+            !(written = writer.write_u8(record.dxgi_format)) ||
+            !(written = writer.write_u16_le(record.cube_maps_raw))) {
             return written.error();
         }
-        for (const auto& chunk : entry.chunks) {
-            if (!(written = writer.write_u64_le(chunk.payload_offset)) ||
+        for (const auto& chunk : record.chunks) {
+            auto placement = payload_for(plan, chunk);
+            if (!placement) {
+                return placement.error();
+            }
+            if (!(written = writer.write_u64_le(placement.value()->offset)) ||
                 !(written = writer.write_u32_le(chunk.packed_size)) ||
                 !(written = writer.write_u32_le(chunk.raw_size)) ||
                 !(written = writer.write_u16_le(chunk.start_mip)) ||
@@ -160,17 +176,18 @@ result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
         }
     }
 
-    for (const auto& entry : entries) {
-        if (!(written = write_name(writer, entry.archive_path_original))) {
+    for (const auto& record : plan.records) {
+        if (!(written = write_name(writer, record.archive_path_original))) {
             return written.error();
         }
     }
 
-    for (const auto& entry : entries) {
-        for (const auto& chunk : entry.chunks) {
-            if (chunk.is_payload_representative && !(written = chunk.payload.emit(output))) {
-                return written.error();
-            }
+    // Placement order is physical order. Serialization neither reselects
+    // representatives nor traverses record chunks to decide emission custody.
+    for (const auto& placement : plan.payloads) {
+        auto emitted = placement.payload.emit(output);
+        if (!emitted) {
+            return emitted.error();
         }
     }
 

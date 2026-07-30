@@ -1,5 +1,6 @@
 #include "formats/ba2/ba2_dx10_layout.hpp"
 #include "formats/ba2/ba2_dx10_prepare.hpp"
+#include "formats/ba2/ba2_dx10_serialize.hpp"
 #include "formats/ba2/ba2_gnrl_layout.hpp"
 #include "formats/ba2/ba2_gnrl_prepare.hpp"
 #include "formats/ba2/ba2_profile.hpp"
@@ -30,6 +31,9 @@
 #include <vector>
 
 namespace {
+
+constexpr std::size_t expected_ba2_dx10_record_size = 24U;
+constexpr std::size_t expected_ba2_dx10_chunk_header_size = 24U;
 
 std::vector<std::byte> bytes_from_text(std::string_view text) {
     std::vector<std::byte> bytes;
@@ -118,6 +122,17 @@ std::uint32_t read_stage_u32_le_at(std::span<const std::byte> bytes, std::size_t
            (std::to_integer<std::uint32_t>(bytes[offset + 1U]) << 8U) |
            (std::to_integer<std::uint32_t>(bytes[offset + 2U]) << 16U) |
            (std::to_integer<std::uint32_t>(bytes[offset + 3U]) << 24U);
+}
+
+std::uint64_t read_stage_u64_le_at(std::span<const std::byte> bytes, std::size_t offset) {
+    REQUIRE(offset <= bytes.size());
+    REQUIRE(bytes.size() - offset >= sizeof(std::uint64_t));
+    std::uint64_t value = 0;
+    for (std::size_t index = 0; index < sizeof(std::uint64_t); ++index) {
+        value |= static_cast<std::uint64_t>(std::to_integer<std::uint8_t>(bytes[offset + index]))
+                 << (index * 8U);
+    }
+    return value;
 }
 
 libbsa::formats::ba2::ba2_profile require_gnrl_profile(
@@ -243,13 +258,11 @@ std::vector<libbsa::formats::ba2::ba2_dx10_prepared_entry> ba2_dx10_prepared_sta
     for (auto& payload : payloads) {
         const auto size = static_cast<std::uint32_t>(payload.size());
         entry.chunks.push_back(libbsa::formats::ba2::ba2_dx10_prepared_chunk{
-            0U,
             size,
             size,
             0U,
             0U,
             libbsa::detail::compression_method::deflate,
-            true,
             libbsa::detail::stored_payload::from_owned_bytes(std::move(payload)),
         });
     }
@@ -892,30 +905,35 @@ TEST_CASE("ba2 dx10 writer preparation stage prepares multi-mip and cubemap entr
     CHECK(cubemap_prepared.value()[0].chunks.size() == 6U);
 }
 
-TEST_CASE("ba2 dx10 writer layout stage toggles duplicate chunk reuse",
+TEST_CASE("ba2 dx10 writer layout stage plans distinct and shared payload placements",
           "[unit][writer-stage][ba2_dx10_writer]") {
     const auto payload = bytes_from_text("dx10-shared");
     const auto profile = require_dx10_profile();
 
     auto distinct =
         ba2_dx10_prepared_stage_entries("Textures/Stage/Distinct.dds", {payload, payload});
-    std::uint64_t distinct_file_table_offset = 0;
-    auto assigned_distinct = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
-        distinct, profile, false, distinct_file_table_offset);
+    auto distinct_plan =
+        libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(distinct), profile, false);
 
-    REQUIRE(assigned_distinct.has_value());
-    REQUIRE(distinct[0].chunks.size() == 2U);
-    CHECK(distinct[0].chunks[0].payload_offset != distinct[0].chunks[1].payload_offset);
+    REQUIRE(distinct_plan.has_value());
+    REQUIRE(distinct_plan.value().records.size() == 1U);
+    REQUIRE(distinct_plan.value().records[0].chunks.size() == 2U);
+    REQUIRE(distinct_plan.value().payloads.size() == 2U);
+    CHECK(distinct_plan.value().records[0].chunks[0].payload_index == 0U);
+    CHECK(distinct_plan.value().records[0].chunks[1].payload_index == 1U);
+    CHECK(distinct_plan.value().payloads[0].offset != distinct_plan.value().payloads[1].offset);
 
     auto deduped =
         ba2_dx10_prepared_stage_entries("Textures/Stage/Deduped.dds", {payload, payload});
-    std::uint64_t deduped_file_table_offset = 0;
-    auto assigned_deduped = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
-        deduped, profile, true, deduped_file_table_offset);
+    auto deduped_plan =
+        libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(deduped), profile, true);
 
-    REQUIRE(assigned_deduped.has_value());
-    REQUIRE(deduped[0].chunks.size() == 2U);
-    CHECK(deduped[0].chunks[0].payload_offset == deduped[0].chunks[1].payload_offset);
+    REQUIRE(deduped_plan.has_value());
+    REQUIRE(deduped_plan.value().records.size() == 1U);
+    REQUIRE(deduped_plan.value().records[0].chunks.size() == 2U);
+    REQUIRE(deduped_plan.value().payloads.size() == 1U);
+    CHECK(deduped_plan.value().records[0].chunks[0].payload_index == 0U);
+    CHECK(deduped_plan.value().records[0].chunks[1].payload_index == 0U);
 }
 
 TEST_CASE("ba2 dx10 writer layout verifies exact payload equality after narrowing",
@@ -927,12 +945,146 @@ TEST_CASE("ba2 dx10 writer layout verifies exact payload equality after narrowin
     REQUIRE(entries[0].chunks[0].payload.fingerprint() ==
             entries[0].chunks[1].payload.fingerprint());
 
-    std::uint64_t file_table_offset = 0;
-    auto assigned = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(entries, profile, true,
-                                                                          file_table_offset);
+    auto plan = libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
 
-    REQUIRE(assigned.has_value());
-    CHECK(entries[0].chunks[0].payload_offset != entries[0].chunks[1].payload_offset);
+    REQUIRE(plan.has_value());
+    REQUIRE(plan.value().payloads.size() == 2U);
+    CHECK(plan.value().records[0].chunks[0].payload_index == 0U);
+    CHECK(plan.value().records[0].chunks[1].payload_index == 1U);
+    CHECK(plan.value().payloads[0].payload.fingerprint() ==
+          plan.value().payloads[1].payload.fingerprint());
+    CHECK(plan.value().payloads[0].offset != plan.value().payloads[1].offset);
+}
+
+TEST_CASE("ba2 dx10 writer layout preserves first occurrence and physical geometry",
+          "[unit][writer-stage][ba2_dx10_writer][physical-layout]") {
+    const auto shared = bytes_from_text("dx10-shared");
+    const auto unique = bytes_from_text("dx10-unique");
+    const auto profile = require_dx10_profile();
+    auto entries = ba2_dx10_prepared_stage_entries("Textures/Stage/A.dds", {shared, unique});
+    auto later = ba2_dx10_prepared_stage_entries("Textures/Stage/B.dds", {shared});
+    entries.push_back(std::move(later[0]));
+
+    auto plan = libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
+
+    REQUIRE(plan.has_value());
+    REQUIRE(plan.value().records.size() == 2U);
+    REQUIRE(plan.value().records[0].chunks.size() == 2U);
+    REQUIRE(plan.value().records[1].chunks.size() == 1U);
+    REQUIRE(plan.value().payloads.size() == 2U);
+    CHECK(plan.value().records[0].chunks[0].payload_index == 0U);
+    CHECK(plan.value().records[0].chunks[1].payload_index == 1U);
+    CHECK(plan.value().records[1].chunks[0].payload_index == 0U);
+
+    const auto expected_filename_table_offset = profile.header_size() +
+                                                (2U * expected_ba2_dx10_record_size) +
+                                                (3U * expected_ba2_dx10_chunk_header_size);
+    const auto expected_first_payload_offset =
+        expected_filename_table_offset + 2U + plan.value().records[0].archive_path_original.size() +
+        2U + plan.value().records[1].archive_path_original.size();
+    CHECK(plan.value().filename_table_offset == expected_filename_table_offset);
+    CHECK(plan.value().payloads[0].offset == expected_first_payload_offset);
+    CHECK(plan.value().payloads[1].offset == expected_first_payload_offset + shared.size());
+}
+
+TEST_CASE("ba2 dx10 writer layout rejects incompatible profiles and malformed geometry",
+          "[unit][writer-stage][ba2_dx10_writer][validation]") {
+    const auto payload = bytes_from_text("dx10-geometry");
+    const auto profile = require_dx10_profile();
+
+    SECTION("non-DX10 profile") {
+        auto entries = ba2_dx10_prepared_stage_entries("Textures/Stage/Profile.dds", {payload});
+        auto plan = libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries),
+                                                                   require_gnrl_profile(), false);
+
+        REQUIRE_FALSE(plan.has_value());
+        CHECK(plan.error().code == libbsa::error_code::invalid_argument);
+    }
+
+    SECTION("prepared chunk count mismatch") {
+        auto entries = ba2_dx10_prepared_stage_entries("Textures/Stage/ChunkCount.dds", {payload});
+        entries[0].chunk_count = 0U;
+        auto plan =
+            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, false);
+
+        REQUIRE_FALSE(plan.has_value());
+        CHECK(plan.error().code == libbsa::error_code::format_error);
+    }
+
+    SECTION("chunk count exceeds UInt8") {
+        std::vector<std::vector<std::byte>> payloads(
+            static_cast<std::size_t>(std::numeric_limits<std::uint8_t>::max()) + 1U, payload);
+        auto entries = ba2_dx10_prepared_stage_entries("Textures/Stage/TooManyChunks.dds",
+                                                       std::move(payloads));
+        auto plan =
+            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, false);
+
+        REQUIRE_FALSE(plan.has_value());
+        CHECK(plan.error().code == libbsa::error_code::format_error);
+    }
+
+    SECTION("filename-table entry exceeds UInt16") {
+        auto entries = ba2_dx10_prepared_stage_entries(
+            std::string(static_cast<std::size_t>(std::numeric_limits<std::uint16_t>::max()) + 1U,
+                        'a'),
+            {payload});
+        auto plan =
+            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, false);
+
+        REQUIRE_FALSE(plan.has_value());
+        CHECK(plan.error().code == libbsa::error_code::format_error);
+    }
+
+    SECTION("empty texture chunk") {
+        auto entries =
+            ba2_dx10_prepared_stage_entries("Textures/Stage/Empty.dds", {std::vector<std::byte>{}});
+        auto plan =
+            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, false);
+
+        REQUIRE_FALSE(plan.has_value());
+        CHECK(plan.error().code == libbsa::error_code::format_error);
+    }
+}
+
+TEST_CASE("ba2 dx10 writer serialization consumes the plan and emits each payload once",
+          "[unit][writer-stage][ba2_dx10_writer][serialization]") {
+    const auto payload = bytes_from_text("dx10-one-emission");
+    const auto profile = require_dx10_profile();
+    auto entries =
+        ba2_dx10_prepared_stage_entries("Textures/Stage/Serialized.dds", {payload, payload});
+    auto plan = libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
+    REQUIRE(plan.has_value());
+    REQUIRE(plan.value().payloads.size() == 1U);
+
+    const auto output = stage_output_path("ba2-dx10-plan-serialization.ba2");
+    auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
+        profile, libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan.value(), output);
+
+    REQUIRE(serialized.has_value());
+    const auto bytes = read_stage_binary_file(output);
+    const auto& placement = plan.value().payloads[0];
+    CHECK(bytes.size() == placement.offset + placement.stored_size);
+    const auto first_chunk_offset = profile.header_size() + expected_ba2_dx10_record_size;
+    const auto second_chunk_offset = first_chunk_offset + expected_ba2_dx10_chunk_header_size;
+    CHECK(read_stage_u64_le_at(bytes, first_chunk_offset) == placement.offset);
+    CHECK(read_stage_u64_le_at(bytes, second_chunk_offset) == placement.offset);
+}
+
+TEST_CASE("ba2 dx10 writer serialization rejects invalid plan payload references",
+          "[unit][writer-stage][ba2_dx10_writer][serialization][validation]") {
+    const auto profile = require_dx10_profile();
+    auto entries = ba2_dx10_prepared_stage_entries("Textures/Stage/InvalidPlan.dds",
+                                                   {bytes_from_text("dx10-invalid-plan")});
+    auto plan = libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, false);
+    REQUIRE(plan.has_value());
+    plan.value().records[0].chunks[0].payload_index = plan.value().payloads.size();
+
+    const auto output = stage_output_path("ba2-dx10-invalid-plan.ba2");
+    auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
+        profile, libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan.value(), output);
+
+    REQUIRE_FALSE(serialized.has_value());
+    CHECK(serialized.error().code == libbsa::error_code::invalid_argument);
 }
 
 TEST_CASE("ba2 dx10 writer layout includes decode facts in dedupe candidates",
@@ -944,35 +1096,38 @@ TEST_CASE("ba2 dx10 writer layout includes decode facts in dedupe candidates",
         auto entries =
             ba2_dx10_prepared_stage_entries("Textures/Stage/RawSize.dds", {payload, payload});
         ++entries[0].chunks[1].raw_size;
-        std::uint64_t file_table_offset = 0;
-        auto assigned = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
-            entries, profile, true, file_table_offset);
+        auto plan =
+            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
 
-        REQUIRE(assigned.has_value());
-        CHECK(entries[0].chunks[0].payload_offset != entries[0].chunks[1].payload_offset);
+        REQUIRE(plan.has_value());
+        REQUIRE(plan.value().payloads.size() == 2U);
+        CHECK(plan.value().records[0].chunks[0].payload_index !=
+              plan.value().records[0].chunks[1].payload_index);
     }
 
     SECTION("packed size") {
         auto entries =
             ba2_dx10_prepared_stage_entries("Textures/Stage/PackedSize.dds", {payload, payload});
         ++entries[0].chunks[1].packed_size;
-        std::uint64_t file_table_offset = 0;
-        auto assigned = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
-            entries, profile, true, file_table_offset);
+        auto plan =
+            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
 
-        REQUIRE(assigned.has_value());
-        CHECK(entries[0].chunks[0].payload_offset != entries[0].chunks[1].payload_offset);
+        REQUIRE(plan.has_value());
+        REQUIRE(plan.value().payloads.size() == 2U);
+        CHECK(plan.value().records[0].chunks[0].payload_index !=
+              plan.value().records[0].chunks[1].payload_index);
     }
 
     SECTION("compression route") {
         auto entries =
             ba2_dx10_prepared_stage_entries("Textures/Stage/Compression.dds", {payload, payload});
         entries[0].chunks[1].compression = libbsa::detail::compression_method::lz4_block;
-        std::uint64_t file_table_offset = 0;
-        auto assigned = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
-            entries, profile, true, file_table_offset);
+        auto plan =
+            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
 
-        REQUIRE(assigned.has_value());
-        CHECK(entries[0].chunks[0].payload_offset != entries[0].chunks[1].payload_offset);
+        REQUIRE(plan.has_value());
+        REQUIRE(plan.value().payloads.size() == 2U);
+        CHECK(plan.value().records[0].chunks[0].payload_index !=
+              plan.value().records[0].chunks[1].payload_index);
     }
 }

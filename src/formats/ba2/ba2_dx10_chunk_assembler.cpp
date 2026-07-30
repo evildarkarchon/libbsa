@@ -175,9 +175,8 @@ result<ba2_dx10_prepared_chunk> ba2_dx10_assemble_chunk(
     if (!start_mip || !end_mip) {
         return !start_mip ? start_mip.error() : end_mip.error();
     }
-    return ba2_dx10_prepared_chunk{
-        0U,   packed_size.value(), raw_size.value(), start_mip.value(), end_mip.value(), method,
-        true, std::move(payload)};
+    return ba2_dx10_prepared_chunk{packed_size.value(), raw_size.value(), start_mip.value(),
+                                   end_mip.value(),     method,           std::move(payload)};
 }
 
 result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(

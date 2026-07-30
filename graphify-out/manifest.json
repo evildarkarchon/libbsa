@@ -235,8 +235,8 @@
     "semantic_hash": "b2596641b139392f02530f7093cc6b0b"
   },
   "src/formats/ba2/ba2_dx10_chunk_assembler.cpp": {
-    "mtime": 1785372508.1348946,
-    "ast_hash": "d423bd850fd69346314a81e7ae592a79",
+    "mtime": 1785380773.018369,
+    "ast_hash": "da739634ba2b5f5870ff0f77f47ee683",
     "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_chunk_assembler.hpp": {
@@ -245,13 +245,13 @@
     "semantic_hash": "6c452b1a25af542fe0c2bb0939cdd8ad"
   },
   "src/formats/ba2/ba2_dx10_layout.cpp": {
-    "mtime": 1785372508.1409073,
-    "ast_hash": "670f0dd0efdd28a4699f1b3fc9a510f2",
+    "mtime": 1785380773.0228693,
+    "ast_hash": "7da03bb6554a7446c108cd5822cd27fc",
     "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_layout.hpp": {
-    "mtime": 1785372508.1374035,
-    "ast_hash": "840e8c3e0e3ae690f0e9a23a4793089e",
+    "mtime": 1785380773.0253792,
+    "ast_hash": "fb6e15fb2e2dc1d5ea0cf5a2150599b7",
     "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_names.cpp": {
@@ -280,8 +280,8 @@
     "semantic_hash": "02069485697d124a871f19f59c2419b3"
   },
   "src/formats/ba2/ba2_dx10_prepare.hpp": {
-    "mtime": 1785372508.1283903,
-    "ast_hash": "8ca64bd5448182671337f6d2845b9150",
+    "mtime": 1785380773.027883,
+    "ast_hash": "d3d876d5a039e45cd38e2b86ac1abad2",
     "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_reader.cpp": {
@@ -305,13 +305,13 @@
     "semantic_hash": "78ed315d6871cc5388b0a0e8d5e34f70"
   },
   "src/formats/ba2/ba2_dx10_serialize.cpp": {
-    "mtime": 1785372508.1469104,
-    "ast_hash": "f8ea9a2df053b72e9da0351785420ee4",
+    "mtime": 1785380797.816342,
+    "ast_hash": "0a304fd43d835f20401d6dce562fa9fc",
     "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_serialize.hpp": {
-    "mtime": 1785372498.3941114,
-    "ast_hash": "65f836936fc6d96405aa359938b8d72e",
+    "mtime": 1785380616.445566,
+    "ast_hash": "25cc0c3fe7142459d106f7f5b1c87b5b",
     "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_snapshot_builder.cpp": {
@@ -325,9 +325,9 @@
     "semantic_hash": "c210da3729213442d100a7b806f2d29b"
   },
   "src/formats/ba2/ba2_dx10_writer.cpp": {
-    "mtime": 1785297252.6192534,
-    "ast_hash": "3d144981bd3dd927b3595f006cee6879",
-    "semantic_hash": "3d144981bd3dd927b3595f006cee6879"
+    "mtime": 1785380773.038395,
+    "ast_hash": "6985c302b905460b7834369dc3344971",
+    "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_writer.hpp": {
     "mtime": 1785297252.6197557,
@@ -700,9 +700,9 @@
     "semantic_hash": "473fa54ce09bf45a434dd50bdc16e6cc"
   },
   "tests/unit/ba2_dx10_writer_tests.cpp": {
-    "mtime": 1785297252.6227653,
-    "ast_hash": "a7280009e01295fb8da4d76d0acdc5c1",
-    "semantic_hash": "a7280009e01295fb8da4d76d0acdc5c1"
+    "mtime": 1785380773.0629218,
+    "ast_hash": "168ee2af2ae75669538dfdb4c174a242",
+    "semantic_hash": ""
   },
   "tests/unit/ba2_gnrl_reader_tests.cpp": {
     "mtime": 1784458701.0798745,
@@ -725,8 +725,8 @@
     "semantic_hash": "9584d6262fa8da73c700e0ecd0a003a1"
   },
   "tests/unit/ba2_writer_execution_tests.cpp": {
-    "mtime": 1785326381.519932,
-    "ast_hash": "4d46f7e56e139980522d988c1e51aefa",
+    "mtime": 1785381327.2175872,
+    "ast_hash": "f891ec60bfa0ad01d98de96c57ea6c38",
     "semantic_hash": ""
   },
   "tests/unit/benchmark_policy_tests.cpp": {
@@ -935,13 +935,13 @@
     "semantic_hash": "395edd89ccd2425bb67d5acf163ed006"
   },
   "tests/unit/writer_publish_tests.cpp": {
-    "mtime": 1785326381.5750084,
-    "ast_hash": "572c9158a8a5d34b9c6783c6c75bdfdb",
+    "mtime": 1785380773.0794418,
+    "ast_hash": "0361a31c2e9896bd2048b970e83c38e3",
     "semantic_hash": ""
   },
   "tests/unit/writer_stage_tests.cpp": {
-    "mtime": 1785372508.1774473,
-    "ast_hash": "aba9e2baa77a6788d551fcb8573e54e7",
+    "mtime": 1785381327.2095768,
+    "ast_hash": "f6403541e87ba7c5b8eb3609e62b574e",
     "semantic_hash": ""
   },
   "tools/cli/main.cpp": {

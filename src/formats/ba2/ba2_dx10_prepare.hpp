@@ -24,16 +24,13 @@ namespace libbsa::formats::ba2 {
 /// Retains one prepared DX10 chunk's decode facts and move-only Stored Payload.
 ///
 /// The Stored Payload owns the exact post-compression bytes. Archive placement
-/// and representative selection remain transient layout facts until the
-/// Placement Plan cutover.
+/// and sharing belong exclusively to the later BA2 DX10 Placement Plan.
 struct ba2_dx10_prepared_chunk {
-    std::uint64_t payload_offset{};
     std::uint32_t packed_size{};
     std::uint32_t raw_size{};
     std::uint16_t start_mip{};
     std::uint16_t end_mip{};
     detail::compression_method compression{};
-    bool is_payload_representative{true};
     detail::stored_payload payload;
 };
 
