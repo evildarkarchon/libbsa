@@ -14,9 +14,12 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -148,13 +151,27 @@ std::vector<std::byte> expected_chunk_bytes(const libbsa::texture::dds_texture_l
 void require_decoded_chunk_matches(const libbsa::formats::ba2::ba2_dx10_prepared_chunk& chunk,
                                    const libbsa::texture::dds_texture_layout& layout,
                                    const libbsa::texture::planned_texture_chunk& planned) {
+    REQUIRE(chunk.payload.size() == chunk.packed_size);
+    std::ostringstream stored_bytes{std::ios::binary};
+    auto emitted = chunk.payload.emit(stored_bytes);
+    REQUIRE(emitted.has_value());
+    const auto stored_text = stored_bytes.str();
+    const auto stored_payload =
+        std::as_bytes(std::span<const char>{stored_text.data(), stored_text.size()});
     auto decoded = libbsa::detail::decompress_payload_exact(
-        chunk.compression, chunk.stored_payload, static_cast<std::size_t>(planned.raw_size));
+        chunk.compression, stored_payload, static_cast<std::size_t>(planned.raw_size));
     REQUIRE(decoded.has_value());
     CHECK(decoded.value() == expected_chunk_bytes(layout, planned));
 }
 
 }  // namespace
+
+static_assert(std::is_move_constructible_v<libbsa::formats::ba2::ba2_dx10_prepared_chunk>);
+static_assert(std::is_nothrow_move_constructible_v<libbsa::formats::ba2::ba2_dx10_prepared_chunk>);
+static_assert(!std::is_copy_constructible_v<libbsa::formats::ba2::ba2_dx10_prepared_chunk>);
+static_assert(
+    std::is_same_v<decltype(std::declval<libbsa::formats::ba2::ba2_dx10_prepared_chunk>().payload),
+                   libbsa::detail::stored_payload>);
 
 TEST_CASE(
     "BA2 DX10 snapshot builder preserves add-time snapshot immutability "

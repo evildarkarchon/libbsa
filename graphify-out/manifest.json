@@ -235,9 +235,9 @@
     "semantic_hash": "b2596641b139392f02530f7093cc6b0b"
   },
   "src/formats/ba2/ba2_dx10_chunk_assembler.cpp": {
-    "mtime": 1783326132.7767248,
-    "ast_hash": "9f7b257fb730e83b6db40f803e487ec9",
-    "semantic_hash": "9f7b257fb730e83b6db40f803e487ec9"
+    "mtime": 1785372508.1348946,
+    "ast_hash": "d423bd850fd69346314a81e7ae592a79",
+    "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_chunk_assembler.hpp": {
     "mtime": 1783323599.501728,
@@ -245,14 +245,14 @@
     "semantic_hash": "6c452b1a25af542fe0c2bb0939cdd8ad"
   },
   "src/formats/ba2/ba2_dx10_layout.cpp": {
-    "mtime": 1783323652.468483,
-    "ast_hash": "7f84ad369c312efb5dff88e7ab91becb",
-    "semantic_hash": "7f84ad369c312efb5dff88e7ab91becb"
+    "mtime": 1785372508.1409073,
+    "ast_hash": "670f0dd0efdd28a4699f1b3fc9a510f2",
+    "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_layout.hpp": {
-    "mtime": 1783323646.4214962,
-    "ast_hash": "2942b537bbf494525be1ac325a7cbf55",
-    "semantic_hash": "2942b537bbf494525be1ac325a7cbf55"
+    "mtime": 1785372508.1374035,
+    "ast_hash": "840e8c3e0e3ae690f0e9a23a4793089e",
+    "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_names.cpp": {
     "mtime": 1784460399.7647269,
@@ -280,9 +280,9 @@
     "semantic_hash": "02069485697d124a871f19f59c2419b3"
   },
   "src/formats/ba2/ba2_dx10_prepare.hpp": {
-    "mtime": 1783323588.473132,
-    "ast_hash": "84e0e6bbeb5b593a5d0bf98e89ab5619",
-    "semantic_hash": "84e0e6bbeb5b593a5d0bf98e89ab5619"
+    "mtime": 1785372508.1283903,
+    "ast_hash": "8ca64bd5448182671337f6d2845b9150",
+    "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_reader.cpp": {
     "mtime": 1784504076.193969,
@@ -305,14 +305,14 @@
     "semantic_hash": "78ed315d6871cc5388b0a0e8d5e34f70"
   },
   "src/formats/ba2/ba2_dx10_serialize.cpp": {
-    "mtime": 1784457202.7790408,
-    "ast_hash": "230345a6b42f545358d05568b563319a",
-    "semantic_hash": "230345a6b42f545358d05568b563319a"
+    "mtime": 1785372508.1469104,
+    "ast_hash": "f8ea9a2df053b72e9da0351785420ee4",
+    "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_serialize.hpp": {
-    "mtime": 1784457498.8837311,
-    "ast_hash": "5f0b477e3e4da6463065ff0320dbf9c6",
-    "semantic_hash": "5f0b477e3e4da6463065ff0320dbf9c6"
+    "mtime": 1785372498.3941114,
+    "ast_hash": "65f836936fc6d96405aa359938b8d72e",
+    "semantic_hash": ""
   },
   "src/formats/ba2/ba2_dx10_snapshot_builder.cpp": {
     "mtime": 1783326158.862394,
@@ -690,9 +690,9 @@
     "semantic_hash": "68465f458fbebf6b5784a4ee90600d57"
   },
   "tests/unit/ba2_dx10_preparer_seam_tests.cpp": {
-    "mtime": 1783323797.578339,
-    "ast_hash": "47716ebe508cbbc95eb1fd8249964754",
-    "semantic_hash": "47716ebe508cbbc95eb1fd8249964754"
+    "mtime": 1785372508.1544185,
+    "ast_hash": "e7a48a51266420feffab5ede77290e77",
+    "semantic_hash": ""
   },
   "tests/unit/ba2_dx10_reader_tests.cpp": {
     "mtime": 1784462218.935546,
@@ -940,8 +940,8 @@
     "semantic_hash": ""
   },
   "tests/unit/writer_stage_tests.cpp": {
-    "mtime": 1785325846.1452432,
-    "ast_hash": "c820eacec06d900ce5fc7550a5160df6",
+    "mtime": 1785372508.1774473,
+    "ast_hash": "aba9e2baa77a6788d551fcb8573e54e7",
     "semantic_hash": ""
   },
   "tools/cli/main.cpp": {
@@ -970,8 +970,8 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1785297252.6177552,
-    "ast_hash": "54b927379979384fafcaa74d19093180",
+    "mtime": 1785366213.0044348,
+    "ast_hash": "3bd8b6986e4b72d1036a638fd75c7452",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1057,6 +1057,21 @@
   "graphify-out/memory/query_20260729_115232_msvc_c2039_c3861__ba2_gnrl_plan_placements_is_not.md": {
     "mtime": 1785325952.4860075,
     "ast_hash": "754ad7e0ae1021a15c9c96b488845230",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260730_003743_how_do_ba2_dx10_prepared_chunks_compression_finali.md": {
+    "mtime": 1785371863.9114387,
+    "ast_hash": "4f516bef2dec3f1d9d1997810e3f8c26",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260730_004506_trace_tes5edit_bsarchpro_ba2_dx10_compression__siz.md": {
+    "mtime": 1785372306.270276,
+    "ast_hash": "1eb9d2105b3d8a8df60a1f33851e5c4c",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260730_004757_issue_33_dx10_reference_compatibility_audit.md": {
+    "mtime": 1785372477.7965305,
+    "ast_hash": "799d156b4554d59c755931f31ac04256",
     "semantic_hash": ""
   }
 }

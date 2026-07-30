@@ -32,6 +32,10 @@ _Avoid_: BA2 detection pass, BA2 parser dispatch
 The subtype-specific lookup facts that bind a BA2 archive path to its stored record fields, including hash input, extension FourCC, and canonical path matching.
 _Avoid_: BA2 record key pieces, path helper fields, hash tuple
 
+**BA2 DX10 Placement Plan**:
+The resolved physical layout of a BA2 DX10 archive: its ordered record and chunk geometry, references from chunks to Stored Payloads, unique Stored Payloads in physical emission order, and filename-table location. It is authoritative for placement and sharing, not for DDS interpretation, compression, or Stored Payload creation.
+_Avoid_: DX10 layout result, assigned chunks, payload ownership flags
+
 ## Relationships
 
 - Archive layout assigns a Stored Payload to a payload-area location. The location and any sharing of that location are not properties of the Stored Payload itself.

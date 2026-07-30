@@ -1,6 +1,54 @@
 {
-  "generated_at": "2026-07-29T11:43:29.905234+00:00",
+  "generated_at": "2026-07-30T00:38:35.329034+00:00",
   "nodes": {
+    "src_detail_stored_payload_stored_payload_exactly_equals": {
+      "code_fingerprint": "50c309f31547a32aa22f5997d82684a7212e68c5a5a583bd58bb554d08b38678",
+      "label": "exactly_equals",
+      "last": "2026-07-30T00:37:43.910817+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-30T00:37:43.910817+00:00",
+          "outcome": "useful",
+          "q": "How do BA2 DX10 prepared chunks compression finalization deduplication serialization work and where are Stored Payload integration points?"
+        }
+      ],
+      "score": 0.99998625,
+      "source_file": "src/detail/stored_payload.hpp",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_formats_ba2_ba2_dx10_layout_dedupe_key": {
+      "code_fingerprint": "bb8c5ab42d094a0742777ef59883ddfe6fa0c0dd73ab2955c1a4abb29596c2f6",
+      "label": "dedupe_key",
+      "last": "2026-07-30T00:37:43.910817+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-30T00:37:43.910817+00:00",
+          "outcome": "useful",
+          "q": "How do BA2 DX10 prepared chunks compression finalization deduplication serialization work and where are Stored Payload integration points?"
+        }
+      ],
+      "score": 0.99998625,
+      "source_file": "src/formats/ba2/ba2_dx10_layout.cpp",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_formats_ba2_ba2_dx10_serialize_cpp_src_formats_ba2_ba2_dx10_serialize": {
+      "code_fingerprint": "00db4df49c5d35a47f8b304fd2d5297ac4b1559a5bd7b185d2585d6b0c9bae6a",
+      "label": "ba2_dx10_serialize.cpp",
+      "last": "2026-07-30T00:37:43.910817+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-30T00:37:43.910817+00:00",
+          "outcome": "useful",
+          "q": "How do BA2 DX10 prepared chunks compression finalization deduplication serialization work and where are Stored Payload integration points?"
+        }
+      ],
+      "score": 0.99998625,
+      "source_file": "src/formats/ba2/ba2_dx10_serialize.cpp",
+      "status": "tentative",
+      "uses": 1
+    },
     "src_formats_ba2_ba2_gnrl_layout_ba2_gnrl_placement_plan": {
       "code_fingerprint": "24b16f9ccf23906e16fa70054292d1859617e8d92c8596a802393ae53d3435dc",
       "label": "ba2_gnrl_placement_plan",
@@ -12,7 +60,39 @@
           "q": "Implement libbsa issue #31 shared finalization boundary"
         }
       ],
-      "score": 0.993298994,
+      "score": 0.981022444,
+      "source_file": "src/formats/ba2/ba2_gnrl_layout.hpp",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_formats_ba2_ba2_gnrl_layout_ba2_gnrl_plan_placements": {
+      "code_fingerprint": "e6e17a803c2df9893d56cb6eb3e7e24860a428d05cc1fd11981bb4f51d9821cc",
+      "label": "ba2_gnrl_plan_placements()",
+      "last": "2026-07-29T11:52:32.486111+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-29T11:52:32.486111+00:00",
+          "outcome": "useful",
+          "q": "MSVC C2039/C3861: ba2_gnrl_plan_placements is not a member of libbsa::formats::ba2 in writer_stage_tests.cpp"
+        }
+      ],
+      "score": 0.987783943,
+      "source_file": "src/formats/ba2/ba2_gnrl_layout.cpp",
+      "status": "tentative",
+      "uses": 1
+    },
+    "src_formats_ba2_ba2_gnrl_layout_hpp_src_formats_ba2_ba2_gnrl_layout": {
+      "code_fingerprint": "24b16f9ccf23906e16fa70054292d1859617e8d92c8596a802393ae53d3435dc",
+      "label": "ba2_gnrl_layout.hpp",
+      "last": "2026-07-29T11:52:32.486111+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-29T11:52:32.486111+00:00",
+          "outcome": "useful",
+          "q": "MSVC C2039/C3861: ba2_gnrl_plan_placements is not a member of libbsa::formats::ba2 in writer_stage_tests.cpp"
+        }
+      ],
+      "score": 0.987783943,
       "source_file": "src/formats/ba2/ba2_gnrl_layout.hpp",
       "status": "tentative",
       "uses": 1
@@ -28,8 +108,24 @@
           "q": "Implement libbsa issue #31 shared finalization boundary"
         }
       ],
-      "score": 0.993298994,
+      "score": 0.981022444,
       "source_file": "src/formats/bsa/tes4_bsa_layout.hpp",
+      "status": "tentative",
+      "uses": 1
+    },
+    "tests_unit_writer_stage_tests": {
+      "code_fingerprint": "332b13302a12e812aebb5534cdf8b43034c9e4525e815c7b073f8ad91e2a3b11",
+      "label": "writer_stage_tests.cpp",
+      "last": "2026-07-29T11:52:32.486111+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-29T11:52:32.486111+00:00",
+          "outcome": "useful",
+          "q": "MSVC C2039/C3861: ba2_gnrl_plan_placements is not a member of libbsa::formats::ba2 in writer_stage_tests.cpp"
+        }
+      ],
+      "score": 0.987783943,
+      "source_file": "tests/unit/writer_stage_tests.cpp",
       "status": "tentative",
       "uses": 1
     }

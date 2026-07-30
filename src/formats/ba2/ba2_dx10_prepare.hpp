@@ -4,6 +4,7 @@
 #include "formats/ba2/ba2_dx10_writer.hpp"
 
 #include <detail/compression_router.hpp>
+#include <detail/stored_payload.hpp>
 
 #include <array>
 #include <cstddef>
@@ -20,6 +21,11 @@ struct planned_texture_chunk;
 
 namespace libbsa::formats::ba2 {
 
+/// Retains one prepared DX10 chunk's decode facts and move-only Stored Payload.
+///
+/// The Stored Payload owns the exact post-compression bytes. Archive placement
+/// and representative selection remain transient layout facts until the
+/// Placement Plan cutover.
 struct ba2_dx10_prepared_chunk {
     std::uint64_t payload_offset{};
     std::uint32_t packed_size{};
@@ -27,8 +33,8 @@ struct ba2_dx10_prepared_chunk {
     std::uint16_t start_mip{};
     std::uint16_t end_mip{};
     detail::compression_method compression{};
-    bool owns_payload_bytes{true};
-    std::vector<std::byte> stored_payload;
+    bool is_payload_representative{true};
+    detail::stored_payload payload;
 };
 
 struct ba2_dx10_prepared_entry {

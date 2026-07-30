@@ -23,6 +23,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <sstream>
 #include <span>
 #include <string>
 #include <utility>
@@ -99,6 +100,15 @@ std::vector<std::byte> read_stage_binary_file(const std::filesystem::path& path)
     }
     REQUIRE_FALSE(input.bad());
     return bytes;
+}
+
+std::vector<std::byte> materialize_stored_payload(const libbsa::detail::stored_payload& payload) {
+    std::ostringstream output{std::ios::binary};
+    auto emitted = payload.emit(output);
+    REQUIRE(emitted.has_value());
+    const auto text = output.str();
+    const auto bytes = std::as_bytes(std::span<const char>{text.data(), text.size()});
+    return {bytes.begin(), bytes.end()};
 }
 
 std::uint32_t read_stage_u32_le_at(std::span<const std::byte> bytes, std::size_t offset) {
@@ -223,20 +233,29 @@ libbsa::formats::ba2::ba2_dx10_writer_entry ba2_dx10_stage_entry(
     return entry;
 }
 
-libbsa::formats::ba2::ba2_dx10_prepared_entry ba2_dx10_prepared_stage_entry(
-    std::string path, std::vector<std::byte> payload) {
+std::vector<libbsa::formats::ba2::ba2_dx10_prepared_entry> ba2_dx10_prepared_stage_entries(
+    std::string path, std::vector<std::vector<std::byte>> payloads) {
     libbsa::formats::ba2::ba2_dx10_prepared_entry entry;
     entry.archive_path_original = std::move(path);
     entry.archive_path_canonical = entry.archive_path_original;
-    entry.chunk_count = 2U;
-    auto first = libbsa::formats::ba2::ba2_dx10_prepared_chunk{};
-    first.raw_size = static_cast<std::uint32_t>(payload.size());
-    first.packed_size = static_cast<std::uint32_t>(payload.size());
-    first.compression = libbsa::detail::compression_method::deflate;
-    first.stored_payload = payload;
-    auto second = first;
-    entry.chunks = {std::move(first), std::move(second)};
-    return entry;
+    entry.chunk_count = static_cast<std::uint8_t>(payloads.size());
+    entry.chunks.reserve(payloads.size());
+    for (auto& payload : payloads) {
+        const auto size = static_cast<std::uint32_t>(payload.size());
+        entry.chunks.push_back(libbsa::formats::ba2::ba2_dx10_prepared_chunk{
+            0U,
+            size,
+            size,
+            0U,
+            0U,
+            libbsa::detail::compression_method::deflate,
+            true,
+            libbsa::detail::stored_payload::from_owned_bytes(std::move(payload)),
+        });
+    }
+    std::vector<libbsa::formats::ba2::ba2_dx10_prepared_entry> entries;
+    entries.push_back(std::move(entry));
+    return entries;
 }
 
 }  // namespace
@@ -809,7 +828,7 @@ TEST_CASE(
     CHECK(chunk.value().end_mip == planned.value()[0].end_mip);
 
     auto decoded = libbsa::detail::decompress_payload_exact(
-        chunk.value().compression, chunk.value().stored_payload,
+        chunk.value().compression, materialize_stored_payload(chunk.value().payload),
         static_cast<std::size_t>(planned.value()[0].raw_size));
     REQUIRE(decoded.has_value());
     std::vector<std::byte> expected;
@@ -879,7 +898,7 @@ TEST_CASE("ba2 dx10 writer layout stage toggles duplicate chunk reuse",
     const auto profile = require_dx10_profile();
 
     auto distinct =
-        std::vector{ba2_dx10_prepared_stage_entry("Textures/Stage/Distinct.dds", payload)};
+        ba2_dx10_prepared_stage_entries("Textures/Stage/Distinct.dds", {payload, payload});
     std::uint64_t distinct_file_table_offset = 0;
     auto assigned_distinct = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
         distinct, profile, false, distinct_file_table_offset);
@@ -887,11 +906,9 @@ TEST_CASE("ba2 dx10 writer layout stage toggles duplicate chunk reuse",
     REQUIRE(assigned_distinct.has_value());
     REQUIRE(distinct[0].chunks.size() == 2U);
     CHECK(distinct[0].chunks[0].payload_offset != distinct[0].chunks[1].payload_offset);
-    CHECK(distinct[0].chunks[0].owns_payload_bytes);
-    CHECK(distinct[0].chunks[1].owns_payload_bytes);
 
     auto deduped =
-        std::vector{ba2_dx10_prepared_stage_entry("Textures/Stage/Deduped.dds", payload)};
+        ba2_dx10_prepared_stage_entries("Textures/Stage/Deduped.dds", {payload, payload});
     std::uint64_t deduped_file_table_offset = 0;
     auto assigned_deduped = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
         deduped, profile, true, deduped_file_table_offset);
@@ -899,6 +916,63 @@ TEST_CASE("ba2 dx10 writer layout stage toggles duplicate chunk reuse",
     REQUIRE(assigned_deduped.has_value());
     REQUIRE(deduped[0].chunks.size() == 2U);
     CHECK(deduped[0].chunks[0].payload_offset == deduped[0].chunks[1].payload_offset);
-    CHECK(deduped[0].chunks[0].owns_payload_bytes);
-    CHECK_FALSE(deduped[0].chunks[1].owns_payload_bytes);
+}
+
+TEST_CASE("ba2 dx10 writer layout verifies exact payload equality after narrowing",
+          "[unit][writer-stage][ba2_dx10_writer][dedupe]") {
+    const auto collision = fnv1a_fingerprint_collision();
+    const auto profile = require_dx10_profile();
+    auto entries = ba2_dx10_prepared_stage_entries("Textures/Stage/Collision.dds",
+                                                   {collision.distinct_a, collision.distinct_b});
+    REQUIRE(entries[0].chunks[0].payload.fingerprint() ==
+            entries[0].chunks[1].payload.fingerprint());
+
+    std::uint64_t file_table_offset = 0;
+    auto assigned = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(entries, profile, true,
+                                                                          file_table_offset);
+
+    REQUIRE(assigned.has_value());
+    CHECK(entries[0].chunks[0].payload_offset != entries[0].chunks[1].payload_offset);
+}
+
+TEST_CASE("ba2 dx10 writer layout includes decode facts in dedupe candidates",
+          "[unit][writer-stage][ba2_dx10_writer][dedupe]") {
+    const auto payload = bytes_from_text("dx10-compatible-bytes");
+    const auto profile = require_dx10_profile();
+
+    SECTION("raw size") {
+        auto entries =
+            ba2_dx10_prepared_stage_entries("Textures/Stage/RawSize.dds", {payload, payload});
+        ++entries[0].chunks[1].raw_size;
+        std::uint64_t file_table_offset = 0;
+        auto assigned = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
+            entries, profile, true, file_table_offset);
+
+        REQUIRE(assigned.has_value());
+        CHECK(entries[0].chunks[0].payload_offset != entries[0].chunks[1].payload_offset);
+    }
+
+    SECTION("packed size") {
+        auto entries =
+            ba2_dx10_prepared_stage_entries("Textures/Stage/PackedSize.dds", {payload, payload});
+        ++entries[0].chunks[1].packed_size;
+        std::uint64_t file_table_offset = 0;
+        auto assigned = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
+            entries, profile, true, file_table_offset);
+
+        REQUIRE(assigned.has_value());
+        CHECK(entries[0].chunks[0].payload_offset != entries[0].chunks[1].payload_offset);
+    }
+
+    SECTION("compression route") {
+        auto entries =
+            ba2_dx10_prepared_stage_entries("Textures/Stage/Compression.dds", {payload, payload});
+        entries[0].chunks[1].compression = libbsa::detail::compression_method::lz4_block;
+        std::uint64_t file_table_offset = 0;
+        auto assigned = libbsa::formats::ba2::ba2_dx10_assign_payload_offsets(
+            entries, profile, true, file_table_offset);
+
+        REQUIRE(assigned.has_value());
+        CHECK(entries[0].chunks[0].payload_offset != entries[0].chunks[1].payload_offset);
+    }
 }

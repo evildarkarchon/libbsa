@@ -168,7 +168,7 @@ result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
 
     for (const auto& entry : entries) {
         for (const auto& chunk : entry.chunks) {
-            if (chunk.owns_payload_bytes && !(written = writer.write_bytes(chunk.stored_payload))) {
+            if (chunk.is_payload_representative && !(written = chunk.payload.emit(output))) {
                 return written.error();
             }
         }

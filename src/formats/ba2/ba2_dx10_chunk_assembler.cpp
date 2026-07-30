@@ -166,19 +166,18 @@ result<ba2_dx10_prepared_chunk> ba2_dx10_assemble_chunk(
     if (!packed_size) {
         return packed_size.error();
     }
+    // The compressed Stored Payload is the only final-byte owner after this
+    // point; release assembled DDS bytes before carrying preparation forward.
+    std::vector<std::byte>{}.swap(raw_bytes);
+    auto payload = detail::stored_payload::from_owned_bytes(std::move(compressed).value());
     auto start_mip = checked_u16(planned.start_mip, "BA2 DX10 chunk start mip");
     auto end_mip = checked_u16(planned.end_mip, "BA2 DX10 chunk end mip");
     if (!start_mip || !end_mip) {
         return !start_mip ? start_mip.error() : end_mip.error();
     }
-    return ba2_dx10_prepared_chunk{0U,
-                                   packed_size.value(),
-                                   raw_size.value(),
-                                   start_mip.value(),
-                                   end_mip.value(),
-                                   method,
-                                   true,
-                                   std::move(compressed.value())};
+    return ba2_dx10_prepared_chunk{
+        0U,   packed_size.value(), raw_size.value(), start_mip.value(), end_mip.value(), method,
+        true, std::move(payload)};
 }
 
 result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
@@ -233,7 +232,8 @@ result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
     std::vector<std::optional<ba2_dx10_prepared_chunk>> chunks_by_index(
         planned_chunks.value().size());
     auto work = [&](std::size_t index) -> result<void> {
-        auto chunk = ba2_dx10_assemble_chunk(profile, options, entry, planned_chunks.value()[index]);
+        auto chunk =
+            ba2_dx10_assemble_chunk(profile, options, entry, planned_chunks.value()[index]);
         if (!chunk) {
             return chunk.error();
         }

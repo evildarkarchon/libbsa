@@ -13,7 +13,8 @@ namespace libbsa::formats::ba2 {
 /// by the publish helper.
 ///
 /// `options` supplies version-gated raw header fields without placing per-archive
-/// metadata in the reusable BA2 Profile.
+/// metadata in the reusable BA2 Profile. Representative chunk bytes are emitted
+/// only through their Stored Payload interface.
 result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
                                           const ba2_dx10_writer_options& options,
                                           std::span<const ba2_dx10_prepared_entry> entries,
