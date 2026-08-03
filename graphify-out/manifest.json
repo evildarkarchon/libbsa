@@ -700,8 +700,8 @@
     "semantic_hash": "473fa54ce09bf45a434dd50bdc16e6cc"
   },
   "tests/unit/ba2_dx10_writer_tests.cpp": {
-    "mtime": 1785389559.0057378,
-    "ast_hash": "3c8206a0ad82464fc0ff27533aa75afb",
+    "mtime": 1785390209.7941873,
+    "ast_hash": "36a24b0e4d57ed85da900327ef506a15",
     "semantic_hash": ""
   },
   "tests/unit/ba2_gnrl_reader_tests.cpp": {
@@ -955,14 +955,14 @@
     "semantic_hash": "08329ff45e207d49b38f0c28a73d3879"
   },
   "AGENTS.md": {
-    "mtime": 1785297326.1574657,
-    "ast_hash": "d74d2872f669b709ccce2e016e7f05d0",
-    "semantic_hash": "d74d2872f669b709ccce2e016e7f05d0"
+    "mtime": 1785759155.269156,
+    "ast_hash": "2a36b38425b5008731ea9292741c8d18",
+    "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1781915027.2848222,
-    "ast_hash": "17766fa698f642f4cdb31ae59e611d85",
-    "semantic_hash": "17766fa698f642f4cdb31ae59e611d85"
+    "mtime": 1785759164.7151718,
+    "ast_hash": "44cfa7fb0e1c590a82b0ecfcb10dadaf",
+    "semantic_hash": ""
   },
   "CMakeLists.txt": {
     "mtime": 1785297252.906579,
@@ -1025,8 +1025,8 @@
     "semantic_hash": ""
   },
   "docs/target-format-guide.md": {
-    "mtime": 1785389359.6327753,
-    "ast_hash": "9fa9202c46d6565ea5ecd241fc58a15f",
+    "mtime": 1785390121.3757658,
+    "ast_hash": "22bbc1efc77b2ab917bfeea2f28540a3",
     "semantic_hash": ""
   },
   "docs/thread-safety.md": {
