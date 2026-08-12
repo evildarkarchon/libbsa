@@ -34,8 +34,26 @@ TEST_CASE("BA2 record identity derives GNRL lookup facts from writer paths",
     CHECK(identity.value().display_path == "Meshes/MixedCase/Probe.NIF");
     CHECK(identity.value().canonical_path == "meshes/mixedcase/probe.nif");
     CHECK(identity.value().extension == fourcc('N', 'I', 'F'));
-    CHECK(identity.value().name_hash == 0x658C15FCU);
+    // NameHash covers the stem "probe", not "probe.nif" (which would hash to
+    // 0x658C15FC). The extension lives in the FourCC field instead.
+    CHECK(identity.value().name_hash == 0x117C9837U);
     CHECK(identity.value().directory_hash == 0x279DA864U);
+}
+
+TEST_CASE("BA2 record identity hashes GNRL and DX10 stems on the same basis",
+          "[unit][ba2_record_identity]") {
+    // TwbBSArchive.FindFileRecordFO4 is one lookup path for every BA2 subtype:
+    // it hashes the extension-stripped stem. Two paths sharing a stem but not an
+    // extension must therefore share a NameHash.
+    auto gnrl = libbsa::formats::ba2::make_ba2_record_identity(
+        ba2_subtype::gnrl, "meshes/probe.nif", ba2_record_identity_source::filename_table);
+    auto dx10 = libbsa::formats::ba2::make_ba2_record_identity(
+        ba2_subtype::dx10, "textures/probe.dds", ba2_record_identity_source::filename_table);
+
+    REQUIRE(gnrl.has_value());
+    REQUIRE(dx10.has_value());
+    CHECK(gnrl.value().name_hash == dx10.value().name_hash);
+    CHECK(gnrl.value().extension != dx10.value().extension);
 }
 
 TEST_CASE("BA2 record identity derives DX10 lookup facts from texture stems",
@@ -120,6 +138,50 @@ TEST_CASE("BA2 record identity validates stored fields with stable diagnostics",
           "BA2 DX10 record extension does not match filename table");
 }
 
+TEST_CASE("BA2 record identity truncates extensions to the four-byte record field",
+          "[unit][ba2_record_identity][compat]") {
+    // TES5Edit's String2Magic copies at most four characters and has no error
+    // path. Retail Fallout 4 depends on it: Interface.ba2 stores .STRINGS,
+    // .ILSTRINGS, and .DLSTRINGS records as 'stri', 'ilst', and 'dlst'.
+    struct truncation_case {
+        std::string_view path;
+        ba2_subtype subtype;
+        std::array<std::byte, 4> extension;
+    };
+    const auto cases = std::to_array<truncation_case>({
+        {"Strings/Fallout4_en.STRINGS", ba2_subtype::gnrl, fourcc('s', 't', 'r', 'i')},
+        {"Strings/Fallout4_en.ILSTRINGS", ba2_subtype::gnrl, fourcc('i', 'l', 's', 't')},
+        {"Strings/Fallout4_en.DLSTRINGS", ba2_subtype::gnrl, fourcc('d', 'l', 's', 't')},
+        {"Textures/File.ddsxx", ba2_subtype::dx10, fourcc('d', 'd', 's', 'x')},
+    });
+
+    for (const auto& truncation : cases) {
+        INFO(truncation.path);
+        auto identity = libbsa::formats::ba2::make_ba2_record_identity(
+            truncation.subtype, truncation.path, ba2_record_identity_source::filename_table);
+
+        REQUIRE(identity.has_value());
+        CHECK(identity.value().extension == truncation.extension);
+
+        // The writer path must also truncate rather than reject. Its stored
+        // casing is asserted case-insensitively here because GNRL writer
+        // derivation currently preserves the caller's casing while the
+        // reference lowercases on write; that deviation is tracked separately
+        // and is not what this case is about.
+        auto writer = libbsa::formats::ba2::make_ba2_record_identity(
+            truncation.subtype, truncation.path, ba2_record_identity_source::writer_entry);
+
+        REQUIRE(writer.has_value());
+        for (std::size_t index = 0; index < truncation.extension.size(); ++index) {
+            const auto actual = std::tolower(
+                std::to_integer<unsigned char>(writer.value().extension.at(index)));
+            const auto expected =
+                std::tolower(std::to_integer<unsigned char>(truncation.extension.at(index)));
+            CHECK(actual == expected);
+        }
+    }
+}
+
 TEST_CASE("BA2 record identity preserves filename-table and writer diagnostics",
           "[unit][ba2_record_identity]") {
     auto gnrl_filename_table = libbsa::formats::ba2::make_ba2_record_identity(
@@ -128,12 +190,6 @@ TEST_CASE("BA2 record identity preserves filename-table and writer diagnostics",
     CHECK(gnrl_filename_table.error().code == libbsa::error_code::format_error);
     CHECK(gnrl_filename_table.error().message ==
           "BA2 GNRL filename table path must include a file extension");
-
-    auto gnrl_writer = libbsa::formats::ba2::make_ba2_record_identity(
-        ba2_subtype::gnrl, "Meshes/File.toolong", ba2_record_identity_source::writer_entry);
-    REQUIRE_FALSE(gnrl_writer.has_value());
-    CHECK(gnrl_writer.error().code == libbsa::error_code::invalid_argument);
-    CHECK(gnrl_writer.error().message == "BA2 GNRL extension exceeds four-byte record field");
 
     std::string gnrl_non_printable{"Meshes/File.b"};
     gnrl_non_printable.push_back(static_cast<char>(0x7F));
@@ -157,13 +213,6 @@ TEST_CASE("BA2 record identity preserves filename-table and writer diagnostics",
     CHECK(dx10_filename_table.error().code == libbsa::error_code::format_error);
     CHECK(dx10_filename_table.error().message ==
           "BA2 DX10 filename table contains an invalid archive path");
-
-    auto dx10_long_extension = libbsa::formats::ba2::make_ba2_record_identity(
-        ba2_subtype::dx10, "Textures/File.ddsxx", ba2_record_identity_source::filename_table);
-    REQUIRE_FALSE(dx10_long_extension.has_value());
-    CHECK(dx10_long_extension.error().code == libbsa::error_code::format_error);
-    CHECK(dx10_long_extension.error().message ==
-          "BA2 DX10 filename table extension exceeds four-byte record field");
 
     std::string dx10_non_printable{"Textures/File.dd"};
     dx10_non_printable.push_back(static_cast<char>(0x7F));

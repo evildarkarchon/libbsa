@@ -217,7 +217,13 @@ std::vector<std::byte> make_synthetic_gnrl_archive(std::span<const synthetic_gnr
                                    ? std::string_view{record.path}
                                    : std::string_view{record.path}.substr(slash + 1U);
 
-        append_u32_le(bytes, libbsa::detail::hash_fo4(file_name));
+        // GNRL NameHash covers the extension-stripped stem, matching retail
+        // archives and TwbBSArchive.FindFileRecordFO4.
+        const auto dot = file_name.find_last_of('.');
+        const auto stem =
+            dot == std::string_view::npos ? file_name : file_name.substr(0U, dot);
+
+        append_u32_le(bytes, libbsa::detail::hash_fo4(stem));
         append_ascii(bytes, std::string_view{"BIN\0", 4U});
         append_u32_le(bytes, libbsa::detail::hash_fo4(directory));
         append_u32_le(bytes, 0U);
@@ -364,7 +370,7 @@ TEST_CASE(
     append_u32_le(bytes, 1U);
     append_u64_le(bytes, 60U);
 
-    append_u32_le(bytes, libbsa::detail::hash_fo4("sparse_payload.bin"));
+    append_u32_le(bytes, libbsa::detail::hash_fo4("sparse_payload"));
     append_ascii(bytes, std::string_view{"BIN\0", 4U});
     append_u32_le(bytes, libbsa::detail::hash_fo4("meshes"));
     append_u32_le(bytes, 0x0000002AU);
@@ -427,7 +433,7 @@ TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename t
     append_u32_le(bytes, file_count);
     append_u64_le(bytes, static_cast<std::uint64_t>(file_table_offset));  // FileTableOffset
 
-    append_u32_le(bytes, libbsa::detail::hash_fo4("alpha.nif"));
+    append_u32_le(bytes, libbsa::detail::hash_fo4("alpha"));
     append_ascii(bytes, std::string_view{"NIF\0", 4U});
     append_u32_le(bytes, libbsa::detail::hash_fo4("meshes/endtable"));
     append_u32_le(bytes, 0U);
@@ -494,7 +500,7 @@ TEST_CASE("ba2_archive_opening rejects non-empty payload spans in fixed metadata
     append_u32_le(bytes, file_count);
     append_u64_le(bytes, record_table_end);
 
-    append_u32_le(bytes, libbsa::detail::hash_fo4("headerpayload.nif"));
+    append_u32_le(bytes, libbsa::detail::hash_fo4("headerpayload"));
     append_ascii(bytes, std::string_view{"NIF\0", 4U});
     append_u32_le(bytes, libbsa::detail::hash_fo4("meshes/invalid"));
     append_u32_le(bytes, 0U);

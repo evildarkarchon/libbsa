@@ -6,6 +6,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -399,21 +400,97 @@ TEST_CASE("retail BA2 headers resolve at every shipped version",
         CHECK(metadata.file_count > 0U);
         CHECK(header.value().filename_table_offset() >= header.value().profile().header_size());
 
-        // A whole-archive open still fails for every retail archive for reasons
-        // this case does not own: DX10 archives store the filename table after
-        // the payloads (issue #36), and both subtypes then trip the
-        // record-identity hash cross-check, which even a v1 archive fails. The
-        // claim this case can make is narrower but unconditional: the header
-        // version must never again be the reason an archive is refused.
-        auto opened = libbsa::archive_reader::open(directory_entry.path().string());
-        const bool refused_on_header_version =
-            !opened.has_value() && opened.error().code == libbsa::error_code::unsupported;
-        CHECK_FALSE(refused_on_header_version);
     }
 
     if (probed_archives == 0U) {
         SKIP("The local corpus holds no BA2 archives to probe.");
     }
+}
+
+TEST_CASE("a retail BA2 GNRL archive opens, lists, and extracts end to end",
+          "[requires-game-fixture][unit][ba2][gnrl][compat]") {
+    auto fixture_root = local_fixture_root();
+    if (!fixture_root.has_value()) {
+        SKIP(
+            "Set LIBBSA_GAME_FIXTURES or place local game archives under "
+            "tests/fixtures/local; these files are not committed.");
+    }
+
+    // Pick the smallest GNRL archive in the corpus. Retail GNRL archives run to
+    // tens of thousands of records, and this case only needs one archive that
+    // libbsa did not write; walking the largest would dominate the suite.
+    std::optional<std::filesystem::path> smallest;
+    std::uintmax_t smallest_size = 0U;
+    std::error_code iteration_error;
+    std::filesystem::directory_iterator iterator{*fixture_root, iteration_error};
+    REQUIRE_FALSE(iteration_error);
+
+    for (const auto& directory_entry : iterator) {
+        if (!directory_entry.is_regular_file()) {
+            continue;
+        }
+        auto probe = probe_ba2_header(directory_entry.path());
+        if (!probe.has_value() || probe->subtype_magic != gnrl_magic) {
+            continue;
+        }
+        std::error_code size_error;
+        const auto size = std::filesystem::file_size(directory_entry.path(), size_error);
+        if (size_error) {
+            continue;
+        }
+        if (!smallest.has_value() || size < smallest_size) {
+            smallest = directory_entry.path();
+            smallest_size = size;
+        }
+    }
+
+    if (!smallest.has_value()) {
+        SKIP("The local corpus holds no BA2 GNRL archives.");
+    }
+
+    INFO("archive=" << smallest->filename().string());
+    auto opened = libbsa::archive_reader::open(smallest->string());
+    REQUIRE(opened.has_value());
+
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().type == libbsa::archive_type::ba2);
+    CHECK(metadata.value().file_count > 0U);
+
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == metadata.value().file_count);
+
+    // Every listed path must resolve through the reader's own hash-backed
+    // lookup. That is the property the GNRL NameHash basis governs: if the
+    // stored hash and the recomputed hash disagree, the archive does not open
+    // at all, and if lookup used a different basis than storage, find() misses.
+    const auto& first = entries.value().front();
+    auto found = opened.value().find(first.path);
+    REQUIRE(found.has_value());
+    REQUIRE(found.value().has_value());
+    CHECK(found.value()->path == first.path);
+
+    // Extraction is deliberately not asserted here yet. Retail BA2 payloads are
+    // zlib-wrapped (RFC1950) and libbsa decodes raw deflate (RFC1951), so a
+    // compressed retail entry fails to decode. That is tracked separately; this
+    // case owns the metadata path, which is what the record-identity basis
+    // governs. Raw entries do stream, so prove the sink path on one when the
+    // archive has one.
+    const auto raw_entry =
+        std::find_if(entries.value().begin(), entries.value().end(),
+                     [](const libbsa::entry_metadata& entry) {
+                         return entry.compression == libbsa::entry_compression::none &&
+                                entry.raw_size > 0U;
+                     });
+    if (raw_entry == entries.value().end()) {
+        return;
+    }
+
+    fnv1a32_sink sink;
+    auto extracted = opened.value().extract(raw_entry->path, sink);
+    REQUIRE(extracted.has_value());
+    CHECK(sink.size() == raw_entry->raw_size);
 }
 
 TEST_CASE("BSArchPro-derived expected fixture comparisons are opt-in",

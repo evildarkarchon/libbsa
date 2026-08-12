@@ -24,6 +24,12 @@ Skyrim SE/AE BSA v105 archives use the TES4-family BSA container with LZ4 frame 
 
 Fallout 4 BA2 GNRL archives use `archive_type::ba2`, `archive_variant::fallout4`, subtype GNRL, and deflate for compressed entries. Consumers create them with `ba2_gnrl_target::fallout4`; filename table offsets, record hashes, packed sizes, and raw sizes remain writer-owned.
 
+### BA2 record identity
+
+Every BA2 subtype shares one record-identity rule, taken from `TwbBSArchive.FindFileRecordFO4`: `NameHash` is the FO4 hash of the **extension-stripped file stem**, `DirHash` is the hash of the directory, and the extension travels separately as a four-byte FourCC. GNRL and DX10 do not differ here.
+
+The FourCC holds at most four bytes. A longer extension is truncated rather than rejected, matching the reference's `String2Magic`; retail Fallout 4 depends on this for its `.STRINGS`, `.ILSTRINGS`, and `.DLSTRINGS` records, which are stored as `stri`, `ilst`, and `dlst`.
+
 ## Fallout 4 BA2 DX10
 
 Fallout 4 BA2 DX10 archives are texture archives created with `ba2_dx10_target::fallout4`. DDS input is analyzed internally, and public metadata exposes libbsa-owned texture dimensions, DXGI numeric format values, mip counts, array/cubemap state, and chunk records. DX10 DDS data is not resized, transcoded, mip-generated, repaired, or otherwise transformed by libbsa. BC6, SRGB, or SNORM DDS formats are rejected for Fallout 4 DX10 archives and require the Starfield DX10 target.

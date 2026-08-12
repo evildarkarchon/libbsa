@@ -396,7 +396,8 @@ TEST_CASE("validation_api caps extractability before reading sparse payload byte
     append_u32_le(bytes, 1U);
     append_u64_le(bytes, 60U);
 
-    append_u32_le(bytes, libbsa::detail::hash_fo4("sparse_payload.bin"));
+    // GNRL NameHash covers the extension-stripped stem.
+    append_u32_le(bytes, libbsa::detail::hash_fo4("sparse_payload"));
     append_ascii(bytes, std::string_view{"BIN\0", 4U});
     append_u32_le(bytes, libbsa::detail::hash_fo4("meshes/validation"));
     append_u32_le(bytes, 0x0000002AU);

@@ -69,7 +69,7 @@ Material subrows:
 Material subrows:
 
 - **Fallout 4 BA2 GNRL v1** — Deflate-capable general BA2 route is proven.
-- **Fallout 4 next-gen BA2 GNRL v7/v8** — Read-only header support is proven; the fixed header, variant, and deflate routing match v1. There is no writer target for these versions. Whole-archive opening of retail GNRL archives is still blocked by the record-identity hash cross-check, which retail archives fail at every version including v1; that is a separate untracked defect, not a v7/v8 gap.
+- **Fallout 4 next-gen BA2 GNRL v7/v8** — Read-only support is proven; the fixed header, variant, and deflate routing match v1. There is no writer target for these versions. Retail GNRL archives open, list, and resolve path lookups end to end. Extracting a compressed retail entry is still blocked by zlib-wrapped payload framing (issue #42), and three vanilla archives are still refused by the record-identity cross-check (issue #43).
 - **Starfield BA2 GNRL v2** — Starfield unknown header fields plus deflate routing are proven.
 - **Starfield BA2 GNRL v3** — `CompressionMethod == 0` deflate and `CompressionMethod == 3` raw-LZ4 block routes are proven by reader/writer tests.
 
@@ -90,7 +90,7 @@ Material subrows:
 Material subrows:
 
 - **Fallout 4 BA2 DX10 v1** — Texture metadata, DDS reconstruction, writer DDS validation, and deflate chunk route are proven.
-- **Fallout 4 next-gen BA2 DX10 v7/v8** — Read-only header support is proven; the fixed header, variant, and deflate routing match v1. There is no writer target for these versions. Whole-archive opening of retail v7/v8 texture archives additionally depends on the filename-table ordering work tracked in issue #36, and then on the same record-identity hash cross-check that blocks retail GNRL archives.
+- **Fallout 4 next-gen BA2 DX10 v7/v8** — Read-only header support is proven; the fixed header, variant, and deflate routing match v1. There is no writer target for these versions. Whole-archive opening of retail v7/v8 texture archives additionally depends on the filename-table ordering work tracked in issue #36.
 - **Starfield BA2 DX10 v2** — Starfield texture metadata and formats with fixed deflate chunk routing are proven.
 - **Starfield BA2 DX10 v3, `CompressionMethod == 3`** — Raw-LZ4 block texture chunks are proven.
 - **Starfield BA2 DX10 v3, `CompressionMethod == 0`** — Deflate compatibility route is proven.

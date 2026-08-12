@@ -23,7 +23,7 @@ std::string label_for(ba2_subtype subtype) {
 
 libbsa::error_code diagnostic_code_for(ba2_record_identity_source source) noexcept {
     return source == ba2_record_identity_source::filename_table ? error_code::format_error
-                                                               : error_code::invalid_argument;
+                                                                : error_code::invalid_argument;
 }
 
 std::string invalid_path_message(ba2_subtype subtype) {
@@ -49,14 +49,6 @@ std::string missing_dx10_stem_extension_message(ba2_record_identity_source sourc
         return "BA2 DX10 filename table must include a file stem and extension";
     }
     return "BA2 DX10 archive path must include a file stem and extension";
-}
-
-std::string extension_too_long_message(ba2_subtype subtype,
-                                       ba2_record_identity_source source) {
-    if (source == ba2_record_identity_source::filename_table) {
-        return label_for(subtype) + " filename table extension exceeds four-byte record field";
-    }
-    return label_for(subtype) + " extension exceeds four-byte record field";
 }
 
 std::string non_printable_extension_message(ba2_subtype subtype,
@@ -110,9 +102,13 @@ bool extension_fourcc_matches(const std::array<std::byte, 4>& stored,
 result<std::array<std::byte, 4>> extension_fourcc_for(ba2_subtype subtype,
                                                       std::string_view extension,
                                                       ba2_record_identity_source source) {
-    if (extension.size() > 4U) {
-        return error{diagnostic_code_for(source), extension_too_long_message(subtype, source)};
-    }
+    // The record's Ext field is a fixed FourCC, and TES5Edit's String2Magic
+    // copies at most four characters and silently discards the rest -- it has no
+    // error path. Retail Fallout 4 relies on this: Interface.ba2 stores
+    // .STRINGS, .ILSTRINGS, and .DLSTRINGS files as 'stri', 'ilst', and 'dlst'.
+    // Rejecting the longer extension would refuse archives the game itself
+    // ships, so truncate on both the parser and writer paths.
+    extension = extension.substr(0U, std::min<std::size_t>(extension.size(), 4U));
 
     std::array<std::byte, 4> fourcc{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
     for (std::size_t index = 0; index < extension.size(); ++index) {
@@ -135,10 +131,18 @@ result<ba2_record_identity> make_gnrl_identity(ba2_record_path path,
         return error{diagnostic_code_for(source), missing_gnrl_file_name_message(source)};
     }
 
-    // GNRL records hash the full canonical filename, including extension, but
-    // keep extension bytes as a separate lookup field. Writer derivation keeps
-    // the caller's extension casing for byte-stable output; parser validation
-    // still compares stored and expected extension bytes case-insensitively.
+    // GNRL records hash the extension-stripped stem and carry the extension
+    // separately as a FourCC lookup field, exactly as DX10 does. TES5Edit's
+    // TwbBSArchive.FindFileRecordFO4 is one shared lookup path for baFO4,
+    // baFO4dds, baSF, and baSFdds: it calls SplitNameExt and hashes `name`, the
+    // stem, never the filename with its extension. Verified against retail
+    // archives: 35,602 GNRL records across Fallout 4 v1/v8 and Starfield v2 all
+    // match the stem hash and none match the full-filename hash.
+    //
+    // Writer derivation keeps the caller's extension casing for byte-stable
+    // output; parser validation still compares stored and expected extension
+    // bytes case-insensitively. The hash basis is always the canonical stem,
+    // since hash_fo4 lowercases ASCII anyway.
     const auto extension_file_name =
         source == ba2_record_identity_source::writer_entry ? display_file_name : file_name;
     const auto dot = extension_file_name.find_last_of('.');
@@ -152,13 +156,13 @@ result<ba2_record_identity> make_gnrl_identity(ba2_record_path path,
         return extension.error();
     }
 
-    const auto name_hash = detail::hash_fo4(file_name);
+    const auto canonical_dot = file_name.find_last_of('.');
+    const auto stem =
+        canonical_dot == std::string_view::npos ? file_name : file_name.substr(0U, canonical_dot);
+    const auto name_hash = detail::hash_fo4(stem);
     const auto directory_hash = detail::hash_fo4(directory);
-    return ba2_record_identity{std::move(path.display_path),
-                               std::move(path.canonical_path),
-                               extension.value(),
-                               name_hash,
-                               directory_hash};
+    return ba2_record_identity{std::move(path.display_path), std::move(path.canonical_path),
+                               extension.value(), name_hash, directory_hash};
 }
 
 result<ba2_record_identity> make_dx10_identity(ba2_record_path path,
@@ -179,17 +183,13 @@ result<ba2_record_identity> make_dx10_identity(ba2_record_path path,
 
     const auto name_hash = detail::hash_fo4(stem);
     const auto directory_hash = detail::hash_fo4(directory);
-    return ba2_record_identity{std::move(path.display_path),
-                               std::move(path.canonical_path),
-                               extension.value(),
-                               name_hash,
-                               directory_hash};
+    return ba2_record_identity{std::move(path.display_path), std::move(path.canonical_path),
+                               extension.value(), name_hash, directory_hash};
 }
 
 }  // namespace
 
-result<ba2_record_path> resolve_ba2_record_path(ba2_subtype subtype,
-                                                std::string_view archive_path,
+result<ba2_record_path> resolve_ba2_record_path(ba2_subtype subtype, std::string_view archive_path,
                                                 ba2_record_identity_source source) {
     std::string display_path{archive_path};
     std::replace(display_path.begin(), display_path.end(), '\\', '/');
@@ -234,8 +234,7 @@ result<void> validate_ba2_record_identity(ba2_subtype subtype,
     // public path lookup would expose an entry Bethesda-style record lookup cannot
     // address consistently.
     if (stored.name_hash != expected.name_hash) {
-        return error{error_code::format_error,
-                     label + " NameHash does not match filename table"};
+        return error{error_code::format_error, label + " NameHash does not match filename table"};
     }
     if (stored.directory_hash != expected.directory_hash) {
         return error{error_code::format_error,
