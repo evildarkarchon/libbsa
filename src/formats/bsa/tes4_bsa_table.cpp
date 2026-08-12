@@ -163,7 +163,13 @@ result<void> validate_tables(detail::binary_reader& reader, const tes4_bsa_heade
         if (!skipped_name) {
             return skipped_name.error();
         }
-        folder_name_bytes_seen += 1U + name_size.value();
+        // TotalFolderNameLength counts the bzstring bytes only -- the name plus
+        // its null terminator -- and excludes the one-byte length prefix.
+        // wbBSArchive.pas:1469 says so outright when writing the header
+        // ("+ terminator only, length prefix is not counted"), and every retail
+        // archive agrees. Counting the prefix here rejected every vanilla
+        // TES4-family BSA outright.
+        folder_name_bytes_seen += name_size.value();
 
         std::size_t file_record_bytes = 0;
         if (!multiply_fits(folder.file_count, tes4_bsa_file_record_size, file_record_bytes)) {
@@ -236,7 +242,13 @@ result<std::vector<tes4_bsa_folder_block>> read_folder_blocks(
             return error{error_code::format_error,
                          "TES4 BSA folder record hash does not match folder name table"};
         }
-        folder_name_bytes_seen += 1U + name_size.value();
+        // TotalFolderNameLength counts the bzstring bytes only -- the name plus
+        // its null terminator -- and excludes the one-byte length prefix.
+        // wbBSArchive.pas:1469 says so outright when writing the header
+        // ("+ terminator only, length prefix is not counted"), and every retail
+        // archive agrees. Counting the prefix here rejected every vanilla
+        // TES4-family BSA outright.
+        folder_name_bytes_seen += name_size.value();
 
         std::vector<tes4_bsa_file_record> file_records;
         auto reserved_files = detail::reserve_metadata_vector(file_records, folder.file_count,
@@ -330,8 +342,13 @@ result<std::size_t> tes4_bsa_metadata_table_size(const tes4_bsa_header_fields& h
     }
 
     std::size_t total = tes4_bsa_header_size;
+    // The folder-name block on disk is one byte per folder larger than
+    // TotalFolderNameLength, because that header field counts bzstring bytes
+    // only and excludes the length prefix. wbBSArchive.pas:1495 walks the same
+    // block as `Length(Name) + 2` where the header counted `+ 1`.
     if (!add_fits(total, folder_records_size, total) ||
         !add_fits(total, static_cast<std::size_t>(header.total_folder_name_length), total) ||
+        !add_fits(total, static_cast<std::size_t>(header.folder_count), total) ||
         !add_fits(total, file_records_size, total) ||
         !add_fits(total, static_cast<std::size_t>(header.total_file_name_length), total)) {
         return error{error_code::format_error, "TES4 BSA metadata table is too large"};

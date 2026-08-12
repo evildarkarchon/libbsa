@@ -358,7 +358,11 @@ void write_archive(archive_spec& archive, const std::filesystem::path& output_di
     writer.u32(archive.flags);
     writer.u32(1U);
     writer.u32(checked_u32(archive.entries.size(), "file count"));
-    writer.u32(checked_u32(archive.folder.size() + 2, "folder names length"));
+    // TotalFolderNameLength is name + terminator; the one-byte bzstring length
+    // prefix is written to the folder-name block but not counted here. See
+    // wbBSArchive.pas:1469. folder_block_size above keeps the + 2 because it
+    // measures the physical block, prefix included.
+    writer.u32(checked_u32(archive.folder.size() + 1, "folder names length"));
     writer.u32(file_names_length);
     writer.u32(archive.file_flags);
 

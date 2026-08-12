@@ -218,6 +218,30 @@ std::optional<ba2_header_probe> probe_ba2_header(const std::filesystem::path& pa
     return ba2_header_probe{read_u32(4U), read_u32(8U)};
 }
 
+/// Reads the header version of a TES4-family BSA at `path`.
+///
+/// Returns `std::nullopt` for anything that is not a `BSA\0` archive, so a mixed
+/// corpus of BSA, BA2, and TES3 archives can be walked in one pass. Like
+/// `probe_ba2_header`, this decodes the bytes directly rather than going through
+/// the parser under test.
+std::optional<std::uint32_t> probe_tes4_bsa_version(const std::filesystem::path& path) {
+    std::ifstream stream{path, std::ios::binary};
+    if (!stream.is_open()) {
+        return std::nullopt;
+    }
+    std::array<unsigned char, 8U> bytes{};
+    stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    if (stream.gcount() != static_cast<std::streamsize>(bytes.size())) {
+        return std::nullopt;
+    }
+    if (bytes[0] != 'B' || bytes[1] != 'S' || bytes[2] != 'A' || bytes[3] != 0U) {
+        return std::nullopt;
+    }
+    return static_cast<std::uint32_t>(bytes[4]) | (static_cast<std::uint32_t>(bytes[5]) << 8U) |
+           (static_cast<std::uint32_t>(bytes[6]) << 16U) |
+           (static_cast<std::uint32_t>(bytes[7]) << 24U);
+}
+
 /// Reads up to `count` leading bytes of `path` for direct header decoding.
 ///
 /// Returns `std::nullopt` when the file cannot be opened, and a short buffer
@@ -502,6 +526,73 @@ TEST_CASE("a retail BA2 GNRL archive opens, lists, and extracts end to end",
         CHECK(sink.size() == entry.raw_size);
     }
     INFO("compressed_entries=" << compressed_entries);
+}
+
+TEST_CASE("a retail TES4-family BSA extracts every zlib-compressed entry",
+          "[requires-game-fixture][unit][bsa][tes4][compat]") {
+    auto fixture_root = local_fixture_root();
+    if (!fixture_root.has_value()) {
+        SKIP(
+            "Set LIBBSA_GAME_FIXTURES or place local game archives under "
+            "tests/fixtures/local; these files are not committed.");
+    }
+
+    // Oblivion/FO3/FNV/Skyrim LE archives (v103/v104) are the BSA half of the
+    // zlib route. v105 is Skyrim SE and uses LZ4 frame, so it proves nothing
+    // here. Pick the smallest matching archive: retail BSAs run to gigabytes and
+    // this case extracts every compressed entry it finds.
+    std::optional<std::filesystem::path> smallest;
+    std::uintmax_t smallest_size = 0U;
+    std::error_code iteration_error;
+    std::filesystem::directory_iterator iterator{*fixture_root, iteration_error};
+    REQUIRE_FALSE(iteration_error);
+
+    for (const auto& directory_entry : iterator) {
+        if (!directory_entry.is_regular_file()) {
+            continue;
+        }
+        auto version = probe_tes4_bsa_version(directory_entry.path());
+        if (!version.has_value() || (*version != 103U && *version != 104U)) {
+            continue;
+        }
+        std::error_code size_error;
+        const auto size = std::filesystem::file_size(directory_entry.path(), size_error);
+        if (size_error) {
+            continue;
+        }
+        if (!smallest.has_value() || size < smallest_size) {
+            smallest = directory_entry.path();
+            smallest_size = size;
+        }
+    }
+
+    if (!smallest.has_value()) {
+        SKIP("The local corpus holds no TES4-family BSA v103 or v104 archives.");
+    }
+
+    INFO("archive=" << smallest->filename().string());
+    auto opened = libbsa::archive_reader::open(smallest->string());
+    REQUIRE(opened.has_value());
+
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+
+    std::size_t compressed_entries = 0U;
+    for (const auto& entry : entries.value()) {
+        if (entry.compression == libbsa::entry_compression::none) {
+            continue;
+        }
+        ++compressed_entries;
+        INFO("entry=" << entry.path << " raw_size=" << entry.raw_size);
+        fnv1a32_sink sink;
+        auto extracted = opened.value().extract(entry.path, sink);
+        REQUIRE(extracted.has_value());
+        CHECK(sink.size() == entry.raw_size);
+    }
+
+    if (compressed_entries == 0U) {
+        SKIP("The smallest TES4-family BSA in the corpus stores no compressed entries.");
+    }
 }
 
 TEST_CASE("a retail BA2 DX10 archive opens and stores its filename table last",

@@ -417,7 +417,9 @@ TEST_CASE("tes4_bsa_malformed_open rejects payload spans inside metadata",
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     const auto folder_count = read_u32_le(bytes, 16U);
     const auto folder_name_bytes = read_u32_le(bytes, 24U);
-    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes;
+    // TotalFolderNameLength counts bzstring bytes only, so the folder-name block
+    // on disk is one length-prefix byte per folder wider than the header field.
+    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes + folder_count;
     overwrite_u32_le(bytes, first_file_record + 12U, 0U);
 
     const auto mutated =
@@ -435,7 +437,9 @@ TEST_CASE("tes4_bsa_malformed_open rejects partially overlapping payload spans",
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     const auto folder_count = read_u32_le(bytes, 16U);
     const auto folder_name_bytes = read_u32_le(bytes, 24U);
-    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes;
+    // TotalFolderNameLength counts bzstring bytes only, so the folder-name block
+    // on disk is one length-prefix byte per folder wider than the header field.
+    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes + folder_count;
     const auto second_file_record = first_file_record + 16U;
     const auto first_payload_offset = read_u32_le(bytes, first_file_record + 12U);
     overwrite_u32_le(bytes, second_file_record + 12U, first_payload_offset + 10U);
@@ -462,7 +466,9 @@ TEST_CASE(
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     const auto folder_count = read_u32_le(bytes, 16U);
     const auto folder_name_bytes = read_u32_le(bytes, 24U);
-    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes;
+    // TotalFolderNameLength counts bzstring bytes only, so the folder-name block
+    // on disk is one length-prefix byte per folder wider than the header field.
+    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes + folder_count;
     const auto second_file_record = first_file_record + 16U;
     const auto first_size_flags = read_u32_le(bytes, first_file_record + 8U);
     const auto second_size_flags = read_u32_le(bytes, second_file_record + 8U);
@@ -500,7 +506,9 @@ TEST_CASE("tes4_bsa_malformed_open rejects file record hash mismatches",
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     const auto folder_count = read_u32_le(bytes, 16U);
     const auto folder_name_bytes = read_u32_le(bytes, 24U);
-    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes;
+    // TotalFolderNameLength counts bzstring bytes only, so the folder-name block
+    // on disk is one length-prefix byte per folder wider than the header field.
+    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes + folder_count;
     overwrite_u32_le(bytes, first_file_record, read_u32_le(bytes, first_file_record) ^ 0x1000U);
 
     const auto mutated = std::filesystem::temp_directory_path() / "libbsa_file_hash_mismatch.bsa";

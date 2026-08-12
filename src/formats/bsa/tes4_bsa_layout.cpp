@@ -88,8 +88,12 @@ result<tes4_table_lengths> calculate_table_lengths(
     std::uint64_t total_file_name_length64 = 0;
     std::uint64_t file_count64 = 0;
     for (const auto& folder : folders) {
+        // Name plus null terminator only. The one-byte bzstring length prefix is
+        // written to the folder-name table but is deliberately not counted here,
+        // matching wbBSArchive.pas:1469 ("+ terminator only, length prefix is not
+        // counted") and every retail archive header.
         std::uint64_t folder_name_length = 0;
-        if (!add_fits_u64(static_cast<std::uint64_t>(folder.name.size()), 2U, folder_name_length) ||
+        if (!add_fits_u64(static_cast<std::uint64_t>(folder.name.size()), 1U, folder_name_length) ||
             !add_fits_u64(total_folder_name_length64, folder_name_length,
                           total_folder_name_length64) ||
             !add_fits_u64(file_count64, folder.entries.size(), file_count64)) {
