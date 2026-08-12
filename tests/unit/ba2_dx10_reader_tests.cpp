@@ -16,6 +16,7 @@
 #include <fstream>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -252,6 +253,10 @@ struct synthetic_dx10_record {
     std::string path;
     std::uint64_t offset;
     std::uint32_t size;
+    /// Replaces the stored NameHash the builder would otherwise derive from the
+    /// path, so a record can carry a BA2 Record Identity mismatch alongside
+    /// another structural defect.
+    std::optional<std::uint32_t> name_hash_override{};
 };
 
 class temp_file_cleanup final {
@@ -297,7 +302,7 @@ void append_dx10_record_for_path(std::vector<std::byte>& bytes,
     const auto [stem, extension] = split_stem_extension(file_name);
     REQUIRE(extension == "dds");
 
-    append_u32_le(bytes, libbsa::detail::hash_fo4(stem));
+    append_u32_le(bytes, record.name_hash_override.value_or(libbsa::detail::hash_fo4(stem)));
     append_ascii(bytes, std::string_view{"dds\0", 4U});
     append_u32_le(bytes, libbsa::detail::hash_fo4(directory));
     append_u8(bytes, 0U);
@@ -347,6 +352,29 @@ std::vector<std::byte> make_synthetic_dx10_archive(std::span<const synthetic_dx1
 
     bytes.insert(bytes.end(), payload.begin(), payload.end());
     return bytes;
+}
+
+/// Returns the offset of the first payload byte make_synthetic_dx10_archive
+/// writes, which is where a legal stored chunk span has to start.
+std::uint64_t synthetic_dx10_payload_base(std::span<const std::string> paths) {
+    constexpr std::uint64_t fixed_header_size = 24U;
+    constexpr std::uint64_t dx10_record_size = 24U + 24U;
+
+    auto base = fixed_header_size + (dx10_record_size * paths.size());
+    for (const auto& path : paths) {
+        base += 2U + path.size();
+    }
+    return base;
+}
+
+/// Writes a synthetic archive and returns the diagnostic archive opening
+/// produced, which is the only outcome the precedence cases below observe.
+libbsa::error open_error_for(const std::filesystem::path& path,
+                             const std::vector<std::byte>& bytes) {
+    write_binary_file(path, bytes);
+    auto opened = libbsa::archive_reader::open(path.string());
+    REQUIRE_FALSE(opened.has_value());
+    return opened.error();
 }
 
 void write_sparse_dx10_archive(const std::filesystem::path& path) {
@@ -671,6 +699,186 @@ TEST_CASE("ba2_archive_opening accepts exact duplicate non-empty DX10 chunk payl
         } else {
             CHECK(extracted.value() == first_extracted);
         }
+    }
+}
+
+TEST_CASE("ba2_archive_opening reports one diagnostic for multi-defect DX10 chunk spans",
+          "[unit][malformed][ba2_archive_opening][ba2_dx10_overlap][span_precedence]") {
+    // Characterisation, not specification (issue #48). Unlike GNRL, DX10
+    // validates every chunk span across every record before any entry is
+    // materialized, so span diagnostics beat the duplicate-canonical-path check
+    // outright instead of racing it record by record. Pinned before Payload Span
+    // Exclusivity enforcement is reformulated so the rework can be validated
+    // against current behavior.
+    const auto temp_path =
+        std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-span-precedence.ba2";
+    temp_file_cleanup cleanup{temp_path};
+
+    const std::string first_path = "textures/precedence/first.dds";
+    const std::string second_path = "textures/precedence/second.dds";
+    const std::string third_path = "textures/precedence/third.dds";
+    const std::string fourth_path = "textures/precedence/fourth.dds";
+    const std::vector<std::byte> payload(8U, std::byte{0x5A});
+
+    SECTION("a chunk span outside the archive precedes a partial overlap in the same chunk") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_dx10_payload_base(paths);
+        const std::array records{
+            synthetic_dx10_record{first_path, base, 4U},
+            // Reaches past the archive and over the accepted span at the same time.
+            synthetic_dx10_record{second_path, base + 2U, 0x0100'0000U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_dx10_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("chunk payload span is outside the archive") !=
+              std::string::npos);
+    }
+
+    SECTION("a header intersection precedes a partial overlap in the same chunk") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_dx10_payload_base(paths);
+        const std::array records{
+            synthetic_dx10_record{first_path, base, 4U},
+            // Covers the whole archive, so it reaches the fixed header, the record
+            // table, the filename table and the accepted span at once.
+            synthetic_dx10_record{second_path, 0U,
+                                  static_cast<std::uint32_t>(base + payload.size())}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_dx10_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("intersects header or record table") != std::string::npos);
+    }
+
+    SECTION("a filename table intersection precedes a partial overlap in the same chunk") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_dx10_payload_base(paths);
+        constexpr std::uint64_t name_table_offset = 24U + (48U * 2U);
+        const std::array records{
+            synthetic_dx10_record{first_path, base, 4U},
+            synthetic_dx10_record{
+                second_path, name_table_offset,
+                static_cast<std::uint32_t>(base + payload.size() - name_table_offset)}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_dx10_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("filename table intersects payload data") != std::string::npos);
+    }
+
+    SECTION("a partial overlap precedes a duplicate canonical path") {
+        const std::array paths{first_path, first_path};
+        const auto base = synthetic_dx10_payload_base(paths);
+        const std::array records{synthetic_dx10_record{first_path, base, 4U},
+                                 synthetic_dx10_record{first_path, base + 2U, 4U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_dx10_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("chunk payload spans partially overlap") != std::string::npos);
+        CHECK(reported.message.find("duplicate canonical archive paths") == std::string::npos);
+    }
+
+    SECTION("inconsistent chunk sizes in an earlier record precede a later partial overlap") {
+        const std::array paths{first_path, second_path, third_path};
+        const auto base = synthetic_dx10_payload_base(paths);
+        const std::array records{synthetic_dx10_record{first_path, base, 0U},
+                                 synthetic_dx10_record{second_path, base, 4U},
+                                 synthetic_dx10_record{third_path, base + 2U, 4U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_dx10_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("chunk sizes are inconsistent") != std::string::npos);
+    }
+
+    SECTION("a record identity mismatch does not preempt a partial overlap") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_dx10_payload_base(paths);
+        // Record Identity mismatches are recorded as compatibility warnings, never
+        // errors (issue #43), so they cannot win a precedence contest at all.
+        const std::array records{
+            synthetic_dx10_record{first_path, base, 4U, std::uint32_t{0xDEAD'BEEFU}},
+            synthetic_dx10_record{second_path, base + 2U, 4U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_dx10_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("chunk payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("an archive carrying every structural defect reports only the earliest") {
+        const std::array paths{first_path, first_path, third_path, fourth_path};
+        const auto base = synthetic_dx10_payload_base(paths);
+        const std::array records{
+            synthetic_dx10_record{first_path, base, 4U, std::uint32_t{0xDEAD'BEEFU}},
+            synthetic_dx10_record{first_path, base + 2U, 4U},
+            synthetic_dx10_record{third_path, 0U, static_cast<std::uint32_t>(base)},
+            synthetic_dx10_record{fourth_path, base, 0x0100'0000U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_dx10_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("chunk payload spans partially overlap") != std::string::npos);
+    }
+}
+
+TEST_CASE("ba2_archive_opening rejects three or more mutually conflicting DX10 chunk spans",
+          "[unit][malformed][ba2_archive_opening][ba2_dx10_overlap]") {
+    // The exact-duplicate exemption exists so Payload Placement can share one
+    // location between records (ADR-0001). It must not become a way to smuggle a
+    // partial overlap past the check by burying it among duplicates.
+    const auto temp_path =
+        std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-multi-span-conflict.ba2";
+    temp_file_cleanup cleanup{temp_path};
+
+    const std::string first_path = "textures/conflict/first.dds";
+    const std::string second_path = "textures/conflict/second.dds";
+    const std::string third_path = "textures/conflict/third.dds";
+    const std::string fourth_path = "textures/conflict/fourth.dds";
+    const std::vector<std::byte> payload(16U, std::byte{0x3C});
+
+    SECTION("a partial overlap after two exact duplicates") {
+        const std::array paths{first_path, second_path, third_path};
+        const auto base = synthetic_dx10_payload_base(paths);
+        const std::array records{synthetic_dx10_record{first_path, base, 4U},
+                                 synthetic_dx10_record{second_path, base, 4U},
+                                 synthetic_dx10_record{third_path, base + 2U, 4U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_dx10_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("chunk payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("a partial overlap against a duplicated span that is not the first accepted span") {
+        const std::array paths{first_path, second_path, third_path, fourth_path};
+        const auto base = synthetic_dx10_payload_base(paths);
+        const std::array records{synthetic_dx10_record{first_path, base, 4U},
+                                 synthetic_dx10_record{second_path, base + 8U, 4U},
+                                 synthetic_dx10_record{third_path, base + 8U, 4U},
+                                 synthetic_dx10_record{fourth_path, base + 10U, 4U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_dx10_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("chunk payload spans partially overlap") != std::string::npos);
+
+        auto validated = libbsa::validate_archive(temp_path.string());
+        REQUIRE(validated.has_value());
+        CHECK_FALSE(validated.value().is_valid());
+        REQUIRE(validated.value().errors.size() == 1U);
+        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
     }
 }
 

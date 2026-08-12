@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -155,6 +156,10 @@ struct synthetic_gnrl_record {
     std::string path;
     std::uint64_t offset;
     std::uint32_t size;
+    /// Replaces the stored NameHash the builder would otherwise derive from the
+    /// path, so a record can carry a BA2 Record Identity mismatch alongside
+    /// another structural defect.
+    std::optional<std::uint32_t> name_hash_override{};
 };
 
 std::vector<ba2_success_fixture> ba2_success_fixtures() {
@@ -221,10 +226,9 @@ std::vector<std::byte> make_synthetic_gnrl_archive(std::span<const synthetic_gnr
         // GNRL NameHash covers the extension-stripped stem, matching retail
         // archives and TwbBSArchive.FindFileRecordFO4.
         const auto dot = file_name.find_last_of('.');
-        const auto stem =
-            dot == std::string_view::npos ? file_name : file_name.substr(0U, dot);
+        const auto stem = dot == std::string_view::npos ? file_name : file_name.substr(0U, dot);
 
-        append_u32_le(bytes, libbsa::detail::hash_fo4(stem));
+        append_u32_le(bytes, record.name_hash_override.value_or(libbsa::detail::hash_fo4(stem)));
         append_ascii(bytes, std::string_view{"BIN\0", 4U});
         append_u32_le(bytes, libbsa::detail::hash_fo4(directory));
         append_u32_le(bytes, 0U);
@@ -241,6 +245,29 @@ std::vector<std::byte> make_synthetic_gnrl_archive(std::span<const synthetic_gnr
 
     bytes.insert(bytes.end(), payload.begin(), payload.end());
     return bytes;
+}
+
+/// Returns the offset of the first payload byte make_synthetic_gnrl_archive
+/// writes, which is where a legal stored span has to start.
+std::uint64_t synthetic_gnrl_payload_base(std::span<const std::string> paths) {
+    constexpr std::uint64_t fixed_header_size = 24U;
+    constexpr std::uint64_t gnrl_record_size = 36U;
+
+    auto base = fixed_header_size + (gnrl_record_size * paths.size());
+    for (const auto& path : paths) {
+        base += 2U + path.size();
+    }
+    return base;
+}
+
+/// Writes a synthetic archive and returns the diagnostic archive opening
+/// produced, which is the only outcome the precedence cases below observe.
+libbsa::error open_error_for(const std::filesystem::path& path,
+                             const std::vector<std::byte>& bytes) {
+    write_binary_file(path, bytes);
+    auto opened = libbsa::archive_reader::open(path.string());
+    REQUIRE_FALSE(opened.has_value());
+    return opened.error();
 }
 
 class temp_file_cleanup final {
@@ -625,6 +652,187 @@ TEST_CASE("ba2_archive_opening accepts exact duplicate non-empty payload spans",
         auto extracted = opened.value().extract_bytes(path);
         REQUIRE(extracted.has_value());
         CHECK(extracted.value() == payload);
+    }
+}
+
+TEST_CASE("ba2_archive_opening reports one diagnostic for multi-defect GNRL payload spans",
+          "[unit][malformed][ba2_archive_opening][ba2_gnrl_overlap][span_precedence]") {
+    // Characterisation, not specification (issue #48). GNRL runs every check for
+    // one record before moving on to the next, so which single diagnostic an
+    // archive with several structural defects reports is decided first by record
+    // order and only then by the order of the checks inside the loop. Pinned
+    // before Payload Span Exclusivity enforcement is reformulated so the rework
+    // can be validated against current behavior rather than against expectations
+    // formed afterwards.
+    const auto temp_path =
+        std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-span-precedence.ba2";
+    temp_file_cleanup cleanup{temp_path};
+
+    const std::string first_path = "meshes/precedence/first.bin";
+    const std::string second_path = "meshes/precedence/second.bin";
+    const std::string third_path = "meshes/precedence/third.bin";
+    const std::string fourth_path = "meshes/precedence/fourth.bin";
+    const std::vector<std::byte> payload(16U, std::byte{0x5A});
+
+    SECTION("a span outside the archive precedes a partial overlap in the same record") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U},
+            // Reaches past the archive and over the accepted span at the same time.
+            synthetic_gnrl_record{second_path, base + 4U, 0x0100'0000U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload span is outside the archive") != std::string::npos);
+    }
+
+    SECTION("a header intersection precedes a partial overlap in the same record") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U},
+            // Covers the whole archive, so it reaches the fixed header, the record
+            // table, the filename table and the accepted span at once.
+            synthetic_gnrl_record{second_path, 0U,
+                                  static_cast<std::uint32_t>(base + payload.size())}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("intersects header or record table") != std::string::npos);
+    }
+
+    SECTION("a filename table intersection precedes a partial overlap in the same record") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        constexpr std::uint64_t name_table_offset = 24U + (36U * 2U);
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U},
+            synthetic_gnrl_record{
+                second_path, name_table_offset,
+                static_cast<std::uint32_t>(base + payload.size() - name_table_offset)}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("filename table intersects payload data") != std::string::npos);
+    }
+
+    SECTION("a duplicate canonical path precedes a partial overlap in the same record") {
+        const std::array paths{first_path, first_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{synthetic_gnrl_record{first_path, base, 8U},
+                                 synthetic_gnrl_record{first_path, base + 4U, 8U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("duplicate canonical archive paths") != std::string::npos);
+    }
+
+    SECTION("a partial overlap precedes a defect carried by a later record") {
+        const std::array paths{first_path, second_path, third_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U},
+            synthetic_gnrl_record{second_path, base + 4U, 8U},
+            synthetic_gnrl_record{third_path, 0U, static_cast<std::uint32_t>(base)}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("a record identity mismatch does not preempt a partial overlap") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        // Record Identity mismatches are recorded as compatibility warnings, never
+        // errors (issue #43), so they cannot win a precedence contest at all.
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U, std::uint32_t{0xDEAD'BEEFU}},
+            synthetic_gnrl_record{second_path, base + 4U, 8U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("an archive carrying every structural defect reports only the earliest") {
+        const std::array paths{first_path, first_path, third_path, fourth_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U, std::uint32_t{0xDEAD'BEEFU}},
+            synthetic_gnrl_record{first_path, base + 4U, 8U},
+            synthetic_gnrl_record{third_path, 0U, static_cast<std::uint32_t>(base)},
+            synthetic_gnrl_record{fourth_path, base, 0x0100'0000U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("duplicate canonical archive paths") != std::string::npos);
+        CHECK(reported.message.find("partially overlap") == std::string::npos);
+    }
+}
+
+TEST_CASE("ba2_archive_opening rejects three or more mutually conflicting GNRL payload spans",
+          "[unit][malformed][ba2_archive_opening][ba2_gnrl_overlap]") {
+    // The exact-duplicate exemption exists so Payload Placement can share one
+    // location between records (ADR-0001). It must not become a way to smuggle a
+    // partial overlap past the check by burying it among duplicates.
+    const auto temp_path =
+        std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-multi-span-conflict.ba2";
+    temp_file_cleanup cleanup{temp_path};
+
+    const std::string first_path = "meshes/conflict/first.bin";
+    const std::string second_path = "meshes/conflict/second.bin";
+    const std::string third_path = "meshes/conflict/third.bin";
+    const std::string fourth_path = "meshes/conflict/fourth.bin";
+    const std::vector<std::byte> payload(16U, std::byte{0x3C});
+
+    SECTION("a partial overlap after two exact duplicates") {
+        const std::array paths{first_path, second_path, third_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{synthetic_gnrl_record{first_path, base, 8U},
+                                 synthetic_gnrl_record{second_path, base, 8U},
+                                 synthetic_gnrl_record{third_path, base + 4U, 8U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("a partial overlap against a duplicated span that is not the first accepted span") {
+        const std::array paths{first_path, second_path, third_path, fourth_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{synthetic_gnrl_record{first_path, base, 4U},
+                                 synthetic_gnrl_record{second_path, base + 8U, 4U},
+                                 synthetic_gnrl_record{third_path, base + 8U, 4U},
+                                 synthetic_gnrl_record{fourth_path, base + 10U, 4U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+
+        auto validated = libbsa::validate_archive(temp_path.string());
+        REQUIRE(validated.has_value());
+        CHECK_FALSE(validated.value().is_valid());
+        REQUIRE(validated.value().errors.size() == 1U);
+        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
     }
 }
 

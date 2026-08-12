@@ -2,11 +2,14 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <detail/bethesda_hash.hpp>
 #include <detail/parser_primitives.hpp>
 
 #include "formats/bsa/bsa_format_detector.hpp"
+#include "formats/bsa/tes4_bsa_constants.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
@@ -14,6 +17,7 @@
 #include <fstream>
 #include <optional>
 #include <regex>
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -170,6 +174,127 @@ std::uint32_t read_u32_le(const std::vector<std::byte>& bytes, std::size_t offse
             << (index * 8U);
     }
     return value;
+}
+
+void append_u8(std::vector<std::byte>& bytes, std::uint8_t value) {
+    bytes.push_back(static_cast<std::byte>(value));
+}
+
+void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
+    for (std::uint32_t index = 0; index < 4U; ++index) {
+        append_u8(bytes, static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+    }
+}
+
+void append_u64_le(std::vector<std::byte>& bytes, std::uint64_t value) {
+    for (std::uint32_t index = 0; index < 8U; ++index) {
+        append_u8(bytes, static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+    }
+}
+
+void append_ascii(std::vector<std::byte>& bytes, std::string_view value) {
+    for (const char ch : value) {
+        append_u8(bytes, static_cast<std::uint8_t>(ch));
+    }
+}
+
+/// Single-folder synthetic archive constant: every builder below packs its files
+/// into this one folder so record order and payload spans stay the only
+/// variables under test.
+const std::string synthetic_tes4_folder = "meshes\\precedence";
+
+struct synthetic_tes4_record {
+    std::string file_name;
+    std::uint32_t offset;
+    std::uint32_t size;
+    /// Replaces the stored file-record hash the builder would otherwise derive
+    /// from the file name, so a record can carry a hash mismatch alongside
+    /// another structural defect.
+    std::optional<std::uint64_t> hash_override{};
+};
+
+/// Returns the offset of the first payload byte make_synthetic_tes4_archive
+/// writes for `records`, which is also the metadata size a legal stored span has
+/// to start at or after.
+std::uint32_t synthetic_tes4_payload_base(std::span<const synthetic_tes4_record> records) {
+    using namespace libbsa::formats::bsa;
+
+    std::size_t file_names_length = 0;
+    for (const auto& record : records) {
+        file_names_length += record.file_name.size() + 1U;
+    }
+    // The folder-name block carries the one-byte bzstring length prefix that
+    // TotalFolderNameLength deliberately excludes, hence + 2 rather than + 1.
+    const auto folder_block_size =
+        synthetic_tes4_folder.size() + 2U + (records.size() * tes4_bsa_file_record_size);
+    return static_cast<std::uint32_t>(tes4_bsa_header_size + tes4_bsa_legacy_folder_record_size +
+                                      folder_block_size + file_names_length);
+}
+
+/// Builds a minimal single-folder TES4 v103 BSA with caller-controlled payload
+/// spans.
+///
+/// Payloads are raw and uncompressed and embedded names are off, so a record's
+/// stored size is exactly the span the parser checks for Payload Span
+/// Exclusivity, with no size prefix or name prefix in the way.
+std::vector<std::byte> make_synthetic_tes4_archive(std::span<const synthetic_tes4_record> records,
+                                                   std::size_t payload_size) {
+    using namespace libbsa::formats::bsa;
+
+    std::uint32_t file_names_length = 0;
+    for (const auto& record : records) {
+        file_names_length += static_cast<std::uint32_t>(record.file_name.size() + 1U);
+    }
+    // TES5Edit stores each folder record offset with the file-name block
+    // contribution folded in; see wbBSArchive.pas and the fixture generator.
+    const auto folder_offset = static_cast<std::uint32_t>(
+        tes4_bsa_header_size + tes4_bsa_legacy_folder_record_size + file_names_length);
+
+    std::vector<std::byte> bytes;
+    append_u32_le(bytes, tes4_bsa_magic);
+    append_u32_le(bytes, tes4_bsa_oblivion_version);
+    append_u32_le(bytes, static_cast<std::uint32_t>(tes4_bsa_header_size));
+    append_u32_le(bytes,
+                  tes4_bsa_archive_include_directory_names | tes4_bsa_archive_include_file_names);
+    append_u32_le(bytes, 1U);
+    append_u32_le(bytes, static_cast<std::uint32_t>(records.size()));
+    // TotalFolderNameLength counts the bzstring bytes only: name plus terminator,
+    // never the length prefix.
+    append_u32_le(bytes, static_cast<std::uint32_t>(synthetic_tes4_folder.size() + 1U));
+    append_u32_le(bytes, file_names_length);
+    append_u32_le(bytes, tes4_bsa_file_flag_meshes);
+
+    append_u64_le(bytes, libbsa::detail::hash_tes4(synthetic_tes4_folder, {}));
+    append_u32_le(bytes, static_cast<std::uint32_t>(records.size()));
+    append_u32_le(bytes, folder_offset);
+
+    append_u8(bytes, static_cast<std::uint8_t>(synthetic_tes4_folder.size() + 1U));
+    append_ascii(bytes, synthetic_tes4_folder);
+    append_u8(bytes, 0U);
+    for (const auto& record : records) {
+        append_u64_le(bytes,
+                      record.hash_override.value_or(libbsa::detail::hash_tes4(record.file_name)));
+        append_u32_le(bytes, record.size);
+        append_u32_le(bytes, record.offset);
+    }
+
+    for (const auto& record : records) {
+        append_ascii(bytes, record.file_name);
+        append_u8(bytes, 0U);
+    }
+
+    bytes.resize(bytes.size() + payload_size, std::byte{0x5A});
+    return bytes;
+}
+
+/// Writes a synthetic archive and returns the diagnostic archive opening
+/// produced, which is the only outcome the precedence cases below observe.
+libbsa::error open_error_for(const std::filesystem::path& path,
+                             const std::vector<std::byte>& bytes) {
+    write_binary_file(path, bytes);
+    auto opened = libbsa::archive_reader::open(path.string());
+    REQUIRE_FALSE(opened.has_value());
+    return opened.error();
 }
 
 }  // namespace
@@ -433,7 +558,7 @@ TEST_CASE("tes4_bsa_malformed_open rejects payload spans inside metadata",
 }
 
 TEST_CASE("tes4_bsa_malformed_open rejects partially overlapping payload spans",
-          "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
+          "[unit][fixture][malformed][tes4_bsa_malformed_open][tes4_bsa_overlap]") {
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     const auto folder_count = read_u32_le(bytes, 16U);
     const auto folder_name_bytes = read_u32_le(bytes, 24U);
@@ -457,6 +582,201 @@ TEST_CASE("tes4_bsa_malformed_open rejects partially overlapping payload spans",
     CHECK_FALSE(validated.value().is_valid());
     REQUIRE(validated.value().errors.size() == 1U);
     CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("tes4_bsa_entry_metadata opens defect-free synthetic TES4 archives",
+          "[unit][tes4_bsa_entry_metadata]") {
+    // Positive control for the builder the precedence cases below drive. Without
+    // it, one of those cases could pass because the builder emits an archive that
+    // never opens at all rather than because the injected defect was reported.
+    const auto archive_path =
+        std::filesystem::temp_directory_path() / "libbsa_tes4_synthetic_baseline.bsa";
+    constexpr std::size_t payload_size = 16U;
+
+    std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                       synthetic_tes4_record{"second.bin", 0U, 8U}};
+    const auto base = synthetic_tes4_payload_base(records);
+    records[0].offset = base;
+    records[1].offset = base + 8U;
+    write_binary_file(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+    auto opened = libbsa::archive_reader::open(archive_path.string());
+
+    REQUIRE(opened.has_value());
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == 2U);
+
+    for (const auto& record : records) {
+        const auto canonical = "meshes/precedence/" + record.file_name;
+        auto found = opened.value().find(canonical);
+        REQUIRE(found.has_value());
+        REQUIRE(found.value().has_value());
+        CHECK(found.value()->payload_offset == record.offset);
+        CHECK(found.value()->stored_size == record.size);
+
+        auto extracted = opened.value().extract_bytes(canonical);
+        REQUIRE(extracted.has_value());
+        CHECK(extracted.value() == std::vector<std::byte>(record.size, std::byte{0x5A}));
+    }
+}
+
+TEST_CASE("tes4_bsa_malformed_open reports one diagnostic for multi-defect payload spans",
+          "[unit][malformed][tes4_bsa_malformed_open][tes4_bsa_overlap][span_precedence]") {
+    // Characterisation, not specification (issue #48). The TES4 parser runs every
+    // check for one file record before moving on to the next, so which single
+    // diagnostic an archive with several structural defects reports is decided
+    // first by record order and only then by the order of the checks inside the
+    // loop. Pinned before Payload Span Exclusivity enforcement is reformulated so
+    // the rework can be validated against current behavior.
+    const auto archive_path =
+        std::filesystem::temp_directory_path() / "libbsa_tes4_span_precedence.bsa";
+    constexpr std::size_t payload_size = 16U;
+
+    SECTION("a payload span outside the archive precedes a partial overlap in the same record") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                           // Reaches past the archive and over the accepted span at
+                           // the same time.
+                           synthetic_tes4_record{"second.bin", 0U, 0x0100'0000U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 4U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload span is outside the archive") != std::string::npos);
+    }
+
+    SECTION("a metadata overlap precedes a partial overlap in the same record") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                           // Covers the whole archive, so it reaches the metadata
+                           // tables and the accepted span at once.
+                           synthetic_tes4_record{"second.bin", 0U, 0U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].size = base + static_cast<std::uint32_t>(payload_size);
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload span overlaps metadata") != std::string::npos);
+    }
+
+    SECTION("a file record hash mismatch precedes a partial overlap in the same record") {
+        std::array records{
+            synthetic_tes4_record{"first.bin", 0U, 8U},
+            synthetic_tes4_record{"second.bin", 0U, 8U, std::uint64_t{0xDEAD'BEEF'FEED'FACEULL}}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 4U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("file record hash does not match filename table") !=
+              std::string::npos);
+    }
+
+    SECTION("a duplicate canonical path precedes a partial overlap in the same record") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                           synthetic_tes4_record{"first.bin", 0U, 8U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 4U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("duplicate canonical archive paths") != std::string::npos);
+    }
+
+    SECTION("a partial overlap precedes a defect carried by a later record") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                           synthetic_tes4_record{"second.bin", 0U, 8U},
+                           synthetic_tes4_record{"third.bin", 0U, 8U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 4U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("an archive carrying every structural defect reports only the earliest") {
+        std::array records{
+            synthetic_tes4_record{"first.bin", 0U, 8U}, synthetic_tes4_record{"first.bin", 0U, 8U},
+            synthetic_tes4_record{"third.bin", 0U, 8U, std::uint64_t{0xDEAD'BEEF'FEED'FACEULL}},
+            synthetic_tes4_record{"fourth.bin", 0U, 0x0100'0000U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 4U;
+        records[3].offset = base;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("duplicate canonical archive paths") != std::string::npos);
+        CHECK(reported.message.find("partially overlap") == std::string::npos);
+    }
+}
+
+TEST_CASE("tes4_bsa_malformed_open rejects three or more mutually conflicting payload spans",
+          "[unit][malformed][tes4_bsa_malformed_open][tes4_bsa_overlap]") {
+    // The exact-duplicate exemption exists so Payload Placement can share one
+    // location between records (ADR-0001). It must not become a way to smuggle a
+    // partial overlap past the check by burying it among duplicates.
+    const auto archive_path =
+        std::filesystem::temp_directory_path() / "libbsa_tes4_multi_span_conflict.bsa";
+    constexpr std::size_t payload_size = 16U;
+
+    SECTION("a partial overlap after two exact duplicates") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                           synthetic_tes4_record{"second.bin", 0U, 8U},
+                           synthetic_tes4_record{"third.bin", 0U, 8U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base;
+        records[2].offset = base + 4U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("a partial overlap against a duplicated span that is not the first accepted span") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 4U},
+                           synthetic_tes4_record{"second.bin", 0U, 4U},
+                           synthetic_tes4_record{"third.bin", 0U, 4U},
+                           synthetic_tes4_record{"fourth.bin", 0U, 4U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 8U;
+        records[2].offset = base + 8U;
+        records[3].offset = base + 10U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+
+        auto validated = libbsa::validate_archive(archive_path.string());
+        REQUIRE(validated.has_value());
+        CHECK_FALSE(validated.value().is_valid());
+        REQUIRE(validated.value().errors.size() == 1U);
+        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+    }
 }
 
 TEST_CASE(
