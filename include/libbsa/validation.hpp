@@ -21,6 +21,7 @@ enum class compatibility_warning_code {
     compressed_sound_payload,
     bsa_embedded_name_compatibility_risk,
     target_family_mismatch,
+    ba2_record_identity_mismatch,
 };
 
 /// Severity for compatible-but-noteworthy validation warnings.

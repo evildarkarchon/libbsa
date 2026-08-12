@@ -230,6 +230,8 @@ std::string warning_code_name(libbsa::compatibility_warning_code code) {
             return "bsa_embedded_name_compatibility_risk";
         case libbsa::compatibility_warning_code::target_family_mismatch:
             return "target_family_mismatch";
+        case libbsa::compatibility_warning_code::ba2_record_identity_mismatch:
+            return "ba2_record_identity_mismatch";
     }
 
     return "unknown";

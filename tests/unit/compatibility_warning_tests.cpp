@@ -114,6 +114,8 @@ std::string warning_code_name(libbsa::compatibility_warning_code code) {
             return "bsa_embedded_name_compatibility_risk";
         case libbsa::compatibility_warning_code::target_family_mismatch:
             return "target_family_mismatch";
+        case libbsa::compatibility_warning_code::ba2_record_identity_mismatch:
+            return "ba2_record_identity_mismatch";
     }
 
     FAIL("unknown compatibility_warning_code");
@@ -153,6 +155,43 @@ std::filesystem::path write_raw_ba2_archive() {
             .add_bytes("Meshes/Mismatch/Probe.nif", bytes_from_text("ba2 target mismatch payload"))
             .has_value());
     REQUIRE(writer.write_to(output.string()).has_value());
+    return output;
+}
+
+/// Writes a writer-output BA2 GNRL archive whose first record's stored NameHash
+/// disagrees with its own filename-table path.
+///
+/// The disagreement is produced by byte-patching writer output rather than by a
+/// committed archive so the evidence stays reproducible from repository sources
+/// alone. Retail archives such as `Fallout4 - Voices.ba2` carry the same
+/// condition (issue #43), but their bytes are not redistributable.
+std::filesystem::path write_record_identity_mismatch_ba2_archive() {
+    const auto output = unique_output_path("record-identity-mismatch", ".ba2");
+    libbsa::ba2_gnrl_writer_options options;
+    options.compression = libbsa::archive_compression_policy::all_raw;
+    options.overwrite_existing = true;
+    libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, options};
+    REQUIRE(writer
+                .add_bytes("Meshes/Unreachable/Probe.nif",
+                           bytes_from_text("record identity mismatch payload"))
+                .has_value());
+    REQUIRE(writer.write_to(output.string()).has_value());
+
+    // The Fallout 4 BA2 header is 24 bytes and a GNRL record leads with its
+    // UInt32 NameHash, so record 0's hash starts at offset 24.
+    constexpr std::size_t first_record_name_hash_offset = 24U;
+    std::fstream patch{output, std::ios::binary | std::ios::in | std::ios::out};
+    REQUIRE(patch.is_open());
+    patch.seekg(static_cast<std::streamoff>(first_record_name_hash_offset));
+    std::array<char, 4U> stored{};
+    patch.read(stored.data(), static_cast<std::streamsize>(stored.size()));
+    REQUIRE(patch.gcount() == static_cast<std::streamsize>(stored.size()));
+    stored[0] = static_cast<char>(static_cast<unsigned char>(stored[0]) ^ 0x10U);
+    patch.seekp(static_cast<std::streamoff>(first_record_name_hash_offset));
+    patch.write(stored.data(), static_cast<std::streamsize>(stored.size()));
+    REQUIRE(patch.good());
+    patch.close();
+
     return output;
 }
 
@@ -213,6 +252,25 @@ TEST_CASE("compatibility_warning reports compressed sound payloads",
                     libbsa::compatibility_warning_severity::advisory, true);
 }
 
+TEST_CASE("compatibility_warning reports BA2 record identity mismatch",
+          "[unit][compat][compatibility_warning]") {
+    const auto archive = write_record_identity_mismatch_ba2_archive();
+    const auto report = require_validated_report(archive);
+
+    const auto& warning =
+        require_warning(report, libbsa::compatibility_warning_code::ba2_record_identity_mismatch,
+                        libbsa::compatibility_warning_severity::risky, true);
+    CHECK(warning.archive_path == "meshes/unreachable/probe.nif");
+
+    // The archive stays open-able and the entry stays extractable by path; only
+    // Bethesda-style lookup by recomputed hash cannot reach it.
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+    auto extracted = opened.value().extract_bytes("Meshes/Unreachable/Probe.nif");
+    REQUIRE(extracted.has_value());
+    CHECK(extracted.value() == bytes_from_text("record identity mismatch payload"));
+}
+
 TEST_CASE("compatibility_warning behavior covers every public warning code",
           "[unit][compat][compatibility_warning][validation_policy]") {
     libbsa::validation_options mismatch_options;
@@ -222,6 +280,7 @@ TEST_CASE("compatibility_warning behavior covers every public warning code",
         require_validated_report(write_raw_ba2_archive(), mismatch_options),
         require_validated_report(write_embedded_name_bsa_archive()),
         require_validated_report(write_compressed_sound_bsa_archive()),
+        require_validated_report(write_record_identity_mismatch_ba2_archive()),
     };
 
     std::vector<std::string> observed_codes;

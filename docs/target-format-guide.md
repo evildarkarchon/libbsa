@@ -120,3 +120,7 @@ Warns when a valid TES4-family BSA entry uses embedded file-name prefixes that a
 ### `target_family_mismatch`
 
 Warns when caller-supplied validation expectations for archive family or variant do not match parsed archive metadata.
+
+### `ba2_record_identity_mismatch`
+
+Warns when a BA2 record's stored `NameHash`, `DirHash`, or `Ext` disagrees with its own filename-table path. The archive stays valid and the entry stays listed and extractable by path, but Bethesda-style lookup by recomputed hash cannot reach it. `entry_metadata::record_identity_mismatch` carries the same fact per entry.

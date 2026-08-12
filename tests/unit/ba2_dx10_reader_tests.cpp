@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include "ba2_record_identity_warning_check.hpp"
+
 #include <detail/bethesda_hash.hpp>
 #include <detail/parser_primitives.hpp>
 
@@ -951,8 +953,11 @@ TEST_CASE(
     REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("ba2_archive_opening rejects DX10 record hash mismatches",
-          "[unit][fixture][malformed][ba2_archive_opening][ba2_dx10_hash_lookup]") {
+TEST_CASE("ba2_archive_opening tolerates DX10 record hash mismatches as compatibility warnings",
+          "[unit][fixture][compat][ba2_archive_opening][ba2_dx10_hash_lookup]") {
+    // DX10 shares FindFileRecordFO4 with GNRL, so it inherits the same rule:
+    // stored lookup fields are never cross-checked against the filename table
+    // (issue #43). Each section mutates exactly one field of record 0.
     constexpr std::size_t first_record_name_hash_offset = 24U;
     constexpr std::size_t first_record_extension_offset = 28U;
     constexpr std::size_t first_record_directory_hash_offset = 32U;
@@ -964,20 +969,10 @@ TEST_CASE("ba2_archive_opening rejects DX10 record hash mismatches",
 
         const auto mutated =
             std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_name_hash_mismatch.ba2";
+        temp_file_cleanup cleanup{mutated};
         write_binary_file(mutated, bytes);
 
-        auto opened = libbsa::archive_reader::open(mutated.string());
-        REQUIRE_FALSE(opened.has_value());
-        REQUIRE(opened.error().code == libbsa::error_code::format_error);
-
-        auto validated = libbsa::validate_archive(mutated.string());
-        REQUIRE(validated.has_value());
-        CHECK_FALSE(validated.value().is_valid());
-        REQUIRE(validated.value().errors.size() == 1U);
-        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
-
-        std::error_code ignored;
-        std::filesystem::remove(mutated, ignored);
+        libbsa::tests::require_single_record_identity_mismatch(mutated);
     }
 
     SECTION("record extension") {
@@ -989,20 +984,10 @@ TEST_CASE("ba2_archive_opening rejects DX10 record hash mismatches",
 
         const auto mutated =
             std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_extension_mismatch.ba2";
+        temp_file_cleanup cleanup{mutated};
         write_binary_file(mutated, bytes);
 
-        auto opened = libbsa::archive_reader::open(mutated.string());
-        REQUIRE_FALSE(opened.has_value());
-        REQUIRE(opened.error().code == libbsa::error_code::format_error);
-
-        auto validated = libbsa::validate_archive(mutated.string());
-        REQUIRE(validated.has_value());
-        CHECK_FALSE(validated.value().is_valid());
-        REQUIRE(validated.value().errors.size() == 1U);
-        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
-
-        std::error_code ignored;
-        std::filesystem::remove(mutated, ignored);
+        libbsa::tests::require_single_record_identity_mismatch(mutated);
     }
 
     SECTION("DirectoryHash") {
@@ -1012,20 +997,10 @@ TEST_CASE("ba2_archive_opening rejects DX10 record hash mismatches",
 
         const auto mutated =
             std::filesystem::temp_directory_path() / "libbsa_ba2_dx10_directory_hash_mismatch.ba2";
+        temp_file_cleanup cleanup{mutated};
         write_binary_file(mutated, bytes);
 
-        auto opened = libbsa::archive_reader::open(mutated.string());
-        REQUIRE_FALSE(opened.has_value());
-        REQUIRE(opened.error().code == libbsa::error_code::format_error);
-
-        auto validated = libbsa::validate_archive(mutated.string());
-        REQUIRE(validated.has_value());
-        CHECK_FALSE(validated.value().is_valid());
-        REQUIRE(validated.value().errors.size() == 1U);
-        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
-
-        std::error_code ignored;
-        std::filesystem::remove(mutated, ignored);
+        libbsa::tests::require_single_record_identity_mismatch(mutated);
     }
 }
 

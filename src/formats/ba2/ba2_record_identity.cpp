@@ -30,13 +30,6 @@ std::string invalid_path_message(ba2_subtype subtype) {
     return label_for(subtype) + " filename table contains an invalid archive path";
 }
 
-std::string missing_gnrl_extension_message(ba2_record_identity_source source) {
-    if (source == ba2_record_identity_source::filename_table) {
-        return "BA2 GNRL filename table path must include a file extension";
-    }
-    return "BA2 GNRL archive path must include a file extension";
-}
-
 std::string missing_gnrl_file_name_message(ba2_record_identity_source source) {
     if (source == ba2_record_identity_source::filename_table) {
         return "BA2 GNRL filename table contains an invalid archive path";
@@ -145,13 +138,19 @@ result<ba2_record_identity> make_gnrl_identity(ba2_record_path path,
     // since hash_fo4 lowercases ASCII anyway.
     const auto extension_file_name =
         source == ba2_record_identity_source::writer_entry ? display_file_name : file_name;
+    // An absent extension is ordinary, not malformed. TES5Edit's SplitNameExt
+    // yields an empty Ext when the file name carries no dot or ends in one, and
+    // String2Magic('') yields #0#0#0#0; both the FO4 writer
+    // (wbBSArchive.pas:1538) and FindFileRecordFO4 (wbBSArchive.pas:960) go
+    // through that path. Retail Fallout4 - Meshes.ba2 and
+    // Starfield - Animations.ba2 both ship extensionless GNRL records, so
+    // requiring an extension rejected whole archives (issue #43).
     const auto dot = extension_file_name.find_last_of('.');
-    if (dot == std::string_view::npos || dot + 1U == extension_file_name.size()) {
-        return error{diagnostic_code_for(source), missing_gnrl_extension_message(source)};
-    }
+    const auto extension_text = dot == std::string_view::npos
+                                    ? std::string_view{}
+                                    : extension_file_name.substr(dot + 1U);
 
-    auto extension =
-        extension_fourcc_for(ba2_subtype::gnrl, extension_file_name.substr(dot + 1U), source);
+    auto extension = extension_fourcc_for(ba2_subtype::gnrl, extension_text, source);
     if (!extension) {
         return extension.error();
     }
@@ -226,25 +225,12 @@ result<ba2_record_identity> make_ba2_record_identity(ba2_subtype subtype, ba2_re
     return error{error_code::invalid_argument, "BA2 subtype is not GNRL or DX10"};
 }
 
-result<void> validate_ba2_record_identity(ba2_subtype subtype,
-                                          const ba2_stored_record_identity& stored,
-                                          const ba2_record_identity& expected) {
-    const auto label = label_for(subtype);
-    // Stored BA2 lookup fields must agree with the filename-table path; otherwise
-    // public path lookup would expose an entry Bethesda-style record lookup cannot
-    // address consistently.
-    if (stored.name_hash != expected.name_hash) {
-        return error{error_code::format_error, label + " NameHash does not match filename table"};
-    }
-    if (stored.directory_hash != expected.directory_hash) {
-        return error{error_code::format_error,
-                     label + " DirectoryHash does not match filename table"};
-    }
-    if (!extension_fourcc_matches(stored.extension, expected.extension)) {
-        return error{error_code::format_error,
-                     label + " record extension does not match filename table"};
-    }
-    return {};
+ba2_record_identity_mismatch compare_ba2_record_identity(
+    const ba2_stored_record_identity& stored, const ba2_record_identity& expected) noexcept {
+    return ba2_record_identity_mismatch{
+        stored.name_hash != expected.name_hash,
+        stored.directory_hash != expected.directory_hash,
+        !extension_fourcc_matches(stored.extension, expected.extension)};
 }
 
 }  // namespace libbsa::formats::ba2

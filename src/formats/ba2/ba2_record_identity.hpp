@@ -43,6 +43,26 @@ struct ba2_stored_record_identity {
     std::array<std::byte, 4> extension{};
 };
 
+/// Stored BA2 record lookup fields that disagree with the filename-table path.
+///
+/// The reference never cross-checks these fields: `TwbBSArchive.LoadFromFile`
+/// reads `NameHash`, `Ext`, and `DirHash` straight into the record array, and
+/// `FindFileRecordFO4` recomputes hashes from the *query* path before scanning
+/// for a match. A record whose stored fields disagree with its own name is
+/// simply unreachable by name, which is why retail archives ship a handful of
+/// them (issue #43). Disagreement is therefore per-entry compatibility
+/// evidence, not a structural invariant.
+struct ba2_record_identity_mismatch {
+    bool name_hash{false};
+    bool directory_hash{false};
+    bool extension{false};
+
+    /// Returns true when any stored lookup field disagrees with the path.
+    [[nodiscard]] constexpr bool any() const noexcept {
+        return name_hash || directory_hash || extension;
+    }
+};
+
 /// Resolves BA2 path spelling without deriving hashes or extension metadata.
 result<ba2_record_path> resolve_ba2_record_path(ba2_subtype subtype,
                                                 std::string_view archive_path,
@@ -57,10 +77,12 @@ result<ba2_record_identity> make_ba2_record_identity(ba2_subtype subtype,
 result<ba2_record_identity> make_ba2_record_identity(ba2_subtype subtype, ba2_record_path path,
                                                      ba2_record_identity_source source);
 
-/// Validates all stored BA2 record identity fields while preserving specific
-/// mismatch diagnostics.
-result<void> validate_ba2_record_identity(ba2_subtype subtype,
-                                          const ba2_stored_record_identity& stored,
-                                          const ba2_record_identity& expected);
+/// Compares stored BA2 record lookup fields against the filename-table path.
+///
+/// Comparison is non-fatal by design; callers surface the result as per-entry
+/// compatibility evidence. Extension bytes compare case-insensitively because
+/// the reference lowercases on write but retail archives are not uniform.
+[[nodiscard]] ba2_record_identity_mismatch compare_ba2_record_identity(
+    const ba2_stored_record_identity& stored, const ba2_record_identity& expected) noexcept;
 
 }  // namespace libbsa::formats::ba2

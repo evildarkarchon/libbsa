@@ -112,6 +112,16 @@ void append_entry_warnings(const archive_metadata& metadata,
                            "BSA entry uses an embedded file-name payload prefix", entry.path);
         }
 
+        // BA2 records whose stored lookup fields disagree with their own name are
+        // valid but unreachable by Bethesda-style hash lookup, so the archive
+        // stays valid while the affected entries are surfaced individually.
+        if (entry.record_identity_mismatch) {
+            append_warning(report, compatibility_warning_code::ba2_record_identity_mismatch,
+                           compatibility_warning_severity::risky,
+                           "BA2 record lookup fields disagree with the filename table path",
+                           entry.path);
+        }
+
         if (entry.compression != entry_compression::none && is_sound_like_path(entry.path)) {
             append_warning(report, compatibility_warning_code::compressed_sound_payload,
                            compatibility_warning_severity::advisory,

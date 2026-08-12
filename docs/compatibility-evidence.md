@@ -84,6 +84,13 @@ The executable opt-in comparison harness is `tests/unit/local_game_fixture_tests
 - Evidence: `tests/unit/compatibility_warning_tests.cpp` test `compatibility_warning reports BA2 target family mismatch` creates a synthetic writer-output BA2 GNRL archive, validates it with `validation_options::expected_type = archive_type::bsa`, and asserts the risky target-family mismatch warning. Validation tests also run `validate_archive` over generated BA2 fixtures and writer-output archives as the same parsed-metadata source of truth.
 - Default gate: generated/writer-output; covered by default CTest through the `compatibility_warning` and `validation_api` test labels.
 
+### `ba2_record_identity_mismatch`
+
+- Rule: A BA2 record whose stored `NameHash`, `DirHash`, or `Ext` disagrees with its own filename-table path is valid but unreachable by Bethesda-style hash lookup, so it warns instead of invalidating the archive. The reference never cross-checks these fields: `TwbBSArchive.LoadFromFile` reads them verbatim into the record array, and `FindFileRecordFO4` recomputes hashes from the *query* path before scanning for a match (`TES5Edit/Core/wbBSArchive.pas`). A disagreeing record is simply unaddressable by name and does not affect any sibling record.
+- Evidence: `tests/unit/compatibility_warning_tests.cpp` test `compatibility_warning reports BA2 record identity mismatch` writes a BA2 GNRL archive through the public writer, byte-patches record 0's `NameHash`, validates it through `validate_archive`, and asserts the risky warning with an archive path plus continued extraction by path. `tests/unit/ba2_gnrl_reader_tests.cpp` and `tests/unit/ba2_dx10_reader_tests.cpp` cover all three stored fields against generated fixtures and assert exactly one warned entry per mutation.
+- Default gate: generated/writer-output; covered by default CTest through the `compatibility_warning`, `ba2_gnrl_hash_lookup`, and `ba2_dx10_hash_lookup` test labels.
+- Open question (advisory, local corpus only): the three warned records in retail `Fallout4 - Voices.ba2` all carry non-ASCII file names. `hash_fo4` skips bytes above 127 exactly as reference `CreateHashFO4` does, so the reconstructed hash cannot depend on those bytes. Why Bethesda's packer stored a different value for them is unresolved; the warning states the disagreement, not a cause.
+
 ## Optional Local Corpus Checks
 
 Local game archives or BSArchPro-derived comparison output may supplement this catalog only as smoke/compare checks. The local comparison manifest is exercised by the `BSArchPro-derived expected fixture comparisons are opt-in` CTest case. Such checks must:

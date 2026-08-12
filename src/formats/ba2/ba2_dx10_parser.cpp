@@ -199,13 +199,13 @@ result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10
                              "BA2 DX10 contains duplicate canonical archive paths"};
             }
 
+            // Stored lookup fields are recorded, not enforced; see the matching
+            // note in the GNRL parser and issue #43. BSArchPro reads these fields
+            // verbatim and only ever recomputes hashes from a query path.
             const ba2_stored_record_identity stored_identity{
                 records[index].name_hash, records[index].directory_hash, records[index].extension};
-            auto validated_identity =
-                validate_ba2_record_identity(ba2_subtype::dx10, stored_identity, identity.value());
-            if (!validated_identity) {
-                return validated_identity.error();
-            }
+            const auto identity_mismatch =
+                compare_ba2_record_identity(stored_identity, identity.value());
 
             auto chunks = public_chunks_for(records[index], profile);
             if (!chunks) {
@@ -250,12 +250,16 @@ result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10
                                      records[index].cube_maps_raw,
                                      std::move(chunks.value())};
 
-            entries.push_back(entry_metadata{
+            auto entry = entry_metadata{
                 std::move(identity.value().canonical_path),
                 std::move(identity.value().display_path), entry_raw_size, stored_payload_size,
                 payload_offset, records[index].name_hash,
                 has_compressed_chunk ? profile.default_compression() : entry_compression::none,
-                records[index].unknown_tex, false, 0U, std::move(texture)});
+                records[index].unknown_tex, false, 0U, std::move(texture)};
+            // Assigned rather than appended positionally; see the matching note
+            // in the GNRL parser.
+            entry.record_identity_mismatch = identity_mismatch.any();
+            entries.push_back(std::move(entry));
         }
 
         std::sort(entries.begin(), entries.end(),

@@ -165,6 +165,17 @@ struct entry_metadata {
     std::uint32_t embedded_name_prefix_size;
     /// Optional texture metadata populated only for BA2 DX10 texture entries.
     std::optional<texture_metadata> texture;
+
+    /// True when the archive's stored record lookup fields disagree with this
+    /// entry's own filename-table path.
+    ///
+    /// Such an entry is still listed and extractable by path, but Bethesda-style
+    /// lookup by recomputed hash cannot reach it. Retail BA2 archives contain a
+    /// handful of these, so libbsa reports the disagreement as a
+    /// `compatibility_warning_code::ba2_record_identity_mismatch` warning rather
+    /// than rejecting the archive. Only BA2 parsers populate this today; BSA
+    /// parsers still reject stored-hash disagreement as a format error.
+    bool record_identity_mismatch{false};
 };
 
 /// Synchronous sink used by archive extraction APIs.

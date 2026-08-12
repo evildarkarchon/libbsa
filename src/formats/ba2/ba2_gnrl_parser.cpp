@@ -170,13 +170,18 @@ result<std::vector<entry_metadata>> materialize_entries(
                              "BA2 GNRL contains duplicate canonical archive paths"};
             }
 
+            // Stored lookup fields are recorded, not enforced: BSArchPro never
+            // compares them against the filename table, and retail archives ship
+            // records whose stored NameHash no reconstruction reproduces.
+            // Fallout4 - Voices.ba2 has three in 116,101, and failing the archive
+            // over them rejected every good entry with them (issue #43). All
+            // three carry non-ASCII names, which hash_fo4 skips byte-for-byte as
+            // the reference does, so the cause is an unresolved encoding
+            // question in Bethesda's packer rather than proven corruption.
             const ba2_stored_record_identity stored_identity{
                 records[index].name_hash, records[index].directory_hash, records[index].extension};
-            auto validated_identity =
-                validate_ba2_record_identity(ba2_subtype::gnrl, stored_identity, identity.value());
-            if (!validated_identity) {
-                return validated_identity.error();
-            }
+            const auto identity_mismatch =
+                compare_ba2_record_identity(stored_identity, identity.value());
 
             const auto stored_size =
                 records[index].packed_size != 0U ? records[index].packed_size : records[index].size;
@@ -213,11 +218,16 @@ result<std::vector<entry_metadata>> materialize_entries(
                     stored_payload_span{records[index].offset, stored_size});
             }
 
-            entries.push_back(entry_metadata{
+            auto entry = entry_metadata{
                 std::move(identity.value().canonical_path),
                 std::move(identity.value().display_path), records[index].size, stored_size,
                 records[index].offset, records[index].name_hash,
-                compression_for(records[index], profile), records[index].unknown, false, 0U});
+                compression_for(records[index], profile), records[index].unknown, false, 0U};
+            // Assigned rather than appended positionally: the aggregate already
+            // carries ten fields, and a future field inserted mid-struct would
+            // silently shift a trailing positional initializer onto it.
+            entry.record_identity_mismatch = identity_mismatch.any();
+            entries.push_back(std::move(entry));
         }
 
         std::sort(entries.begin(), entries.end(),

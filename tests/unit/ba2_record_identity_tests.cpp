@@ -70,40 +70,41 @@ TEST_CASE("BA2 record identity derives DX10 lookup facts from texture stems",
     CHECK(identity.value().directory_hash == 0xAF9CC190U);
 }
 
-TEST_CASE("BA2 record identity validates stored fields with stable diagnostics",
+TEST_CASE("BA2 record identity reports stored field disagreement per field",
           "[unit][ba2_record_identity]") {
     auto gnrl = libbsa::formats::ba2::make_ba2_record_identity(
         ba2_subtype::gnrl, "Deep/File.BIN", ba2_record_identity_source::filename_table);
     REQUIRE(gnrl.has_value());
 
+    // Extension bytes compare case-insensitively: the reference lowercases on
+    // write but retail archives are not uniform about it.
     ba2_stored_record_identity stored_gnrl{gnrl.value().name_hash, gnrl.value().directory_hash,
                                            fourcc('B', 'I', 'N')};
-    CHECK(libbsa::formats::ba2::validate_ba2_record_identity(ba2_subtype::gnrl, stored_gnrl,
-                                                             gnrl.value())
-              .has_value());
+    CHECK_FALSE(
+        libbsa::formats::ba2::compare_ba2_record_identity(stored_gnrl, gnrl.value()).any());
 
     stored_gnrl.name_hash ^= 0x1000U;
-    auto gnrl_name = libbsa::formats::ba2::validate_ba2_record_identity(
-        ba2_subtype::gnrl, stored_gnrl, gnrl.value());
-    REQUIRE_FALSE(gnrl_name.has_value());
-    CHECK(gnrl_name.error().code == libbsa::error_code::format_error);
-    CHECK(gnrl_name.error().message == "BA2 GNRL NameHash does not match filename table");
+    const auto gnrl_name =
+        libbsa::formats::ba2::compare_ba2_record_identity(stored_gnrl, gnrl.value());
+    CHECK(gnrl_name.any());
+    CHECK(gnrl_name.name_hash);
+    CHECK_FALSE(gnrl_name.directory_hash);
+    CHECK_FALSE(gnrl_name.extension);
 
     stored_gnrl.name_hash = gnrl.value().name_hash;
     stored_gnrl.directory_hash ^= 0x1000U;
-    auto gnrl_directory = libbsa::formats::ba2::validate_ba2_record_identity(
-        ba2_subtype::gnrl, stored_gnrl, gnrl.value());
-    REQUIRE_FALSE(gnrl_directory.has_value());
-    CHECK(gnrl_directory.error().message ==
-          "BA2 GNRL DirectoryHash does not match filename table");
+    const auto gnrl_directory =
+        libbsa::formats::ba2::compare_ba2_record_identity(stored_gnrl, gnrl.value());
+    CHECK(gnrl_directory.directory_hash);
+    CHECK_FALSE(gnrl_directory.name_hash);
 
     stored_gnrl.directory_hash = gnrl.value().directory_hash;
     stored_gnrl.extension = fourcc('d', 'd', 's');
-    auto gnrl_extension = libbsa::formats::ba2::validate_ba2_record_identity(
-        ba2_subtype::gnrl, stored_gnrl, gnrl.value());
-    REQUIRE_FALSE(gnrl_extension.has_value());
-    CHECK(gnrl_extension.error().message ==
-          "BA2 GNRL record extension does not match filename table");
+    const auto gnrl_extension =
+        libbsa::formats::ba2::compare_ba2_record_identity(stored_gnrl, gnrl.value());
+    CHECK(gnrl_extension.extension);
+    CHECK_FALSE(gnrl_extension.name_hash);
+    CHECK_FALSE(gnrl_extension.directory_hash);
 
     auto dx10 = libbsa::formats::ba2::make_ba2_record_identity(
         ba2_subtype::dx10, "Textures/Set/Tiny.dds", ba2_record_identity_source::filename_table);
@@ -111,31 +112,63 @@ TEST_CASE("BA2 record identity validates stored fields with stable diagnostics",
 
     ba2_stored_record_identity stored_dx10{dx10.value().name_hash, dx10.value().directory_hash,
                                            fourcc('D', 'D', 'S')};
-    CHECK(libbsa::formats::ba2::validate_ba2_record_identity(ba2_subtype::dx10, stored_dx10,
-                                                             dx10.value())
-              .has_value());
+    CHECK_FALSE(
+        libbsa::formats::ba2::compare_ba2_record_identity(stored_dx10, dx10.value()).any());
 
+    // Each DX10 field is mutated on its own so a comparison that silently skips
+    // one field cannot pass by way of another field's disagreement.
     stored_dx10.name_hash ^= 0x1000U;
-    auto dx10_name = libbsa::formats::ba2::validate_ba2_record_identity(
-        ba2_subtype::dx10, stored_dx10, dx10.value());
-    REQUIRE_FALSE(dx10_name.has_value());
-    CHECK(dx10_name.error().message == "BA2 DX10 NameHash does not match filename table");
+    const auto dx10_name =
+        libbsa::formats::ba2::compare_ba2_record_identity(stored_dx10, dx10.value());
+    CHECK(dx10_name.name_hash);
+    CHECK_FALSE(dx10_name.directory_hash);
+    CHECK_FALSE(dx10_name.extension);
 
     stored_dx10.name_hash = dx10.value().name_hash;
     stored_dx10.directory_hash ^= 0x1000U;
-    auto dx10_directory = libbsa::formats::ba2::validate_ba2_record_identity(
-        ba2_subtype::dx10, stored_dx10, dx10.value());
-    REQUIRE_FALSE(dx10_directory.has_value());
-    CHECK(dx10_directory.error().message ==
-          "BA2 DX10 DirectoryHash does not match filename table");
+    const auto dx10_directory =
+        libbsa::formats::ba2::compare_ba2_record_identity(stored_dx10, dx10.value());
+    CHECK(dx10_directory.directory_hash);
+    CHECK_FALSE(dx10_directory.name_hash);
+    CHECK_FALSE(dx10_directory.extension);
 
     stored_dx10.directory_hash = dx10.value().directory_hash;
     stored_dx10.extension = fourcc('n', 'i', 'f');
-    auto dx10_extension = libbsa::formats::ba2::validate_ba2_record_identity(
-        ba2_subtype::dx10, stored_dx10, dx10.value());
-    REQUIRE_FALSE(dx10_extension.has_value());
-    CHECK(dx10_extension.error().message ==
-          "BA2 DX10 record extension does not match filename table");
+    const auto dx10_extension =
+        libbsa::formats::ba2::compare_ba2_record_identity(stored_dx10, dx10.value());
+    CHECK(dx10_extension.extension);
+    CHECK_FALSE(dx10_extension.name_hash);
+    CHECK_FALSE(dx10_extension.directory_hash);
+}
+
+TEST_CASE("BA2 record identity accepts extensionless GNRL paths",
+          "[unit][ba2_record_identity][compat]") {
+    // SplitNameExt yields an empty Ext for a dotless name, and String2Magic('')
+    // yields #0#0#0#0. Retail Fallout4 - Meshes.ba2 and
+    // Starfield - Animations.ba2 ship such records (issue #43).
+    constexpr std::array<std::byte, 4> zeroed{};
+
+    for (const auto source :
+         {ba2_record_identity_source::filename_table, ba2_record_identity_source::writer_entry}) {
+        auto dotless = libbsa::formats::ba2::make_ba2_record_identity(ba2_subtype::gnrl,
+                                                                      "Meshes/File", source);
+        REQUIRE(dotless.has_value());
+        CHECK(dotless.value().extension == zeroed);
+
+        // The whole file name is the hash basis when there is no extension, so
+        // it must agree with the stem hash of the same name plus an extension.
+        auto with_extension = libbsa::formats::ba2::make_ba2_record_identity(
+            ba2_subtype::gnrl, "Meshes/File.nif", source);
+        REQUIRE(with_extension.has_value());
+        CHECK(dotless.value().name_hash == with_extension.value().name_hash);
+
+        // A trailing dot splits the same way: stem "File", empty extension.
+        auto trailing_dot = libbsa::formats::ba2::make_ba2_record_identity(ba2_subtype::gnrl,
+                                                                           "Meshes/File.", source);
+        REQUIRE(trailing_dot.has_value());
+        CHECK(trailing_dot.value().extension == zeroed);
+        CHECK(trailing_dot.value().name_hash == dotless.value().name_hash);
+    }
 }
 
 TEST_CASE("BA2 record identity truncates extensions to the four-byte record field",
@@ -184,13 +217,6 @@ TEST_CASE("BA2 record identity truncates extensions to the four-byte record fiel
 
 TEST_CASE("BA2 record identity preserves filename-table and writer diagnostics",
           "[unit][ba2_record_identity]") {
-    auto gnrl_filename_table = libbsa::formats::ba2::make_ba2_record_identity(
-        ba2_subtype::gnrl, "Meshes/File", ba2_record_identity_source::filename_table);
-    REQUIRE_FALSE(gnrl_filename_table.has_value());
-    CHECK(gnrl_filename_table.error().code == libbsa::error_code::format_error);
-    CHECK(gnrl_filename_table.error().message ==
-          "BA2 GNRL filename table path must include a file extension");
-
     std::string gnrl_non_printable{"Meshes/File.b"};
     gnrl_non_printable.push_back(static_cast<char>(0x7F));
     auto gnrl_bad_byte = libbsa::formats::ba2::make_ba2_record_identity(

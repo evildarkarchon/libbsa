@@ -2,6 +2,7 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include "ba2_record_identity_warning_check.hpp"
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 
 #include <detail/bethesda_hash.hpp>
@@ -627,8 +628,13 @@ TEST_CASE("ba2_archive_opening accepts exact duplicate non-empty payload spans",
     }
 }
 
-TEST_CASE("ba2_archive_opening rejects record hash mismatches",
-          "[unit][fixture][malformed][ba2_archive_opening][ba2_gnrl_hash_lookup]") {
+TEST_CASE("ba2_archive_opening tolerates record hash mismatches as compatibility warnings",
+          "[unit][fixture][compat][ba2_archive_opening][ba2_gnrl_hash_lookup]") {
+    // BSArchPro never compares a stored record's NameHash/DirHash/Ext against
+    // the filename table; it recomputes hashes from a query path and scans. A
+    // disagreeing record is unreachable by hash lookup but does not invalidate
+    // the archive, and retail Fallout4 - Voices.ba2 ships three of them
+    // (issue #43). Each section mutates exactly one field of record 0.
     constexpr std::size_t first_record_name_hash_offset = 24U;
     constexpr std::size_t first_record_extension_offset = 28U;
     constexpr std::size_t first_record_directory_hash_offset = 32U;
@@ -643,15 +649,7 @@ TEST_CASE("ba2_archive_opening rejects record hash mismatches",
         temp_file_cleanup cleanup{mutated};
         write_binary_file(mutated, bytes);
 
-        auto opened = libbsa::archive_reader::open(mutated.string());
-        REQUIRE_FALSE(opened.has_value());
-        REQUIRE(opened.error().code == libbsa::error_code::format_error);
-
-        auto validated = libbsa::validate_archive(mutated.string());
-        REQUIRE(validated.has_value());
-        CHECK_FALSE(validated.value().is_valid());
-        REQUIRE(validated.value().errors.size() == 1U);
-        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+        libbsa::tests::require_single_record_identity_mismatch(mutated);
     }
 
     SECTION("record extension") {
@@ -666,15 +664,7 @@ TEST_CASE("ba2_archive_opening rejects record hash mismatches",
         temp_file_cleanup cleanup{mutated};
         write_binary_file(mutated, bytes);
 
-        auto opened = libbsa::archive_reader::open(mutated.string());
-        REQUIRE_FALSE(opened.has_value());
-        REQUIRE(opened.error().code == libbsa::error_code::format_error);
-
-        auto validated = libbsa::validate_archive(mutated.string());
-        REQUIRE(validated.has_value());
-        CHECK_FALSE(validated.value().is_valid());
-        REQUIRE(validated.value().errors.size() == 1U);
-        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+        libbsa::tests::require_single_record_identity_mismatch(mutated);
     }
 
     SECTION("DirectoryHash") {
@@ -687,15 +677,7 @@ TEST_CASE("ba2_archive_opening rejects record hash mismatches",
         temp_file_cleanup cleanup{mutated};
         write_binary_file(mutated, bytes);
 
-        auto opened = libbsa::archive_reader::open(mutated.string());
-        REQUIRE_FALSE(opened.has_value());
-        REQUIRE(opened.error().code == libbsa::error_code::format_error);
-
-        auto validated = libbsa::validate_archive(mutated.string());
-        REQUIRE(validated.has_value());
-        CHECK_FALSE(validated.value().is_valid());
-        REQUIRE(validated.value().errors.size() == 1U);
-        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+        libbsa::tests::require_single_record_identity_mismatch(mutated);
     }
 }
 
