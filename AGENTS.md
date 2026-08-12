@@ -116,6 +116,25 @@ Test expectations:
 - Never keep production or library code around exclusively for test compatibility. When an API or behavior changes, migrate affected tests to the current API or remove obsolete tests; test-only compatibility shims in product code are not allowed. This is mandatory.
 - Do not use the `TES5Edit/` submodule as a mutable test fixture.
 
+### Local game archive corpus
+
+`tests/fixtures/local/` holds an uncommitted corpus of vanilla retail archives copied from the
+supported games. The directory is gitignored, so its contents are invisible from a clean checkout and
+cannot be discovered by reading the repository.
+
+Agents are authorized to read these archives and to run the `[requires-game-fixture]` tests against
+them without asking first. This is standing authorization.
+
+- Treat the corpus as strictly read-only reference data. Never modify, move, rename, delete, or
+  rewrite an archive in it, and never commit one.
+- Never copy archive bytes into committed fixtures, test sources, issues, or commit messages. Retail
+  archives are not redistributable; report offsets, versions, and counts instead of content.
+- The corpus is resolved by `LIBBSA_GAME_FIXTURES` when set, otherwise from `tests/fixtures/local/`
+  directly. Tests skip when neither is available, so a clean checkout still passes.
+- Prefer this corpus over synthesized fixtures whenever a claim concerns real archive layout.
+  Generated fixtures are produced by libbsa's own writers, so they can only prove libbsa agrees with
+  itself. Compatibility claims about physical layout must be checked against retail archives.
+
 ## MCP Server Usage
 
 ### Exa (`mcp__exa`)

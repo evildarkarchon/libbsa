@@ -12,6 +12,10 @@ _Avoid_: File list, backend entries
 The exact byte sequence an archive entry references in the archive payload area, after any format-required prefixing and compression. It is distinct from the decoded entry bytes and from the location assigned during archive layout.
 _Avoid_: Source payload, raw payload, final stored buffer
 
+**Payload Placement**:
+The assignment of a Stored Payload to a location in the archive payload area, together with any sharing of that location between records. Placement is authoritative for location and sharing; it is not authoritative for payload creation, compression, or record geometry.
+_Avoid_: dedupe, payload sharing, offset assignment
+
 **TES4 BSA Profile**:
 A resolved description of a TES4-family BSA format member: its version and version-dependent layout, compression, embedded-name, and file-classification semantics. The same profile applies whether an archive is being read or written.
 _Avoid_: TES4 mode, TES4 target behavior, raw version checks

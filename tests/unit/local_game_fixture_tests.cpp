@@ -11,18 +11,55 @@
 #include <fstream>
 #include <optional>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
+
+#include "test_source_root.hpp"
 
 namespace {
 
+/// Resolves the opt-in local game archive corpus root.
+///
+/// `LIBBSA_GAME_FIXTURES` takes precedence when set. Otherwise the uncommitted
+/// `tests/fixtures/local` directory is used when it actually holds archives,
+/// which is the fallback the skip messages in this file have always advertised
+/// but which was never implemented. Returns `std::nullopt` when neither source
+/// is available, so `[requires-game-fixture]` cases skip rather than fail.
 std::optional<std::filesystem::path> local_fixture_root() {
     const char* fixture_root = std::getenv("LIBBSA_GAME_FIXTURES");
-    if (fixture_root == nullptr || std::string_view{fixture_root}.empty()) {
+    if (fixture_root != nullptr && !std::string_view{fixture_root}.empty()) {
+        return std::filesystem::path{fixture_root};
+    }
+
+    // source_root() throws when the repository layout cannot be located. An
+    // opt-in corpus that is simply absent must stay a skip, never an error.
+    std::filesystem::path candidate;
+    try {
+        candidate = LIBBSA_SOURCE_DIR / "tests" / "fixtures" / "local";
+    } catch (const std::runtime_error&) {
         return std::nullopt;
     }
-    return std::filesystem::path{fixture_root};
+
+    std::error_code error;
+    if (!std::filesystem::is_directory(candidate, error) || error) {
+        return std::nullopt;
+    }
+
+    // The committed .gitkeep is not a corpus. Require at least one other entry
+    // so a clean checkout still skips instead of reporting an empty corpus.
+    std::filesystem::directory_iterator iterator{candidate, error};
+    if (error) {
+        return std::nullopt;
+    }
+    for (const auto& entry : iterator) {
+        if (entry.path().filename() != ".gitkeep") {
+            return candidate;
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<std::filesystem::path> bsarchpro_expected_manifest_path() {
