@@ -400,7 +400,6 @@ TEST_CASE("retail BA2 headers resolve at every shipped version",
         CHECK(metadata.variant == *expected_variant);
         CHECK(metadata.file_count > 0U);
         CHECK(header.value().filename_table_offset() >= header.value().profile().header_size());
-
     }
 
     if (probed_archives == 0U) {
@@ -472,26 +471,37 @@ TEST_CASE("a retail BA2 GNRL archive opens, lists, and extracts end to end",
     REQUIRE(found.value().has_value());
     CHECK(found.value()->path == first.path);
 
-    // Extraction is deliberately not asserted here yet. Retail BA2 payloads are
-    // zlib-wrapped (RFC1950) and libbsa decodes raw deflate (RFC1951), so a
-    // compressed retail entry fails to decode. That is tracked separately; this
-    // case owns the metadata path, which is what the record-identity basis
-    // governs. Raw entries do stream, so prove the sink path on one when the
-    // archive has one.
-    const auto raw_entry =
-        std::find_if(entries.value().begin(), entries.value().end(),
-                     [](const libbsa::entry_metadata& entry) {
-                         return entry.compression == libbsa::entry_compression::none &&
-                                entry.raw_size > 0U;
-                     });
-    if (raw_entry == entries.value().end()) {
-        return;
+    // Raw entries stream straight out of the archive, so prove the sink path on
+    // one when the archive has one.
+    const auto raw_entry = std::find_if(
+        entries.value().begin(), entries.value().end(), [](const libbsa::entry_metadata& entry) {
+            return entry.compression == libbsa::entry_compression::none && entry.raw_size > 0U;
+        });
+    if (raw_entry != entries.value().end()) {
+        fnv1a32_sink sink;
+        auto extracted = opened.value().extract(raw_entry->path, sink);
+        REQUIRE(extracted.has_value());
+        CHECK(sink.size() == raw_entry->raw_size);
     }
 
-    fnv1a32_sink sink;
-    auto extracted = opened.value().extract(raw_entry->path, sink);
-    REQUIRE(extracted.has_value());
-    CHECK(sink.size() == raw_entry->raw_size);
+    // Compressed entries are the claim issue #42 turned on: every retail BA2
+    // stores them zlib-wrapped (RFC1950), and libbsa decoded raw deflate
+    // (RFC1951), so no compressed retail entry could be extracted at all.
+    // Assert against every compressed entry rather than a sample, since a
+    // partial fix would still leave most of an archive unreadable.
+    std::size_t compressed_entries = 0U;
+    for (const auto& entry : entries.value()) {
+        if (entry.compression == libbsa::entry_compression::none) {
+            continue;
+        }
+        ++compressed_entries;
+        INFO("entry=" << entry.path);
+        fnv1a32_sink sink;
+        auto extracted = opened.value().extract(entry.path, sink);
+        REQUIRE(extracted.has_value());
+        CHECK(sink.size() == entry.raw_size);
+    }
+    INFO("compressed_entries=" << compressed_entries);
 }
 
 TEST_CASE("a retail BA2 DX10 archive opens and stores its filename table last",
@@ -577,6 +587,33 @@ TEST_CASE("a retail BA2 DX10 archive opens and stores its filename table last",
     INFO("file_table_offset=" << header.value().filename_table_offset()
                               << " lowest_payload_offset=" << lowest_payload_offset);
     CHECK(header.value().filename_table_offset() > lowest_payload_offset);
+
+    // Retail DX10 chunks are zlib-wrapped just like GNRL payloads, so issue #42
+    // blocked texture extraction too. Reassembling a DDS exercises the chunk
+    // decode path end to end. Unlike the GNRL case this samples rather than
+    // sweeps: the smallest retail texture archive still holds thousands of
+    // textures and megabytes of surface per entry.
+    constexpr std::size_t sampled_textures = 8U;
+    std::size_t sampled = 0U;
+    for (const auto& entry : entries.value()) {
+        const auto has_compressed_chunk =
+            std::any_of(entry.texture->chunks.begin(), entry.texture->chunks.end(),
+                        [](const libbsa::texture_chunk_metadata& chunk) {
+                            return chunk.compression != libbsa::entry_compression::none;
+                        });
+        if (!has_compressed_chunk) {
+            continue;
+        }
+        INFO("entry=" << entry.path);
+        fnv1a32_sink sink;
+        auto extracted = opened.value().extract(entry.path, sink);
+        REQUIRE(extracted.has_value());
+        CHECK(sink.size() == entry.raw_size);
+        if (++sampled == sampled_textures) {
+            break;
+        }
+    }
+    INFO("sampled_compressed_textures=" << sampled);
 }
 
 TEST_CASE("BSArchPro-derived expected fixture comparisons are opt-in",

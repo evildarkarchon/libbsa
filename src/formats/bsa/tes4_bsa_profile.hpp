@@ -108,7 +108,7 @@ class tes4_bsa_profile {
     tes4_folder_record_shape folder_shape_{tes4_folder_record_shape::legacy_32_bit_offset};
     std::size_t folder_record_size_{0U};
     entry_compression compressed_entry_metadata_{entry_compression::deflate};
-    detail::compression_method compressed_payload_method_{detail::compression_method::deflate};
+    detail::compression_method compressed_payload_method_{detail::compression_method::zlib};
     bool target_default_compressed_{false};
     bool supports_embedded_names_{false};
 

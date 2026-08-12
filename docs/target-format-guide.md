@@ -64,6 +64,8 @@ Starfield BA2 v3 DX10 archives are texture archives created with `ba2_dx10_targe
 
 Deflate is used for TES4-family v103/v104 BSA compressed entries, Fallout 4 BA2 compressed entries, Starfield BA2 v2 GNRL compressed entries and DX10 chunks, and Starfield BA2 v3 routes where the selected `CompressionMethod` is the deflate-compatible method. The public API reports this as `entry_compression::deflate` and keeps libdeflate private.
 
+On the wire this is always RFC1950 zlib framing, not bare RFC1951 deflate, so libbsa reads and writes `libdeflate_zlib_*` streams. The public enumerator keeps the `deflate` name because zlib framing wraps a DEFLATE stream and the distinction is an implementation detail consumers never see. Issue #42 has the corpus evidence: every compressed payload in every retail BSA v103/v104, BA2 GNRL, and BA2 DX10 archive is zlib-framed, and none is raw.
+
 ## LZ4 frame
 
 LZ4 frame is used by Skyrim SE/AE BSA v105 compressed entries. The public API reports this as `entry_compression::lz4_frame` and never exposes LZ4 frame library types in public headers.

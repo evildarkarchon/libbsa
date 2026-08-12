@@ -79,9 +79,9 @@ TEST_CASE("ba2_profile maps Fallout 4 next-gen versions to Fallout 4 deflate pro
     // Retail Fallout 4 ships v7 DX10 and v8 GNRL/DX10 archives. Neither header
     // carries a CompressionMethod field, so compressed payloads are deflate and
     // the profile must not consult Starfield metadata to decide that.
-    constexpr auto versions = std::to_array<std::uint32_t>(
-        {libbsa::formats::ba2::ba2_fallout4_ng_v7_version,
-         libbsa::formats::ba2::ba2_fallout4_ng_v8_version});
+    constexpr auto versions =
+        std::to_array<std::uint32_t>({libbsa::formats::ba2::ba2_fallout4_ng_v7_version,
+                                      libbsa::formats::ba2::ba2_fallout4_ng_v8_version});
 
     for (const auto version : versions) {
         INFO("BA2 header version " << version);
@@ -94,8 +94,7 @@ TEST_CASE("ba2_profile maps Fallout 4 next-gen versions to Fallout 4 deflate pro
         CHECK(gnrl.value().version() == version);
         CHECK(gnrl.value().header_size() == libbsa::formats::ba2::ba2_common_header_size);
         CHECK(gnrl.value().default_compression() == libbsa::entry_compression::deflate);
-        CHECK(gnrl.value().compressed_payload_method() ==
-              libbsa::detail::compression_method::deflate);
+        CHECK(gnrl.value().compressed_payload_method() == libbsa::detail::compression_method::zlib);
 
         auto dx10 = libbsa::formats::ba2::make_ba2_profile_from_header(
             version, libbsa::formats::ba2::ba2_subtype::dx10, {});
@@ -104,8 +103,7 @@ TEST_CASE("ba2_profile maps Fallout 4 next-gen versions to Fallout 4 deflate pro
         CHECK(dx10.value().variant() == libbsa::archive_variant::fallout4);
         CHECK(dx10.value().is_dx10());
         CHECK(dx10.value().header_size() == libbsa::formats::ba2::ba2_common_header_size);
-        CHECK(dx10.value().compressed_payload_method() ==
-              libbsa::detail::compression_method::deflate);
+        CHECK(dx10.value().compressed_payload_method() == libbsa::detail::compression_method::zlib);
     }
 }
 
@@ -119,8 +117,7 @@ TEST_CASE("ba2_profile maps detected header versions to profile facts", "[unit][
     CHECK(fallout4.value().version() == libbsa::formats::ba2::ba2_fallout4_version);
     CHECK(fallout4.value().header_size() == libbsa::formats::ba2::ba2_common_header_size);
     CHECK(fallout4.value().default_compression() == libbsa::entry_compression::deflate);
-    CHECK(fallout4.value().compressed_payload_method() ==
-          libbsa::detail::compression_method::deflate);
+    CHECK(fallout4.value().compressed_payload_method() == libbsa::detail::compression_method::zlib);
 
     libbsa::ba2_archive_metadata starfield_v2_metadata;
     starfield_v2_metadata.starfield_unknown1 = 7U;
@@ -133,7 +130,7 @@ TEST_CASE("ba2_profile maps detected header versions to profile facts", "[unit][
     CHECK(starfield_v2.value().variant() == libbsa::archive_variant::starfield);
     CHECK(starfield_v2.value().header_size() == libbsa::formats::ba2::ba2_starfield_v2_header_size);
     CHECK(starfield_v2.value().compressed_payload_method() ==
-          libbsa::detail::compression_method::deflate);
+          libbsa::detail::compression_method::zlib);
 }
 
 TEST_CASE("ba2_profile maps Starfield v3 compression methods", "[unit][ba2_profile][starfield]") {
@@ -150,8 +147,7 @@ TEST_CASE("ba2_profile maps Starfield v3 compression methods", "[unit][ba2_profi
     CHECK(deflate.value().is_dx10());
     CHECK(deflate.value().header_size() == libbsa::formats::ba2::ba2_starfield_v3_header_size);
     CHECK(deflate.value().default_compression() == libbsa::entry_compression::deflate);
-    CHECK(deflate.value().compressed_payload_method() ==
-          libbsa::detail::compression_method::deflate);
+    CHECK(deflate.value().compressed_payload_method() == libbsa::detail::compression_method::zlib);
 
     auto lz4_metadata = deflate_metadata;
     lz4_metadata.compression_method = libbsa::formats::ba2::ba2_starfield_compression_lz4_block;
@@ -209,8 +205,7 @@ TEST_CASE("ba2_profile builds Starfield v2 DX10 writers with fixed deflate seman
     CHECK(profile.value().version() == libbsa::formats::ba2::ba2_starfield_v2_version);
     CHECK(profile.value().header_size() == libbsa::formats::ba2::ba2_starfield_v2_header_size);
     CHECK(profile.value().default_compression() == libbsa::entry_compression::deflate);
-    CHECK(profile.value().compressed_payload_method() ==
-          libbsa::detail::compression_method::deflate);
+    CHECK(profile.value().compressed_payload_method() == libbsa::detail::compression_method::zlib);
 }
 
 TEST_CASE("ba2_profile maps public BA2 compression metadata to codec methods",
@@ -221,7 +216,7 @@ TEST_CASE("ba2_profile maps public BA2 compression metadata to codec methods",
         libbsa::formats::ba2::ba2_subtype::dx10, libbsa::entry_compression::lz4_block);
 
     REQUIRE(deflate.has_value());
-    CHECK(deflate.value() == libbsa::detail::compression_method::deflate);
+    CHECK(deflate.value() == libbsa::detail::compression_method::zlib);
     REQUIRE(lz4.has_value());
     CHECK(lz4.value() == libbsa::detail::compression_method::lz4_block);
 

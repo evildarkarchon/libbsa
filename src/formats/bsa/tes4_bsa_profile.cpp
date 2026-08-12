@@ -225,7 +225,7 @@ result<tes4_bsa_profile> make_tes4_bsa_profile_from_header(std::uint32_t version
                 .folder_shape = tes4_folder_record_shape::legacy_32_bit_offset,
                 .folder_record_size = tes4_bsa_legacy_folder_record_size,
                 .compressed_entry_metadata = entry_compression::deflate,
-                .compressed_payload_method = detail::compression_method::deflate,
+                .compressed_payload_method = detail::compression_method::zlib,
                 .target_default_compressed = false,
                 .supports_embedded_names = false}};
         case tes4_bsa_fallout3_version:
@@ -234,7 +234,7 @@ result<tes4_bsa_profile> make_tes4_bsa_profile_from_header(std::uint32_t version
                 .folder_shape = tes4_folder_record_shape::legacy_32_bit_offset,
                 .folder_record_size = tes4_bsa_legacy_folder_record_size,
                 .compressed_entry_metadata = entry_compression::deflate,
-                .compressed_payload_method = detail::compression_method::deflate,
+                .compressed_payload_method = detail::compression_method::zlib,
                 .target_default_compressed = true,
                 .supports_embedded_names = true}};
         case tes4_bsa_skyrim_se_version:

@@ -32,7 +32,7 @@ detail::compression_method compression_method_for(entry_compression compression)
         case entry_compression::none:
             return detail::compression_method::none;
         case entry_compression::deflate:
-            return detail::compression_method::deflate;
+            return detail::compression_method::zlib;
         case entry_compression::lz4_frame:
             return detail::compression_method::lz4_frame;
         case entry_compression::lz4_block:

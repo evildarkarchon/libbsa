@@ -92,7 +92,7 @@ class ba2_profile {
     ba2_subtype subtype_{ba2_subtype::gnrl};
     std::uint32_t version_{0U};
     entry_compression default_compression_{entry_compression::deflate};
-    detail::compression_method compressed_method_{detail::compression_method::deflate};
+    detail::compression_method compressed_method_{detail::compression_method::zlib};
 
     friend result<ba2_profile> make_ba2_profile_from_header(std::uint32_t version,
                                                             ba2_subtype subtype,

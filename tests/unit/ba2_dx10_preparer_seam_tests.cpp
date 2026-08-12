@@ -234,7 +234,7 @@ TEST_CASE(
             profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
 
         REQUIRE(chunk.has_value());
-        CHECK(chunk.value().compression == libbsa::detail::compression_method::deflate);
+        CHECK(chunk.value().compression == libbsa::detail::compression_method::zlib);
         require_decoded_chunk_matches(chunk.value(), layout, planned.value()[0]);
     }
 
@@ -304,7 +304,7 @@ TEST_CASE(
     auto fallout4 = libbsa::formats::ba2::ba2_dx10_assemble_chunk(
         fallout4_profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
     REQUIRE(fallout4.has_value());
-    CHECK(fallout4.value().compression == libbsa::detail::compression_method::deflate);
+    CHECK(fallout4.value().compression == libbsa::detail::compression_method::zlib);
 
     libbsa::ba2_dx10_writer_options starfield_deflate_options;
     starfield_deflate_options.starfield_compression_method =
@@ -314,7 +314,7 @@ TEST_CASE(
     auto starfield_deflate = libbsa::formats::ba2::ba2_dx10_assemble_chunk(
         starfield_deflate_profile, starfield_deflate_options, source, planned.value()[0]);
     REQUIRE(starfield_deflate.has_value());
-    CHECK(starfield_deflate.value().compression == libbsa::detail::compression_method::deflate);
+    CHECK(starfield_deflate.value().compression == libbsa::detail::compression_method::zlib);
 
     libbsa::ba2_dx10_writer_options starfield_lz4_options;
     starfield_lz4_options.starfield_compression_method =

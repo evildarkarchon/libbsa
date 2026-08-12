@@ -90,7 +90,7 @@ add_executable(libbsa_tests
   unit/parser_primitives_tests.cpp
   unit/archive_path_tests.cpp
   unit/payload_stream_tests.cpp
-  unit/deflate_codec_tests.cpp
+  unit/zlib_codec_tests.cpp
   unit/lz4_codec_tests.cpp
   unit/compression_router_tests.cpp
   unit/stored_payload_tests.cpp

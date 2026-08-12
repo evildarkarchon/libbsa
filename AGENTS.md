@@ -56,7 +56,7 @@ Dependencies are consumed through vcpkg in manifest mode. `vcpkg.json` and `vcpk
 
 Library dependencies:
 
-- `libdeflate` (`compression` and `decompression` features) for deflate compression and decompression. Do not enable the `gzip`/`zlib` features unless fixtures prove a wrapped-stream need.
+- `libdeflate` (`compression`, `decompression`, and `zlib` features) for the DEFLATE-family payloads. The `zlib` feature is required: retail archives store RFC1950 zlib-wrapped streams, never bare RFC1951 deflate, and the whole corpus proves it (issue #42). Do not enable the `gzip` feature unless fixtures prove a gzip-wrapped need.
 - `lz4`, the official library linked as `lz4::lz4`, for both the frame and raw block paths. Do not depend on the lz4 CLI or treat its GPL terms as applying to the library.
 - `DirectXTex` for texture analysis, used only behind an internal adapter.
 
@@ -76,14 +76,16 @@ Rules:
 Encode the compression method as explicit metadata. Never infer it solely from a file extension.
 
 - **TES3 BSA**: no compression. Use standard C++ binary I/O and explicit little-endian reads, and keep data-section-relative offset math and TES3 hash/path utilities isolated in TES3 code.
-- **TES4 / FO3 / FNV / Skyrim LE BSA**: libdeflate. Keep embedded-name handling, archive flags, file flags, and hash ordering in format-specific code.
+- **TES4 / FO3 / FNV / Skyrim LE BSA**: libdeflate's *zlib* APIs (`libdeflate_zlib_*`). Keep embedded-name handling, archive flags, file flags, and hash ordering in format-specific code.
 - **Skyrim SE/AE BSA**: official LZ4 *frame* APIs (`LZ4F_*`) only.
-- **Fallout 4 BA2, Starfield BA2 v2, and Starfield BA2 v3 when not LZ4**: libdeflate.
+- **Fallout 4 BA2, Starfield BA2 v2, and Starfield BA2 v3 when not LZ4**: libdeflate's *zlib* APIs (`libdeflate_zlib_*`).
 - **Starfield BA2 v3 with `CompressionMethod == 3`**: official raw *block* APIs (`LZ4_*safe*`).
+
+Every DEFLATE-family payload is RFC1950 zlib-wrapped, never bare RFC1951. The reference only ever selects `ctZlib`, `ctLZ4Frame`, or `ctLZ4Block` (`wbBSArchive.pas:32`, `1790-1813`), and `ctZlib` runs through Delphi's `ZCompressStream`/`DecompressToUserBuf`, which produce and consume wrapped streams. libbsa therefore has no raw-deflate route at all; do not add one. Reading raw deflate is what issue #42 fixed, and writing it produces archives the games cannot read.
 
 LZ4 frame and raw block formats are different, and selecting the wrong API can fail or silently corrupt output. Keep the frame and block wrappers separate.
 
-Decompression helpers must be exact-size: fail if the decompressed byte count does not match the size recorded in archive metadata.
+Decompression helpers must be exact-size: fail if the decompressed byte count does not match the size recorded in archive metadata. The zlib route carries two narrow, corpus-proven exceptions that still honour the exact size, documented on `decompress_zlib_exact`: an empty payload decoding to zero bytes, and a complete DEFLATE stream whose Adler-32 trailer is missing or short. The second mirrors the reference's deliberate `Buffer error` tolerance for vanilla `Fallout - Misc.bsa` (`wbBSArchive.pas:1800-1810`). Do not widen either one.
 
 BA2 DX10/DDS work goes through the DirectXTex adapter for dimensions, DXGI format, mip count, array/cubemap metadata, and mip chunk planning. Persist libbsa-native metadata, never DirectXTex objects.
 

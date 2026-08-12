@@ -262,7 +262,7 @@ std::vector<libbsa::formats::ba2::ba2_dx10_prepared_entry> ba2_dx10_prepared_sta
             size,
             0U,
             0U,
-            libbsa::detail::compression_method::deflate,
+            libbsa::detail::compression_method::zlib,
             libbsa::detail::stored_payload::from_owned_bytes(std::move(payload)),
         });
     }
@@ -454,8 +454,7 @@ TEST_CASE("ba2 gnrl writer layout keeps zero-length records at the current paylo
         // entry is packed, so an empty entry ahead of every payload shares the
         // first payload location while one behind a payload trails it.
         CHECK(plan.value().payloads[0].offset == plan.value().payloads[1].offset);
-        CHECK(plan.value().payloads[2].offset ==
-              plan.value().payloads[1].offset + payload.size());
+        CHECK(plan.value().payloads[2].offset == plan.value().payloads[1].offset + payload.size());
         CHECK(plan.value().filename_table_offset == plan.value().payloads[2].offset);
     }
 

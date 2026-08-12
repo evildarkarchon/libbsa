@@ -37,7 +37,7 @@ std::uint32_t version_for(ba2_dx10_target target) noexcept {
 result<detail::compression_method> method_for_starfield_v3(std::uint32_t compression_method,
                                                            std::string_view error_message) {
     if (compression_method == ba2_starfield_compression_deflate) {
-        return detail::compression_method::deflate;
+        return detail::compression_method::zlib;
     }
     if (compression_method == ba2_starfield_compression_lz4_block) {
         return detail::compression_method::lz4_block;
@@ -47,7 +47,7 @@ result<detail::compression_method> method_for_starfield_v3(std::uint32_t compres
 
 entry_compression public_compression_for(detail::compression_method method) noexcept {
     switch (method) {
-        case detail::compression_method::deflate:
+        case detail::compression_method::zlib:
             return entry_compression::deflate;
         case detail::compression_method::lz4_block:
             return entry_compression::lz4_block;
@@ -160,7 +160,7 @@ result<ba2_profile> make_ba2_profile_from_header(std::uint32_t version, ba2_subt
     // default. Fallout 4 v1/v7/v8 and Starfield v2 have no such field, so their
     // compressed payloads are always deflate.
     if (!layout.value().has_compression_method) {
-        return make_profile(version, subtype, detail::compression_method::deflate);
+        return make_profile(version, subtype, detail::compression_method::zlib);
     }
     if (!metadata.compression_method.has_value()) {
         return error{error_code::format_error, "Starfield BA2 v3 CompressionMethod is truncated"};
@@ -178,10 +178,10 @@ result<ba2_profile> make_ba2_profile_for_gnrl_writer(ba2_gnrl_target target,
     switch (target) {
         case ba2_gnrl_target::fallout4:
             return make_profile(version_for(target), ba2_subtype::gnrl,
-                                detail::compression_method::deflate);
+                                detail::compression_method::zlib);
         case ba2_gnrl_target::starfield_v2:
             return make_profile(version_for(target), ba2_subtype::gnrl,
-                                detail::compression_method::deflate);
+                                detail::compression_method::zlib);
         case ba2_gnrl_target::starfield_v3: {
             auto method =
                 method_for_starfield_v3(options.starfield_compression_method,
@@ -200,10 +200,10 @@ result<ba2_profile> make_ba2_profile_for_dx10_writer(ba2_dx10_target target,
     switch (target) {
         case ba2_dx10_target::fallout4:
             return make_profile(version_for(target), ba2_subtype::dx10,
-                                detail::compression_method::deflate);
+                                detail::compression_method::zlib);
         case ba2_dx10_target::starfield_v2:
             return make_profile(version_for(target), ba2_subtype::dx10,
-                                detail::compression_method::deflate);
+                                detail::compression_method::zlib);
         case ba2_dx10_target::starfield_v3: {
             auto method =
                 method_for_starfield_v3(options.starfield_compression_method,
@@ -221,7 +221,7 @@ result<detail::compression_method> ba2_compressed_payload_method(ba2_subtype sub
                                                                  entry_compression compression) {
     switch (compression) {
         case entry_compression::deflate:
-            return detail::compression_method::deflate;
+            return detail::compression_method::zlib;
         case entry_compression::lz4_block:
             return detail::compression_method::lz4_block;
         case entry_compression::none:

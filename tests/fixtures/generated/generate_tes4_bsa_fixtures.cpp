@@ -150,7 +150,7 @@ std::string compression_name(libbsa::detail::compression_method method) {
     switch (method) {
         case libbsa::detail::compression_method::none:
             return "raw";
-        case libbsa::detail::compression_method::deflate:
+        case libbsa::detail::compression_method::zlib:
             return "deflate";
         case libbsa::detail::compression_method::lz4_frame:
             return "lz4_frame";
@@ -222,7 +222,7 @@ archive_spec make_v103() {
          .folder = archive.folder,
          .file = "PackedMesh.nif",
          .expected_bytes = bytes_from_string("v103 deflate mesh bytes\n"),
-         .compression = libbsa::detail::compression_method::deflate},
+         .compression = libbsa::detail::compression_method::zlib},
     };
     return archive;
 }
@@ -246,7 +246,7 @@ archive_spec make_v104() {
          .folder = archive.folder,
          .file = "PackedTexture.dds",
          .expected_bytes = bytes_from_string("v104 deflate texture bytes\n"),
-         .compression = libbsa::detail::compression_method::deflate,
+         .compression = libbsa::detail::compression_method::zlib,
          .has_embedded_name = true,
          .embedded_name = "textures\\mixedcase\\packedtexture.dds"},
     };

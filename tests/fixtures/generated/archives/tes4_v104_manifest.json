@@ -44,7 +44,7 @@
       "record_flags": 1073741824,
       "compression": "deflate",
       "raw_size": 27,
-      "stored_size": 73,
+      "stored_size": 79,
       "offset": 194,
       "has_embedded_name": true,
       "embedded_name_prefix_size": 37,

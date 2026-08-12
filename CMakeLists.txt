@@ -134,7 +134,6 @@ set(libbsa_library_sources
   src/detail/bethesda_hash.cpp
   src/detail/binary_io.cpp
   src/detail/compression_router.cpp
-  src/detail/deflate_codec.cpp
   src/detail/lz4_block_codec.cpp
   src/detail/lz4_frame_codec.cpp
   src/detail/parallel_work.cpp
@@ -144,6 +143,7 @@ set(libbsa_library_sources
   src/detail/writer_publish.cpp
   src/detail/host_file.cpp
   src/detail/host_file_path.cpp
+  src/detail/zlib_codec.cpp
   src/formats/ba2/ba2_archive_header.cpp
   src/formats/ba2/ba2_archive_opening.cpp
   src/formats/ba2/ba2_profile.cpp

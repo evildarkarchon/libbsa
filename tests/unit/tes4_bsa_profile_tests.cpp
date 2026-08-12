@@ -27,18 +27,16 @@ struct profile_expectation {
 };
 
 constexpr std::array profile_matrix{
-    profile_expectation{libbsa::formats::bsa::tes4_bsa_oblivion_version,
-                        libbsa::tes4_bsa_target::oblivion,
-                        libbsa::formats::bsa::tes4_folder_record_shape::legacy_32_bit_offset,
-                        libbsa::formats::bsa::tes4_bsa_legacy_folder_record_size,
-                        libbsa::entry_compression::deflate,
-                        libbsa::detail::compression_method::deflate, false, false},
-    profile_expectation{libbsa::formats::bsa::tes4_bsa_fallout3_version,
-                        libbsa::tes4_bsa_target::fallout3,
-                        libbsa::formats::bsa::tes4_folder_record_shape::legacy_32_bit_offset,
-                        libbsa::formats::bsa::tes4_bsa_legacy_folder_record_size,
-                        libbsa::entry_compression::deflate,
-                        libbsa::detail::compression_method::deflate, true, true},
+    profile_expectation{
+        libbsa::formats::bsa::tes4_bsa_oblivion_version, libbsa::tes4_bsa_target::oblivion,
+        libbsa::formats::bsa::tes4_folder_record_shape::legacy_32_bit_offset,
+        libbsa::formats::bsa::tes4_bsa_legacy_folder_record_size,
+        libbsa::entry_compression::deflate, libbsa::detail::compression_method::zlib, false, false},
+    profile_expectation{
+        libbsa::formats::bsa::tes4_bsa_fallout3_version, libbsa::tes4_bsa_target::fallout3,
+        libbsa::formats::bsa::tes4_folder_record_shape::legacy_32_bit_offset,
+        libbsa::formats::bsa::tes4_bsa_legacy_folder_record_size,
+        libbsa::entry_compression::deflate, libbsa::detail::compression_method::zlib, true, true},
     profile_expectation{
         libbsa::formats::bsa::tes4_bsa_skyrim_se_version, libbsa::tes4_bsa_target::skyrim_se,
         libbsa::formats::bsa::tes4_folder_record_shape::sse_64_bit_offset,

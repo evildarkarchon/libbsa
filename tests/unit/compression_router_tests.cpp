@@ -83,9 +83,9 @@ class temporary_payload_file final {
 TEST_CASE("compression_router dispatches explicit codec methods",
           "[unit][compression][compression-router]") {
     const auto original = router_vector();
-    for (auto method : {libbsa::detail::compression_method::deflate,
-                        libbsa::detail::compression_method::lz4_frame,
-                        libbsa::detail::compression_method::lz4_block}) {
+    for (auto method :
+         {libbsa::detail::compression_method::zlib, libbsa::detail::compression_method::lz4_frame,
+          libbsa::detail::compression_method::lz4_block}) {
         auto compressed = libbsa::detail::compress_payload(method, original);
         REQUIRE(compressed);
         auto decoded =
@@ -141,7 +141,7 @@ TEST_CASE("compression_router sink route streams LZ4 frame payloads",
 TEST_CASE("compression_router sink fallbacks preserve bytes and exact-size errors",
           "[unit][compression][compression-router][sink]") {
     const auto original = router_vector();
-    for (const auto method : {libbsa::detail::compression_method::deflate,
+    for (const auto method : {libbsa::detail::compression_method::zlib,
                               libbsa::detail::compression_method::lz4_block}) {
         auto compressed = libbsa::detail::compress_payload(method, original);
         REQUIRE(compressed);
