@@ -16,6 +16,10 @@ _Avoid_: Source payload, raw payload, final stored buffer
 The assignment of a Stored Payload to a location in the archive payload area, together with any sharing of that location between records. Placement is authoritative for location and sharing; it is not authoritative for payload creation, compression, or record geometry.
 _Avoid_: dedupe, payload sharing, offset assignment
 
+**Payload Span Exclusivity**:
+The property that any two Stored Payload spans in one archive are either identical in placement or completely disjoint. Distinct spans never partially overlap, so no entry can read bytes that belong to another entry's payload.
+_Avoid_: overlap check, span collision, payload aliasing
+
 **TES4 BSA Profile**:
 A resolved description of a TES4-family BSA format member: its version and version-dependent layout, compression, embedded-name, and file-classification semantics. The same profile applies whether an archive is being read or written.
 _Avoid_: TES4 mode, TES4 target behavior, raw version checks
