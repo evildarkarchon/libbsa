@@ -102,12 +102,6 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
     return bytes;
 }
 
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream input{path};
-    REQUIRE(input.good());
-    return {std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
-}
-
 #if defined(_WIN32)
 class read_only_file_guard {
    public:
@@ -642,73 +636,3 @@ TEST_CASE("writer_publish cleans the workspace after every finalization stage fa
     }
 }
 
-TEST_CASE(
-    "writer_publish delegation boundary keeps all writer families on the "
-    "shared Finalization Workspace helper",
-    "[unit][writer_publish][publish][static_boundary]") {
-    struct writer_source_expectation {
-        std::string_view relative_source;
-        std::string_view prefix;
-        std::string_view validation;
-        std::string_view profile;
-        std::string_view preparation;
-        std::string_view layout;
-        std::string_view serialization;
-    };
-
-    const auto root = std::filesystem::path{LIBBSA_SOURCE_DIR};
-    constexpr std::array sources{
-        writer_source_expectation{"src/formats/bsa/tes3_bsa_writer.cpp",
-                                  "TES3 BSA writer",
-                                  "tes3_validate_entries(",
-                                  {},
-                                  "tes3_prepare_entries(",
-                                  "tes3_assign_raw_offsets(",
-                                  "tes3_write_archive_bytes("},
-        writer_source_expectation{"src/formats/bsa/tes4_bsa_writer.cpp", "TES4 BSA writer",
-                                  "tes4_validate_entries(", "make_tes4_bsa_profile_for_writer(",
-                                  "tes4_prepare_folders(", "tes4_plan_placements(",
-                                  "tes4_write_archive_bytes("},
-        writer_source_expectation{"src/formats/ba2/ba2_gnrl_writer.cpp", "BA2 GNRL writer",
-                                  "ba2_gnrl_validate_entries(", "make_ba2_profile_for_gnrl_writer(",
-                                  "ba2_gnrl_prepare_entries(", "ba2_gnrl_plan_placements(",
-                                  "ba2_gnrl_write_archive_bytes("},
-        writer_source_expectation{"src/formats/ba2/ba2_dx10_writer.cpp", "BA2 DX10 writer",
-                                  "ba2_dx10_validate_entries(", "make_ba2_profile_for_dx10_writer(",
-                                  "ba2_dx10_prepare_entries(", "ba2_dx10_plan_placements(",
-                                  "ba2_dx10_write_archive_bytes("},
-    };
-
-    for (const auto& source : sources) {
-        INFO("writer publish delegation boundary source: " << source.relative_source);
-        const auto text = read_text_file(root / source.relative_source);
-        const auto publish_position = text.find("detail::publish_writer_output(");
-        const auto validation_position = text.find(source.validation);
-        const auto profile_position = text.find(source.profile);
-        const auto preparation_position = text.find(source.preparation);
-        const auto layout_position = text.find(source.layout);
-        const auto serialization_position = text.find(source.serialization);
-        REQUIRE(publish_position != std::string::npos);
-        CHECK(text.find(source.prefix) != std::string::npos);
-        REQUIRE(validation_position != std::string::npos);
-        CHECK(validation_position < publish_position);
-        if (!source.profile.empty()) {
-            REQUIRE(profile_position != std::string::npos);
-            CHECK(profile_position < publish_position);
-        }
-        REQUIRE(preparation_position != std::string::npos);
-        REQUIRE(layout_position != std::string::npos);
-        REQUIRE(serialization_position != std::string::npos);
-        CHECK(publish_position < preparation_position);
-        CHECK(publish_position < layout_position);
-        CHECK(publish_position < serialization_position);
-        CHECK(text.find("const detail::finalization_workspace& workspace") != std::string::npos);
-        CHECK(text.find("workspace.temporary_archive_path()") != std::string::npos);
-        CHECK(text.find("make_unique_publish_directory") == std::string::npos);
-        CHECK(text.find("cleanup_publish_directory") == std::string::npos);
-        CHECK(text.find("reserve_backup_path") == std::string::npos);
-        CHECK(text.find("restore_backup_after_publish_failure") == std::string::npos);
-        CHECK(text.find("detail::publish_file_without_replace") == std::string::npos);
-        CHECK(text.find("detail::replace_file_atomically") == std::string::npos);
-    }
-}

@@ -99,14 +99,6 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
     return bytes;
 }
 
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream input{path};
-    REQUIRE(input.is_open());
-    std::ostringstream buffer;
-    buffer << input.rdbuf();
-    return buffer.str();
-}
-
 std::vector<std::byte> bytes_from_hex(std::string_view hex) {
     REQUIRE(hex.size() % 2U == 0U);
     std::vector<std::byte> bytes;
@@ -849,28 +841,3 @@ TEST_CASE(
     REQUIRE(missing.error().code == libbsa::error_code::not_found);
 }
 
-TEST_CASE(
-    "archive_reader_extract_bytes preflights materialization before "
-    "payload extraction",
-    "[unit][bounded_memory_policy][allocation]") {
-    const auto text =
-        read_text_file(std::filesystem::path{LIBBSA_SOURCE_DIR} / "src" / "archive.cpp");
-    const auto function_pos =
-        text.find("result<std::vector<std::byte>> archive_reader::extract_bytes");
-    REQUIRE(function_pos != std::string::npos);
-
-    const auto function_end =
-        text.find("result<std::vector<bulk_extract_entry_result>> archive_reader::extract_entries",
-                  function_pos);
-    REQUIRE(function_end != std::string::npos);
-    const auto function_text = text.substr(function_pos, function_end - function_pos);
-
-    const auto preflight_pos = function_text.find("checked_materialized_payload_size");
-    const std::regex direct_state_invocation{
-        R"([A-Za-z_][A-Za-z0-9_]*->[A-Za-z_][A-Za-z0-9_]*\([^;]*\))"};
-    std::smatch extraction;
-
-    REQUIRE(preflight_pos != std::string::npos);
-    REQUIRE(std::regex_search(function_text, extraction, direct_state_invocation));
-    REQUIRE(preflight_pos < static_cast<std::size_t>(extraction.position()));
-}

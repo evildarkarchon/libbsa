@@ -9,7 +9,7 @@ Default proof means evidence that is reproducible from the repository without lo
 - Public headers: `include/libbsa/libbsa.hpp`, `archive.hpp`, `writer.hpp`, `validation.hpp`, and `result.hpp`.
 - Public support docs: `docs/coverage-audit-matrix.md`, `docs/compatibility-evidence.md`, `docs/api-mainpage.md`, `docs/integration-examples.md`, `docs/target-format-guide.md`, and `docs/thread-safety.md`.
 - Package-consumer proof: `tests/package-consumer/main.cpp` and the package-consumer CTest gates described by `tests/unit/target_format_policy_tests.cpp`.
-- Public-boundary and documentation policy proof: `tests/unit/public_include_boundary_tests.cpp`, `tests/unit/export_surface_policy_tests.cpp`, `tests/unit/docs_policy_tests.cpp`, `tests/unit/target_format_policy_tests.cpp`, and `tests/unit/validation_api_tests.cpp`.
+- Public-boundary proof: `tests/unit/public_include_boundary_tests.cpp`, `tests/unit/export_surface_policy_tests.cpp`, `tests/unit/target_format_policy_tests.cpp`, and `tests/unit/validation_api_tests.cpp`. Documentation accuracy is a review responsibility and is not asserted by a test.
 
 Optional local game corpora and BSArchPro-derived manifests remain advisory evidence only. They can increase confidence or justify future hardening, but they are not required for default support claims and they do not replace committed legal fixtures, writer-output tests, package-consumer checks, or docs-policy coverage. `TES5Edit/` remains a read-only reference boundary.
 

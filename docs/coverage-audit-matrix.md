@@ -2,13 +2,16 @@
 
 This document is the human-readable support-truth matrix for libbsa's currently implemented archive families. It answers one question: for each family and capability axis, what is proven by default, what is only partially proven, and what is intentionally advisory or deferred?
 
-It is not a promise that every real-world archive has been compared against BSArchPro or official game data. Default support claims below are based on committed legal fixtures, writer-produced archives, always-on Catch2/CTest coverage, package-consumer smoke checks, and documentation policy tests.
+It is not a promise that every real-world archive has been compared against BSArchPro or official game data. Default support claims below are based on committed legal fixtures, writer-produced archives, always-on Catch2/CTest coverage, and package-consumer smoke checks.
+
+Documentation accuracy is not part of the default proof set. It was previously asserted by tests that substring-matched documentation prose, which could only detect a missing word rather than a wrong statement, and which broke on ordinary rewording. Those tests were removed; documentation is kept accurate by review.
 
 ## Scope and evidence policy
 
 ### Status vocabulary
 
-- **Proven** — The claim has default evidence from committed legal/generated fixtures, writer-output archives exercised by always-on Catch2/CTest tests, package-consumer checks, or docs-policy tests. Optional local game/BSArchPro inputs are not required for this status.
+- **Proven** — The claim has default evidence from committed legal/generated fixtures, writer-output archives exercised by always-on Catch2/CTest tests, or package-consumer checks. Optional local game/BSArchPro inputs are not required for this status.
+- **Documented** — The claim is described in public documentation, and that is all. No automated check enforces it. Used for the documentation axis, which is a review responsibility rather than a test result.
 - **Partial** — The implementation has meaningful default proof, but at least one important variant, compression route, or public-policy angle is indirect or representative rather than directly covered by a family/axis test.
 - **Missing** — A support claim would currently lack default proof. Missing rows should become work items before the claim is repeated in user-facing docs.
 - **Deferred** — The work is intentionally outside the current default proof contract, usually because it depends on local copyrighted inputs, a future compatibility campaign, performance/stress work, or a release-readiness pass.
@@ -42,7 +45,7 @@ Material subrow: **TES3/Morrowind BSA** only. TES3 has no compression route; wri
 | Validation API behavior | Proven | `include/libbsa/validation.hpp`; `tests/unit/validation_api_tests.cpp` | Generated TES3 success archives and writer-produced TES3 archives are accepted; malformed TES3 rows report structured validation diagnostics. |
 | Compatibility warnings | N/A | `include/libbsa/validation.hpp`; `tests/unit/compatibility_warning_tests.cpp`; `docs/compatibility-evidence.md` | The current public warning catalog has no TES3-specific compatibility warning. This is not a TES3 support gap unless a known TES3 compatibility risk is added to the public warning contract. |
 | Public/package-consumer API proof | Proven | `tests/package-consumer/main.cpp`; `docs/integration-examples.md`; `tests/unit/public_include_boundary_tests.cpp`; `tests/unit/export_surface_policy_tests.cpp` | The installed umbrella header and package-consumer smoke source compile/link representative reader, validation, `payload_sink`, and `tes3_bsa_writer` usage. The installed `package_consumer_smoke` runtime creates a writer-produced TES3 BSA, opens it through `archive_reader`, validates it through `validate_archive`, and extracts it through sink, `extract_bytes`, and bulk extraction paths. |
-| Docs/support-claim proof | Proven | `docs/target-format-guide.md`; `docs/api-mainpage.md`; `tests/unit/target_format_policy_tests.cpp`; `tests/unit/docs_policy_tests.cpp` | Public docs describe TES3 support, raw writer behavior, and dependency-light API shape; policy tests keep docs discoverable and free of planning identifiers where checked. |
+| Docs/support-claim proof | Documented | `docs/target-format-guide.md`; `docs/api-mainpage.md` | Public docs describe TES3 support, raw writer behavior, and dependency-light API shape. Accuracy is maintained by review, not by an automated check. |
 
 ### TES4-family BSA
 
@@ -62,7 +65,7 @@ Material subrows:
 | Validation API behavior | Proven | `include/libbsa/validation.hpp`; `tests/unit/validation_api_tests.cpp`; `tests/unit/compatibility_warning_tests.cpp` | The validation API directly accepts generated success fixtures `tes4_v103.bsa`, `tes4_v104.bsa`, and `tes4_v105.bsa` with extractability enabled, validates writer-produced TES4 archives, reports malformed BSA diagnostics, and keeps compatibility-warning proof on the public report surface. |
 | Compatibility warnings | Proven | `include/libbsa/validation.hpp`; `tests/unit/compatibility_warning_tests.cpp`; `docs/compatibility-evidence.md` | Current public BSA warning codes are proven: compressed sound payloads and embedded-name compatibility risk are generated/writer-output tests, not local corpus assumptions. |
 | Public/package-consumer API proof | Proven | `tests/package-consumer/main.cpp`; `docs/integration-examples.md`; `tests/unit/public_include_boundary_tests.cpp`; `tests/unit/export_surface_policy_tests.cpp` | Package-consumer source compiles representative `tes4_bsa_writer`, `archive_reader`, validation, extraction, and error-handling usage through `<libbsa/libbsa.hpp>`. The installed `package_consumer_smoke` runtime creates a writer-produced TES4-family BSA, opens it through `archive_reader`, validates it through `validate_archive`, and extracts it through sink, `extract_bytes`, and bulk extraction paths. |
-| Docs/support-claim proof | Proven | `docs/target-format-guide.md`; `docs/api-mainpage.md`; `tests/unit/target_format_policy_tests.cpp`; `tests/unit/docs_policy_tests.cpp` | Target-format policy tests require v103, v104, v105, deflate, LZ4-frame, writer target policies, and compatibility warning documentation. |
+| Docs/support-claim proof | Documented | `docs/target-format-guide.md`; `docs/api-mainpage.md` | Public docs cover v103, v104, v105, deflate, LZ4-frame, writer target policies, and compatibility warnings. Accuracy is maintained by review, not by an automated check. |
 
 ### BA2 GNRL
 
@@ -83,7 +86,7 @@ Material subrows:
 | Validation API behavior | Proven | `include/libbsa/validation.hpp`; `tests/unit/validation_api_tests.cpp`; `tests/unit/compatibility_warning_tests.cpp` | The validation API directly accepts generated success fixtures `ba2_gnrl_fo4.ba2`, `ba2_gnrl_sfv2.ba2`, and `ba2_gnrl_sfv3.ba2` with extractability enabled, validates representative writer-produced BA2 GNRL archives, validates writer-produced Starfield BA2 v3 method 0 deflate and method 3 raw LZ4 block routes, and malformed matrix rows cover BA2 GNRL failures. |
 | Compatibility warnings | Proven | `include/libbsa/validation.hpp`; `tests/unit/compatibility_warning_tests.cpp`; `docs/compatibility-evidence.md` | Current BA2 warning proof covers caller-supplied target-family mismatch through generated writer-output validation. No GNRL-specific warning beyond the current catalog is claimed. |
 | Public/package-consumer API proof | Proven | `tests/package-consumer/main.cpp`; `docs/integration-examples.md`; `tests/unit/public_include_boundary_tests.cpp`; `tests/unit/export_surface_policy_tests.cpp` | Package-consumer source compiles representative `ba2_gnrl_writer`, target enum, compression policy, reader, validation, and error-handling usage through the installed public header. The installed `package_consumer_smoke` runtime creates a writer-produced BA2 GNRL archive, opens it through `archive_reader`, validates it through `validate_archive`, and extracts it through sink, `extract_bytes`, and bulk extraction paths. |
-| Docs/support-claim proof | Proven | `docs/target-format-guide.md`; `docs/api-mainpage.md`; `tests/unit/target_format_policy_tests.cpp`; `tests/unit/docs_policy_tests.cpp` | Target-format policy tests require Fallout 4 GNRL, Starfield v2/v3 GNRL, deflate, raw LZ4 block, writer target policies, and compatibility warning docs. |
+| Docs/support-claim proof | Documented | `docs/target-format-guide.md`; `docs/api-mainpage.md` | Public docs cover Fallout 4 GNRL, Starfield v2/v3 GNRL, deflate, raw LZ4 block, writer target policies, and compatibility warnings. Accuracy is maintained by review, not by an automated check. |
 
 ### BA2 DX10
 
@@ -105,7 +108,7 @@ Material subrows:
 | Validation API behavior | Proven | `include/libbsa/validation.hpp`; `tests/unit/validation_api_tests.cpp` | The validation API directly accepts generated success fixtures `ba2_dx10_fo4.ba2` and `ba2_dx10_sfv3.ba2` with extractability enabled, validates writer-produced Starfield BA2 v2 fixed-deflate output, validates Starfield BA2 v3 method 0 deflate and method 3 raw LZ4 block texture routes, and covers BA2 DX10 failures through malformed matrix rows. |
 | Compatibility warnings | N/A | `include/libbsa/validation.hpp`; `tests/unit/compatibility_warning_tests.cpp`; `docs/compatibility-evidence.md` | The current public warning catalog has no BA2 DX10-specific warning. Texture format restrictions are enforced as writer/parser validation behavior rather than compatibility warnings. |
 | Public/package-consumer API proof | Proven | `tests/package-consumer/main.cpp`; `docs/integration-examples.md`; `tests/unit/public_include_boundary_tests.cpp`; `tests/unit/export_surface_policy_tests.cpp` | Package-consumer source compiles `ba2_dx10_writer` v2 target/options usage and the documented example compiles through `<libbsa/libbsa.hpp>`. The installed `package_consumer_smoke` runtime generates a tiny legal BC1 DXT10 DDS input inline, creates writer-produced Starfield v2 and v3 DX10 archives, opens them through `archive_reader`, validates them through `validate_archive`, and extracts the reconstructed DDS through sink, `extract_bytes`, and bulk extraction paths. |
-| Docs/support-claim proof | Proven | `docs/target-format-guide.md`; `docs/api-mainpage.md`; `tests/unit/target_format_policy_tests.cpp`; `tests/unit/docs_policy_tests.cpp` | Target-format policy tests require Fallout 4 DX10, Starfield v2/v3 DX10, raw LZ4 block, deflate routes, writer target policies, and public documentation boundaries. |
+| Docs/support-claim proof | Documented | `docs/target-format-guide.md`; `docs/api-mainpage.md` | Public docs cover Fallout 4 DX10, Starfield v2/v3 DX10, raw LZ4 block, deflate routes, and writer target policies. Accuracy is maintained by review, not by an automated check. |
 
 ## What `compatibility_matrix.json` is and is not
 

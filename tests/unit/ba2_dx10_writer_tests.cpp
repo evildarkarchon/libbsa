@@ -939,6 +939,56 @@ TEST_CASE(
     require_snapshot_directories_removed(created);
 }
 
+TEST_CASE("BA2 DX10 writer snapshot directory names are unpredictable",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][security]") {
+    // Snapshot directories live in the shared temp directory, so a predictable
+    // name would let another process pre-create or squat the path a writer is
+    // about to use. Previously this was guarded by grepping the implementation
+    // for BCryptGenRandom and against a sequential counter, which proved only
+    // that certain tokens appeared in the source. Observe the actual names
+    // instead: two concurrent writers must not produce adjacent suffixes.
+    const auto before = snapshot_directories();
+    const auto manifest =
+        read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+    const auto& source_case = manifest.at("valid_cases").at(0);
+    const auto source_path =
+        (generated_source_dir() / source_case.at("file").get<std::string>()).string();
+
+    libbsa::ba2_dx10_writer first{libbsa::ba2_dx10_target::fallout4};
+    libbsa::ba2_dx10_writer second{libbsa::ba2_dx10_target::fallout4};
+    REQUIRE(first.add_file("textures/first.dds", source_path).has_value());
+    REQUIRE(second.add_file("textures/second.dds", source_path).has_value());
+
+    const auto created = new_snapshot_directories_since(before);
+    REQUIRE(created.size() == 2U);
+
+    std::vector<std::string> suffixes;
+    for (const auto& path : created) {
+        const auto name = path.filename().string();
+        REQUIRE(name.rfind(snapshot_directory_prefix, 0U) == 0U);
+        auto suffix = name.substr(snapshot_directory_prefix.size());
+        REQUIRE_FALSE(suffix.empty());
+        suffixes.push_back(std::move(suffix));
+    }
+
+    CHECK(suffixes.front() != suffixes.back());
+    // A counter-derived name differs only in its final digits. Require the two
+    // suffixes to diverge somewhere other than the very end.
+    const auto shared_prefix =
+        static_cast<std::size_t>(std::distance(suffixes.front().begin(),
+                                               std::mismatch(suffixes.front().begin(),
+                                                             suffixes.front().end(),
+                                                             suffixes.back().begin(),
+                                                             suffixes.back().end())
+                                                   .first));
+    INFO("snapshot suffixes: " << suffixes.front() << " and " << suffixes.back());
+    CHECK(shared_prefix < suffixes.front().size() / 2U);
+
+    REQUIRE(first.write_to(unique_output_path("dx10-unpredictable-first").string()).has_value());
+    REQUIRE(second.write_to(unique_output_path("dx10-unpredictable-second").string()).has_value());
+    require_snapshot_directories_removed(created);
+}
+
 TEST_CASE(
     "BA2 DX10 writer cleans snapshot directories on validation failure "
     "and consumes writer",

@@ -52,28 +52,20 @@ add_executable(libbsa_tests
   unit/result_tests.cpp
   unit/archive_reader_tests.cpp
   unit/archive_reader_dispatch_tests.cpp
-  unit/archive_reader_dispatch_policy_tests.cpp
   unit/bulk_extraction_tests.cpp
   unit/writer_execution_options_tests.cpp
   unit/bsa_writer_execution_tests.cpp
   unit/ba2_writer_execution_tests.cpp
   unit/writer_ownership_tests.cpp
   unit/writer_stage_tests.cpp
-  unit/bounded_memory_policy_tests.cpp
   unit/benchmark_policy_tests.cpp
-  unit/docs_policy_tests.cpp
-  unit/coverage_audit_matrix_docs_tests.cpp
-  unit/thread_safety_docs_policy_tests.cpp
   unit/target_format_policy_tests.cpp
   unit/ba2_gnrl_writer_tests.cpp
   unit/writer_publish_tests.cpp
   unit/tes3_bsa_writer_tests.cpp
   unit/tes4_bsa_writer_tests.cpp
   unit/tes4_bsa_profile_tests.cpp
-  unit/tes4_bsa_profile_ownership_policy_tests.cpp
   unit/ba2_dx10_preparer_seam_tests.cpp
-  unit/parser_preparer_seam_policy_tests.cpp
-  unit/writer_hotspot_policy_tests.cpp
   unit/tes4_bsa_parser_seam_tests.cpp
   unit/tes4_bsa_reader_tests.cpp
   unit/tes3_bsa_reader_tests.cpp
@@ -104,7 +96,6 @@ add_executable(libbsa_tests
   unit/stored_payload_tests.cpp
   unit/host_file_tests.cpp
   unit/host_file_path_tests.cpp
-  unit/host_file_writer_name_tests.cpp
   unit/host_path_correctness_boundary_tests.cpp
   unit/bethesda_hash_tests.cpp
 )

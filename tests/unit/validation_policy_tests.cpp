@@ -28,10 +28,6 @@ std::string read_text_file(const std::filesystem::path& path) {
     return buffer.str();
 }
 
-bool command_succeeds(const std::string& command) { return std::system(command.c_str()) == 0; }
-
-std::string quoted_path(const std::filesystem::path& path) { return '"' + path.string() + '"'; }
-
 std::string trim_copy(std::string value) {
     const auto first = std::find_if(value.begin(), value.end(),
                                     [](unsigned char ch) { return !std::isspace(ch); });
@@ -43,36 +39,6 @@ std::string trim_copy(std::string value) {
         return {};
     }
     return std::string{first, last};
-}
-
-std::vector<std::string> compatibility_warning_codes_from_public_header() {
-    const auto header = read_text_file(source_root() / "include/libbsa/validation.hpp");
-    const auto enum_name = std::string{"enum class compatibility_warning_code"};
-    const auto enum_start = header.find(enum_name);
-    REQUIRE(enum_start != std::string::npos);
-
-    const auto body_start = header.find('{', enum_start);
-    REQUIRE(body_start != std::string::npos);
-    const auto body_end = header.find("};", body_start);
-    REQUIRE(body_end != std::string::npos);
-
-    std::vector<std::string> codes;
-    std::istringstream lines{header.substr(body_start + 1, body_end - body_start - 1)};
-    std::string line;
-    while (std::getline(lines, line)) {
-        if (const auto comment = line.find("//"); comment != std::string::npos) {
-            line.erase(comment);
-        }
-        if (const auto comma = line.find(','); comma != std::string::npos) {
-            line.erase(comma);
-        }
-
-        auto code = trim_copy(line);
-        if (!code.empty()) {
-            codes.push_back(std::move(code));
-        }
-    }
-    return codes;
 }
 
 struct verification_lane_contract {
@@ -143,25 +109,6 @@ std::optional<std::string> yaml_block(std::string_view text, std::string_view he
     return block.str();
 }
 
-std::vector<std::string> yaml_scalar_values(std::string_view block, std::string_view key) {
-    std::vector<std::string> values;
-    std::istringstream lines{std::string{block}};
-    std::string line;
-    const auto prefix = std::string{key} + ":";
-    while (std::getline(lines, line)) {
-        const auto trimmed = trim_copy(line);
-        if (!trimmed.starts_with(prefix)) {
-            continue;
-        }
-
-        auto value = trim_copy(trimmed.substr(prefix.size()));
-        if (!value.empty() && value.find("${{") == std::string::npos) {
-            values.push_back(std::move(value));
-        }
-    }
-    return values;
-}
-
 std::size_t count_occurrences(std::string_view text, std::string_view needle) {
     std::size_t count = 0;
     std::size_t offset = 0;
@@ -170,24 +117,6 @@ std::size_t count_occurrences(std::string_view text, std::string_view needle) {
         offset += needle.size();
     }
     return count;
-}
-
-void require_exact_values(const std::vector<std::string>& actual,
-                          std::initializer_list<std::string_view> expected) {
-    INFO("Actual values count: " << actual.size());
-    REQUIRE(actual.size() == expected.size());
-
-    std::vector<std::string> normalized_actual = actual;
-    std::sort(normalized_actual.begin(), normalized_actual.end());
-
-    std::vector<std::string> normalized_expected;
-    normalized_expected.reserve(expected.size());
-    for (const auto value : expected) {
-        normalized_expected.emplace_back(value);
-    }
-    std::sort(normalized_expected.begin(), normalized_expected.end());
-
-    REQUIRE(normalized_actual == normalized_expected);
 }
 
 void require_preset_family(std::string_view presets, const verification_lane_contract& lane) {
@@ -216,90 +145,6 @@ void require_all_tokens(std::string_view text, std::initializer_list<std::string
 }
 
 }  // namespace
-
-TEST_CASE(
-    "validation_policy CTest label taxonomy is documented and backed by "
-    "selectable tests",
-    "[unit][fixture][roundtrip][compat][malformed][slow][doc_structure]") {
-    const auto readme = read_text_file(source_root() / "tests/fixtures/README.md");
-
-    constexpr std::array<std::string_view, 7> required_labels{
-        "unit", "fixture", "roundtrip", "compat", "malformed", "slow", "requires-game-fixture",
-    };
-
-    for (const auto label : required_labels) {
-        INFO("Missing documented label: " << label);
-        REQUIRE(readme.find(std::string{label}) != std::string::npos);
-    }
-}
-
-TEST_CASE(
-    "validation_policy requires-game-fixture label is selectable without "
-    "local archives",
-    "[unit][requires-game-fixture][doc_structure]") {
-    const auto readme = read_text_file(source_root() / "tests/fixtures/README.md");
-
-    REQUIRE(readme.find("Tests discovered by default") != std::string::npos);
-    REQUIRE(readme.find("skipped unless local") != std::string::npos);
-    REQUIRE(readme.find("LIBBSA_GAME_FIXTURES") != std::string::npos);
-}
-
-TEST_CASE(
-    "validation_policy compatibility evidence catalog documents public "
-    "warning-code structure",
-    "[unit][compat][validation_policy][doc_structure]") {
-    const auto catalog = read_text_file(source_root() / "docs/compatibility-evidence.md");
-    const auto warning_codes = compatibility_warning_codes_from_public_header();
-    REQUIRE_FALSE(warning_codes.empty());
-
-    for (const auto code : warning_codes) {
-        const auto heading = "### `" + code + "`";
-        const auto entry_start = catalog.find(heading);
-        INFO("Missing compatibility evidence entry: " << code);
-        REQUIRE(entry_start != std::string::npos);
-
-        const auto next_entry = catalog.find("\n### `", entry_start + heading.size());
-        const auto entry = catalog.substr(entry_start, next_entry - entry_start);
-        REQUIRE(entry.find("Rule:") != std::string::npos);
-        REQUIRE(entry.find("Evidence:") != std::string::npos);
-    }
-
-    REQUIRE(catalog.find("generated") != std::string::npos);
-    REQUIRE(catalog.find("writer-output") != std::string::npos);
-}
-
-TEST_CASE(
-    "validation_policy local fixture boundary keeps game archives "
-    "ignored and provenance documented",
-    "[unit][fixture][static_boundary][doc_structure]") {
-    const auto root = source_root();
-    const auto readme = read_text_file(root / "tests/fixtures/README.md");
-    const auto gitignore = read_text_file(root / ".gitignore");
-
-    REQUIRE(readme.find("tests/fixtures/generated/source") != std::string::npos);
-    REQUIRE(readme.find("tests/fixtures/generated/archives") != std::string::npos);
-    REQUIRE(readme.find("The generator or source recipe") != std::string::npos);
-    REQUIRE(readme.find("The legal provenance") != std::string::npos);
-    REQUIRE(readme.find("The behavior it proves") != std::string::npos);
-    REQUIRE(readme.find("TES5Edit/ must not be used as a fixture workspace") != std::string::npos);
-    REQUIRE(readme.find("LIBBSA_BSARCHPRO_EXPECTED") != std::string::npos);
-    REQUIRE(readme.find("bsarchpro_expected.json") != std::string::npos);
-    REQUIRE(readme.find("BSArchPro-derived expected fixture comparisons are opt-in") !=
-            std::string::npos);
-
-    REQUIRE(gitignore.find("/tests/fixtures/local/*") != std::string::npos);
-    REQUIRE(gitignore.find("!/tests/fixtures/local/.gitkeep") != std::string::npos);
-
-    const auto git_base = "git -C " + quoted_path(root) + " check-ignore ";
-#ifdef _WIN32
-    const auto silence = " >NUL 2>NUL";
-#else
-    const auto silence = " >/dev/null 2>/dev/null";
-#endif
-
-    REQUIRE(command_succeeds(git_base + "tests/fixtures/local/example.bsa" + silence));
-    REQUIRE_FALSE(command_succeeds(git_base + "tests/fixtures/local/.gitkeep" + silence));
-}
 
 TEST_CASE(
     "validation_policy CI and presets preserve static shared and "

@@ -66,31 +66,6 @@ TEST_CASE(
     REQUIRE(cmake.find("enable_testing()") == std::string_view::npos);
 }
 
-TEST_CASE("benchmark_policy runner preserves required report scenario structure",
-          "[unit][benchmark_policy][doc_structure]") {
-    const auto benchmark_source =
-        read_text_file(source_root() / "benchmarks" / "libbsa_benchmarks.cpp");
-
-    require_all_tokens(
-        benchmark_source,
-        {"--output-json", "--output-markdown", "tes4_bsa_pack_extract", "ba2_gnrl_pack_extract",
-         "ba2_dx10_pack_extract", "bulk_extract", "worker_count", "1U", "4U",
-         "archive_reader::extract_entries", "write_execution_options", "scenario", "elapsed_ms",
-         "bytes_processed", "correctness_passed"});
-}
-
-TEST_CASE("benchmark_policy README documents commands schema and data policy",
-          "[unit][benchmark_policy][doc_structure]") {
-    const auto readme = read_text_file(source_root() / "benchmarks" / "README.md");
-
-    require_all_tokens(readme,
-                       {"cmake --build --preset windows-msvc-debug-static --target "
-                        "libbsa_benchmark_report",
-                        "libbsa-benchmark.json", "libbsa-benchmark.md", "scenario", "worker_count",
-                        "elapsed_ms", "bytes_processed", "correctness_passed", "legal synthetic",
-                        "TES5Edit", "game archives", "fixed speedup threshold", "does not gate"});
-}
-
 TEST_CASE(
     "benchmark_policy static boundary keeps report generation out of "
     "default CTest timing gates",

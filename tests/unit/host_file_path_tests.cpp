@@ -17,20 +17,6 @@ constexpr std::wstring_view non_ascii_host_path_token =
 
 std::filesystem::path project_root() { return std::filesystem::path{LIBBSA_SOURCE_DIR}; }
 
-std::filesystem::path host_file_path_source_path() {
-    return project_root() / "src" / "detail" / "host_file_path.cpp";
-}
-
-std::filesystem::path host_file_path_header_path() {
-    return project_root() / "src" / "detail" / "host_file_path.hpp";
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream input{path, std::ios::binary};
-    REQUIRE(input.is_open());
-    return std::string{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
-}
-
 std::filesystem::path unique_non_ascii_host_path() {
     static std::atomic_uint64_t counter{0};
     return std::filesystem::temp_directory_path() /
@@ -63,29 +49,6 @@ TEST_CASE("host_file_path decodes UTF-8 public host text into the native path",
 
     REQUIRE(resolved.has_value());
     CHECK(resolved.value().resolved == native_path);
-}
-
-TEST_CASE(
-    "host_file_path source uses strict UTF-8 conversion instead of "
-    "narrow path construction",
-    "[unit][host_file_path]") {
-    const auto source = read_text_file(host_file_path_source_path());
-
-    CHECK(source.find("MultiByteToWideChar") != std::string::npos);
-    CHECK(source.find("MB_ERR_INVALID_CHARS") != std::string::npos);
-    CHECK(source.find("std::filesystem::path{std::string{host_path}}") == std::string::npos);
-}
-
-TEST_CASE(
-    "host_file_path contract does not preserve caller UTF-8 text as dead "
-    "diagnostics state",
-    "[unit][host_file_path]") {
-    const auto removed_member = std::string{"original_"} + "utf8";
-    const auto header = read_text_file(host_file_path_header_path());
-    const auto source = read_text_file(host_file_path_source_path());
-
-    CHECK(header.find(removed_member) == std::string::npos);
-    CHECK(source.find(removed_member) == std::string::npos);
 }
 
 TEST_CASE("host_file_path rejects malformed UTF-8 before filesystem I/O",
