@@ -181,8 +181,26 @@ function Assert-SafeCleanPath {
     $sourcePath = [System.IO.Path]::GetFullPath($SourceDirectory)
     $trimChars = [char[]] @([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
 
-    if ($fullPath.TrimEnd($trimChars) -eq $sourcePath.TrimEnd($trimChars)) {
+    $normalizedPath = $fullPath.TrimEnd($trimChars)
+    $normalizedSource = $sourcePath.TrimEnd($trimChars)
+
+    if ($normalizedPath -eq $normalizedSource) {
         throw "Refusing to clean $Description because it resolves to the source directory: $fullPath"
+    }
+
+    # A custom -BuildRoot such as '..' resolves to an ancestor of the checkout. Recursive removal
+    # there would take the repository (and any sibling projects) with it, so ancestors are rejected
+    # outright rather than only the exact source directory.
+    $sourceWithSeparator = $normalizedSource + [System.IO.Path]::DirectorySeparatorChar
+    if ($sourceWithSeparator.StartsWith($normalizedPath + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to clean $Description because it contains the source directory: $fullPath"
+    }
+
+    # Volume roots ('D:\') and UNC share roots ('\\server\share') have no parent to fall back on,
+    # so a recursive delete there is never a build-tree cleanup.
+    $pathRoot = [System.IO.Path]::GetPathRoot($fullPath)
+    if (-not [string]::IsNullOrEmpty($pathRoot) -and $normalizedPath -eq $pathRoot.TrimEnd($trimChars)) {
+        throw "Refusing to clean $Description because it resolves to a filesystem root: $fullPath"
     }
 
     if ([string]::IsNullOrWhiteSpace($fullPath) -or $fullPath.Length -lt 4) {
