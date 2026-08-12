@@ -32,8 +32,10 @@ struct ba2_gnrl_placed_record {
 /// Owns GNRL records, unique Stored Payloads in physical order, and archive geometry.
 ///
 /// Record payload indices refer to placements selected by exact Stored Payload
-/// equality. Distinct zero-length placements intentionally may share the first
-/// payload offset because they emit no bytes and do not advance the cursor.
+/// equality. A zero-length placement takes the payload cursor as it stands when
+/// the record is placed and does not advance it, so it may share an offset with
+/// whichever placement follows it — or with the filename table when no payload
+/// follows.
 struct ba2_gnrl_placement_plan {
     std::vector<ba2_gnrl_placed_record> records;
     std::vector<ba2_gnrl_payload_placement> payloads;

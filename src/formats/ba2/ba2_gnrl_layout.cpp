@@ -59,7 +59,6 @@ result<ba2_gnrl_placement_plan> ba2_gnrl_plan_placements(
     if (!add_fits_u64(profile.header_size(), record_bytes, cursor)) {
         return error{error_code::format_error, "BA2 GNRL metadata size overflows"};
     }
-    const auto first_payload_offset = cursor;
 
     ba2_gnrl_placement_plan plan;
     plan.records.reserve(entries.size());
@@ -99,12 +98,14 @@ result<ba2_gnrl_placement_plan> ba2_gnrl_plan_placements(
         }
 
         if (payload_index == plan.payloads.size()) {
-            // Empty GNRL records always point to the first payload location.
-            // They emit no bytes and therefore never advance the physical cursor,
-            // including when every record in the archive is empty.
-            const auto offset = stored_size.value() == 0U ? first_payload_offset : cursor;
+            // TwbBSArchive.PackData records `Offset := Position` unconditionally
+            // for baFO4/baSF, where Position is the write cursor sampled before
+            // the payload write. A zero-length write does not move the stream, so
+            // an empty record takes the cursor as it stands and leaves it there.
+            // There is no zero-length special case in the reference, and TES4
+            // placement already follows the same rule.
             plan.payloads.push_back(
-                ba2_gnrl_payload_placement{offset, stored_size.value(), std::move(payload)});
+                ba2_gnrl_payload_placement{cursor, stored_size.value(), std::move(payload)});
             if (identity.has_value()) {
                 candidate_buckets[*identity].push_back(payload_index);
             }

@@ -271,7 +271,11 @@ void require_raw_round_trip(const std::filesystem::path& output,
         CHECK(found.value()->compression == libbsa::entry_compression::none);
         CHECK(found.value()->record_flags == expected_entry.record_flags);
         CHECK(found.value()->archive_hash != 0U);
-        CHECK(found.value()->payload_offset < layout.file_table_offset);
+        // A zero-length entry packed last sits exactly at the filename table,
+        // so the payload span — not the offset alone — is what must stay inside
+        // the payload area.
+        CHECK(found.value()->payload_offset + found.value()->stored_size <=
+              layout.file_table_offset);
 
         auto extracted = opened.value().extract_bytes(expected_entry.path);
         REQUIRE(extracted.has_value());
@@ -617,7 +621,7 @@ TEST_CASE("BA2 GNRL writer raw Fallout 4 output reopens with end filename table"
                            std::nullopt);
 }
 
-TEST_CASE("BA2 GNRL writer places mixed zero-length records at the first payload location",
+TEST_CASE("BA2 GNRL writer places mixed zero-length records at the current payload cursor",
           "[unit][ba2_gnrl_writer][physical-layout]") {
     const auto payload = bytes_from_text("physical payload");
     const std::vector<std::byte> empty;
@@ -639,9 +643,12 @@ TEST_CASE("BA2 GNRL writer places mixed zero-length records at the first payload
     CHECK(layout.records[1].raw_size == payload.size());
     CHECK(layout.records[2].packed_size == 0U);
     CHECK(layout.records[2].raw_size == 0U);
+    // The reference samples the write cursor per entry, so the leading empty
+    // record shares the first payload location and the trailing one lands past
+    // the payload, where the filename table begins.
     CHECK(layout.records[0].offset == layout.records[1].offset);
-    CHECK(layout.records[2].offset == layout.records[1].offset);
-    CHECK(layout.file_table_offset == layout.records[1].offset + payload.size());
+    CHECK(layout.records[2].offset == layout.records[1].offset + payload.size());
+    CHECK(layout.file_table_offset == layout.records[2].offset);
 
     auto opened = libbsa::archive_reader::open(output.string());
     REQUIRE(opened.has_value());

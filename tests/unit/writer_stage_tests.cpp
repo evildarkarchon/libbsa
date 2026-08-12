@@ -427,7 +427,7 @@ TEST_CASE("ba2 gnrl writer layout preserves first occurrence and exact equality"
     }
 }
 
-TEST_CASE("ba2 gnrl writer layout keeps zero-length records at the first payload location",
+TEST_CASE("ba2 gnrl writer layout keeps zero-length records at the current payload cursor",
           "[unit][writer-stage][ba2_gnrl_writer][physical-layout]") {
     const auto profile = require_gnrl_profile();
     const auto payload = bytes_from_text("physical");
@@ -450,8 +450,34 @@ TEST_CASE("ba2 gnrl writer layout keeps zero-length records at the first payload
         CHECK(plan.value().payloads[0].stored_size == 0U);
         CHECK(plan.value().payloads[1].stored_size == payload.size());
         CHECK(plan.value().payloads[2].stored_size == 0U);
+        // BSArchPro's PackData records the write cursor as it stands when the
+        // entry is packed, so an empty entry ahead of every payload shares the
+        // first payload location while one behind a payload trails it.
         CHECK(plan.value().payloads[0].offset == plan.value().payloads[1].offset);
-        CHECK(plan.value().payloads[2].offset == plan.value().payloads[1].offset);
+        CHECK(plan.value().payloads[2].offset ==
+              plan.value().payloads[1].offset + payload.size());
+        CHECK(plan.value().filename_table_offset == plan.value().payloads[2].offset);
+    }
+
+    SECTION("deduplication shares one zero-length placement across a real payload") {
+        std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> entries;
+        entries.push_back(ba2_gnrl_memory_stage_entry({}));
+        entries.push_back(ba2_gnrl_memory_stage_entry(payload));
+        entries.push_back(ba2_gnrl_memory_stage_entry({}));
+
+        auto plan =
+            libbsa::formats::ba2::ba2_gnrl_plan_placements(std::move(entries), profile, true);
+
+        REQUIRE(plan.has_value());
+        REQUIRE(plan.value().records.size() == 3U);
+        // Sharing outranks the cursor rule: the trailing empty record inherits
+        // the leading empty record's location rather than taking the cursor it
+        // would have been placed at, matching FindPackedData under ShareData.
+        REQUIRE(plan.value().payloads.size() == 2U);
+        CHECK(plan.value().records[0].payload_index == 0U);
+        CHECK(plan.value().records[1].payload_index == 1U);
+        CHECK(plan.value().records[2].payload_index == 0U);
+        CHECK(plan.value().payloads[0].offset == plan.value().payloads[1].offset);
         CHECK(plan.value().filename_table_offset ==
               plan.value().payloads[1].offset + payload.size());
     }

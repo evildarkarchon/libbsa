@@ -87,4 +87,7 @@ libbsa keeps the stricter rule: a zero-length mip chunk carries no recoverable t
 accepting one would produce an archive whose records describe content that cannot be extracted. This
 divergence is confined to the write path; the reader is unaffected.
 
-See also issue #37, which tracks aligning BA2 GNRL's empty-entry offset with the reference.
+BA2 DX10 is now the only family that treats an empty payload specially. TES3 BSA, TES4-family BSA,
+and BA2 GNRL all accept one and place it at the write cursor as it stands, matching
+`TwbBSArchive.PackData`'s unconditional `Offset := Position`. See issue #37, which aligned GNRL with
+that rule.

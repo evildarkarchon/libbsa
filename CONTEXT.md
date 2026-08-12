@@ -51,3 +51,4 @@ _Avoid_: DX10 layout result, assigned chunks, payload ownership flags
 ## Behaviors
 
 - Stored Payload equality is exact byte equality. A fingerprint may narrow equality candidates but never establishes equality on its own.
+- Payload Placement gives a newly placed Stored Payload the payload cursor as it stands at that moment; a Stored Payload that shares an earlier location inherits that location instead. A zero-length Stored Payload takes the cursor and does not advance it, so it shares an offset with whatever is placed next — another payload, or the filename table when nothing follows. BA2 DX10 is the exception: it rejects a zero-length texture chunk rather than placing one (ADR-0001).
