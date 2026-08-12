@@ -7,6 +7,7 @@
 #include "texture/dds_layout.hpp"
 
 #include <detail/parser_primitives.hpp>
+#include <detail/payload_span_exclusivity.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -21,12 +22,6 @@ namespace {
 
 constexpr std::uint64_t reconstructed_dds_header_size = 148U;
 
-struct stored_chunk_span {
-    std::uint64_t offset;
-    std::uint64_t size;
-};
-
-using detail::add_fits;
 using detail::add_fits_u64;
 using detail::span_fits_u64;
 using detail::spans_overlap_u64;
@@ -49,63 +44,62 @@ entry_compression compression_for(const ba2_dx10_chunk_record& chunk,
 /// Both are accepted, so instead of requiring an order this checks the two
 /// properties that order was standing in for — payload bytes never reach into
 /// the header/record prefix, and never into the filename table.
+///
+/// Payload Span Exclusivity is enforced through the shared collection rather
+/// than a per-chunk scan over every accepted span, so a DX10 archive opens in
+/// O(n log n) in total chunk count instead of quadratically (ADR-0002). Unlike
+/// the sibling families, this seam has no enclosing allocation boundary, so it
+/// owns one: growing the node-based collection can throw where the removed
+/// vector reservation returned a result, and the boundary keeps that failure
+/// reporting the same "BA2 DX10 stored chunk spans" wording.
 result<void> validate_chunk_payload_spans(std::span<const ba2_dx10_record> records,
                                           std::uint64_t archive_size, std::uint64_t records_end,
                                           std::uint64_t name_table_offset,
                                           std::uint64_t name_table_end) {
-    std::size_t expected_chunk_count = 0;
-    for (const auto& record : records) {
-        std::size_t next_chunk_count = 0;
-        if (!add_fits(expected_chunk_count, record.chunks.size(), next_chunk_count)) {
-            return error{error_code::format_error,
-                         "BA2 DX10 aggregate texture chunk count exceeds platform limits"};
-        }
-        expected_chunk_count = next_chunk_count;
-    }
+    try {
+        detail::payload_span_exclusivity accepted_payload_spans;
 
-    std::vector<stored_chunk_span> accepted_payload_spans;
-    auto reserved_payload_spans = detail::reserve_metadata_vector(
-        accepted_payload_spans, expected_chunk_count, "BA2 DX10 stored chunk spans");
-    if (!reserved_payload_spans) {
-        return reserved_payload_spans.error();
-    }
-
-    for (const auto& record : records) {
-        for (const auto& chunk : record.chunks) {
-            const auto stored_size = static_cast<std::uint64_t>(
-                chunk.packed_size != 0U ? chunk.packed_size : chunk.raw_size);
-            if (stored_size == 0U || chunk.raw_size == 0U) {
-                return error{error_code::format_error, "BA2 DX10 chunk sizes are inconsistent"};
-            }
-            if (!span_fits_u64(chunk.offset, stored_size, archive_size)) {
-                return error{error_code::format_error,
-                             "BA2 DX10 chunk payload span is outside the archive"};
-            }
-            if (spans_overlap_u64(chunk.offset, stored_size, 0U, records_end)) {
-                return error{error_code::format_error,
-                             "BA2 DX10 chunk payload span intersects header or record table"};
-            }
-            if (spans_overlap_u64(chunk.offset, stored_size, name_table_offset,
-                                  name_table_end - name_table_offset)) {
-                return error{error_code::format_error,
-                             "BA2 DX10 filename table intersects payload data"};
-            }
-            for (const auto& prior : accepted_payload_spans) {
-                const auto exact_duplicate =
-                    prior.offset == chunk.offset && prior.size == stored_size;
-                if (!exact_duplicate &&
-                    spans_overlap_u64(prior.offset, prior.size, chunk.offset, stored_size)) {
+        for (const auto& record : records) {
+            for (const auto& chunk : record.chunks) {
+                const auto stored_size = static_cast<std::uint64_t>(
+                    chunk.packed_size != 0U ? chunk.packed_size : chunk.raw_size);
+                if (stored_size == 0U || chunk.raw_size == 0U) {
+                    return error{error_code::format_error, "BA2 DX10 chunk sizes are inconsistent"};
+                }
+                if (!span_fits_u64(chunk.offset, stored_size, archive_size)) {
                     return error{error_code::format_error,
-                                 "BA2 DX10 chunk payload spans partially overlap"};
+                                 "BA2 DX10 chunk payload span is outside the archive"};
+                }
+                if (spans_overlap_u64(chunk.offset, stored_size, 0U, records_end)) {
+                    return error{error_code::format_error,
+                                 "BA2 DX10 chunk payload span intersects header or record table"};
+                }
+                if (spans_overlap_u64(chunk.offset, stored_size, name_table_offset,
+                                      name_table_end - name_table_offset)) {
+                    return error{error_code::format_error,
+                                 "BA2 DX10 filename table intersects payload data"};
+                }
+                // Writer dedupe can intentionally publish exact duplicate chunks; partial
+                // sharing would make texture chunk extraction ambiguous because logical
+                // DDS segments would read bytes from each other's ranges. The call stays
+                // here, after the bounds and metadata-intersect checks and inside the same
+                // per-chunk loop, because which diagnostic a multi-defect archive reports
+                // is observable behavior. No zero-size guard is needed: the chunk size
+                // consistency check above has already rejected every empty stored span.
+                auto exclusive =
+                    accepted_payload_spans.insert(chunk.offset, stored_size,
+                                                  "BA2 DX10 chunk payload spans partially overlap");
+                if (!exclusive) {
+                    return exclusive.error();
                 }
             }
-            // Writer dedupe can intentionally publish exact duplicate chunks; partial
-            // sharing would make texture chunk extraction ambiguous because logical
-            // DDS segments would read bytes from each other's ranges.
-            accepted_payload_spans.push_back(stored_chunk_span{chunk.offset, stored_size});
         }
+        return {};
+    } catch (const std::bad_alloc&) {
+        return detail::metadata_allocation_error("BA2 DX10 stored chunk spans");
+    } catch (const std::length_error&) {
+        return detail::metadata_allocation_error("BA2 DX10 stored chunk spans");
     }
-    return {};
 }
 
 std::uint32_t inferred_array_size(const ba2_dx10_record& record) noexcept {
