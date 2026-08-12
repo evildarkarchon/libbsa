@@ -185,18 +185,21 @@ result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
         }
     }
 
-    for (const auto& record : plan.records) {
-        if (!(written = write_name(writer, record.archive_path_original))) {
-            return written.error();
-        }
-    }
-
     // Placement order is physical order. Serialization neither reselects
     // representatives nor traverses record chunks to decide emission custody.
     for (const auto& placement : plan.payloads) {
         auto emitted = placement.payload.emit(output);
         if (!emitted) {
             return emitted.error();
+        }
+    }
+
+    // The filename table trails every payload, matching TwbBSArchive.Save's
+    // baFO4dds/baSFdds branch, which sets FileTableOffset to the stream position
+    // after packing and only then writes the length-prefixed names.
+    for (const auto& record : plan.records) {
+        if (!(written = write_name(writer, record.archive_path_original))) {
+            return written.error();
         }
     }
 

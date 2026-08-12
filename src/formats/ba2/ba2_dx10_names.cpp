@@ -8,11 +8,12 @@
 namespace libbsa::formats::ba2 {
 result<std::vector<std::string>> read_ba2_dx10_names(const ba2_archive_source& source,
                                                      std::uint64_t file_table_offset,
-                                                     std::uint64_t first_payload_offset,
+                                                     std::uint64_t archive_size,
                                                      std::uint32_t file_count,
                                                      std::uint64_t& table_end) {
-    if (file_table_offset > first_payload_offset) {
-        return error{error_code::format_error, "BA2 DX10 filename table overlaps payload data"};
+    if (file_table_offset > archive_size) {
+        return error{error_code::format_error,
+                     "BA2 DX10 FileTableOffset is outside archive bytes"};
     }
 
     std::vector<std::string> names;
@@ -24,7 +25,7 @@ result<std::vector<std::string>> read_ba2_dx10_names(const ba2_archive_source& s
 
     std::uint64_t cursor = file_table_offset;
     for (std::uint32_t index = 0; index < file_count; ++index) {
-        if (!detail::span_fits_u64(cursor, 2U, first_payload_offset)) {
+        if (!detail::span_fits_u64(cursor, 2U, archive_size)) {
             return error{error_code::format_error,
                          "BA2 DX10 filename table is truncated before UInt16 length"};
         }
@@ -41,9 +42,9 @@ result<std::vector<std::string>> read_ba2_dx10_names(const ba2_archive_source& s
                          "BA2 DX10 filename table is truncated before UInt16 length"};
         }
         cursor += 2U;
-        if (!detail::span_fits_u64(cursor, length.value(), first_payload_offset)) {
+        if (!detail::span_fits_u64(cursor, length.value(), archive_size)) {
             return error{error_code::format_error,
-                         "BA2 DX10 filename table name crosses payload data"};
+                         "BA2 DX10 filename table is truncated before name bytes"};
         }
 
         auto name_bytes = source.read_exact(cursor, length.value(), "BA2 DX10 filename bytes");

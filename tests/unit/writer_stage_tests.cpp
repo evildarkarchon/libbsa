@@ -976,15 +976,16 @@ TEST_CASE("ba2 dx10 writer layout preserves first occurrence and physical geomet
     CHECK(plan.value().records[0].chunks[1].payload_index == 1U);
     CHECK(plan.value().records[1].chunks[0].payload_index == 0U);
 
-    const auto expected_filename_table_offset = profile.header_size() +
-                                                (2U * expected_ba2_dx10_record_size) +
-                                                (3U * expected_ba2_dx10_chunk_header_size);
-    const auto expected_first_payload_offset =
-        expected_filename_table_offset + 2U + plan.value().records[0].archive_path_original.size() +
-        2U + plan.value().records[1].archive_path_original.size();
-    CHECK(plan.value().filename_table_offset == expected_filename_table_offset);
+    // Reference DX10 order is header -> records -> payloads -> names, so the
+    // payload area starts right after the record table and FileTableOffset lands
+    // past the last unique payload.
+    const auto expected_first_payload_offset = profile.header_size() +
+                                               (2U * expected_ba2_dx10_record_size) +
+                                               (3U * expected_ba2_dx10_chunk_header_size);
     CHECK(plan.value().payloads[0].offset == expected_first_payload_offset);
     CHECK(plan.value().payloads[1].offset == expected_first_payload_offset + shared.size());
+    CHECK(plan.value().filename_table_offset ==
+          expected_first_payload_offset + shared.size() + unique.size());
 }
 
 TEST_CASE("ba2 dx10 writer layout rejects incompatible profiles and malformed geometry",
@@ -1063,7 +1064,11 @@ TEST_CASE("ba2 dx10 writer serialization consumes the plan and emits each payloa
     REQUIRE(serialized.has_value());
     const auto bytes = read_stage_binary_file(output);
     const auto& placement = plan.value().payloads[0];
-    CHECK(bytes.size() == placement.offset + placement.stored_size);
+    // The name table trails the payload area now, so the archive ends after the
+    // single length-prefixed name rather than at the last payload byte.
+    CHECK(placement.offset + placement.stored_size == plan.value().filename_table_offset);
+    CHECK(bytes.size() == plan.value().filename_table_offset + 2U +
+                              plan.value().records[0].archive_path_original.size());
     const auto first_chunk_offset = profile.header_size() + expected_ba2_dx10_record_size;
     const auto second_chunk_offset = first_chunk_offset + expected_ba2_dx10_chunk_header_size;
     CHECK(read_stage_u64_le_at(bytes, first_chunk_offset) == placement.offset);

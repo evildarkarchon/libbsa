@@ -6,11 +6,11 @@
 #include "formats/ba2/ba2_record_identity.hpp"
 #include "texture/dds_layout.hpp"
 
-#include <detail/binary_io.hpp>
 #include <detail/parser_primitives.hpp>
 
 #include <algorithm>
 #include <limits>
+#include <span>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -42,48 +42,17 @@ entry_compression compression_for(const ba2_dx10_chunk_record& chunk,
     return profile.default_compression();
 }
 
-/// Validates the header-delimited variable-width DX10 record-table allocation.
-result<std::size_t> record_table_size_for(const ba2_archive_header& header) {
-    const auto header_size = static_cast<std::uint64_t>(header.profile().header_size());
-    const auto record_table_size = header.filename_table_offset() - header_size;
-
-    std::size_t fixed_record_bytes = 0U;
-    std::size_t minimum_chunk_bytes = 0U;
-    if (!detail::multiply_fits(header.file_count(), ba2_dx10_record_size, fixed_record_bytes) ||
-        !detail::multiply_fits(header.file_count(), ba2_dx10_chunk_header_size,
-                               minimum_chunk_bytes)) {
-        return error{error_code::format_error, "BA2 DX10 record table is too large"};
-    }
-
-    std::size_t minimum_table_size = 0U;
-    if (!add_fits(fixed_record_bytes, minimum_chunk_bytes, minimum_table_size)) {
-        return error{error_code::format_error, "BA2 DX10 record table is too large"};
-    }
-
-    const auto maximum_chunks_from_records =
-        static_cast<std::uint64_t>(header.file_count()) *
-        static_cast<std::uint64_t>((std::numeric_limits<std::uint8_t>::max)());
-    const auto maximum_chunk_count = static_cast<std::uint32_t>(std::min<std::uint64_t>(
-        detail::metadata_dx10_chunk_count_limit, maximum_chunks_from_records));
-    std::size_t maximum_chunk_bytes = 0U;
-    std::size_t maximum_table_size = 0U;
-    if (!detail::multiply_fits(maximum_chunk_count, ba2_dx10_chunk_header_size,
-                               maximum_chunk_bytes) ||
-        !add_fits(fixed_record_bytes, maximum_chunk_bytes, maximum_table_size)) {
-        return error{error_code::format_error, "BA2 DX10 record table is too large"};
-    }
-
-    if (record_table_size < static_cast<std::uint64_t>(minimum_table_size) ||
-        record_table_size > static_cast<std::uint64_t>(maximum_table_size)) {
-        return error{error_code::format_error,
-                     "BA2 DX10 FileTableOffset does not match texture record table bounds"};
-    }
-    return static_cast<std::size_t>(record_table_size);
-}
-
-result<std::uint64_t> first_payload_offset_for(std::span<const ba2_dx10_record> records,
-                                               std::uint64_t archive_size) {
-    std::uint64_t first_payload_offset = archive_size;
+/// Validates every stored chunk span against the archive and its metadata areas.
+///
+/// DX10 physical order is not fixed by the format: BSArchPro writes the filename
+/// table after all payloads, while earlier libbsa releases wrote it before them.
+/// Both are accepted, so instead of requiring an order this checks the two
+/// properties that order was standing in for — payload bytes never reach into
+/// the header/record prefix, and never into the filename table.
+result<void> validate_chunk_payload_spans(std::span<const ba2_dx10_record> records,
+                                          std::uint64_t archive_size, std::uint64_t records_end,
+                                          std::uint64_t name_table_offset,
+                                          std::uint64_t name_table_end) {
     std::size_t expected_chunk_count = 0;
     for (const auto& record : records) {
         std::size_t next_chunk_count = 0;
@@ -112,6 +81,15 @@ result<std::uint64_t> first_payload_offset_for(std::span<const ba2_dx10_record> 
                 return error{error_code::format_error,
                              "BA2 DX10 chunk payload span is outside the archive"};
             }
+            if (spans_overlap_u64(chunk.offset, stored_size, 0U, records_end)) {
+                return error{error_code::format_error,
+                             "BA2 DX10 chunk payload span intersects header or record table"};
+            }
+            if (spans_overlap_u64(chunk.offset, stored_size, name_table_offset,
+                                  name_table_end - name_table_offset)) {
+                return error{error_code::format_error,
+                             "BA2 DX10 filename table intersects payload data"};
+            }
             for (const auto& prior : accepted_payload_spans) {
                 const auto exact_duplicate =
                     prior.offset == chunk.offset && prior.size == stored_size;
@@ -125,10 +103,9 @@ result<std::uint64_t> first_payload_offset_for(std::span<const ba2_dx10_record> 
             // sharing would make texture chunk extraction ambiguous because logical
             // DDS segments would read bytes from each other's ranges.
             accepted_payload_spans.push_back(stored_chunk_span{chunk.offset, stored_size});
-            first_payload_offset = std::min(first_payload_offset, chunk.offset);
         }
     }
-    return first_payload_offset;
+    return {};
 }
 
 std::uint32_t inferred_array_size(const ba2_dx10_record& record) noexcept {
@@ -194,9 +171,7 @@ result<std::vector<texture_chunk_metadata>> public_chunks_for(const ba2_dx10_rec
     }
 }
 
-result<std::vector<entry_metadata>> materialize_entries(std::uint64_t name_table_end,
-                                                        std::uint64_t first_payload_offset,
-                                                        std::span<const ba2_dx10_record> records,
+result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10_record> records,
                                                         std::span<const std::string> names,
                                                         const ba2_profile& profile) {
     try {
@@ -211,10 +186,6 @@ result<std::vector<entry_metadata>> materialize_entries(std::uint64_t name_table
                                                            "BA2 DX10 canonical path set");
         if (!reserved_paths) {
             return reserved_paths.error();
-        }
-
-        if (name_table_end > first_payload_offset) {
-            return error{error_code::format_error, "BA2 DX10 filename table overlaps payload data"};
         }
 
         for (std::size_t index = 0; index < records.size(); ++index) {
@@ -307,38 +278,40 @@ result<opened_ba2_archive> materialize_ba2_dx10_archive(const ba2_archive_source
         return error{error_code::unsupported, "BA2 Archive Header is not DX10"};
     }
 
-    auto record_table_size = record_table_size_for(header);
-    if (!record_table_size) {
-        return record_table_size.error();
-    }
-    auto record_bytes = source.read_exact(header.profile().header_size(), record_table_size.value(),
-                                          "BA2 DX10 texture record and chunk tables");
-    if (!record_bytes) {
-        return record_bytes.error();
-    }
-    detail::binary_reader record_reader{record_bytes.value()};
-    auto records = read_ba2_dx10_records(record_reader, header.file_count());
+    // DX10 records are variable width, so the record table has to be measured by
+    // parsing rather than derived from FileTableOffset. Deriving it was what made
+    // the reference layout unreadable: with the filename table written after the
+    // payloads, FileTableOffset - HeaderSize spans the whole payload area.
+    std::uint64_t records_end = 0U;
+    auto records = read_ba2_dx10_records(source, header.profile().header_size(),
+                                         header.file_count(), source.size(), records_end);
     if (!records) {
         return records.error();
     }
 
-    auto first_payload_offset = first_payload_offset_for(records.value(), source.size());
-    if (!first_payload_offset) {
-        return first_payload_offset.error();
+    if (header.filename_table_offset() < records_end) {
+        return error{error_code::format_error,
+                     "BA2 DX10 FileTableOffset is inside the texture record table"};
     }
 
     std::uint64_t name_table_end = 0U;
-    // BA2 DX10 filename tables are count-delimited, so sparse padding between
-    // the last encoded name and first payload is never read or allocated.
-    auto names =
-        read_ba2_dx10_names(source, header.filename_table_offset(), first_payload_offset.value(),
-                            header.file_count(), name_table_end);
+    // BSArchPro writes the DX10 filename table after every payload, so the table
+    // is bounded by the archive rather than by the first payload offset. It is
+    // count-delimited, so padding after the last encoded name is never read.
+    auto names = read_ba2_dx10_names(source, header.filename_table_offset(), source.size(),
+                                     header.file_count(), name_table_end);
     if (!names) {
         return names.error();
     }
 
-    auto entries = materialize_entries(name_table_end, first_payload_offset.value(),
-                                       records.value(), names.value(), header.profile());
+    auto validated_spans =
+        validate_chunk_payload_spans(records.value(), source.size(), records_end,
+                                     header.filename_table_offset(), name_table_end);
+    if (!validated_spans) {
+        return validated_spans.error();
+    }
+
+    auto entries = materialize_entries(records.value(), names.value(), header.profile());
     if (!entries) {
         return entries.error();
     }

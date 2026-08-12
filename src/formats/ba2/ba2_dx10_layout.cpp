@@ -105,17 +105,13 @@ result<ba2_dx10_placement_plan> ba2_dx10_plan_placements(
     }
 
     ba2_dx10_placement_plan plan;
-    if (!add_fits_u64(profile.header_size(), record_bytes, plan.filename_table_offset)) {
+    // Reference order, from TwbBSArchive.Save's baFO4dds/baSFdds branch: header,
+    // records, payloads, names. FileTableOffset is assigned from the stream
+    // position reached after every payload is packed, so payload placement
+    // begins immediately after the record table and the name table is last.
+    std::uint64_t cursor = 0U;
+    if (!add_fits_u64(profile.header_size(), record_bytes, cursor)) {
         return error{error_code::format_error, "BA2 DX10 metadata size overflows"};
-    }
-
-    std::uint64_t cursor = plan.filename_table_offset;
-    for (const auto& entry : entries) {
-        std::uint64_t name_bytes = 0;
-        if (!add_fits_u64(2U, entry.archive_path_original.size(), name_bytes) ||
-            !add_fits_u64(cursor, name_bytes, cursor)) {
-            return error{error_code::format_error, "BA2 DX10 filename table size overflows"};
-        }
     }
 
     plan.records.reserve(entries.size());
@@ -196,6 +192,17 @@ result<ba2_dx10_placement_plan> ba2_dx10_plan_placements(
         // new placements preserves first occurrence as representative and
         // physical emission authority.
         plan.records.push_back(std::move(record));
+    }
+
+    // The filename table starts where the payload area ends. Names are read from
+    // the placed records because `entries` has had its paths moved out by now.
+    plan.filename_table_offset = cursor;
+    for (const auto& record : plan.records) {
+        std::uint64_t name_bytes = 0;
+        if (!add_fits_u64(2U, record.archive_path_original.size(), name_bytes) ||
+            !add_fits_u64(cursor, name_bytes, cursor)) {
+            return error{error_code::format_error, "BA2 DX10 filename table size overflows"};
+        }
     }
     return plan;
 }

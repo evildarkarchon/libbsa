@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <optional>
 #include <span>
 #include <stdexcept>
@@ -491,6 +492,91 @@ TEST_CASE("a retail BA2 GNRL archive opens, lists, and extracts end to end",
     auto extracted = opened.value().extract(raw_entry->path, sink);
     REQUIRE(extracted.has_value());
     CHECK(sink.size() == raw_entry->raw_size);
+}
+
+TEST_CASE("a retail BA2 DX10 archive opens and stores its filename table last",
+          "[requires-game-fixture][unit][ba2][dx10][compat]") {
+    auto fixture_root = local_fixture_root();
+    if (!fixture_root.has_value()) {
+        SKIP(
+            "Set LIBBSA_GAME_FIXTURES or place local game archives under "
+            "tests/fixtures/local; these files are not committed.");
+    }
+
+    // Smallest DX10 archive in the corpus, for the same reason the GNRL case
+    // picks the smallest: retail texture archives run to gigabytes and this case
+    // only needs one archive libbsa did not write.
+    std::optional<std::filesystem::path> smallest;
+    std::uintmax_t smallest_size = 0U;
+    std::error_code iteration_error;
+    std::filesystem::directory_iterator iterator{*fixture_root, iteration_error};
+    REQUIRE_FALSE(iteration_error);
+
+    for (const auto& directory_entry : iterator) {
+        if (!directory_entry.is_regular_file()) {
+            continue;
+        }
+        auto probe = probe_ba2_header(directory_entry.path());
+        if (!probe.has_value() || probe->subtype_magic != dx10_magic) {
+            continue;
+        }
+        std::error_code size_error;
+        const auto size = std::filesystem::file_size(directory_entry.path(), size_error);
+        if (size_error) {
+            continue;
+        }
+        if (!smallest.has_value() || size < smallest_size) {
+            smallest = directory_entry.path();
+            smallest_size = size;
+        }
+    }
+
+    if (!smallest.has_value()) {
+        SKIP("The local corpus holds no BA2 DX10 archives.");
+    }
+
+    INFO("archive=" << smallest->filename().string());
+
+    // Opening at all is the first half of the claim: libbsa used to derive the
+    // DX10 record table width from FileTableOffset - HeaderSize, which spans the
+    // whole payload area on a Bethesda-written archive and was rejected outright.
+    auto opened = libbsa::archive_reader::open(smallest->string());
+    REQUIRE(opened.has_value());
+
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().type == libbsa::archive_type::ba2);
+    CHECK(metadata.value().file_count > 0U);
+
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == metadata.value().file_count);
+
+    // The second half pins the ordering claim to an observed archive rather than
+    // to a reading of TwbBSArchive.Save: decode FileTableOffset straight from the
+    // header and compare it against the lowest chunk payload offset the archive
+    // actually declares. Reference order is header -> records -> payloads ->
+    // names, so the filename table must sit past every payload.
+    auto header_bytes = read_leading_bytes(*smallest, widest_ba2_fixed_header_size);
+    REQUIRE(header_bytes.has_value());
+    auto header = libbsa::formats::ba2::decode_ba2_archive_header(
+        *header_bytes, static_cast<std::uint64_t>(smallest_size));
+    REQUIRE(header.has_value());
+
+    std::uint64_t lowest_payload_offset = std::numeric_limits<std::uint64_t>::max();
+    std::size_t chunk_count = 0U;
+    for (const auto& entry : entries.value()) {
+        REQUIRE(entry.texture.has_value());
+        for (const auto& chunk : entry.texture->chunks) {
+            lowest_payload_offset = std::min(lowest_payload_offset, chunk.payload_offset);
+            ++chunk_count;
+        }
+    }
+    REQUIRE(chunk_count > 0U);
+
+    INFO("file_table_offset=" << header.value().filename_table_offset()
+                              << " lowest_payload_offset=" << lowest_payload_offset);
+    CHECK(header.value().filename_table_offset() > lowest_payload_offset);
 }
 
 TEST_CASE("BSArchPro-derived expected fixture comparisons are opt-in",

@@ -672,6 +672,89 @@ TEST_CASE("ba2_archive_opening accepts exact duplicate non-empty DX10 chunk payl
     }
 }
 
+TEST_CASE("ba2_archive_opening bounds DX10 tables without assuming a physical order",
+          "[unit][malformed][ba2_archive_opening][ba2_dx10_validation]") {
+    // The DX10 reader no longer derives the record table width from
+    // FileTableOffset, because BSArchPro writes the filename table after the
+    // payload area. These sections cover the checks that replaced that
+    // derivation, so dropping it cannot silently accept a malformed table.
+    constexpr std::size_t file_count_offset = 12U;
+    constexpr std::size_t file_table_offset_field = 16U;
+    constexpr std::uint64_t fixed_header_size = 24U;
+    constexpr std::uint64_t record_header_size = 24U;
+    const std::string archive_path = "textures/bounds/table.dds";
+
+    SECTION("FileTableOffset points inside the record table") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-fto-in-records.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        const auto payload_offset = static_cast<std::uint64_t>(72U + 2U + archive_path.size());
+        const std::array payload{std::byte{0x11}, std::byte{0x22}, std::byte{0x33},
+                                 std::byte{0x44}};
+        const std::array records{synthetic_dx10_record{archive_path, payload_offset,
+                                                       static_cast<std::uint32_t>(payload.size())}};
+        auto bytes = make_synthetic_dx10_archive(records, payload);
+        overwrite_u64_le(bytes, file_table_offset_field, fixed_header_size);
+        require_open_format_error(temp_path, bytes);
+    }
+
+    SECTION("declared record count runs past the archive") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-records-past-eof.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        const std::array payload{std::byte{0x55}};
+        const std::array records{synthetic_dx10_record{archive_path, 72U, 1U}};
+        auto bytes = make_synthetic_dx10_archive(records, payload);
+        // Keep only the header and the single real record, then claim a second
+        // one. The fixed part of record two starts exactly at EOF.
+        bytes.resize(static_cast<std::size_t>(fixed_header_size + (record_header_size * 2U)));
+        overwrite_u32_le(bytes, file_count_offset, 2U);
+        overwrite_u64_le(bytes, file_table_offset_field, fixed_header_size);
+        require_open_format_error(temp_path, bytes);
+    }
+
+    SECTION("declared chunk table runs past the archive") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-chunks-past-eof.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        const std::array payload{std::byte{0x66}};
+        const std::array records{synthetic_dx10_record{archive_path, 72U, 1U}};
+        auto bytes = make_synthetic_dx10_archive(records, payload);
+        // The record's fixed part survives and still declares one chunk, but the
+        // 24 chunk bytes it promises are gone.
+        bytes.resize(static_cast<std::size_t>(fixed_header_size + record_header_size));
+        overwrite_u64_le(bytes, file_table_offset_field, fixed_header_size);
+        require_open_format_error(temp_path, bytes);
+    }
+
+    SECTION("chunk payload overlaps the filename table") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-payload-over-names.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        const std::array payload{std::byte{0x77}, std::byte{0x88}, std::byte{0x99},
+                                 std::byte{0xAA}};
+        // The synthetic builder writes names at 72; aiming the chunk there makes
+        // the payload span swallow the name table.
+        const std::array records{
+            synthetic_dx10_record{archive_path, 72U, static_cast<std::uint32_t>(payload.size())}};
+        const auto bytes = make_synthetic_dx10_archive(records, payload);
+        require_open_format_error(temp_path, bytes);
+    }
+
+    SECTION("FileTableOffset shifted off the encoded names") {
+        const auto temp_path =
+            std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-fto-shifted.ba2";
+        temp_file_cleanup cleanup{temp_path};
+        auto bytes = read_binary_file(generated_archive_path("ba2_dx10_fo4.ba2"));
+        // FileTableOffset is honoured wherever it points, but it is not a free
+        // pointer: names decoded from the wrong place fail the record-identity
+        // hash cross-check or collide with a payload span.
+        const auto filename_table_offset = read_u64_le(bytes, file_table_offset_field);
+        overwrite_u64_le(bytes, file_table_offset_field, filename_table_offset + 1U);
+        require_open_format_error(temp_path, bytes);
+    }
+}
+
 TEST_CASE("ba2_archive_opening preserves DX10 record, name, metadata, and cubemap validation",
           "[unit][malformed][ba2_archive_opening][ba2_dx10_validation]") {
     constexpr std::size_t first_record_offset = 24U;
@@ -715,7 +798,10 @@ TEST_CASE("ba2_archive_opening preserves DX10 record, name, metadata, and cubema
         require_open_format_error(temp_path, bytes);
     }
 
-    SECTION("encoded name crosses payload") {
+    // Renamed from "encoded name crosses payload": the name table is now bounded
+    // by the archive rather than by the first payload offset, so an oversized
+    // length is caught as truncation instead of as a payload collision.
+    SECTION("encoded name length runs past the archive") {
         const auto temp_path =
             std::filesystem::temp_directory_path() / "libbsa-ba2-dx10-name-crosses.ba2";
         temp_file_cleanup cleanup{temp_path};
