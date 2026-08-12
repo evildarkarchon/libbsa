@@ -189,13 +189,14 @@ TEST_CASE(
     "[unit][target_format_policy][doc_structure]") {
     const auto guide = read_text_file(source_root() / "docs/target-format-guide.md");
 
-    constexpr std::array<std::string_view, 14> required_headings{
+    constexpr std::array<std::string_view, 15> required_headings{
         "## TES3 BSA",
         "## TES4-family BSA v103",
         "## TES4-family BSA v104",
         "## Skyrim SE/AE BSA v105",
         "## Fallout 4 BA2 GNRL",
         "## Fallout 4 BA2 DX10",
+        "## Fallout 4 next-gen BA2 v7/v8",
         "## Starfield BA2 v2 GNRL",
         "## Starfield BA2 v2 DX10",
         "## Starfield BA2 v3 GNRL",

@@ -28,6 +28,16 @@ Fallout 4 BA2 GNRL archives use `archive_type::ba2`, `archive_variant::fallout4`
 
 Fallout 4 BA2 DX10 archives are texture archives created with `ba2_dx10_target::fallout4`. DDS input is analyzed internally, and public metadata exposes libbsa-owned texture dimensions, DXGI numeric format values, mip counts, array/cubemap state, and chunk records. DX10 DDS data is not resized, transcoded, mip-generated, repaired, or otherwise transformed by libbsa. BC6, SRGB, or SNORM DDS formats are rejected for Fallout 4 DX10 archives and require the Starfield DX10 target.
 
+## Fallout 4 next-gen BA2 v7/v8
+
+The Fallout 4 next-gen update ships BA2 header versions `7` and `8` for both GNRL and DX10 archives. A current retail Fallout 4 install is almost entirely v7 and v8; only `Fallout4 - Nvflex.ba2` is still v1.
+
+Both versions reuse the original 24-byte Fallout 4 fixed header with no trailing fields, report `archive_variant::fallout4`, and route compressed payloads through deflate. Readers therefore expose them exactly like v1. This is verified two ways: `TES5Edit/Core/wbBSArchive.pas` groups versions 1, 7, and 8 under the same `baFO4` archive type with the default zlib compression type and reads no version-specific header fields for them, and the `BAADF00D` record sentinel sits at the same offset in retail v1, v7, and v8 archives (byte 56 for GNRL, byte 68 for DX10).
+
+BA2 header versions are an unordered tag set, not a capability ladder: `7` and `8` sort above Starfield's `2` and `3` while carrying a narrower header. Every version-dependent decision resolves through an explicit per-version layout table, never an ordered comparison.
+
+Support is read-only. There is no `ba2_gnrl_target` or `ba2_dx10_target` value that emits v7 or v8, because their on-disk layout is byte-identical to v1 and the reference implementation does not write them, so no compatibility oracle exists for such output. Consumers producing Fallout 4 archives continue to use `ba2_gnrl_target::fallout4` and `ba2_dx10_target::fallout4`, which emit v1.
+
 ## Starfield BA2 v2 GNRL
 
 Starfield BA2 v2 GNRL archives expose `ba2_archive_metadata::starfield_unknown1` and `starfield_unknown2` and retain deflate routing for compressed entries. Consumers create this target with `ba2_gnrl_target::starfield_v2`; the Starfield header fields are supplied through `ba2_gnrl_writer_options`.

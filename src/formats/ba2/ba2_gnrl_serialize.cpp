@@ -135,7 +135,10 @@ result<void> ba2_gnrl_write_archive_bytes(const ba2_profile& profile,
         !(written = writer.write_u64_le(plan.filename_table_offset))) {
         return written.error();
     }
-    if (profile.version() >= ba2_starfield_v2_version) {
+    // Trailing header fields follow the profile's per-version layout, never a
+    // version comparison: BA2 versions are unordered tags, so a `>=` test would
+    // append Starfield fields to a Fallout 4 next-gen v7/v8 header.
+    if (profile.has_starfield_unknown_fields()) {
         // xEdit/BSArchPro initializes Starfield writer Unknown1/Unknown2 to 1/0;
         // options can override these raw compatibility fields while keeping them
         // library-owned and version-gated in public metadata.
@@ -144,7 +147,7 @@ result<void> ba2_gnrl_write_archive_bytes(const ba2_profile& profile,
             return written.error();
         }
     }
-    if (profile.version() >= ba2_starfield_v3_version) {
+    if (profile.has_compression_method_field()) {
         // Phase 8 treats v3 GNRL as a structurally supported profile. Method 3
         // remains the default raw-LZ4-block method for later compression support;
         // raw entries still serialize with PackedSize == 0 in this plan.

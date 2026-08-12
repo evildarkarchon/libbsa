@@ -2,8 +2,11 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include "formats/ba2/ba2_archive_header.hpp"
+
 #include <nlohmann/json.hpp>
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -164,6 +167,90 @@ std::vector<std::byte> bytes_from_hex(std::string_view hex) {
     return bytes;
 }
 
+/// BA2 header facts read straight off disk, without going through libbsa.
+///
+/// The first twelve bytes of a BA2 are version-independent, so probing them
+/// gives the tests an oracle that cannot be wrong in the same way the parser
+/// under test might be.
+struct ba2_header_probe {
+    std::uint32_t version{0U};
+    std::uint32_t subtype_magic{0U};
+};
+
+// Restated rather than pulled from ba2_constants.hpp on purpose: the probe is
+// meant to be an oracle independent of the code it checks.
+constexpr std::uint32_t btdx_magic = 0x5844'5442U;
+constexpr std::uint32_t gnrl_magic = 0x4C52'4E47U;
+constexpr std::uint32_t dx10_magic = 0x3031'5844U;
+
+/// Widest BA2 fixed header across every supported version (Starfield v3).
+///
+/// Reading this many leading bytes is enough to decode any supported header.
+constexpr std::size_t widest_ba2_fixed_header_size = 36U;
+
+/// Reads BA2 magic, version, and subtype from `path`.
+///
+/// Returns `std::nullopt` when the file is unreadable, shorter than the twelve
+/// probed bytes, or does not start with BTDX, so a corpus holding BSA archives
+/// alongside BA2 archives can be walked in one pass.
+std::optional<ba2_header_probe> probe_ba2_header(const std::filesystem::path& path) {
+    std::ifstream stream{path, std::ios::binary};
+    if (!stream.is_open()) {
+        return std::nullopt;
+    }
+    std::array<unsigned char, 12U> bytes{};
+    stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    if (stream.gcount() != static_cast<std::streamsize>(bytes.size())) {
+        return std::nullopt;
+    }
+
+    const auto read_u32 = [&bytes](std::size_t offset) {
+        return static_cast<std::uint32_t>(bytes[offset]) |
+               (static_cast<std::uint32_t>(bytes[offset + 1U]) << 8U) |
+               (static_cast<std::uint32_t>(bytes[offset + 2U]) << 16U) |
+               (static_cast<std::uint32_t>(bytes[offset + 3U]) << 24U);
+    };
+    if (read_u32(0U) != btdx_magic) {
+        return std::nullopt;
+    }
+    return ba2_header_probe{read_u32(4U), read_u32(8U)};
+}
+
+/// Reads up to `count` leading bytes of `path` for direct header decoding.
+///
+/// Returns `std::nullopt` when the file cannot be opened, and a short buffer
+/// when the file itself is shorter than `count`.
+std::optional<std::vector<std::byte>> read_leading_bytes(const std::filesystem::path& path,
+                                                         std::size_t count) {
+    std::ifstream stream{path, std::ios::binary};
+    if (!stream.is_open()) {
+        return std::nullopt;
+    }
+    std::vector<std::byte> bytes(count);
+    stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(count));
+    bytes.resize(static_cast<std::size_t>(stream.gcount()));
+    return bytes;
+}
+
+/// Restates the BA2 header version to game-family mapping independently of the
+/// production table, so a regression there cannot silently satisfy the test.
+///
+/// Fallout 4's next-gen versions 7 and 8 are Fallout 4 despite sorting above
+/// Starfield's 2 and 3.
+std::optional<libbsa::archive_variant> expected_variant_for_ba2_version(std::uint32_t version) {
+    switch (version) {
+        case 1U:
+        case 7U:
+        case 8U:
+            return libbsa::archive_variant::fallout4;
+        case 2U:
+        case 3U:
+            return libbsa::archive_variant::starfield;
+        default:
+            return std::nullopt;
+    }
+}
+
 class fnv1a32_sink final : public libbsa::payload_sink {
    public:
     /// Hashes bytes as they stream out of libbsa without storing local corpus
@@ -258,6 +345,75 @@ TEST_CASE("local game fixtures are opt-in", "[requires-game-fixture][unit]") {
     }
 
     REQUIRE_FALSE(fixture_root->empty());
+}
+
+TEST_CASE("retail BA2 headers resolve at every shipped version",
+          "[requires-game-fixture][unit][ba2][compat]") {
+    auto fixture_root = local_fixture_root();
+    if (!fixture_root.has_value()) {
+        SKIP(
+            "Set LIBBSA_GAME_FIXTURES or place local game archives under "
+            "tests/fixtures/local; these files are not committed.");
+    }
+
+    std::size_t probed_archives = 0U;
+    std::error_code iteration_error;
+    std::filesystem::directory_iterator iterator{*fixture_root, iteration_error};
+    REQUIRE_FALSE(iteration_error);
+
+    for (const auto& directory_entry : iterator) {
+        if (!directory_entry.is_regular_file()) {
+            continue;
+        }
+        auto probe = probe_ba2_header(directory_entry.path());
+        if (!probe.has_value()) {
+            continue;
+        }
+        ++probed_archives;
+
+        const auto name = directory_entry.path().filename().string();
+        INFO("archive=" << name << " version=" << probe->version
+                        << " subtype=" << probe->subtype_magic);
+
+        const auto expected_variant = expected_variant_for_ba2_version(probe->version);
+        REQUIRE(expected_variant.has_value());
+        CHECK((probe->subtype_magic == gnrl_magic || probe->subtype_magic == dx10_magic));
+
+        // The fixed header is what this case owns. Decoding it directly keeps
+        // the assertion sharp while later parsing stages carry their own known
+        // defects against retail archives.
+        auto header_bytes =
+            read_leading_bytes(directory_entry.path(), widest_ba2_fixed_header_size);
+        REQUIRE(header_bytes.has_value());
+        std::error_code size_error;
+        const auto archive_size = std::filesystem::file_size(directory_entry.path(), size_error);
+        REQUIRE_FALSE(size_error);
+
+        auto header = libbsa::formats::ba2::decode_ba2_archive_header(*header_bytes, archive_size);
+
+        REQUIRE(header.has_value());
+        const auto metadata = header.value().materialize_metadata();
+        CHECK(metadata.type == libbsa::archive_type::ba2);
+        CHECK(metadata.version == probe->version);
+        CHECK(metadata.variant == *expected_variant);
+        CHECK(metadata.file_count > 0U);
+        CHECK(header.value().filename_table_offset() >= header.value().profile().header_size());
+
+        // A whole-archive open still fails for every retail archive for reasons
+        // this case does not own: DX10 archives store the filename table after
+        // the payloads (issue #36), and both subtypes then trip the
+        // record-identity hash cross-check, which even a v1 archive fails. The
+        // claim this case can make is narrower but unconditional: the header
+        // version must never again be the reason an archive is refused.
+        auto opened = libbsa::archive_reader::open(directory_entry.path().string());
+        const bool refused_on_header_version =
+            !opened.has_value() && opened.error().code == libbsa::error_code::unsupported;
+        CHECK_FALSE(refused_on_header_version);
+    }
+
+    if (probed_archives == 0U) {
+        SKIP("The local corpus holds no BA2 archives to probe.");
+    }
 }
 
 TEST_CASE("BSArchPro-derived expected fixture comparisons are opt-in",

@@ -88,9 +88,14 @@ void append_u64_le(std::vector<std::byte>& bytes, std::uint64_t value) {
 }
 
 /// Returns the serialized fixed-header width for a supported BA2 version.
+///
+/// Fallout 4 next-gen v7 and v8 reuse the 24-byte v1 header even though they
+/// sort above the Starfield versions, so this must stay an explicit table.
 std::size_t header_size_for(std::uint32_t version) {
     switch (version) {
         case libbsa::formats::ba2::ba2_fallout4_version:
+        case libbsa::formats::ba2::ba2_fallout4_ng_v7_version:
+        case libbsa::formats::ba2::ba2_fallout4_ng_v8_version:
             return libbsa::formats::ba2::ba2_common_header_size;
         case libbsa::formats::ba2::ba2_starfield_v2_version:
             return libbsa::formats::ba2::ba2_starfield_v2_header_size;
@@ -153,6 +158,10 @@ struct supported_profile_case {
     libbsa::archive_variant variant;
     std::uint32_t compression_method;
     libbsa::entry_compression default_compression;
+    /// Stated per case rather than derived from the version, so a version whose
+    /// header shape is misclassified cannot make the expectation agree with it.
+    bool expects_starfield_header_fields;
+    bool expects_compression_method_field;
 };
 
 }  // namespace
@@ -163,28 +172,43 @@ TEST_CASE("BA2 Archive Opening returns normalized supported profile metadata and
     constexpr auto profiles = std::to_array<supported_profile_case>({
         {"Fallout 4 GNRL", ba2_fallout4_version, ba2_gnrl_magic, ba2_subtype::gnrl,
          libbsa::archive_variant::fallout4, ba2_starfield_compression_deflate,
-         libbsa::entry_compression::deflate},
+         libbsa::entry_compression::deflate, false, false},
         {"Fallout 4 DX10", ba2_fallout4_version, ba2_dx10_magic, ba2_subtype::dx10,
          libbsa::archive_variant::fallout4, ba2_starfield_compression_deflate,
-         libbsa::entry_compression::deflate},
+         libbsa::entry_compression::deflate, false, false},
+        // Fallout 4 next-gen v7/v8 are the versions retail Fallout 4 actually
+        // ships; they must resolve to the Fallout 4 variant and the 24-byte
+        // header despite sorting above the Starfield versions.
+        {"Fallout 4 next-gen v7 GNRL", ba2_fallout4_ng_v7_version, ba2_gnrl_magic,
+         ba2_subtype::gnrl, libbsa::archive_variant::fallout4, ba2_starfield_compression_deflate,
+         libbsa::entry_compression::deflate, false, false},
+        {"Fallout 4 next-gen v7 DX10", ba2_fallout4_ng_v7_version, ba2_dx10_magic,
+         ba2_subtype::dx10, libbsa::archive_variant::fallout4, ba2_starfield_compression_deflate,
+         libbsa::entry_compression::deflate, false, false},
+        {"Fallout 4 next-gen v8 GNRL", ba2_fallout4_ng_v8_version, ba2_gnrl_magic,
+         ba2_subtype::gnrl, libbsa::archive_variant::fallout4, ba2_starfield_compression_deflate,
+         libbsa::entry_compression::deflate, false, false},
+        {"Fallout 4 next-gen v8 DX10", ba2_fallout4_ng_v8_version, ba2_dx10_magic,
+         ba2_subtype::dx10, libbsa::archive_variant::fallout4, ba2_starfield_compression_deflate,
+         libbsa::entry_compression::deflate, false, false},
         {"Starfield v2 GNRL", ba2_starfield_v2_version, ba2_gnrl_magic, ba2_subtype::gnrl,
          libbsa::archive_variant::starfield, ba2_starfield_compression_deflate,
-         libbsa::entry_compression::deflate},
+         libbsa::entry_compression::deflate, true, false},
         {"Starfield v2 DX10", ba2_starfield_v2_version, ba2_dx10_magic, ba2_subtype::dx10,
          libbsa::archive_variant::starfield, ba2_starfield_compression_deflate,
-         libbsa::entry_compression::deflate},
+         libbsa::entry_compression::deflate, true, false},
         {"Starfield v3 GNRL deflate", ba2_starfield_v3_version, ba2_gnrl_magic, ba2_subtype::gnrl,
          libbsa::archive_variant::starfield, ba2_starfield_compression_deflate,
-         libbsa::entry_compression::deflate},
+         libbsa::entry_compression::deflate, true, true},
         {"Starfield v3 GNRL LZ4", ba2_starfield_v3_version, ba2_gnrl_magic, ba2_subtype::gnrl,
          libbsa::archive_variant::starfield, ba2_starfield_compression_lz4_block,
-         libbsa::entry_compression::lz4_block},
+         libbsa::entry_compression::lz4_block, true, true},
         {"Starfield v3 DX10 deflate", ba2_starfield_v3_version, ba2_dx10_magic, ba2_subtype::dx10,
          libbsa::archive_variant::starfield, ba2_starfield_compression_deflate,
-         libbsa::entry_compression::deflate},
+         libbsa::entry_compression::deflate, true, true},
         {"Starfield v3 DX10 LZ4", ba2_starfield_v3_version, ba2_dx10_magic, ba2_subtype::dx10,
          libbsa::archive_variant::starfield, ba2_starfield_compression_lz4_block,
-         libbsa::entry_compression::lz4_block},
+         libbsa::entry_compression::lz4_block, true, true},
     });
 
     for (const auto& profile : profiles) {
@@ -204,19 +228,20 @@ TEST_CASE("BA2 Archive Opening returns normalized supported profile metadata and
         CHECK(opened.value().metadata.file_count == 0U);
         CHECK(opened.value().metadata.default_compression == profile.default_compression);
         REQUIRE(opened.value().metadata.ba2.has_value());
-        if (profile.version == ba2_fallout4_version) {
-            CHECK_FALSE(opened.value().metadata.ba2->starfield_unknown1.has_value());
-            CHECK_FALSE(opened.value().metadata.ba2->starfield_unknown2.has_value());
-            CHECK_FALSE(opened.value().metadata.ba2->compression_method.has_value());
-        } else {
+        if (profile.expects_starfield_header_fields) {
             REQUIRE(opened.value().metadata.ba2->starfield_unknown1.has_value());
             REQUIRE(opened.value().metadata.ba2->starfield_unknown2.has_value());
             CHECK(*opened.value().metadata.ba2->starfield_unknown1 == 0x1122'3344U);
             CHECK(*opened.value().metadata.ba2->starfield_unknown2 == 0x5566'7788U);
+        } else {
+            CHECK_FALSE(opened.value().metadata.ba2->starfield_unknown1.has_value());
+            CHECK_FALSE(opened.value().metadata.ba2->starfield_unknown2.has_value());
         }
-        if (profile.version == ba2_starfield_v3_version) {
+        if (profile.expects_compression_method_field) {
             REQUIRE(opened.value().metadata.ba2->compression_method.has_value());
             CHECK(*opened.value().metadata.ba2->compression_method == profile.compression_method);
+        } else {
+            CHECK_FALSE(opened.value().metadata.ba2->compression_method.has_value());
         }
     }
 }
@@ -253,7 +278,8 @@ TEST_CASE("BA2 Archive Opening classifies every fixed-header truncation as forma
           "[unit][ba2_archive_opening][fixed_header][malformed]") {
     using namespace libbsa::formats::ba2;
     constexpr auto versions = std::to_array<std::uint32_t>(
-        {ba2_fallout4_version, ba2_starfield_v2_version, ba2_starfield_v3_version});
+        {ba2_fallout4_version, ba2_starfield_v2_version, ba2_starfield_v3_version,
+         ba2_fallout4_ng_v7_version, ba2_fallout4_ng_v8_version});
 
     for (const auto version : versions) {
         const auto complete = make_empty_ba2_header(version, ba2_gnrl_magic);

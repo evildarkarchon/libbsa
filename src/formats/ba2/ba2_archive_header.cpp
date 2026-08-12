@@ -94,33 +94,33 @@ result<ba2_archive_header> decode_ba2_archive_header(std::span<const std::byte> 
         return filename_table_offset.error();
     }
 
+    // The trailing header fields are driven by the shared per-version layout
+    // table so the decoder and the profile can never disagree about how wide
+    // the fixed header is or which optional fields it carries.
+    auto layout = ba2_header_layout_for_version(version.value());
+    if (!layout) {
+        return layout.error();
+    }
+
     ba2_archive_metadata stored_metadata{};
-    switch (version.value()) {
-        case ba2_fallout4_version:
-            break;
-        case ba2_starfield_v2_version:
-        case ba2_starfield_v3_version: {
-            auto unknown1 = read_required_u32(reader, "Starfield Unknown1");
-            if (!unknown1) {
-                return unknown1.error();
-            }
-            auto unknown2 = read_required_u32(reader, "Starfield Unknown2");
-            if (!unknown2) {
-                return unknown2.error();
-            }
-            stored_metadata.starfield_unknown1 = unknown1.value();
-            stored_metadata.starfield_unknown2 = unknown2.value();
-            if (version.value() == ba2_starfield_v3_version) {
-                auto compression_method = read_required_u32(reader, "Starfield CompressionMethod");
-                if (!compression_method) {
-                    return compression_method.error();
-                }
-                stored_metadata.compression_method = compression_method.value();
-            }
-            break;
+    if (layout.value().has_starfield_unknown_fields) {
+        auto unknown1 = read_required_u32(reader, "Starfield Unknown1");
+        if (!unknown1) {
+            return unknown1.error();
         }
-        default:
-            return error{error_code::unsupported, "BA2 header version is not supported"};
+        auto unknown2 = read_required_u32(reader, "Starfield Unknown2");
+        if (!unknown2) {
+            return unknown2.error();
+        }
+        stored_metadata.starfield_unknown1 = unknown1.value();
+        stored_metadata.starfield_unknown2 = unknown2.value();
+    }
+    if (layout.value().has_compression_method) {
+        auto compression_method = read_required_u32(reader, "Starfield CompressionMethod");
+        if (!compression_method) {
+            return compression_method.error();
+        }
+        stored_metadata.compression_method = compression_method.value();
     }
 
     auto profile = make_ba2_profile_from_header(version.value(), subtype.value(), stored_metadata);

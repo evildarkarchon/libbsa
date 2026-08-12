@@ -21,6 +21,31 @@ struct ba2_dx10_writer_options;
 
 namespace libbsa::formats::ba2 {
 
+/// Version-determined shape of the BA2 fixed header.
+///
+/// BA2 header versions are tags, not an ordered capability ladder: Fallout 4's
+/// next-gen versions 7 and 8 sit numerically above Starfield's 2 and 3 while
+/// reusing the original 24-byte Fallout 4 header with no trailing fields. This
+/// struct exists so every header-shape decision resolves through one explicit
+/// per-version table instead of a `>=` comparison that would misread 7 and 8.
+struct ba2_header_layout {
+    /// Game family reported through public archive metadata.
+    archive_variant variant{archive_variant::fallout4};
+    /// Serialized width of the fixed header, including any trailing fields.
+    std::size_t header_size{0U};
+    /// True when the header stores the Starfield Unknown1/Unknown2 pair.
+    bool has_starfield_unknown_fields{false};
+    /// True when the header stores the Starfield v3 CompressionMethod field.
+    bool has_compression_method{false};
+};
+
+/// Resolves the fixed-header layout for a reader-supported BA2 header version.
+///
+/// Returns `error_code::unsupported` for any version outside the supported set,
+/// which is what keeps an unrecognized future version from being absorbed into
+/// an existing layout.
+result<ba2_header_layout> ba2_header_layout_for_version(std::uint32_t version);
+
 /// Immutable interpretation of BA2 version, subtype, header, and compression
 /// semantics.
 class ba2_profile {
@@ -40,6 +65,12 @@ class ba2_profile {
     /// Returns the fixed BA2 header size for this profile.
     [[nodiscard]] std::size_t header_size() const noexcept;
 
+    /// Returns true when this version's header stores Starfield Unknown1/Unknown2.
+    [[nodiscard]] bool has_starfield_unknown_fields() const noexcept;
+
+    /// Returns true when this version's header stores a CompressionMethod field.
+    [[nodiscard]] bool has_compression_method_field() const noexcept;
+
     /// Returns the public default compression metadata for compressed entries.
     [[nodiscard]] entry_compression default_compression() const noexcept;
 
@@ -53,14 +84,13 @@ class ba2_profile {
     [[nodiscard]] bool is_dx10() const noexcept;
 
    private:
-    ba2_profile(archive_variant variant, ba2_subtype subtype, std::uint32_t version,
-                std::size_t header_size, entry_compression default_compression,
+    ba2_profile(ba2_header_layout layout, ba2_subtype subtype, std::uint32_t version,
+                entry_compression default_compression,
                 detail::compression_method compressed_method);
 
-    archive_variant variant_{archive_variant::fallout4};
+    ba2_header_layout layout_{};
     ba2_subtype subtype_{ba2_subtype::gnrl};
     std::uint32_t version_{0U};
-    std::size_t header_size_{0U};
     entry_compression default_compression_{entry_compression::deflate};
     detail::compression_method compressed_method_{detail::compression_method::deflate};
 

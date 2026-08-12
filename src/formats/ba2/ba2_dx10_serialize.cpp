@@ -136,13 +136,16 @@ result<void> ba2_dx10_write_archive_bytes(const ba2_profile& profile,
     }
     // Starfield v2 introduced Unknown1 and Unknown2. V3 retains those fields
     // and appends CompressionMethod, so the fields must be gated separately.
-    if (profile.version() >= ba2_starfield_v2_version) {
+    // Both gates read the profile's per-version layout rather than comparing
+    // version numbers, because Fallout 4 next-gen v7/v8 sort above Starfield
+    // v2/v3 while carrying neither field.
+    if (profile.has_starfield_unknown_fields()) {
         if (!(written = writer.write_u32_le(header_options.starfield_unknown1)) ||
             !(written = writer.write_u32_le(header_options.starfield_unknown2))) {
             return written.error();
         }
     }
-    if (profile.version() >= ba2_starfield_v3_version) {
+    if (profile.has_compression_method_field()) {
         if (!(written = writer.write_u32_le(header_options.starfield_compression_method))) {
             return written.error();
         }
