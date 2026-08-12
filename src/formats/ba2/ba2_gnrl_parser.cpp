@@ -5,6 +5,7 @@
 
 #include <detail/binary_io.hpp>
 #include <detail/parser_primitives.hpp>
+#include <detail/payload_span_exclusivity.hpp>
 
 #include <algorithm>
 #include <array>
@@ -25,11 +26,6 @@ struct gnrl_record {
     std::uint64_t offset;
     std::uint32_t packed_size;
     std::uint32_t size;
-};
-
-struct stored_payload_span {
-    std::uint64_t offset;
-    std::uint64_t size;
 };
 
 using detail::add_fits_u64;
@@ -152,12 +148,7 @@ result<std::vector<entry_metadata>> materialize_entries(
         if (!reserved_paths) {
             return reserved_paths.error();
         }
-        std::vector<stored_payload_span> accepted_payload_spans;
-        auto reserved_payload_spans = detail::reserve_metadata_vector(
-            accepted_payload_spans, records.size(), "BA2 GNRL stored payload spans");
-        if (!reserved_payload_spans) {
-            return reserved_payload_spans.error();
-        }
+        detail::payload_span_exclusivity accepted_payload_spans;
 
         for (std::size_t index = 0; index < records.size(); ++index) {
             auto identity = make_ba2_record_identity(ba2_subtype::gnrl, names[index],
@@ -202,20 +193,17 @@ result<std::vector<entry_metadata>> materialize_entries(
                              "BA2 GNRL filename table intersects payload data"};
             }
             if (stored_size != 0U) {
-                for (const auto& prior : accepted_payload_spans) {
-                    const auto exact_duplicate =
-                        prior.offset == records[index].offset && prior.size == stored_size;
-                    if (!exact_duplicate && spans_overlap_u64(prior.offset, prior.size,
-                                                              records[index].offset, stored_size)) {
-                        return error{error_code::format_error,
-                                     "BA2 GNRL entry payload spans partially overlap"};
-                    }
-                }
                 // Writer dedupe can intentionally publish exact duplicate stored spans;
                 // partial sharing would make two entries read ambiguous bytes from each
-                // other's payload ranges.
-                accepted_payload_spans.push_back(
-                    stored_payload_span{records[index].offset, stored_size});
+                // other's payload ranges. The call stays here, interleaved with the
+                // checks above, because which diagnostic an archive with several defects
+                // reports is observable behavior.
+                auto exclusive =
+                    accepted_payload_spans.insert(records[index].offset, stored_size,
+                                                  "BA2 GNRL entry payload spans partially overlap");
+                if (!exclusive) {
+                    return exclusive.error();
+                }
             }
 
             auto entry = entry_metadata{
