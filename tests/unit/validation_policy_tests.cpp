@@ -338,7 +338,6 @@ TEST_CASE(
     const auto workflow = read_text_file(root / ".github/workflows/ci.yml");
     const auto fixture_policy = read_text_file(root / "tests/fixtures/README.md");
     const auto readme = read_text_file(root / "README.md");
-    const auto agents = read_text_file(root / "AGENTS.md");
 
     REQUIRE(presets.find("windows-msvc-debug-static") != std::string::npos);
     REQUIRE(presets.find("windows-msvc-debug-shared") != std::string::npos);
@@ -359,10 +358,6 @@ TEST_CASE(
     REQUIRE(fixture_policy.find("Windows-only") != std::string::npos);
     REQUIRE(fixture_policy.find("linux-clang-asan-ubsan") == std::string::npos);
     REQUIRE(readme.find("Windows-only") != std::string::npos);
-    // AGENTS.md is the single source of truth for platform policy; CLAUDE.md
-    // pulls it in with an `@AGENTS.md` include the harness resolves at load
-    // time, which a plain text read here cannot see.
-    REQUIRE(agents.find("Windows-only") != std::string::npos);
 }
 
 TEST_CASE("validation_policy verification matrix contract keeps README truthful",
@@ -390,24 +385,13 @@ TEST_CASE(
          "requires-game-fixture", "skipped by default", "WSL", "extra sanitizer families"});
 }
 
-TEST_CASE(
-    "validation_policy verification matrix contract keeps planning "
-    "summaries truthful",
-    "[unit][validation_policy][doc_structure]") {
-    const auto root = source_root();
-    // The verification matrix lives in AGENTS.md, which CLAUDE.md includes via
-    // `@AGENTS.md`. Assert against the file that actually carries the text.
-    const auto agents = read_text_file(root / "AGENTS.md");
-
-    require_lane_names(agents);
-    require_all_tokens(
-        agents, {"Debug quick path", "Debug inner-loop lane", "Release package-proof lanes",
-                 "MSVC AddressSanitizer hardening lane", "Windows-only", "CMakePresets.json"});
-
-    REQUIRE(agents.find(".planning/") == std::string::npos);
-    REQUIRE(agents.find(".gsd/") == std::string::npos);
-    REQUIRE(agents.find("cmake --preset") == std::string::npos);
-}
+// The verification matrix was previously also asserted against the agent
+// instruction file (CLAUDE.md, later AGENTS.md). That coupled the test suite to
+// files that configure coding agents rather than to the library or its user-
+// facing documentation, and it broke whenever that guidance was reorganized.
+// The lane names and lane descriptions it checked are already covered against
+// README.md and tests/fixtures/README.md above, so the case was removed rather
+// than repointed.
 
 TEST_CASE(
     "validation_policy verification matrix contract requires supported "
