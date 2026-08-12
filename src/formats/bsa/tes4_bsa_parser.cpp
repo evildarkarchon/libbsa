@@ -10,6 +10,7 @@
 #include <detail/byte_vector.hpp>
 #include <detail/host_file.hpp>
 #include <detail/parser_primitives.hpp>
+#include <detail/payload_span_exclusivity.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -24,12 +25,6 @@ namespace {
 using detail::normalize_display_separators;
 using detail::read_file_bytes_at;
 using detail::span_fits;
-using detail::spans_overlap_u64;
-
-struct stored_payload_span {
-    std::uint64_t offset;
-    std::uint64_t size;
-};
 
 template <typename PayloadReader>
 result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size,
@@ -49,12 +44,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
         if (!reserved_paths) {
             return reserved_paths.error();
         }
-        std::vector<stored_payload_span> accepted_payload_spans;
-        auto reserved_payload_spans = detail::reserve_metadata_vector(
-            accepted_payload_spans, table.header.file_count, "TES4 BSA stored payload spans");
-        if (!reserved_payload_spans) {
-            return reserved_payload_spans.error();
-        }
+        detail::payload_span_exclusivity accepted_payload_spans;
         std::size_t name_index = 0;
 
         for (const auto& folder : table.folder_blocks) {
@@ -88,22 +78,21 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                     return payload.error();
                 }
                 if (payload.value().stored_size != 0U) {
-                    for (const auto& prior : accepted_payload_spans) {
-                        const auto exact_duplicate =
-                            prior.offset == payload.value().payload_offset &&
-                            prior.size == payload.value().stored_size;
-                        if (!exact_duplicate && spans_overlap_u64(prior.offset, prior.size,
-                                                                  payload.value().payload_offset,
-                                                                  payload.value().stored_size)) {
-                            return error{error_code::format_error,
-                                         "TES4 BSA entry payload spans partially overlap"};
-                        }
-                    }
                     // Writer dedupe can intentionally publish exact duplicate stored
                     // spans; partial sharing would make two entries read ambiguous bytes
-                    // from each other's payload ranges.
-                    accepted_payload_spans.push_back(stored_payload_span{
-                        payload.value().payload_offset, payload.value().stored_size});
+                    // from each other's payload ranges. The call stays here, inside the
+                    // per-record loop, because which diagnostic an archive with several
+                    // defects reports is observable behavior. The zero-size guard is
+                    // kept rather than delegated to the module's own empty-span
+                    // handling: unlike BA2 DX10, nothing upstream rejects a zero-size
+                    // stored payload, so this is where that exclusion is stated for this
+                    // family, as it is for BA2 GNRL.
+                    auto exclusive = accepted_payload_spans.insert(
+                        payload.value().payload_offset, payload.value().stored_size,
+                        "TES4 BSA entry payload spans partially overlap");
+                    if (!exclusive) {
+                        return exclusive.error();
+                    }
                 }
 
                 entries.push_back(entry_metadata{

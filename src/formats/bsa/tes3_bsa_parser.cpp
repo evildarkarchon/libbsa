@@ -268,6 +268,20 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                                              stored_hash, entry_compression::none, 0U, false, 0U});
         }
 
+        // TES3 is deliberately not migrated onto detail::payload_span_exclusivity,
+        // which the other archive families share; ADR-0002 records that decision
+        // and the open question it leaves. Two things here genuinely differ.
+        // Semantics: this sweep rejects *any* overlap, exact duplicates included,
+        // whereas the shared module exempts byte-identical placement because
+        // Payload Placement may deliberately share one location (ADR-0001).
+        // Position: the sweep runs after the entry loop, so every in-loop check
+        // outranks it for an archive carrying several defects -- and precedence
+        // here is pinned behavior, with a test asserting that unsorted hash
+        // records are reported before payload overlap. Moving the check inside the
+        // loop would reorder it against those checks whenever the two defects sit
+        // at different records. Folding TES3 in would therefore mean changing its
+        // accept/reject set or giving the shared module a mode flag, so the
+        // omission is intentional, not an oversight.
         std::sort(payload_spans.begin(), payload_spans.end(),
                   [](const payload_span& lhs, const payload_span& rhs) {
                       if (lhs.start != rhs.start) {
