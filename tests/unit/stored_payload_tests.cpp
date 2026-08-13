@@ -1,3 +1,5 @@
+#include "fingerprint_collision_fixture.hpp"
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <detail/stored_payload.hpp>
@@ -270,14 +272,11 @@ TEST_CASE("Stored Payload exact equality rejects genuine fingerprint collisions"
     REQUIRE(reserved.has_value());
     auto workspace = std::move(reserved).value();
 
-    const std::vector<std::byte> first_bytes{
-        std::byte{0x1D}, std::byte{0x50}, std::byte{0xD0}, std::byte{0x37},
-        std::byte{0x4E}, std::byte{0xC6}, std::byte{0xF8}, std::byte{0x00},
-    };
-    const std::vector<std::byte> second_bytes{
-        std::byte{0xB1}, std::byte{0xFB}, std::byte{0x78}, std::byte{0x97},
-        std::byte{0xB8}, std::byte{0x62}, std::byte{0x20}, std::byte{0x25},
-    };
+    // The pair comes from the shared helper so this case doubles as the proof
+    // that the sequences every collision test relies on really do collide.
+    const auto collision = libbsa::tests::fnv1a_fingerprint_collision();
+    const std::vector<std::byte>& first_bytes = collision.distinct_a;
+    const std::vector<std::byte>& second_bytes = collision.distinct_b;
     constexpr std::uint64_t colliding_fingerprint = 0x4C1655569D1ACD7DULL;
 
     auto first_owned = libbsa::detail::stored_payload::from_owned_bytes(first_bytes);

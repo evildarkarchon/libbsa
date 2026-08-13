@@ -138,6 +138,7 @@ set(libbsa_library_sources
   src/detail/lz4_frame_codec.cpp
   src/detail/parallel_work.cpp
   src/detail/parser_primitives.cpp
+  src/detail/payload_placement.cpp
   src/detail/payload_span_exclusivity.cpp
   src/detail/payload_stream.cpp
   src/detail/stored_payload.cpp

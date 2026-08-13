@@ -1,3 +1,5 @@
+#include "fingerprint_collision_fixture.hpp"
+
 #include "formats/ba2/ba2_dx10_layout.hpp"
 #include "formats/ba2/ba2_dx10_prepare.hpp"
 #include "formats/ba2/ba2_dx10_serialize.hpp"
@@ -44,37 +46,10 @@ std::vector<std::byte> bytes_from_text(std::string_view text) {
     return bytes;
 }
 
-struct fingerprint_collision_fixture {
-    std::vector<std::byte> distinct_a;
-    std::vector<std::byte> distinct_b;
-};
-
-fingerprint_collision_fixture fnv1a_fingerprint_collision() {
-    return fingerprint_collision_fixture{
-        .distinct_a =
-            {
-                std::byte{0x1D},
-                std::byte{0x50},
-                std::byte{0xD0},
-                std::byte{0x37},
-                std::byte{0x4E},
-                std::byte{0xC6},
-                std::byte{0xF8},
-                std::byte{0x00},
-            },
-        .distinct_b =
-            {
-                std::byte{0xB1},
-                std::byte{0xFB},
-                std::byte{0x78},
-                std::byte{0x97},
-                std::byte{0xB8},
-                std::byte{0x62},
-                std::byte{0x20},
-                std::byte{0x25},
-            },
-    };
-}
+// The collision pair now lives in `fingerprint_collision_fixture.hpp` so the
+// Payload Placement module tests and these family-stage tests exercise the same
+// bytes rather than two copies that could drift apart.
+using libbsa::tests::fnv1a_fingerprint_collision;
 
 std::filesystem::path stage_test_dir() {
     auto path = std::filesystem::temp_directory_path() / "libbsa_writer_stage_tests";
