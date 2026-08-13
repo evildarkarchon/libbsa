@@ -126,3 +126,7 @@ Warns when caller-supplied validation expectations for archive family or variant
 ### `ba2_record_identity_mismatch`
 
 Warns when a BA2 record's stored `NameHash`, `DirHash`, or `Ext` disagrees with its own filename-table path. The archive stays valid and the entry stays listed and extractable by path, but Bethesda-style lookup by recomputed hash cannot reach it. `entry_metadata::record_identity_mismatch` carries the same fact per entry.
+
+### `bsa_file_name_table_trailing_bytes`
+
+Warns when a TES4-family BSA declares a `TotalFileNameLength` larger than its file names consume. The surplus bytes belong to no entry and hide none, so the archive stays valid and fully listable; retail archives ship this condition. The warning is archive-level and carries no `archive_path`. `archive_metadata::file_name_table_has_trailing_bytes` carries the same fact.

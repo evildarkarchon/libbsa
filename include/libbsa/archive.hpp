@@ -143,6 +143,17 @@ struct archive_metadata {
     std::uint32_t file_count;
     entry_compression default_compression;
     std::optional<ba2_archive_metadata> ba2;
+
+    /// True when the archive's file-name table declares more bytes than its
+    /// listed entries consume.
+    ///
+    /// The trailing bytes are ignored: the archive is fully listable and
+    /// extractable, and no entry is hidden by them. Retail TES4-family BSA
+    /// archives carry this condition, so libbsa reports it as a
+    /// `compatibility_warning_code::bsa_file_name_table_trailing_bytes` warning
+    /// rather than rejecting the archive. Only the TES4-family BSA parser
+    /// populates this today.
+    bool file_name_table_has_trailing_bytes{false};
 };
 
 /// Entry-level metadata exposed for lookup, listing, and extraction.

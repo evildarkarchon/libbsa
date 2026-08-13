@@ -147,9 +147,16 @@ result<void> validate_tables(detail::binary_reader& reader, const tes4_bsa_heade
             return error{error_code::format_error,
                          "TES4 BSA folder block offset is outside the archive"};
         }
-        // TES4 folder offsets point to the parser's current folder-block position
-        // adjusted by the later file-name table length; stale but in-range offsets
-        // must fail before entry metadata is materialized.
+        // TES4 folder offsets are stored biased by TotalFileNameLength:
+        // wbBSArchive.pas:1483-1498 seeds fDataOffset with the folder-record span,
+        // then does `Inc(fDataOffset, fHeaderTES4.FileNamesLength)` under the
+        // comment "Offsets are stored including this value" before assigning each
+        // folder's Offset. Reading the field as a plain archive offset overshoots
+        // by the whole file-name block. The reference never navigates by it -- it
+        // reads folder names, file records, and file names sequentially from
+        // FoldersOffset (wbBSArchive.pas:1209-1237) -- and neither does this
+        // parser, so the field is only ever a cross-check. Stale but in-range
+        // offsets must still fail before entry metadata is materialized.
         if (folder.offset !=
             static_cast<std::uint64_t>(reader.position()) + header.total_file_name_length) {
             return error{error_code::format_error,
@@ -182,6 +189,15 @@ result<void> validate_tables(detail::binary_reader& reader, const tes4_bsa_heade
         file_records_seen += folder.file_count;
     }
 
+    // Unlike TotalFileNameLength, this total stays fatal on disagreement, and
+    // deliberately so. Surplus file-name bytes are inert -- no entry is read from
+    // them, so an archive carrying them lists and extracts completely (issue #45).
+    // TotalFolderNameLength is instead load-bearing: tes4_bsa_metadata_table_size
+    // sizes the whole metadata span from it, so a wrong value makes the file-name
+    // table start somewhere this parser did not read. Demoting the check would not
+    // open a single further archive, only trade this diagnostic for the confusing
+    // downstream one. Every archive in the retail corpus satisfies it once the
+    // bzstring prefix is excluded from the count, so nothing is lost by keeping it.
     if (folder_name_bytes_seen != header.total_folder_name_length) {
         return error{error_code::format_error,
                      "TES4 BSA folder name lengths do not match header total"};
@@ -282,9 +298,35 @@ result<std::vector<tes4_bsa_folder_block>> read_folder_blocks(
     return blocks;
 }
 
-result<std::vector<std::string>> read_file_names(detail::binary_reader& reader,
-                                                 std::uint32_t file_count,
-                                                 std::uint32_t total_file_name_length) {
+/// File-name table parse result plus whether the declared table outran its
+/// names.
+struct parsed_file_name_table {
+    std::vector<std::string> names;
+
+    /// True when bytes remain between the last parsed name and the end of the
+    /// declared table. Retail archives pad with NULs there, but the surplus is
+    /// never inspected -- see `read_file_names`. Only the fact is kept, not the
+    /// surplus byte count: nothing consumes the count, and `validation_report`
+    /// deliberately exposes no parser offsets.
+    bool has_trailing_bytes{false};
+};
+
+/// Reads exactly `file_count` NUL-terminated names from the declared file-name
+/// table and reports any declared bytes the names did not consume.
+///
+/// The reference reads names with `file_count` sequential `ReadStringTerm` calls
+/// and never compares the resulting stream position against
+/// `TotalFileNameLength` (`wbBSArchive.pas:1235-1237`), so surplus table bytes
+/// are invisible to it. Retail `Fallout - Voices1.bsa` declares 105 bytes more
+/// than its 105,517 names consume, all of them NUL. Requiring exact consumption
+/// rejected that archive outright (issue #45); the surplus is now reported as a
+/// compatibility warning instead. The surplus bytes are never inspected -- the
+/// loop stops after `file_count` names, so their value is irrelevant, and the
+/// reference does not look at them either. Names that run past the declared table
+/// stay a hard error, because then the archive genuinely cannot be listed.
+result<parsed_file_name_table> read_file_names(detail::binary_reader& reader,
+                                               std::uint32_t file_count,
+                                               std::uint32_t total_file_name_length) {
     auto table_bytes = reader.read_bytes(total_file_name_length);
     if (!table_bytes) {
         return error{error_code::format_error, "TES4 BSA file name table is truncated"};
@@ -322,11 +364,8 @@ result<std::vector<std::string>> read_file_names(detail::binary_reader& reader,
         }
         names.push_back(std::move(name.value()));
     }
-    if (name_reader.position() != table_bytes.value().size()) {
-        return error{error_code::format_error,
-                     "TES4 BSA file name lengths do not match header total"};
-    }
-    return names;
+    return parsed_file_name_table{std::move(names),
+                                  name_reader.position() != table_bytes.value().size()};
 }
 
 }  // namespace
@@ -456,8 +495,12 @@ result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> ta
         return file_names.error();
     }
 
-    return tes4_bsa_raw_table{header.value(), table_size.value(), std::move(folder_records).value(),
-                              std::move(folder_blocks).value(), std::move(file_names).value()};
+    return tes4_bsa_raw_table{header.value(),
+                              table_size.value(),
+                              std::move(folder_records).value(),
+                              std::move(folder_blocks).value(),
+                              std::move(file_names.value().names),
+                              file_names.value().has_trailing_bytes};
 }
 
 }  // namespace libbsa::formats::bsa

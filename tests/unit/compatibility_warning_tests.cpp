@@ -7,8 +7,11 @@
 #include <atomic>
 #include <cctype>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -116,6 +119,8 @@ std::string warning_code_name(libbsa::compatibility_warning_code code) {
             return "target_family_mismatch";
         case libbsa::compatibility_warning_code::ba2_record_identity_mismatch:
             return "ba2_record_identity_mismatch";
+        case libbsa::compatibility_warning_code::bsa_file_name_table_trailing_bytes:
+            return "bsa_file_name_table_trailing_bytes";
     }
 
     FAIL("unknown compatibility_warning_code");
@@ -210,6 +215,128 @@ std::filesystem::path write_embedded_name_bsa_archive() {
     return output;
 }
 
+std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
+    std::ifstream stream{path, std::ios::binary};
+    REQUIRE(stream.is_open());
+
+    const std::string text{std::istreambuf_iterator<char>{stream},
+                           std::istreambuf_iterator<char>{}};
+    std::vector<std::byte> bytes;
+    bytes.reserve(text.size());
+    for (const char ch : text) {
+        bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
+    }
+    return bytes;
+}
+
+std::uint32_t read_u32_le(std::span<const std::byte> bytes, std::size_t offset) {
+    REQUIRE(offset + 4U <= bytes.size());
+    std::uint32_t value = 0;
+    for (std::size_t index = 0; index < 4U; ++index) {
+        value |= static_cast<std::uint32_t>(std::to_integer<std::uint8_t>(bytes[offset + index]))
+                 << (index * 8U);
+    }
+    return value;
+}
+
+void write_u32_le(std::span<std::byte> bytes, std::size_t offset, std::uint32_t value) {
+    REQUIRE(offset + 4U <= bytes.size());
+    for (std::size_t index = 0; index < 4U; ++index) {
+        bytes[offset + index] = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
+    }
+}
+
+/// Writes a writer-output TES4-family BSA whose file-name table declares more
+/// bytes than its names consume.
+///
+/// Retail `Fallout - Voices1.bsa` ships this condition -- 105 declared bytes
+/// past the last of its 105,517 names, all NUL (issue #45) -- but retail bytes
+/// are not redistributable, so the evidence is reconstructed by byte-patching
+/// writer output instead. Growing the table means every archive-absolute offset
+/// past it moves, so the patch rewrites the folder-record and file-record offset
+/// fields as well as `TotalFileNameLength`. Folder-record offsets are stored
+/// biased by `TotalFileNameLength` (`wbBSArchive.pas:1491`), which shifts them by
+/// the same amount, so one delta covers both.
+std::filesystem::path write_trailing_file_name_bytes_bsa_archive() {
+    const auto output = unique_output_path("trailing-file-name-bytes", ".bsa");
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    options.overwrite_existing = true;
+    libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+    REQUIRE(writer
+                .add_bytes("Meshes/Trailing/Probe.nif",
+                           bytes_from_text("trailing file-name table payload"))
+                .has_value());
+    REQUIRE(writer.write_to(output.string()).has_value());
+
+    auto bytes = read_binary_file(output);
+
+    // Fixed TES4 header: magic, version, FoldersOffset, ArchiveFlags,
+    // FolderCount, FileCount, TotalFolderNameLength, TotalFileNameLength,
+    // FileFlags.
+    constexpr std::size_t header_size = 36U;
+    constexpr std::size_t folder_count_offset = 16U;
+    constexpr std::size_t file_count_offset = 20U;
+    constexpr std::size_t total_folder_name_length_offset = 24U;
+    constexpr std::size_t total_file_name_length_offset = 28U;
+    // Legacy (non-SSE) folder record: Hash u64, FileCount u32, Offset u32.
+    constexpr std::size_t folder_record_size = 16U;
+    constexpr std::size_t folder_record_offset_field = 12U;
+    // File record: Hash u64, Size u32, Offset u32.
+    constexpr std::size_t file_record_size = 16U;
+    constexpr std::size_t file_record_offset_field = 12U;
+    constexpr std::uint32_t trailing_bytes = 105U;
+
+    const auto folder_count = read_u32_le(bytes, folder_count_offset);
+    const auto file_count = read_u32_le(bytes, file_count_offset);
+    const auto total_folder_name_length = read_u32_le(bytes, total_folder_name_length_offset);
+    const auto total_file_name_length = read_u32_le(bytes, total_file_name_length_offset);
+
+    write_u32_le(bytes, total_file_name_length_offset, total_file_name_length + trailing_bytes);
+
+    const std::size_t folder_records_start = header_size;
+    for (std::uint32_t index = 0; index < folder_count; ++index) {
+        const auto field =
+            folder_records_start + (index * folder_record_size) + folder_record_offset_field;
+        write_u32_le(bytes, field, read_u32_le(bytes, field) + trailing_bytes);
+    }
+
+    // The folder-name block is one byte per folder wider than
+    // TotalFolderNameLength, which counts the bzstring without its length prefix.
+    const std::size_t folder_blocks_start =
+        folder_records_start + (static_cast<std::size_t>(folder_count) * folder_record_size);
+    const std::size_t folder_blocks_size = total_folder_name_length + folder_count +
+                                           (static_cast<std::size_t>(file_count) * file_record_size);
+    std::size_t cursor = folder_blocks_start;
+    for (std::uint32_t index = 0; index < folder_count; ++index) {
+        const auto name_size = std::to_integer<std::uint8_t>(bytes[cursor]);
+        cursor += 1U + name_size;
+        const auto folder_file_count =
+            read_u32_le(bytes, folder_records_start + (index * folder_record_size) + 8U);
+        for (std::uint32_t file_index = 0; file_index < folder_file_count; ++file_index) {
+            write_u32_le(bytes, cursor + file_record_offset_field,
+                         read_u32_le(bytes, cursor + file_record_offset_field) + trailing_bytes);
+            cursor += file_record_size;
+        }
+    }
+    REQUIRE(cursor == folder_blocks_start + folder_blocks_size);
+
+    // NUL to match what retail archives actually pad with. The parser does not
+    // require it: it stops after FileCount names, so any surplus byte is slack
+    // whatever its value, exactly as the reference's FileCount sequential
+    // ReadStringTerm calls leave it.
+    const std::size_t names_end = cursor + total_file_name_length;
+    bytes.insert(bytes.begin() + static_cast<std::ptrdiff_t>(names_end), trailing_bytes,
+                 std::byte{0});
+
+    std::ofstream out{output, std::ios::binary | std::ios::trunc};
+    REQUIRE(out.is_open());
+    out.write(reinterpret_cast<const char*>(bytes.data()),
+              static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(out.good());
+    return output;
+}
+
 std::filesystem::path write_compressed_sound_bsa_archive() {
     const auto output = unique_output_path("compressed-sound-risk", ".bsa");
     libbsa::tes4_bsa_writer_options options;
@@ -271,6 +398,31 @@ TEST_CASE("compatibility_warning reports BA2 record identity mismatch",
     CHECK(extracted.value() == bytes_from_text("record identity mismatch payload"));
 }
 
+TEST_CASE("compatibility_warning reports a file-name table with trailing bytes",
+          "[unit][compat][compatibility_warning]") {
+    const auto archive = write_trailing_file_name_bytes_bsa_archive();
+    const auto report = require_validated_report(archive);
+
+    // Archive-wide condition: the surplus bytes belong to no entry, so unlike the
+    // record-identity warning this one carries no archive path.
+    require_warning(report,
+                    libbsa::compatibility_warning_code::bsa_file_name_table_trailing_bytes,
+                    libbsa::compatibility_warning_severity::advisory, false);
+    REQUIRE(report.metadata.has_value());
+    CHECK(report.metadata.value().file_name_table_has_trailing_bytes);
+
+    // The slack must not swallow or invent an entry, and the archive must stay
+    // fully listable and extractable.
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == 1U);
+    auto extracted = opened.value().extract_bytes("Meshes/Trailing/Probe.nif");
+    REQUIRE(extracted.has_value());
+    CHECK(extracted.value() == bytes_from_text("trailing file-name table payload"));
+}
+
 TEST_CASE("compatibility_warning behavior covers every public warning code",
           "[unit][compat][compatibility_warning][validation_policy]") {
     libbsa::validation_options mismatch_options;
@@ -281,6 +433,7 @@ TEST_CASE("compatibility_warning behavior covers every public warning code",
         require_validated_report(write_embedded_name_bsa_archive()),
         require_validated_report(write_compressed_sound_bsa_archive()),
         require_validated_report(write_record_identity_mismatch_ba2_archive()),
+        require_validated_report(write_trailing_file_name_bytes_bsa_archive()),
     };
 
     std::vector<std::string> observed_codes;

@@ -226,6 +226,13 @@ here so a future run can tell a genuine regression from the status quo:
 | 1 | `format_error: TES4 BSA file name lengths do not match header total` |
 | 1 | `format_error: TES3 BSA stored hash does not match parsed name` |
 
+The TES4 row was resolved after this measurement was taken. Issue #45 showed the archive is well formed:
+it declares a file-name table 105 bytes longer than its names consume, which the reference never checks.
+libbsa now accepts it and reports `bsa_file_name_table_trailing_bytes` instead. That was confirmed by
+opening every `.bsa` in the corpus, all 29 TES4-family archives of which now open; the BA2 rows were not
+re-measured, so the totals above have not been re-derived. The table is left as recorded so the
+comparison it documents stays reproducible.
+
 ## Where the remaining cost is
 
 One acceptance criterion from issue #52 is **not met**: `bsa info` on the largest archive in the corpus

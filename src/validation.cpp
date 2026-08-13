@@ -101,6 +101,21 @@ void append_target_family_warning(const archive_metadata& metadata,
                    "archive metadata does not match the requested target family");
 }
 
+/// Appends archive-level compatibility warnings derived from parsed metadata.
+///
+/// The trailing-bytes condition is archive-wide rather than per-entry: the
+/// surplus bytes belong to no entry, so the warning carries no archive path.
+void append_archive_warnings(const archive_metadata& metadata, validation_report& report) {
+    // A file-name table longer than its names is what retail TES4-family BSA
+    // archives ship (issue #45). Every entry stays listed and extractable, so the
+    // archive stays valid and the disagreement is surfaced instead.
+    if (metadata.file_name_table_has_trailing_bytes) {
+        append_warning(report, compatibility_warning_code::bsa_file_name_table_trailing_bytes,
+                       compatibility_warning_severity::advisory,
+                       "archive file-name table declares more bytes than its entries consume");
+    }
+}
+
 /// Appends entry-level compatibility warnings that can be derived from public
 /// metadata.
 void append_entry_warnings(const archive_metadata& metadata,
@@ -212,6 +227,7 @@ result<validation_report> validate_archive(std::string_view host_path, validatio
     report.valid = true;
 
     append_target_family_warning(metadata.value(), options, report);
+    append_archive_warnings(metadata.value(), report);
 
     auto entries = opened.value().entries();
     if (!entries) {

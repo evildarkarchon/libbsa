@@ -54,6 +54,11 @@ struct tes4_bsa_raw_table {
     std::vector<tes4_bsa_folder_record> folder_records;
     std::vector<tes4_bsa_folder_block> folder_blocks;
     std::vector<std::string> file_names;
+
+    /// True when TotalFileNameLength declared more bytes than the file names
+    /// actually consumed. The surplus is ignored during parsing and surfaced as a
+    /// public compatibility warning; see `read_tes4_bsa_raw_table`.
+    bool file_name_table_has_trailing_bytes{false};
 };
 
 /// Computes the checked TES4 metadata table byte size for an already-read

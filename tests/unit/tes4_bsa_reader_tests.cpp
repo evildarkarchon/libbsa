@@ -216,10 +216,15 @@ struct synthetic_tes4_record {
 /// Returns the offset of the first payload byte make_synthetic_tes4_archive
 /// writes for `records`, which is also the metadata size a legal stored span has
 /// to start at or after.
-std::uint32_t synthetic_tes4_payload_base(std::span<const synthetic_tes4_record> records) {
+///
+/// `trailing_file_name_bytes` matches the argument of the same name on
+/// `make_synthetic_tes4_archive`: slack the header declares inside the file-name
+/// table but that no name consumes, which still pushes the payload base out.
+std::uint32_t synthetic_tes4_payload_base(std::span<const synthetic_tes4_record> records,
+                                          std::uint32_t trailing_file_name_bytes = 0U) {
     using namespace libbsa::formats::bsa;
 
-    std::size_t file_names_length = 0;
+    std::size_t file_names_length = trailing_file_name_bytes;
     for (const auto& record : records) {
         file_names_length += record.file_name.size() + 1U;
     }
@@ -237,11 +242,16 @@ std::uint32_t synthetic_tes4_payload_base(std::span<const synthetic_tes4_record>
 /// Payloads are raw and uncompressed and embedded names are off, so a record's
 /// stored size is exactly the span the parser checks for Payload Span
 /// Exclusivity, with no size prefix or name prefix in the way.
+///
+/// `trailing_file_name_bytes` appends that many NUL bytes to the file-name table
+/// and folds them into TotalFileNameLength, reproducing the retail condition in
+/// issue #45 where the declared table is longer than the names consume.
 std::vector<std::byte> make_synthetic_tes4_archive(std::span<const synthetic_tes4_record> records,
-                                                   std::size_t payload_size) {
+                                                   std::size_t payload_size,
+                                                   std::uint32_t trailing_file_name_bytes = 0U) {
     using namespace libbsa::formats::bsa;
 
-    std::uint32_t file_names_length = 0;
+    std::uint32_t file_names_length = trailing_file_name_bytes;
     for (const auto& record : records) {
         file_names_length += static_cast<std::uint32_t>(record.file_name.size() + 1U);
     }
@@ -280,6 +290,11 @@ std::vector<std::byte> make_synthetic_tes4_archive(std::span<const synthetic_tes
 
     for (const auto& record : records) {
         append_ascii(bytes, record.file_name);
+        append_u8(bytes, 0U);
+    }
+    // Declared-but-unconsumed file-name table bytes. Retail archives carry these
+    // as NUL padding, so the slack cannot be mistaken for a further name.
+    for (std::uint32_t index = 0; index < trailing_file_name_bytes; ++index) {
         append_u8(bytes, 0U);
     }
 
@@ -334,6 +349,65 @@ TEST_CASE("tes4_bsa_metadata exposes archive-level open state",
         REQUIRE(metadata.value().file_count == fixture.file_count);
         REQUIRE(metadata.value().default_compression ==
                 expected_default_compression(fixture.version));
+    }
+}
+
+TEST_CASE(
+    "tes4_bsa_metadata opens archives whose file-name table declares unconsumed "
+    "trailing bytes",
+    "[unit][tes4_bsa_metadata][compat]") {
+    // Retail `Fallout - Voices1.bsa` declares TotalFileNameLength 105 bytes
+    // longer than its 105,517 names consume, and every one of those bytes is
+    // NUL. The reference calls ReadStringTerm exactly FileCount times
+    // (wbBSArchive.pas:1235-1237) and never compares the cursor against the
+    // header total, so the slack is invisible to it. libbsa used to require
+    // exact consumption and rejected the whole archive (issue #45).
+    constexpr std::uint32_t trailing_file_name_bytes = 105U;
+    constexpr std::uint32_t payload_size = 16U;
+
+    std::array records{synthetic_tes4_record{"probe.nif", 0U, payload_size}};
+    records[0].offset = synthetic_tes4_payload_base(records, trailing_file_name_bytes);
+    const auto bytes = make_synthetic_tes4_archive(records, payload_size,
+                                                   trailing_file_name_bytes);
+
+    const auto archive =
+        std::filesystem::temp_directory_path() / "libbsa_trailing_file_name_bytes.bsa";
+    write_binary_file(archive, bytes);
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().file_count == 1U);
+    CHECK(metadata.value().file_name_table_has_trailing_bytes);
+
+    // The slack must not become a phantom entry, and the entry it precedes must
+    // still resolve and extract by path.
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == 1U);
+    CHECK(entries.value().front().path == "meshes/precedence/probe.nif");
+
+    auto extracted = opened.value().extract_bytes(entries.value().front().path);
+    REQUIRE(extracted.has_value());
+    CHECK(extracted.value().size() == payload_size);
+}
+
+TEST_CASE("tes4_bsa_metadata leaves the trailing file-name byte flag clear by default",
+          "[unit][fixture][tes4_bsa_metadata][compat]") {
+    // The flag is only meaningful if it stays false for a well-formed archive,
+    // so pin it against every committed generated fixture rather than only
+    // against the mutated case above.
+    for (const auto& fixture : success_fixtures()) {
+        auto opened =
+            libbsa::archive_reader::open(generated_archive_path(fixture.archive_filename).string());
+        REQUIRE(opened.has_value());
+
+        auto metadata = opened.value().metadata();
+        REQUIRE(metadata.has_value());
+        INFO("fixture=" << fixture.archive_filename);
+        CHECK_FALSE(metadata.value().file_name_table_has_trailing_bytes);
     }
 }
 

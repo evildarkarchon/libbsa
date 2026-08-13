@@ -131,11 +131,14 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> 
         return entries.error();
     }
     (void)table.value().header.file_flags;
-    return tes4_bsa_archive{
-        archive_metadata{archive_type::bsa, profile.variant(), table.value().header.version,
-                         table.value().header.archive_flags, table.value().header.file_count,
-                         profile.compressed_entry_metadata()},
-        std::move(entries.value())};
+    archive_metadata metadata{archive_type::bsa,           profile.variant(),
+                              table.value().header.version, table.value().header.archive_flags,
+                              table.value().header.file_count,
+                              profile.compressed_entry_metadata()};
+    // Assigned rather than passed positionally so the aggregate initializer above
+    // does not have to name the unrelated BA2 metadata optional in between.
+    metadata.file_name_table_has_trailing_bytes = table.value().file_name_table_has_trailing_bytes;
+    return tes4_bsa_archive{std::move(metadata), std::move(entries.value())};
 }
 
 }  // namespace

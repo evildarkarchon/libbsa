@@ -619,6 +619,143 @@ TEST_CASE("a retail BA2 GNRL archive opens, lists, and extracts end to end",
     INFO("compressed_entries=" << compressed_entries);
 }
 
+TEST_CASE("every retail TES4-family BSA opens and lists its full entry count",
+          "[requires-game-fixture][unit][bsa][tes4][compat]") {
+    // Every committed TES4 fixture is written by libbsa's own writer, so the
+    // default suite can only prove libbsa agrees with itself about physical
+    // layout. Issue #45 was a class of defect only retail bytes could expose:
+    // libbsa enforced invariants over derived header metadata -- the folder
+    // record `Offset` bias by `TotalFileNameLength`, the folder-name total, and
+    // exact `TotalFileNameLength` consumption -- that Bethesda's packer does not
+    // honour, and every one of the 29 archives here was rejected outright.
+    //
+    // Unlike the BA2 header case above, this opens each archive fully rather
+    // than probing bytes: the defects were in table parsing, not in the fixed
+    // header, so nothing short of a real open would have caught them. A full
+    // open-and-list sweep of the corpus runs in well under a minute.
+    auto fixture_root = local_fixture_root();
+    if (!fixture_root.has_value()) {
+        SKIP(
+            "Set LIBBSA_GAME_FIXTURES or place local game archives under "
+            "tests/fixtures/local; these files are not committed.");
+    }
+
+    std::size_t opened_archives = 0U;
+    std::error_code iteration_error;
+    std::filesystem::directory_iterator iterator{*fixture_root, iteration_error};
+    REQUIRE_FALSE(iteration_error);
+
+    for (const auto& directory_entry : iterator) {
+        if (!directory_entry.is_regular_file()) {
+            continue;
+        }
+        auto version = probe_tes4_bsa_version(directory_entry.path());
+        if (!version.has_value()) {
+            continue;
+        }
+
+        const auto name = directory_entry.path().filename().string();
+        INFO("archive=" << name << " version=" << *version);
+
+        // 103 is Oblivion, 104 is Fallout 3 / New Vegas / Skyrim LE, and 105 is
+        // Skyrim SE/AE. Anything else in a vanilla corpus is a detection gap.
+        REQUIRE((*version == 103U || *version == 104U || *version == 105U));
+
+        auto opened = libbsa::archive_reader::open(directory_entry.path().string());
+        REQUIRE(opened.has_value());
+        ++opened_archives;
+
+        auto metadata = opened.value().metadata();
+        REQUIRE(metadata.has_value());
+        CHECK(metadata.value().type == libbsa::archive_type::bsa);
+        CHECK(metadata.value().variant == libbsa::archive_variant::tes4);
+        CHECK(metadata.value().version == *version);
+        CHECK(metadata.value().file_count > 0U);
+
+        // Listing the declared count is the claim: a folder table walked with a
+        // biased offset, or one cut short by a name-total mismatch, cannot
+        // produce every entry the header promises.
+        auto entries = opened.value().entries();
+        REQUIRE(entries.has_value());
+        REQUIRE(entries.value().size() == metadata.value().file_count);
+
+        // Hash-backed lookup has to reach a listed path, which pins the folder
+        // and file hash bases against archives libbsa did not write.
+        const auto& first = entries.value().front();
+        auto found = opened.value().find(first.path);
+        REQUIRE(found.has_value());
+        REQUIRE(found.value().has_value());
+        CHECK(found.value()->path == first.path);
+    }
+
+    if (opened_archives == 0U) {
+        SKIP("The local corpus holds no TES4-family BSA archives.");
+    }
+    INFO("opened " << opened_archives << " retail TES4-family BSA archives");
+}
+
+TEST_CASE("retail TES4-family BSA file-name table slack is a warning, not a rejection",
+          "[requires-game-fixture][unit][bsa][tes4][compat]") {
+    // At least one vanilla archive -- `Fallout - Voices1.bsa` -- declares a
+    // `TotalFileNameLength` longer than its names consume, and libbsa used to
+    // reject it outright (issue #45). The reference reads exactly `FileCount`
+    // names and never inspects the surplus (`wbBSArchive.pas:1235-1237`).
+    //
+    // The corpus a given machine holds is not fixed, so this asserts the
+    // implication rather than a specific archive: whenever the flag is set, the
+    // archive must still validate, and whenever it is clear, no such warning may
+    // appear. `compatibility_warning_tests.cpp` owns the positive case against a
+    // reproducible writer-output archive.
+    auto fixture_root = local_fixture_root();
+    if (!fixture_root.has_value()) {
+        SKIP(
+            "Set LIBBSA_GAME_FIXTURES or place local game archives under "
+            "tests/fixtures/local; these files are not committed.");
+    }
+
+    std::size_t checked_archives = 0U;
+    std::size_t archives_with_slack = 0U;
+    std::error_code iteration_error;
+    std::filesystem::directory_iterator iterator{*fixture_root, iteration_error};
+    REQUIRE_FALSE(iteration_error);
+
+    for (const auto& directory_entry : iterator) {
+        if (!directory_entry.is_regular_file()) {
+            continue;
+        }
+        if (!probe_tes4_bsa_version(directory_entry.path()).has_value()) {
+            continue;
+        }
+
+        const auto name = directory_entry.path().filename().string();
+        INFO("archive=" << name);
+
+        auto validated = libbsa::validate_archive(directory_entry.path().string());
+        REQUIRE(validated.has_value());
+        CHECK(validated.value().is_valid());
+        ++checked_archives;
+
+        REQUIRE(validated.value().metadata.has_value());
+        const bool has_slack = validated.value().metadata.value().file_name_table_has_trailing_bytes;
+        const auto warned = std::any_of(
+            validated.value().warnings.begin(), validated.value().warnings.end(),
+            [](const libbsa::compatibility_warning& warning) {
+                return warning.code ==
+                       libbsa::compatibility_warning_code::bsa_file_name_table_trailing_bytes;
+            });
+        CHECK(warned == has_slack);
+        if (has_slack) {
+            ++archives_with_slack;
+        }
+    }
+
+    if (checked_archives == 0U) {
+        SKIP("The local corpus holds no TES4-family BSA archives.");
+    }
+    INFO("checked " << checked_archives << " archives, " << archives_with_slack
+                    << " with file-name table slack");
+}
+
 TEST_CASE("a retail TES4-family BSA extracts every zlib-compressed entry",
           "[requires-game-fixture][unit][bsa][tes4][compat]") {
     auto fixture_root = local_fixture_root();
