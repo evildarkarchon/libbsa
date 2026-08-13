@@ -114,6 +114,16 @@ void append_archive_warnings(const archive_metadata& metadata, validation_report
                        compatibility_warning_severity::advisory,
                        "archive file-name table declares more bytes than its entries consume");
     }
+
+    // The declared folder-name length locates nothing -- folder blocks are walked
+    // sequentially, as the reference walks them -- so a disagreement is reported
+    // rather than treated as corruption.
+    if (metadata.folder_name_table_length_mismatch) {
+        append_warning(report, compatibility_warning_code::bsa_folder_name_table_length_mismatch,
+                       compatibility_warning_severity::advisory,
+                       "archive declared folder-name table length disagrees with its stored "
+                       "folder names");
+    }
 }
 
 /// Appends entry-level compatibility warnings that can be derived from public

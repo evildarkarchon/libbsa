@@ -138,6 +138,7 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> 
     // Assigned rather than passed positionally so the aggregate initializer above
     // does not have to name the unrelated BA2 metadata optional in between.
     metadata.file_name_table_has_trailing_bytes = table.value().file_name_table_has_trailing_bytes;
+    metadata.folder_name_table_length_mismatch = table.value().folder_name_table_length_mismatch;
     return tes4_bsa_archive{std::move(metadata), std::move(entries.value())};
 }
 
@@ -212,15 +213,19 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_file(const detail::host_file_pat
     if (!file_count_limit) {
         return file_count_limit.error();
     }
-    auto table_size =
-        tes4_bsa_metadata_table_size(header.value(), profile.value().folder_record_size(),
-                                     static_cast<std::size_t>(archive_size));
-    if (!table_size) {
-        return table_size.error();
+    // An upper bound, not the exact table size: the folder-name block is measured
+    // by walking it, so this read must not depend on TotalFolderNameLength being
+    // right. Over-reading costs at most 256 bytes per folder, kilobytes against
+    // the megabytes of table a retail archive carries.
+    auto read_bound =
+        tes4_bsa_metadata_table_read_bound(header.value(), profile.value().folder_record_size(),
+                                           static_cast<std::size_t>(archive_size));
+    if (!read_bound) {
+        return read_bound.error();
     }
 
     auto table_bytes =
-        read_file_bytes_at(input.value(), 0U, table_size.value(), "TES4 BSA metadata table");
+        read_file_bytes_at(input.value(), 0U, read_bound.value(), "TES4 BSA metadata table");
     if (!table_bytes) {
         return table_bytes.error();
     }

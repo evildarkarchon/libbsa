@@ -246,9 +246,15 @@ std::uint32_t synthetic_tes4_payload_base(std::span<const synthetic_tes4_record>
 /// `trailing_file_name_bytes` appends that many NUL bytes to the file-name table
 /// and folds them into TotalFileNameLength, reproducing the retail condition in
 /// issue #45 where the declared table is longer than the names consume.
-std::vector<std::byte> make_synthetic_tes4_archive(std::span<const synthetic_tes4_record> records,
-                                                   std::size_t payload_size,
-                                                   std::uint32_t trailing_file_name_bytes = 0U) {
+///
+/// `folder_name_length_override` writes an arbitrary TotalFolderNameLength into
+/// the header without changing a single byte of the folder-name block, so the
+/// declared total disagrees with what is stored. Nothing in the layout depends on
+/// that field, so the archive stays readable; the parser must agree.
+std::vector<std::byte> make_synthetic_tes4_archive(
+    std::span<const synthetic_tes4_record> records, std::size_t payload_size,
+    std::uint32_t trailing_file_name_bytes = 0U,
+    std::optional<std::uint32_t> folder_name_length_override = std::nullopt) {
     using namespace libbsa::formats::bsa;
 
     std::uint32_t file_names_length = trailing_file_name_bytes;
@@ -270,7 +276,8 @@ std::vector<std::byte> make_synthetic_tes4_archive(std::span<const synthetic_tes
     append_u32_le(bytes, static_cast<std::uint32_t>(records.size()));
     // TotalFolderNameLength counts the bzstring bytes only: name plus terminator,
     // never the length prefix.
-    append_u32_le(bytes, static_cast<std::uint32_t>(synthetic_tes4_folder.size() + 1U));
+    append_u32_le(bytes, folder_name_length_override.value_or(
+                             static_cast<std::uint32_t>(synthetic_tes4_folder.size() + 1U)));
     append_u32_le(bytes, file_names_length);
     append_u32_le(bytes, tes4_bsa_file_flag_meshes);
 
@@ -355,7 +362,7 @@ TEST_CASE("tes4_bsa_metadata exposes archive-level open state",
 TEST_CASE(
     "tes4_bsa_metadata opens archives whose file-name table declares unconsumed "
     "trailing bytes",
-    "[unit][tes4_bsa_metadata][compat]") {
+    "[unit][malformed][tes4_bsa_metadata][compat]") {
     // Retail `Fallout - Voices1.bsa` declares TotalFileNameLength 105 bytes
     // longer than its 105,517 names consume, and every one of those bytes is
     // NUL. The reference calls ReadStringTerm exactly FileCount times
@@ -394,11 +401,89 @@ TEST_CASE(
     CHECK(extracted.value().size() == payload_size);
 }
 
-TEST_CASE("tes4_bsa_metadata leaves the trailing file-name byte flag clear by default",
+TEST_CASE(
+    "tes4_bsa_metadata opens archives whose declared folder-name length disagrees "
+    "with the folder names stored",
+    "[unit][malformed][tes4_bsa_metadata][compat]") {
+    // TotalFolderNameLength appears only on the reference's write path
+    // (wbBSArchive.pas:1393 and :1469); TwbBSArchive.LoadFromFile never reads it
+    // back, walking folder names sequentially instead. libbsa used to size the
+    // whole metadata table from it, which made a wrong value fatal twice over: the
+    // total cross-check rejected the archive, and an inflated value would also
+    // have pushed the payload/metadata boundary past legal payloads.
+    //
+    // The payload here starts at the first byte after the true metadata table, so
+    // it is exactly the payload an inflated boundary would wrongly reject.
+    constexpr std::uint32_t payload_size = 16U;
+    constexpr std::uint32_t inflated_folder_name_length = 4096U;
+
+    std::array records{synthetic_tes4_record{"probe.nif", 0U, payload_size}};
+    records[0].offset = synthetic_tes4_payload_base(records);
+    const auto bytes =
+        make_synthetic_tes4_archive(records, payload_size, 0U, inflated_folder_name_length);
+
+    const auto archive =
+        std::filesystem::temp_directory_path() / "libbsa_folder_name_length_mismatch.bsa";
+    write_binary_file(archive, bytes);
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().folder_name_table_length_mismatch);
+    CHECK_FALSE(metadata.value().file_name_table_has_trailing_bytes);
+
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == 1U);
+    CHECK(entries.value().front().path == "meshes/precedence/probe.nif");
+
+    auto extracted = opened.value().extract_bytes(entries.value().front().path);
+    REQUIRE(extracted.has_value());
+    CHECK(extracted.value().size() == payload_size);
+}
+
+TEST_CASE("tes4_bsa_metadata reads archives that declare a zero folder-name length",
+          "[unit][malformed][tes4_bsa_metadata][compat]") {
+    // Zero is the specific understated value worth pinning: it is what the
+    // reference initializes the field to (wbBSArchive.pas:1393) and it never
+    // reads the field back, so zero is a value BSArchPro would happily load.
+    // libbsa used to reject it outright as "does not include usable entry names",
+    // which contradicted the archive flags that actually answer that question.
+    // Understating the total also used to shorten the metadata read span and fail
+    // downstream with a confusing file-name-table diagnostic; the span is now
+    // bounded independently of the field.
+    constexpr std::uint32_t payload_size = 16U;
+
+    std::array records{synthetic_tes4_record{"probe.nif", 0U, payload_size}};
+    records[0].offset = synthetic_tes4_payload_base(records);
+    const auto bytes = make_synthetic_tes4_archive(records, payload_size, 0U, 0U);
+
+    const auto archive =
+        std::filesystem::temp_directory_path() / "libbsa_folder_name_length_zero.bsa";
+    write_binary_file(archive, bytes);
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().folder_name_table_length_mismatch);
+
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == 1U);
+    auto extracted = opened.value().extract_bytes(entries.value().front().path);
+    REQUIRE(extracted.has_value());
+    CHECK(extracted.value().size() == payload_size);
+}
+
+TEST_CASE("tes4_bsa_metadata leaves both name-table compatibility flags clear by default",
           "[unit][fixture][tes4_bsa_metadata][compat]") {
-    // The flag is only meaningful if it stays false for a well-formed archive,
-    // so pin it against every committed generated fixture rather than only
-    // against the mutated case above.
+    // The flags are only meaningful if they stay false for a well-formed archive,
+    // so pin them against every committed generated fixture rather than only
+    // against the mutated cases above.
     for (const auto& fixture : success_fixtures()) {
         auto opened =
             libbsa::archive_reader::open(generated_archive_path(fixture.archive_filename).string());
@@ -408,6 +493,7 @@ TEST_CASE("tes4_bsa_metadata leaves the trailing file-name byte flag clear by de
         REQUIRE(metadata.has_value());
         INFO("fixture=" << fixture.archive_filename);
         CHECK_FALSE(metadata.value().file_name_table_has_trailing_bytes);
+        CHECK_FALSE(metadata.value().folder_name_table_length_mismatch);
     }
 }
 
@@ -460,9 +546,17 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "tes4_bsa_malformed_open rejects count-derived table spans before "
-    "allocation",
-    "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
+    "tes4_bsa_metadata tolerates an absurd declared folder-name length because "
+    "nothing is sized from it",
+    "[unit][fixture][malformed][tes4_bsa_metadata][compat]") {
+    // This case used to assert rejection, back when TotalFolderNameLength sized
+    // the metadata table and an oversized value produced an oversized span. The
+    // parser now bounds that read by folder count instead and measures the table
+    // by walking it, so the field allocates nothing and even 0xFFFFFFFF is inert.
+    // The reference never reads the field back at all (wbBSArchive.pas:1393,
+    // :1469 are its only uses, both on the write path), so tolerating it is what
+    // matches BSArchPro. Field-driven allocation is still proven, by the
+    // TotalFileNameLength and folder-record-count cases below.
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     overwrite_u32_le(bytes, 24U, 0xFFFF'FFFFU);
 
@@ -472,8 +566,19 @@ TEST_CASE(
 
     auto opened = libbsa::archive_reader::open(mutated.string());
 
-    REQUIRE_FALSE(opened.has_value());
-    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+    REQUIRE(opened.has_value());
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().folder_name_table_length_mismatch);
+
+    // Every entry the untouched fixture lists must still list and extract.
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    CHECK(entries.value().size() == metadata.value().file_count);
+    for (const auto& entry : entries.value()) {
+        INFO("entry=" << entry.path);
+        REQUIRE(opened.value().extract_bytes(entry.path).has_value());
+    }
 }
 
 TEST_CASE(

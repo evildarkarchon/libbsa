@@ -121,6 +121,8 @@ std::string warning_code_name(libbsa::compatibility_warning_code code) {
             return "ba2_record_identity_mismatch";
         case libbsa::compatibility_warning_code::bsa_file_name_table_trailing_bytes:
             return "bsa_file_name_table_trailing_bytes";
+        case libbsa::compatibility_warning_code::bsa_folder_name_table_length_mismatch:
+            return "bsa_folder_name_table_length_mismatch";
     }
 
     FAIL("unknown compatibility_warning_code");
@@ -337,6 +339,44 @@ std::filesystem::path write_trailing_file_name_bytes_bsa_archive() {
     return output;
 }
 
+/// Writes a writer-output TES4-family BSA whose header declares a folder-name
+/// table length that disagrees with the folder names it stores.
+///
+/// This is a one-field patch, unlike the file-name slack fixture: nothing in the
+/// layout is located by `TotalFolderNameLength`, so inflating it moves no byte
+/// and shifts no offset. That is precisely the claim -- an archive carrying a
+/// wrong value is still completely readable, and the reference never reads the
+/// field back at all.
+std::filesystem::path write_folder_name_length_mismatch_bsa_archive() {
+    const auto output = unique_output_path("folder-name-length-mismatch", ".bsa");
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    options.overwrite_existing = true;
+    libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+    REQUIRE(writer
+                .add_bytes("Meshes/Mismatched/Probe.nif",
+                           bytes_from_text("folder name length mismatch payload"))
+                .has_value());
+    REQUIRE(writer.write_to(output.string()).has_value());
+
+    auto bytes = read_binary_file(output);
+
+    // TotalFolderNameLength sits at offset 24 in the fixed TES4 header. Inflating
+    // it is the direction that used to be doubly fatal: it failed the total
+    // cross-check, and it pushed the derived payload/metadata boundary past legal
+    // payload bytes.
+    constexpr std::size_t total_folder_name_length_offset = 24U;
+    constexpr std::uint32_t inflated_length = 4096U;
+    write_u32_le(bytes, total_folder_name_length_offset, inflated_length);
+
+    std::ofstream out{output, std::ios::binary | std::ios::trunc};
+    REQUIRE(out.is_open());
+    out.write(reinterpret_cast<const char*>(bytes.data()),
+              static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(out.good());
+    return output;
+}
+
 std::filesystem::path write_compressed_sound_bsa_archive() {
     const auto output = unique_output_path("compressed-sound-risk", ".bsa");
     libbsa::tes4_bsa_writer_options options;
@@ -423,6 +463,30 @@ TEST_CASE("compatibility_warning reports a file-name table with trailing bytes",
     CHECK(extracted.value() == bytes_from_text("trailing file-name table payload"));
 }
 
+TEST_CASE("compatibility_warning reports a declared folder-name length that disagrees",
+          "[unit][compat][compatibility_warning]") {
+    const auto archive = write_folder_name_length_mismatch_bsa_archive();
+    const auto report = require_validated_report(archive);
+
+    require_warning(report,
+                    libbsa::compatibility_warning_code::bsa_folder_name_table_length_mismatch,
+                    libbsa::compatibility_warning_severity::advisory, false);
+    REQUIRE(report.metadata.has_value());
+    CHECK(report.metadata.value().folder_name_table_length_mismatch);
+
+    // The payload sits immediately after the true metadata table. Deriving the
+    // table size by walking is what keeps it extractable: sizing from the inflated
+    // header field would place it inside a phantom metadata region and reject it.
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == 1U);
+    auto extracted = opened.value().extract_bytes("Meshes/Mismatched/Probe.nif");
+    REQUIRE(extracted.has_value());
+    CHECK(extracted.value() == bytes_from_text("folder name length mismatch payload"));
+}
+
 TEST_CASE("compatibility_warning behavior covers every public warning code",
           "[unit][compat][compatibility_warning][validation_policy]") {
     libbsa::validation_options mismatch_options;
@@ -434,6 +498,7 @@ TEST_CASE("compatibility_warning behavior covers every public warning code",
         require_validated_report(write_compressed_sound_bsa_archive()),
         require_validated_report(write_record_identity_mismatch_ba2_archive()),
         require_validated_report(write_trailing_file_name_bytes_bsa_archive()),
+        require_validated_report(write_folder_name_length_mismatch_bsa_archive()),
     };
 
     std::vector<std::string> observed_codes;

@@ -235,6 +235,8 @@ std::string warning_code_name(libbsa::compatibility_warning_code code) {
             return "ba2_record_identity_mismatch";
         case libbsa::compatibility_warning_code::bsa_file_name_table_trailing_bytes:
             return "bsa_file_name_table_trailing_bytes";
+        case libbsa::compatibility_warning_code::bsa_folder_name_table_length_mismatch:
+            return "bsa_folder_name_table_length_mismatch";
     }
 
     return "unknown";

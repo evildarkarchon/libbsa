@@ -154,6 +154,17 @@ struct archive_metadata {
     /// rather than rejecting the archive. Only the TES4-family BSA parser
     /// populates this today.
     bool file_name_table_has_trailing_bytes{false};
+
+    /// True when the archive's declared folder-name table length disagrees with
+    /// the folder names it actually stores.
+    ///
+    /// The declared length is not used to locate anything: folder blocks are
+    /// walked sequentially, so a wrong value costs the archive nothing and every
+    /// entry stays listed and extractable. libbsa reports it as a
+    /// `compatibility_warning_code::bsa_folder_name_table_length_mismatch`
+    /// warning rather than rejecting the archive. Only the TES4-family BSA parser
+    /// populates this today.
+    bool folder_name_table_length_mismatch{false};
 };
 
 /// Entry-level metadata exposed for lookup, listing, and extraction.
