@@ -231,7 +231,8 @@ formed and libbsa read the hash field wrongly: a TES3 hash record stores the two
 `u32` values, first-half sum first, and libbsa read the eight bytes as one little-endian `u64`, which
 transposes the halves relative to `hash_tes3`. All 11090 records of vanilla `Morrowind.bsa` match the
 corrected composition and none matched the old one, so the archive was rejected on its very first record.
-It now opens.
+It now opens. The reference's writer already emitted this order (`wbBSArchive.pas:1613-1616`); only its read
+path disagreed with its own writer.
 
 The TES4 row was resolved after this measurement was taken. Issue #45 showed the archive is well formed:
 it declares a file-name table 105 bytes longer than its names consume, which the reference never checks.

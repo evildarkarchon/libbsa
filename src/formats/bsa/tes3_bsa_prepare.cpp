@@ -139,7 +139,11 @@ result<std::vector<tes3_prepared_entry>> tes3_prepare_entries(
                   // sum -- which is ascending `hash_tes3` value. libbsa used to
                   // compare low32 first, an order no retail archive uses; all
                   // 11090 records of vanilla `Morrowind.bsa` are sorted the way
-                  // this comparator now sorts them (issue #46).
+                  // this comparator now sorts them (issue #46). The reference
+                  // sorts the same way: `HashPairSort` compares `DirHash` then
+                  // `FileHash` (`wbBSArchive.pas:1251-1265`), and the TES3 path
+                  // only ever populates `FileHash` with `CreateHashTES3`
+                  // (`wbBSArchive.pas:1355-1360`), leaving `DirHash` zero.
                   return lhs.hash < rhs.hash;
               });
     return prepared;

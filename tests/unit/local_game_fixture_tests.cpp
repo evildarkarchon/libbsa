@@ -976,11 +976,13 @@ TEST_CASE("every retail TES3 BSA opens and lists its full entry count",
 
 TEST_CASE("retail TES3 BSA hash records store the first-half sum before the second",
           "[requires-game-fixture][unit][bsa][tes3][compat]") {
-    // The reference is not a usable oracle here. `TwbBSArchive.LoadFromFile`
-    // reads the field with `fStream.ReadUInt64` and `FindFileRecordTES3` compares
-    // that value directly against `CreateHashTES3`, a comparison that cannot
-    // match on any archive measured below -- TES3 lookup by name in BSArchPro
-    // appears to be unexercised. Retail bytes are the authority (issue #46).
+    // The reference contradicts itself here, so retail bytes are the tiebreak.
+    // `TwbBSArchive.SaveToFile` writes the record as `Hash shr 32` then
+    // `Hash and $FFFFFFFF` (`wbBSArchive.pas:1613-1616`), which is the order
+    // asserted below, but `LoadFromFile` reads the field with
+    // `fStream.ReadUInt64` (`wbBSArchive.pas:1127`) and `FindFileRecordTES3`
+    // compares that against `CreateHashTES3` -- a comparison that cannot match on
+    // any archive measured here (issue #46).
     auto fixture_root = local_fixture_root();
     if (!fixture_root.has_value()) {
         SKIP(

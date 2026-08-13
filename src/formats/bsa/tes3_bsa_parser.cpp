@@ -174,12 +174,18 @@ result<std::vector<std::string>> read_names(std::span<const std::byte> table_byt
 /// any retail TES3 archive ever matched and `Morrowind.bsa` could not be opened
 /// (issue #46).
 ///
-/// The reference is not a usable oracle here. `TwbBSArchive.LoadFromFile` reads
-/// the field with `fStream.ReadUInt64` and `FindFileRecordTES3` compares that
-/// value directly against `CreateHashTES3`, a comparison that cannot match on
-/// vanilla data; TES3 lookup by name in BSArchPro appears to be unexercised.
-/// Retail bytes settle it: all 11090 records of vanilla `Morrowind.bsa` match the
-/// composition below and none match a `u64` read.
+/// The reference agrees, but only on its write path, and it contradicts itself.
+/// `TwbBSArchive.SaveToFile` emits the record as `Hash shr 32` then
+/// `Hash and $FFFFFFFF` (`wbBSArchive.pas:1613-1616`) -- exactly the composition
+/// below. Its read path does not match its own writer: `LoadFromFile` takes the
+/// field with `fStream.ReadUInt64` (`wbBSArchive.pas:1127`) and
+/// `FindFileRecordTES3` compares that value directly against `CreateHashTES3`
+/// (`wbBSArchive.pas:907-911`), which transposes the halves and so cannot match
+/// on vanilla data. TES3 lookup by name in BSArchPro therefore appears to be
+/// unexercised, and the writer is the half of the reference to trust here.
+///
+/// Retail bytes settle it either way: all 11090 records of vanilla
+/// `Morrowind.bsa` match the composition below and none match a `u64` read.
 result<std::vector<std::uint64_t>> read_hashes(detail::binary_reader& reader,
                                                std::uint32_t file_count) {
     std::vector<std::uint64_t> hashes;

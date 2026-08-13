@@ -215,7 +215,10 @@ result<void> tes3_write_archive_bytes(std::span<const tes3_prepared_entry> entri
     // other way round, so writing it as one `u64` emits Bethesda's words
     // transposed -- archives Morrowind cannot resolve by name, even though
     // libbsa's own reader round-tripped them because it read them back the same
-    // wrong way. Retail `Morrowind.bsa` is the authority (issue #46).
+    // wrong way. The reference writer does what this loop now does:
+    // `fStream.WriteCardinal(Hash shr 32)` then
+    // `fStream.WriteCardinal(Hash and $FFFFFFFF)` (`wbBSArchive.pas:1613-1616`),
+    // and retail `Morrowind.bsa` agrees (issue #46).
     for (const auto& entry : entries) {
         if (!(written = writer.write_u32_le(detail::tes3_hash_high32(entry.hash))) ||
             !(written = writer.write_u32_le(detail::tes3_hash_low32(entry.hash)))) {
