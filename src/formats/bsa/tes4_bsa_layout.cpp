@@ -2,11 +2,12 @@
 
 #include "formats/bsa/tes4_bsa_constants.hpp"
 
+#include <detail/parser_primitives.hpp>
+#include <detail/payload_placement.hpp>
+
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <map>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -16,31 +17,16 @@ namespace libbsa::formats::bsa {
 
 namespace {
 
+// Table and record geometry below is all 64-bit accumulation. It uses the
+// shared overflow-checked add rather than a private copy, which is the same
+// primitive the Payload Placement module applies to the payload cursor.
+using detail::add_fits_u64;
+
 struct tes4_table_lengths {
     std::uint32_t total_folder_name_length{0};
     std::uint32_t total_file_name_length{0};
     std::uint32_t file_count{0};
 };
-
-struct tes4_dedupe_identity {
-    std::uint32_t stored_size{0};
-    std::uint64_t fingerprint{0};
-
-    bool operator<(const tes4_dedupe_identity& other) const noexcept {
-        if (stored_size != other.stored_size) {
-            return stored_size < other.stored_size;
-        }
-        return fingerprint < other.fingerprint;
-    }
-};
-
-bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept {
-    if (lhs > std::numeric_limits<std::uint64_t>::max() - rhs) {
-        return false;
-    }
-    total = lhs + rhs;
-    return true;
-}
 
 result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view description) {
     if (value > std::numeric_limits<std::uint32_t>::max()) {
@@ -212,14 +198,31 @@ result<tes4_placement_plan> tes4_plan_placements(std::vector<tes4_prepared_folde
         plan.folders.push_back(std::move(placed_folder));
     }
 
-    std::uint64_t payload_cursor = 0;
-    if (!add_fits_u64(tes4_bsa_header_size, folder_records_size, payload_cursor) ||
-        !add_fits_u64(payload_cursor, folder_blocks_size, payload_cursor) ||
-        !add_fits_u64(payload_cursor, plan.total_file_name_length, payload_cursor)) {
+    // The payload area starts past the header, the folder record table, every
+    // folder block, and the file-name table. The file-name table is included
+    // even though it is serialized after the folder blocks, which is the same
+    // BSArchPro-compatible accounting the folder block offsets above use.
+    std::uint64_t payload_base_offset = 0;
+    if (!add_fits_u64(tes4_bsa_header_size, folder_records_size, payload_base_offset) ||
+        !add_fits_u64(payload_base_offset, folder_blocks_size, payload_base_offset) ||
+        !add_fits_u64(payload_base_offset, plan.total_file_name_length, payload_base_offset)) {
         return error{error_code::format_error, "TES4 BSA metadata size overflows"};
     }
 
-    std::map<tes4_dedupe_identity, std::vector<std::size_t>> candidate_buckets;
+    // Deduplication stays opt-in, so the writer option selects the policy rather
+    // than this layout deciding it.
+    //
+    // No Sharing Eligibility predicate is supplied, and the omission is the
+    // documentation: TES4-family records carry no decode facts beyond their
+    // stored bytes, so differing compression already yields differing stored
+    // bytes and exact byte equality refuses the share unaided (ADR-0001). An
+    // always-true predicate here would claim a constraint exists.
+    detail::payload_placer placer{payload_base_offset,
+                                  options.deduplicate_payloads
+                                      ? detail::payload_sharing_policy::enabled
+                                      : detail::payload_sharing_policy::disabled,
+                                  "TES4 BSA"};
+
     for (std::size_t folder_index = 0U; folder_index < folders.size(); ++folder_index) {
         auto& prepared_entries = folders[folder_index].entries;
         auto& placed_entries = plan.folders[folder_index].entries;
@@ -230,44 +233,31 @@ result<tes4_placement_plan> tes4_plan_placements(std::vector<tes4_prepared_folde
                 return stored_size.error();
             }
 
-            std::size_t payload_index = plan.payloads.size();
-            std::optional<tes4_dedupe_identity> identity;
-            if (options.deduplicate_payloads) {
-                identity.emplace(tes4_dedupe_identity{stored_size.value(), payload.fingerprint()});
-                const auto bucket = candidate_buckets.find(*identity);
-                if (bucket != candidate_buckets.end()) {
-                    // Fingerprints are only narrowing keys; prefix bytes and
-                    // snapshot bodies both participate in authoritative equality.
-                    for (const auto candidate_index : bucket->second) {
-                        auto equal = payload.exactly_equals(plan.payloads[candidate_index].payload);
-                        if (!equal) {
-                            return equal.error();
-                        }
-                        if (equal.value()) {
-                            payload_index = candidate_index;
-                            break;
-                        }
-                    }
-                }
+            const detail::payload_narrowing_key key{stored_size.value(), payload.fingerprint()};
+            auto placed = placer.place(
+                key, detail::payload_placement_subject::of_payload(std::move(payload)));
+            if (!placed) {
+                return placed.error();
             }
 
-            if (payload_index == plan.payloads.size()) {
-                auto offset = checked_u32(payload_cursor, "TES4 BSA payload offset");
-                if (!offset) {
-                    return offset.error();
-                }
-                plan.payloads.push_back(tes4_payload_placement{offset.value(), stored_size.value(),
-                                                               std::move(payload)});
-                if (identity.has_value()) {
-                    candidate_buckets[*identity].push_back(payload_index);
-                }
-                if (!add_fits_u64(payload_cursor, stored_size.value(), payload_cursor)) {
-                    return error{error_code::format_error, "TES4 BSA payload span overflows"};
-                }
-            }
-
-            placed_entries[entry_index].payload_index = payload_index;
+            placed_entries[entry_index].payload_index = placed.value().payload_index.value();
         }
+    }
+
+    auto accepted_payloads = std::move(placer).release();
+    plan.payloads.reserve(accepted_payloads.size());
+    for (auto& accepted : accepted_payloads) {
+        // TES4-family file records serialize a UInt32 offset, so the module's
+        // 64-bit cursor narrows here, at read-out. Every accepted payload passed
+        // `checked_stored_size` before it was placed, so its size is already
+        // known to fit the serialized size field.
+        auto offset = checked_u32(accepted.offset, "TES4 BSA payload offset");
+        if (!offset) {
+            return offset.error();
+        }
+        const auto stored_size = static_cast<std::uint32_t>(accepted.payload.size());
+        plan.payloads.push_back(
+            tes4_payload_placement{offset.value(), stored_size, std::move(accepted.payload)});
     }
 
     return plan;

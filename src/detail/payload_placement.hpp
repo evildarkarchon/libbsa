@@ -118,6 +118,21 @@ class payload_placement_subject final {
     std::variant<stored_payload, std::uint64_t> held_;
 };
 
+/// One accepted Stored Payload together with the location it was given.
+///
+/// This is what `payload_placer::release` hands back, rather than bare payloads.
+/// The placer is the only thing that knows a payload's offset — Stored Payload
+/// deliberately carries no archive location — so releasing the two together is
+/// what stops every archive family from rebuilding a vector of offsets running
+/// parallel to the payloads, which is the arrangement this module exists to
+/// avoid.
+struct placed_payload {
+    /// The archive-absolute payload-area offset, always 64-bit. Families that
+    /// serialize a narrower field narrow it here, at read-out.
+    std::uint64_t offset{};
+    stored_payload payload;
+};
+
 /// Where one Stored Payload ended up, and whether it reused a location.
 struct payload_placement {
     /// The archive-absolute payload-area offset, always 64-bit.
@@ -215,27 +230,20 @@ class payload_placer final {
     /// Returns how many distinct payload locations have been assigned.
     [[nodiscard]] std::size_t placed_payload_count() const noexcept;
 
-    /// Hands the accepted Stored Payloads to the caller in placement order.
+    /// Hands the accepted payloads and their offsets over in placement order.
+    ///
+    /// Vector positions are the `payload_index` values already handed out, so a
+    /// family can serialize by index without a second lookup table, and each
+    /// entry carries the offset the placer assigned so no family has to keep its
+    /// own record of where a payload went.
     ///
     /// Rvalue-qualified because releasing consumes the placer: the sharing
     /// index refers to payloads it no longer owns afterwards, so continuing to
     /// place against it would be meaningless. Callers write
     /// `std::move(placer).release()`, and a later `place` throws.
-    [[nodiscard]] std::vector<stored_payload> release() &&;
+    [[nodiscard]] std::vector<placed_payload> release() &&;
 
    private:
-    /// One accepted payload and the location the placer gave it.
-    ///
-    /// The offset lives here rather than in a vector parallel to the payloads
-    /// so that accepting a payload is a single append and the two can never
-    /// fall out of step. Stored Payload itself deliberately carries no archive
-    /// location, so the pairing has to happen somewhere, and this is the only
-    /// place that knows it.
-    struct accepted_payload {
-        std::uint64_t offset;
-        stored_payload payload;
-    };
-
     /// Appends `subject` at the cursor and advances it, or reports overflow.
     result<payload_placement> place_at_cursor(const payload_narrowing_key& key,
                                               payload_placement_subject subject);
@@ -244,10 +252,17 @@ class payload_placer final {
     payload_sharing_policy sharing_policy_;
     std::string diagnostic_label_;
 
-    /// Accepted payloads in placement order. Index positions are the
-    /// `payload_index` values handed back to callers and to eligibility
-    /// predicates, so entries are only ever appended.
-    std::vector<accepted_payload> payloads_;
+    /// Accepted payloads in placement order, each paired with the offset it was
+    /// given. Index positions are the `payload_index` values handed back to
+    /// callers and to eligibility predicates, so entries are only ever appended.
+    ///
+    /// The offset lives beside the payload rather than in a parallel vector so
+    /// that accepting a payload is a single append and the two can never fall
+    /// out of step. Stored Payload itself deliberately carries no archive
+    /// location, so the pairing has to happen somewhere, and this is the only
+    /// place that knows it. `release` hands the pairs on intact for the same
+    /// reason.
+    std::vector<placed_payload> payloads_;
 
     /// Candidate indices into `payloads_`, bucketed by narrowing key and held
     /// in acceptance order so the first accepted payload stays representative.

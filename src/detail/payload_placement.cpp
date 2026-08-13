@@ -94,12 +94,8 @@ std::uint64_t payload_placer::cursor() const noexcept { return cursor_; }
 
 std::size_t payload_placer::placed_payload_count() const noexcept { return payloads_.size(); }
 
-std::vector<stored_payload> payload_placer::release() && {
-    std::vector<stored_payload> released;
-    released.reserve(payloads_.size());
-    for (auto& accepted : payloads_) {
-        released.push_back(std::move(accepted.payload));
-    }
+std::vector<placed_payload> payload_placer::release() && {
+    auto released = std::move(payloads_);
     payloads_.clear();
     candidate_buckets_.clear();
     released_ = true;
@@ -125,11 +121,18 @@ result<payload_placement> payload_placer::place_at_cursor(const payload_narrowin
     payload_placement placement{offset, std::nullopt, false};
     if (subject.has_payload()) {
         const std::size_t payload_index = payloads_.size();
-        payloads_.push_back(accepted_payload{offset, subject.take_payload()});
+        payloads_.push_back(placed_payload{offset, subject.take_payload()});
         // Registering the candidate here, in the single place a payload is ever
         // accepted, is what makes the sharing index impossible to bypass. A
         // caller has no other route to add a payload the index would not see.
-        candidate_buckets_[key].push_back(payload_index);
+        //
+        // A disabled policy never consults the buckets, so it does not build
+        // them either. That keeps the default dedupe-off path free of a map
+        // insertion per archive entry without changing any answer the index
+        // could give, because the only reader is guarded by the same condition.
+        if (sharing_policy_ == payload_sharing_policy::enabled) {
+            candidate_buckets_[key].push_back(payload_index);
+        }
         placement.payload_index = payload_index;
     }
 

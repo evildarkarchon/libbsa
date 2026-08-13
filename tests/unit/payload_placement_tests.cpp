@@ -297,7 +297,7 @@ TEST_CASE("payload_placement never shares a size-only placement even with sharin
     CHECK(second.offset == first.offset + 16U);
 }
 
-TEST_CASE("payload_placement releases accepted payloads in placement order",
+TEST_CASE("payload_placement releases accepted payloads with their offsets in placement order",
           "[unit][payload_placement]") {
     payload_placer placer{test_base_offset, payload_sharing_policy::enabled, test_label};
 
@@ -313,8 +313,12 @@ TEST_CASE("payload_placement releases accepted payloads in placement order",
     REQUIRE(payloads.size() == 2U);
     // Released order matches the indices already handed out, which is what lets
     // a family serialize payloads by index without a second lookup table.
-    CHECK(materialize(payloads[0]) == "alpha");
-    CHECK(materialize(payloads[1]) == "bravo");
+    CHECK(materialize(payloads[0].payload) == "alpha");
+    CHECK(materialize(payloads[1].payload) == "bravo");
+    // Each payload arrives with the offset it was assigned, so no family has to
+    // keep a vector of offsets running parallel to the payloads.
+    CHECK(payloads[0].offset == first.offset);
+    CHECK(payloads[1].offset == second.offset);
 }
 
 TEST_CASE("payload_placement refuses to place after releasing its payloads",

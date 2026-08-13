@@ -1,5 +1,6 @@
 #include "fingerprint_collision_fixture.hpp"
 
+#include "formats/ba2/ba2_constants.hpp"
 #include "formats/ba2/ba2_dx10_layout.hpp"
 #include "formats/ba2/ba2_dx10_prepare.hpp"
 #include "formats/ba2/ba2_dx10_serialize.hpp"
@@ -9,6 +10,7 @@
 #include "formats/ba2/ba2_gnrl_serialize.hpp"
 #include "formats/bsa/tes3_bsa_layout.hpp"
 #include "formats/bsa/tes3_bsa_prepare.hpp"
+#include "formats/bsa/tes4_bsa_constants.hpp"
 #include "formats/bsa/tes4_bsa_layout.hpp"
 #include "formats/bsa/tes4_bsa_prepare.hpp"
 #include "formats/bsa/tes4_bsa_profile.hpp"
@@ -29,6 +31,7 @@
 #include <sstream>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -326,83 +329,89 @@ TEST_CASE("ba2 gnrl writer preparation stage prepares minimal memory entries",
     CHECK(prepared.value()[0].extension[0] == std::byte{0x62});
 }
 
-TEST_CASE("ba2 gnrl writer layout stage plans distinct and shared payload placements",
-          "[unit][writer-stage][ba2_gnrl_writer]") {
+TEST_CASE("ba2 gnrl writer layout wires the payload placer to this family",
+          "[unit][writer-stage][ba2_gnrl_writer][payload_placement]") {
+    // The sharing rule itself is covered once at the Payload Placement module's
+    // own interface. What has to be proven here is only that GNRL hands the
+    // module the right family-specific construction values, because a wrong base
+    // offset or a wrong policy is a mistake this family made.
+    //
+    // The module's diagnostic label is deliberately not asserted here: its only
+    // labelled diagnostic is a 64-bit payload span overflow, and GNRL rejects any
+    // stored size above UInt32 before a placement happens, so no reachable input
+    // to this function can produce it. That the label is echoed at all is proven
+    // at the module seam.
     const auto payload = bytes_from_text("shared");
     const auto profile = require_gnrl_profile();
 
-    std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> distinct;
-    distinct.push_back(ba2_gnrl_memory_stage_entry(payload));
-    distinct.push_back(ba2_gnrl_memory_stage_entry(payload));
-    auto distinct_plan =
-        libbsa::formats::ba2::ba2_gnrl_plan_placements(std::move(distinct), profile, false);
+    SECTION("the payload area starts past the header and record table") {
+        std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> entries;
+        entries.push_back(ba2_gnrl_memory_stage_entry(payload));
+        entries.push_back(ba2_gnrl_memory_stage_entry(bytes_from_text("second")));
 
-    REQUIRE(distinct_plan.has_value());
-    REQUIRE(distinct_plan.value().records.size() == 2U);
-    REQUIRE(distinct_plan.value().payloads.size() == 2U);
-    CHECK(distinct_plan.value().records[0].payload_index == 0U);
-    CHECK(distinct_plan.value().records[1].payload_index == 1U);
-    CHECK(distinct_plan.value().payloads[0].offset != distinct_plan.value().payloads[1].offset);
+        auto plan =
+            libbsa::formats::ba2::ba2_gnrl_plan_placements(std::move(entries), profile, false);
 
-    std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> deduped;
-    deduped.push_back(ba2_gnrl_memory_stage_entry(payload));
-    deduped.push_back(ba2_gnrl_memory_stage_entry(payload));
-    auto deduped_plan =
-        libbsa::formats::ba2::ba2_gnrl_plan_placements(std::move(deduped), profile, true);
+        REQUIRE(plan.has_value());
+        REQUIRE(plan.value().payloads.size() == 2U);
+        const auto expected_base_offset =
+            profile.header_size() + (2U * libbsa::formats::ba2::ba2_gnrl_record_size);
+        CHECK(plan.value().payloads[0].offset == expected_base_offset);
+        CHECK(plan.value().payloads[1].offset == expected_base_offset + payload.size());
+    }
 
-    REQUIRE(deduped_plan.has_value());
-    REQUIRE(deduped_plan.value().records.size() == 2U);
-    REQUIRE(deduped_plan.value().payloads.size() == 1U);
-    CHECK(deduped_plan.value().records[0].payload_index == 0U);
-    CHECK(deduped_plan.value().records[1].payload_index == 0U);
-    CHECK(deduped_plan.value().filename_table_offset < distinct_plan.value().filename_table_offset);
+    SECTION("the dedupe flag selects the placer's sharing policy") {
+        std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> distinct;
+        distinct.push_back(ba2_gnrl_memory_stage_entry(payload));
+        distinct.push_back(ba2_gnrl_memory_stage_entry(payload));
+        auto distinct_plan =
+            libbsa::formats::ba2::ba2_gnrl_plan_placements(std::move(distinct), profile, false);
+
+        REQUIRE(distinct_plan.has_value());
+        REQUIRE(distinct_plan.value().records.size() == 2U);
+        REQUIRE(distinct_plan.value().payloads.size() == 2U);
+        CHECK(distinct_plan.value().records[0].payload_index == 0U);
+        CHECK(distinct_plan.value().records[1].payload_index == 1U);
+        CHECK(distinct_plan.value().payloads[0].offset != distinct_plan.value().payloads[1].offset);
+
+        std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> deduped;
+        deduped.push_back(ba2_gnrl_memory_stage_entry(payload));
+        deduped.push_back(ba2_gnrl_memory_stage_entry(payload));
+        auto deduped_plan =
+            libbsa::formats::ba2::ba2_gnrl_plan_placements(std::move(deduped), profile, true);
+
+        REQUIRE(deduped_plan.has_value());
+        REQUIRE(deduped_plan.value().records.size() == 2U);
+        REQUIRE(deduped_plan.value().payloads.size() == 1U);
+        CHECK(deduped_plan.value().records[0].payload_index == 0U);
+        CHECK(deduped_plan.value().records[1].payload_index == 0U);
+        CHECK(deduped_plan.value().filename_table_offset <
+              distinct_plan.value().filename_table_offset);
+    }
 }
 
-TEST_CASE("ba2 gnrl writer layout preserves first occurrence and exact equality",
+TEST_CASE("ba2 gnrl writer layout preserves the first occurrence as the shared placement",
           "[unit][writer-stage][ba2_gnrl_writer][dedupe]") {
     const auto profile = require_gnrl_profile();
+    const auto shared = bytes_from_text("shared");
+    const auto unique = bytes_from_text("different");
+    std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> entries;
+    entries.push_back(ba2_gnrl_memory_stage_entry(shared));
+    entries.push_back(ba2_gnrl_memory_stage_entry(unique));
+    entries.push_back(ba2_gnrl_memory_stage_entry(shared));
 
-    SECTION("first prepared occurrence owns the shared placement") {
-        const auto shared = bytes_from_text("shared");
-        const auto unique = bytes_from_text("different");
-        std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> entries;
-        entries.push_back(ba2_gnrl_memory_stage_entry(shared));
-        entries.push_back(ba2_gnrl_memory_stage_entry(unique));
-        entries.push_back(ba2_gnrl_memory_stage_entry(shared));
+    auto plan = libbsa::formats::ba2::ba2_gnrl_plan_placements(std::move(entries), profile, true);
 
-        auto plan =
-            libbsa::formats::ba2::ba2_gnrl_plan_placements(std::move(entries), profile, true);
-
-        REQUIRE(plan.has_value());
-        REQUIRE(plan.value().records.size() == 3U);
-        REQUIRE(plan.value().payloads.size() == 2U);
-        CHECK(plan.value().records[0].payload_index == 0U);
-        CHECK(plan.value().records[1].payload_index == 1U);
-        CHECK(plan.value().records[2].payload_index == 0U);
-        CHECK(plan.value().payloads[1].offset == plan.value().payloads[0].offset + shared.size());
-        CHECK(plan.value().filename_table_offset ==
-              plan.value().payloads[1].offset + unique.size());
-    }
-
-    SECTION("matching size and fingerprint do not bypass exact equality") {
-        const auto collision = fnv1a_fingerprint_collision();
-        std::vector<libbsa::formats::ba2::ba2_gnrl_prepared_entry> entries;
-        entries.push_back(ba2_gnrl_memory_stage_entry(collision.distinct_a));
-        entries.push_back(ba2_gnrl_memory_stage_entry(collision.distinct_b));
-
-        auto plan =
-            libbsa::formats::ba2::ba2_gnrl_plan_placements(std::move(entries), profile, true);
-
-        REQUIRE(plan.has_value());
-        REQUIRE(plan.value().records.size() == 2U);
-        REQUIRE(plan.value().payloads.size() == 2U);
-        CHECK(plan.value().records[0].payload_index == 0U);
-        CHECK(plan.value().records[1].payload_index == 1U);
-        CHECK(plan.value().payloads[0].stored_size == plan.value().payloads[1].stored_size);
-        CHECK(plan.value().payloads[0].payload.fingerprint() ==
-              plan.value().payloads[1].payload.fingerprint());
-        CHECK(plan.value().payloads[0].offset != plan.value().payloads[1].offset);
-    }
+    REQUIRE(plan.has_value());
+    REQUIRE(plan.value().records.size() == 3U);
+    REQUIRE(plan.value().payloads.size() == 2U);
+    CHECK(plan.value().records[0].payload_index == 0U);
+    CHECK(plan.value().records[1].payload_index == 1U);
+    CHECK(plan.value().records[2].payload_index == 0U);
+    CHECK(plan.value().payloads[1].offset == plan.value().payloads[0].offset + shared.size());
+    // The filename table takes the payload cursor after the final placement, so
+    // a shared third record must not have moved it.
+    CHECK(plan.value().filename_table_offset == plan.value().payloads[1].offset + unique.size());
 }
 
 TEST_CASE("ba2 gnrl writer layout keeps zero-length records at the current payload cursor",
@@ -570,64 +579,106 @@ TEST_CASE("tes4 writer preparation stage prepares minimal memory folders",
     CHECK(file_flags != 0U);
 }
 
-TEST_CASE("tes4 writer placement plan toggles exact Stored Payload reuse",
-          "[unit][writer-stage][tes4_bsa_writer]") {
+TEST_CASE("tes4 writer placement wires the payload placer to this family",
+          "[unit][writer-stage][tes4_bsa_writer][payload_placement]") {
+    // The sharing rule itself is covered once at the Payload Placement module's
+    // own interface. What has to be proven here is only that TES4-family layout
+    // hands the module the right family-specific construction values, because a
+    // wrong base offset or a wrong policy is a mistake this family made.
+    //
+    // The module's diagnostic label is deliberately not asserted here: its only
+    // labelled diagnostic is a 64-bit payload span overflow, and TES4-family
+    // rejects any stored size above its size-flag limits before a placement
+    // happens, so no reachable input to this function can produce it. That the
+    // label is echoed at all is proven at the module seam.
     const auto payload = bytes_from_text("shared");
     const auto profile = require_tes4_profile();
     libbsa::tes4_bsa_writer_options options;
     options.compression_policy = libbsa::archive_compression_policy::all_raw;
 
-    auto distinct = tes4_stage_folders({{"A.nif", payload}, {"B.nif", payload}});
-    options.deduplicate_payloads = false;
-    auto distinct_plan =
-        libbsa::formats::bsa::tes4_plan_placements(std::move(distinct), profile, options, 0U);
+    SECTION("the payload area starts past the header, records, blocks and file names") {
+        auto folders = tes4_stage_folders({{"A.nif", payload}, {"B.nif", payload}});
+        options.deduplicate_payloads = false;
 
-    REQUIRE(distinct_plan.has_value());
-    REQUIRE(distinct_plan.value().payloads.size() == 2U);
-    REQUIRE(distinct_plan.value().folders.size() == 1U);
-    REQUIRE(distinct_plan.value().folders[0].entries.size() == 2U);
-    const auto distinct_first_index = distinct_plan.value().folders[0].entries[0].payload_index;
-    const auto distinct_second_index = distinct_plan.value().folders[0].entries[1].payload_index;
-    CHECK(distinct_first_index != distinct_second_index);
-    CHECK(distinct_plan.value().payloads[distinct_first_index].offset !=
-          distinct_plan.value().payloads[distinct_second_index].offset);
+        auto plan =
+            libbsa::formats::bsa::tes4_plan_placements(std::move(folders), profile, options, 0U);
 
-    auto deduped = tes4_stage_folders({{"A.nif", payload}, {"B.nif", payload}});
-    options.deduplicate_payloads = true;
-    auto deduped_plan =
-        libbsa::formats::bsa::tes4_plan_placements(std::move(deduped), profile, options, 0U);
+        REQUIRE(plan.has_value());
+        REQUIRE(plan.value().payloads.size() == 2U);
+        // One "Meshes" folder block: a bzstring folder name (length prefix plus
+        // name plus terminator) followed by one file record per entry.
+        const std::size_t folder_block_size =
+            std::string_view{"Meshes"}.size() + 2U +
+            (2U * libbsa::formats::bsa::tes4_bsa_file_record_size);
+        const auto expected_base_offset = static_cast<std::uint32_t>(
+            libbsa::formats::bsa::tes4_bsa_header_size + profile.folder_record_size() +
+            folder_block_size + plan.value().total_file_name_length);
+        CHECK(plan.value().payloads[0].offset == expected_base_offset);
+        CHECK(plan.value().payloads[1].offset == expected_base_offset + payload.size());
+    }
 
-    REQUIRE(deduped_plan.has_value());
-    REQUIRE(deduped_plan.value().payloads.size() == 1U);
-    REQUIRE(deduped_plan.value().folders.size() == 1U);
-    CHECK(deduped_plan.value().folders[0].entries[0].payload_index ==
-          deduped_plan.value().folders[0].entries[1].payload_index);
-    CHECK(deduped_plan.value().file_count == 2U);
+    SECTION("the dedupe option selects the placer's sharing policy") {
+        auto distinct = tes4_stage_folders({{"A.nif", payload}, {"B.nif", payload}});
+        options.deduplicate_payloads = false;
+        auto distinct_plan =
+            libbsa::formats::bsa::tes4_plan_placements(std::move(distinct), profile, options, 0U);
+
+        REQUIRE(distinct_plan.has_value());
+        REQUIRE(distinct_plan.value().payloads.size() == 2U);
+        REQUIRE(distinct_plan.value().folders.size() == 1U);
+        REQUIRE(distinct_plan.value().folders[0].entries.size() == 2U);
+        const auto distinct_first_index = distinct_plan.value().folders[0].entries[0].payload_index;
+        const auto distinct_second_index = distinct_plan.value().folders[0].entries[1].payload_index;
+        CHECK(distinct_first_index != distinct_second_index);
+        CHECK(distinct_plan.value().payloads[distinct_first_index].offset !=
+              distinct_plan.value().payloads[distinct_second_index].offset);
+
+        auto deduped = tes4_stage_folders({{"A.nif", payload}, {"B.nif", payload}});
+        options.deduplicate_payloads = true;
+        auto deduped_plan =
+            libbsa::formats::bsa::tes4_plan_placements(std::move(deduped), profile, options, 0U);
+
+        REQUIRE(deduped_plan.has_value());
+        REQUIRE(deduped_plan.value().payloads.size() == 1U);
+        REQUIRE(deduped_plan.value().folders.size() == 1U);
+        CHECK(deduped_plan.value().folders[0].entries[0].payload_index ==
+              deduped_plan.value().folders[0].entries[1].payload_index);
+        // Sharing must not change record geometry: both entries are still files.
+        CHECK(deduped_plan.value().file_count == 2U);
+    }
 }
 
-TEST_CASE("tes4 writer placement rejects fingerprint collisions without exact equality",
-          "[unit][writer-stage][tes4_bsa_writer][dedupe][collision]") {
-    const auto collision = fnv1a_fingerprint_collision();
+TEST_CASE("tes4 writer placement preserves the first occurrence as the shared placement",
+          "[unit][writer-stage][tes4_bsa_writer][dedupe]") {
+    const auto shared = bytes_from_text("shared");
+    const auto unique = bytes_from_text("different");
     const auto profile = require_tes4_profile();
     libbsa::tes4_bsa_writer_options options;
     options.compression_policy = libbsa::archive_compression_policy::all_raw;
     options.deduplicate_payloads = true;
+    // Preparation sorts entries into canonical record order, so the placement
+    // order here is A, B, C and the first of the two identical payloads must own
+    // the location the third entry reuses.
     auto folders =
-        tes4_stage_folders({{"A.nif", collision.distinct_a}, {"B.nif", collision.distinct_b}});
+        tes4_stage_folders({{"A.nif", shared}, {"B.nif", unique}, {"C.nif", shared}});
 
     auto plan =
         libbsa::formats::bsa::tes4_plan_placements(std::move(folders), profile, options, 0U);
 
     REQUIRE(plan.has_value());
     REQUIRE(plan.value().folders.size() == 1U);
-    REQUIRE(plan.value().folders[0].entries.size() == 2U);
+    REQUIRE(plan.value().folders[0].entries.size() == 3U);
     REQUIRE(plan.value().payloads.size() == 2U);
-    const auto first_index = plan.value().folders[0].entries[0].payload_index;
-    const auto second_index = plan.value().folders[0].entries[1].payload_index;
-    CHECK(first_index != second_index);
-    CHECK(plan.value().payloads[first_index].payload.fingerprint() ==
-          plan.value().payloads[second_index].payload.fingerprint());
-    CHECK(plan.value().payloads[first_index].offset != plan.value().payloads[second_index].offset);
+    const auto& entries = plan.value().folders[0].entries;
+    CHECK(entries[0].payload_index == 0U);
+    CHECK(entries[1].payload_index == 1U);
+    CHECK(entries[2].payload_index == 0U);
+    // Physical geometry: the second placement trails the first, and the shared
+    // third entry adds no payload-area bytes at all.
+    CHECK(plan.value().payloads[1].offset ==
+          plan.value().payloads[0].offset + static_cast<std::uint32_t>(shared.size()));
+    CHECK(plan.value().payloads[0].stored_size == shared.size());
+    CHECK(plan.value().payloads[1].stored_size == unique.size());
 }
 
 TEST_CASE("tes4 writer placement plan uses resolved profile folder record sizing",

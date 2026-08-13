@@ -105,6 +105,8 @@ precondition. The original claim does hold for TES4-family BSA and BA2 GNRL, whe
 compression yields differing stored bytes and `exactly_equals` refuses the share unaided.
 
 `CONTEXT.md` now names the missing concept as Sharing Eligibility, kept distinct from the narrowing
-key. The Payload Placement module (`src/detail/payload_placement.hpp`) exists and carries the
-eligibility predicate that DX10's decode facts belong in, but no family has been migrated onto it
-yet. Until DX10's key gives those facts up, read fact 1 as scoped to TES4-family BSA and BA2 GNRL.
+key. The Payload Placement module (`src/detail/payload_placement.hpp`) carries the eligibility
+predicate that DX10's decode facts belong in. TES4-family BSA and BA2 GNRL now place through that
+module and deliberately supply no predicate, because they have no eligibility constraint to state;
+BA2 DX10 has not migrated. Until DX10's key gives those facts up, read fact 1 as scoped to
+TES4-family BSA and BA2 GNRL.
