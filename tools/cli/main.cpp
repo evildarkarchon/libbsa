@@ -19,6 +19,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <span>
 #include <sstream>
 #include <string>
@@ -667,21 +668,28 @@ libbsa::result<void> reject_reparse_point(const std::filesystem::path& path,
     return {};
 }
 
-libbsa::result<void> reject_reparse_ancestors(const std::filesystem::path& root,
-                                              const std::filesystem::path& destination) {
-    std::vector<std::filesystem::path> ancestors;
-    for (auto current = destination.parent_path(); !current.empty();
-         current = current.parent_path()) {
+/// Rejects reparse points on `directory` and on every ancestor up to `root`.
+///
+/// Checks run outermost-first so the redirection closest to the output root is the
+/// one reported, which is the order the per-entry ancestor walk used before the
+/// unpack pre-pass hoisted this work out of the sink factory. Ancestors outside
+/// `root` are left alone: the output root itself is validated by
+/// `prepare_output_root`, and whatever sits above it is not this command's to
+/// judge.
+libbsa::result<void> reject_reparse_chain(const std::filesystem::path& root,
+                                          const std::filesystem::path& directory) {
+    std::vector<std::filesystem::path> chain;
+    for (auto current = directory; !current.empty(); current = current.parent_path()) {
         if (!is_within_root(root, current)) {
             break;
         }
-        ancestors.push_back(current);
+        chain.push_back(current);
         if (current.lexically_normal() == root.lexically_normal()) {
             break;
         }
     }
 
-    for (auto it = ancestors.rbegin(); it != ancestors.rend(); ++it) {
+    for (auto it = chain.rbegin(); it != chain.rend(); ++it) {
         auto checked = reject_reparse_point(*it, "destination parent");
         if (!checked) {
             return checked.error();
@@ -1066,6 +1074,37 @@ libbsa::result<void> clear_delete_on_close(HANDLE handle) {
     }
     return {};
 }
+
+/// Resolves the output root's canonical final path once for a whole unpack run.
+///
+/// Every staged temporary destination is validated against this string, so
+/// resolving it up front removes a CreateFileW and a GetFinalPathNameByHandleW
+/// from every extracted entry. Caching the root's *real* path does not weaken the
+/// check: if the output root is swapped for a junction mid-run, the temp file's own
+/// final path stops matching the cached root and staging is rejected, which is the
+/// same outcome the per-entry root check produced.
+libbsa::result<std::wstring> resolve_output_root_final_path(
+    const std::filesystem::path& output_root) {
+    unique_windows_handle root_handle{::CreateFileW(
+        output_root.c_str(), FILE_READ_ATTRIBUTES,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nullptr)};
+    if (!root_handle) {
+        return windows_io_error("cannot open output directory for final-path validation",
+                                ::GetLastError());
+    }
+
+    auto root_reparse = handle_is_reparse_point(root_handle.value, "output directory");
+    if (!root_reparse) {
+        return root_reparse.error();
+    }
+    if (root_reparse.value()) {
+        return make_error(libbsa::error_code::io_error,
+                          "refusing reparse-point output directory: " + output_root.string());
+    }
+
+    return final_path_for_handle(root_handle.value, "output directory");
+}
 #endif
 
 std::filesystem::path make_staged_temp_path(const std::filesystem::path& final_path) {
@@ -1107,34 +1146,14 @@ struct staged_extraction {
 /// extraction failures, and early returns clean up automatically. The open handle
 /// is kept in staged_extraction because publish happens after the sink has been
 /// destroyed by archive_reader::extract_entries.
+///
+/// `output_root_final_path` is the canonical output-root path resolved once by
+/// `resolve_output_root_final_path`; validating the opened handle's final path
+/// against it is what stops a raced parent junction from redirecting extraction
+/// outside the output root.
 libbsa::result<std::shared_ptr<staged_extraction>> open_staged_destination(
     const std::filesystem::path& temp_path, const std::filesystem::path& final_path,
-    const std::filesystem::path& output_root, bool overwrite) {
-    // Validate the opened handle's final path before writing so a raced parent
-    // junction cannot redirect extraction outside output_root.
-    unique_windows_handle root_handle{::CreateFileW(
-        output_root.c_str(), FILE_READ_ATTRIBUTES,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nullptr)};
-    if (!root_handle) {
-        return windows_io_error("cannot open output directory for final-path validation",
-                                ::GetLastError());
-    }
-
-    auto root_reparse = handle_is_reparse_point(root_handle.value, "output directory");
-    if (!root_reparse) {
-        return root_reparse.error();
-    }
-    if (root_reparse.value()) {
-        return make_error(libbsa::error_code::io_error,
-                          "refusing reparse-point output directory: " + output_root.string());
-    }
-
-    auto root_final_path = final_path_for_handle(root_handle.value, "output directory");
-    if (!root_final_path) {
-        return root_final_path.error();
-    }
-
+    const std::wstring& output_root_final_path, bool overwrite) {
     unique_windows_handle temp_handle{::CreateFileW(
         temp_path.c_str(), GENERIC_WRITE | FILE_READ_ATTRIBUTES | DELETE,
         FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr, CREATE_NEW,
@@ -1159,7 +1178,7 @@ libbsa::result<std::shared_ptr<staged_extraction>> open_staged_destination(
     if (!temp_final_path) {
         return temp_final_path.error();
     }
-    if (!final_path_is_within_root(root_final_path.value(), temp_final_path.value())) {
+    if (!final_path_is_within_root(output_root_final_path, temp_final_path.value())) {
         return make_error(libbsa::error_code::invalid_argument,
                           "refusing temporary destination handle outside output directory: " +
                               temp_path.string());
@@ -1255,6 +1274,14 @@ class file_payload_sink final : public libbsa::payload_sink {
 };
 
 #else
+/// POSIX fallback: there is no handle-based final-path validation to prepare.
+///
+/// Returns an empty string so the staging signature stays identical on both
+/// platforms; the fallback `open_staged_destination` ignores it.
+libbsa::result<std::wstring> resolve_output_root_final_path(const std::filesystem::path&) {
+    return std::wstring{};
+}
+
 /// Creates POSIX fallback staging metadata.
 ///
 /// The Windows CLI path is the supported safety boundary, but keeping the
@@ -1262,7 +1289,7 @@ class file_payload_sink final : public libbsa::payload_sink {
 /// Win32 APIs.
 libbsa::result<std::shared_ptr<staged_extraction>> open_staged_destination(
     const std::filesystem::path& temp_path, const std::filesystem::path& final_path,
-    const std::filesystem::path&, bool overwrite) {
+    const std::wstring&, bool overwrite) {
     auto staged = std::make_shared<staged_extraction>();
     staged->temp_path = temp_path;
     staged->final_path = final_path;
@@ -1390,12 +1417,138 @@ libbsa::result<std::filesystem::path> safe_destination_path(
     return destination;
 }
 
-/// Bulk extraction factory that validates destinations before creating file
-/// sinks.
+/// Destination decided for every unique unpack request, keyed by the exact request
+/// string.
+///
+/// A request whose destination path or destination directory was rejected holds the
+/// diagnostic instead of a path; the sink factory replays it, so a rejected entry
+/// still fails on its own instead of aborting the siblings that extract cleanly.
+///
+/// `archive_reader::extract_entries` coalesces duplicate exact request strings and
+/// passes that same string to `bulk_extract_sink_factory::create`, so keying the
+/// plan the same way makes the factory's lookup exact.
+using extraction_plan =
+    std::map<std::string, libbsa::result<std::filesystem::path>, std::less<>>;
+
+/// Verifies containment for one destination directory and creates it.
+///
+/// Reparse-point rejection runs both before and after creation because
+/// `create_directories` materialises components between the two observations; this
+/// is the same before/after pairing the per-entry path used, moved to run once per
+/// distinct directory.
+///
+/// Because this now runs once up front rather than again for every entry, a
+/// junction swapped into an ancestor *after* the pre-pass is no longer caught here.
+/// It is still caught, and still cannot write outside the output root, because
+/// `open_staged_destination` compares the opened handle's final path against the
+/// output root; only the diagnostic differs.
+libbsa::result<void> prepare_destination_directory(const std::filesystem::path& output_root,
+                                                   const std::filesystem::path& directory) {
+    auto before_creation = reject_reparse_chain(output_root, directory);
+    if (!before_creation) {
+        return before_creation.error();
+    }
+
+    std::error_code fs_error;
+    std::filesystem::create_directories(directory, fs_error);
+    if (fs_error) {
+        return make_error(libbsa::error_code::io_error, "cannot create destination directory '" +
+                                                            directory.string() +
+                                                            "': " + fs_error.message());
+    }
+
+    return reject_reparse_chain(output_root, directory);
+}
+
+/// Resolves every unpack destination and creates each distinct directory once,
+/// before any extraction worker starts.
+///
+/// Real archives hold between tens and thousands of entries per directory, so
+/// doing containment verification and directory creation per entry repeats almost
+/// all of it. This pre-pass converts that work from proportional to entry count
+/// into proportional to directory count (issue #53).
+///
+/// Destination paths come from each archive entry's own spelling rather than from
+/// the requested path string — `--path meshes/tiny/probe.nif` still writes
+/// `Meshes/Tiny/Probe.nif` — so each request has to be resolved to its entry before
+/// its directory is known. Deriving the directory set from the request list rather
+/// than from the whole catalog is what keeps a subset extraction from creating
+/// directories for entries the caller did not ask for.
+///
+/// Requests whose lookup fails are deliberately left out of the plan:
+/// `extract_entries` repeats the same lookup and records the identical per-entry
+/// failure, so the pre-pass must not promote a missing entry into a whole-run
+/// failure. A directory that cannot be prepared fails only the requests that
+/// resolved into it, which is likewise how the per-entry path behaved.
+///
+/// The plan is complete before the first worker starts and is only read after that
+/// point, so it needs no lock and adds no per-thread state.
+extraction_plan plan_extraction(const libbsa::archive_reader& reader,
+                                const std::filesystem::path& output_root,
+                                std::span<const libbsa::bulk_extract_request> requests) {
+    extraction_plan plan;
+    std::set<std::filesystem::path> directories;
+
+    for (const auto& request : requests) {
+        if (plan.contains(request.path)) {
+            continue;
+        }
+
+        auto found = reader.find(request.path);
+        if (!found || !found.value()) {
+            continue;
+        }
+        const auto& entry = *found.value();
+
+        auto destination = safe_destination_path(output_root, entry.original_path);
+        if (!destination) {
+            plan.emplace(request.path, destination.error());
+            continue;
+        }
+
+        auto parent = destination.value().parent_path();
+        plan.emplace(request.path, std::move(destination).value());
+        if (!parent.empty()) {
+            directories.insert(std::move(parent));
+        }
+    }
+
+    // std::set orders a parent before the directories nested inside it, so an
+    // ancestor is created and checked before its children are visited.
+    std::map<std::filesystem::path, libbsa::error> failed_directories;
+    for (const auto& directory : directories) {
+        auto prepared = prepare_destination_directory(output_root, directory);
+        if (!prepared) {
+            failed_directories.emplace(directory, prepared.error());
+        }
+    }
+
+    for (auto& [request_path, planned] : plan) {
+        if (!planned) {
+            continue;
+        }
+        const auto failed = failed_directories.find(planned.value().parent_path());
+        if (failed != failed_directories.end()) {
+            planned = failed->second;
+        }
+    }
+
+    return plan;
+}
+
+/// Bulk extraction factory that stages entries into destinations decided by the
+/// serial pre-pass.
+///
+/// The factory performs no destination-directory containment or creation work: by
+/// the time `create` runs, `plan_extraction` has already verified containment and
+/// created every directory. `plan_` is immutable for the whole extraction, so
+/// worker threads read it without synchronization.
 class file_sink_factory final : public libbsa::bulk_extract_sink_factory {
    public:
-    file_sink_factory(std::filesystem::path output_root, bool overwrite)
-        : output_root_(std::move(output_root)), overwrite_(overwrite) {}
+    file_sink_factory(extraction_plan plan, std::wstring output_root_final_path, bool overwrite)
+        : plan_(std::move(plan)),
+          output_root_final_path_(std::move(output_root_final_path)),
+          overwrite_(overwrite) {}
 
     ~file_sink_factory() override {
         std::vector<std::shared_ptr<staged_extraction>> staged;
@@ -1410,67 +1563,52 @@ class file_sink_factory final : public libbsa::bulk_extract_sink_factory {
 
     libbsa::result<std::unique_ptr<libbsa::payload_sink>> create(
         std::string_view path, const libbsa::entry_metadata& entry) override {
-        auto destination = safe_destination_path(output_root_, entry.original_path);
-        if (!destination) {
-            return destination.error();
-        }
+        // The destination was derived from this entry's archive spelling during the
+        // pre-pass, so the entry metadata is not consulted again here.
+        (void)entry;
 
-        auto destination_reparse = reject_reparse_point(destination.value(), "destination");
+        const auto planned = plan_.find(path);
+        if (planned == plan_.end()) {
+            return make_error(libbsa::error_code::io_error,
+                              "no planned extraction destination for archive path: " +
+                                  std::string{path});
+        }
+        if (!planned->second) {
+            return planned->second.error();
+        }
+        const auto& destination = planned->second.value();
+
+        auto destination_reparse = reject_reparse_point(destination, "destination");
         if (!destination_reparse) {
             return destination_reparse.error();
         }
 
-        auto ancestors_reparse = reject_reparse_ancestors(output_root_, destination.value());
-        if (!ancestors_reparse) {
-            return ancestors_reparse.error();
-        }
-
         std::error_code fs_error;
-        const bool exists = std::filesystem::exists(destination.value(), fs_error);
+        const bool exists = std::filesystem::exists(destination, fs_error);
         if (fs_error) {
             return make_error(libbsa::error_code::io_error, "cannot inspect destination '" +
-                                                                destination.value().string() +
+                                                                destination.string() +
                                                                 "': " + fs_error.message());
         }
         if (exists && !overwrite_) {
             return make_error(libbsa::error_code::io_error,
                               "destination exists and --overwrite was not specified: " +
-                                  destination.value().string());
+                                  destination.string());
         }
-        if (exists && std::filesystem::is_directory(destination.value(), fs_error)) {
+        if (exists && std::filesystem::is_directory(destination, fs_error)) {
             return make_error(libbsa::error_code::io_error,
-                              "destination is a directory: " + destination.value().string());
+                              "destination is a directory: " + destination.string());
         }
         if (fs_error) {
             return make_error(libbsa::error_code::io_error, "cannot inspect destination type '" +
-                                                                destination.value().string() +
+                                                                destination.string() +
                                                                 "': " + fs_error.message());
-        }
-
-        const auto parent = destination.value().parent_path();
-        if (!parent.empty()) {
-            std::filesystem::create_directories(parent, fs_error);
-            if (fs_error) {
-                return make_error(libbsa::error_code::io_error,
-                                  "cannot create destination directory '" + parent.string() +
-                                      "': " + fs_error.message());
-            }
-        }
-
-        ancestors_reparse = reject_reparse_ancestors(output_root_, destination.value());
-        if (!ancestors_reparse) {
-            return ancestors_reparse.error();
-        }
-
-        destination_reparse = reject_reparse_point(destination.value(), "destination");
-        if (!destination_reparse) {
-            return destination_reparse.error();
         }
 
         libbsa::result<std::shared_ptr<staged_extraction>> staged{make_error(
             libbsa::error_code::io_error, "cannot prepare staged extraction destination")};
         for (int attempt = 0; attempt != 16; ++attempt) {
-            const auto temp_path = make_staged_temp_path(destination.value());
+            const auto temp_path = make_staged_temp_path(destination);
             if (std::filesystem::exists(temp_path, fs_error)) {
                 if (fs_error) {
                     return make_error(libbsa::error_code::io_error,
@@ -1485,8 +1623,8 @@ class file_sink_factory final : public libbsa::bulk_extract_sink_factory {
                                       "': " + fs_error.message());
             }
 
-            staged =
-                open_staged_destination(temp_path, destination.value(), output_root_, overwrite_);
+            staged = open_staged_destination(temp_path, destination, output_root_final_path_,
+                                             overwrite_);
             if (staged) {
                 break;
             }
@@ -1552,8 +1690,11 @@ class file_sink_factory final : public libbsa::bulk_extract_sink_factory {
         return staged;
     }
 
-    std::filesystem::path output_root_;
-    bool overwrite_;
+    /// Immutable for the lifetime of the extraction, so worker threads read it
+    /// without taking mutex_.
+    const extraction_plan plan_;
+    const std::wstring output_root_final_path_;
+    const bool overwrite_;
     mutable std::mutex mutex_;
     std::vector<std::shared_ptr<staged_extraction>> staged_;
     std::map<std::string, std::shared_ptr<staged_extraction>, std::less<>> by_path_;
@@ -1647,7 +1788,21 @@ int run_unpack(const argparse::ArgumentParser& parser) {
         }
     }
 
-    file_sink_factory sink_factory{output_root.value(), parser.get<bool>("--overwrite")};
+    // Resolve the output root's canonical path once; every staged destination is
+    // validated against it instead of reopening the root per entry.
+    auto output_root_final_path = resolve_output_root_final_path(output_root.value());
+    if (!output_root_final_path) {
+        render_error(output_root_final_path.error());
+        return static_cast<int>(process_exit::operational_failure);
+    }
+
+    // Serial pre-pass: containment is verified and every distinct destination
+    // directory is created here, before any worker thread starts, so an entry path
+    // that cannot be written safely is rejected before any file is created.
+    auto plan = plan_extraction(opened.value(), output_root.value(), requests);
+
+    file_sink_factory sink_factory{std::move(plan), std::move(output_root_final_path).value(),
+                                   parser.get<bool>("--overwrite")};
     auto extracted = opened.value().extract_entries(requests, sink_factory,
                                                     libbsa::bulk_extract_options{worker_count});
     if (!extracted) {

@@ -182,7 +182,8 @@ why `list` now stands out: it is not slow, it simply has the most of its own wor
 `unpack` is measured with `--path` naming a single entry so that the run is open cost plus one
 extraction. A full extraction of this archive is dominated by per-entry filesystem work rather than by
 opening, so it measures something else; that is the subject of issue #53 and is not evidence about open
-cost.
+cost. Those extraction measurements live in
+[Unpack Cost Measurement](unpack-cost-measurement.md).
 
 ## Result: open cost does not depend on worker count
 

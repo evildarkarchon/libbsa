@@ -133,6 +133,18 @@ function(require_not_exists path context)
   endif()
 endfunction()
 
+function(require_no_children directory context)
+  if(NOT IS_DIRECTORY "${directory}")
+    message(FATAL_ERROR "Expected ${context} directory to exist: ${directory}")
+  endif()
+
+  file(GLOB children RELATIVE "${directory}" "${directory}/*")
+  if(children)
+    string(REPLACE ";" ", " rendered_children "${children}")
+    message(FATAL_ERROR "Expected ${context} to be empty, found: ${rendered_children}")
+  endif()
+endfunction()
+
 function(try_create_junction link target result_var)
   if(NOT WIN32)
     set(${result_var} "UNSUPPORTED" PARENT_SCOPE)
@@ -257,6 +269,14 @@ endif()
 string(FIND "${cli_source}" "CreateFileW(" destination_create_file_at)
 if(destination_create_file_at EQUAL -1)
   message(FATAL_ERROR "CLI unpack destinations must use a Windows handle-based create/open path for atomic destination safety")
+endif()
+require_match_count("${cli_source}" "safe_destination_path\\(output_root" 1
+  "CLI unpack destination resolution confined to the serial pre-pass")
+require_contains("${cli_source}" "prepare_destination_directory(output_root, directory)"
+  "CLI unpack destination directory creation in the serial pre-pass")
+string(FIND "${cli_source}" "std::filesystem::create_directories(parent" per_entry_directory_create_at)
+if(NOT per_entry_directory_create_at EQUAL -1)
+  message(FATAL_ERROR "CLI unpack must not create destination directories once per extracted entry")
 endif()
 string(FIND "${cli_source}" "std::cout << entry.path" raw_list_path_at)
 if(NOT raw_list_path_at EQUAL -1)
@@ -474,6 +494,23 @@ require_child_name("${mixed_case_selective_output}" "Meshes")
 require_child_name("${mixed_case_selective_output}/Meshes" "Tiny")
 require_child_name("${mixed_case_selective_output}/Meshes/Tiny" "Probe.nif")
 
+# The unpack pre-pass derives its destination-directory set from the filtered
+# request list, so extracting a subset must create no directory for an entry that
+# was not requested -- including when the requested spelling differs from the
+# archive's own, which is the case the pre-pass has to resolve through the entry.
+set(subset_dirs_root "${work_root}/subset-directories")
+set(subset_dirs_input "${subset_dirs_root}/input")
+set(subset_dirs_archive "${subset_dirs_root}/packed.bsa")
+set(subset_dirs_output "${subset_dirs_root}/output")
+write_text("${subset_dirs_input}/Meshes/Tiny/Probe.nif" "requested mesh payload\n")
+write_text("${subset_dirs_input}/Textures/Other/Skin.dds" "unrequested texture payload\n")
+run_cli(0 stdout stderr pack --format bsa-tes3 "${subset_dirs_input}" "${subset_dirs_archive}")
+run_cli(0 stdout stderr unpack "${subset_dirs_archive}" "${subset_dirs_output}" --path meshes/tiny/probe.nif)
+require_contains("${stdout}" "extracted 1 of 1" "subset extraction count")
+require_file_text("${subset_dirs_output}/Meshes/Tiny/Probe.nif" "requested mesh payload\n")
+require_child_name("${subset_dirs_output}" "Meshes")
+require_not_exists("${subset_dirs_output}/Textures" "destination directory for an unrequested entry")
+
 set(selective_archive "${work_root}/roundtrip-bsa-tes3/packed.bsa")
 set(selective_output "${work_root}/selective-output")
 run_cli(0 stdout stderr unpack --help)
@@ -524,6 +561,14 @@ run_cli(1 stdout stderr unpack "${selective_archive}" "${traversal_output}" --pa
 if(EXISTS "${work_root}/escape.txt")
   message(FATAL_ERROR "Traversal extraction wrote outside the output root")
 endif()
+
+# The case above exercises the *request* path: `../escape.txt` names no entry, so it
+# fails lookup. An archive entry whose own path escapes the output root cannot be
+# reached from a parsed archive at all -- normalize_archive_path rejects any segment
+# that is "." or "..", a leading separator, and a drive-rooted path, so such an
+# archive fails to open. The reachable destination rejections are the Windows-unsafe
+# component names, and the pre-pass behaviour for those is covered against the
+# tes3_windows_unsafe_names fixture below.
 
 if(WIN32)
   set(pack_reparse_root "${work_root}/pack-reparse")
@@ -606,6 +651,16 @@ if(WIN32 AND EXISTS "${tes3_windows_unsafe_names_fixture}")
   require_contains("${stderr}" "trailing dot or space" "Windows trailing dot/space path diagnostic")
   require_contains("${stderr}" "colon" "Windows ADS-style stream path diagnostic")
   require_not_exists("${windows_unsafe_names_output}/textures/file.txt:stream" "ADS-style stream destination")
+
+  # Every entry in this fixture has a destination the CLI refuses, and the pre-pass
+  # refuses them before any worker starts. Nothing may be created under the output
+  # root -- not the payloads and not the directory two of the rejected entries would
+  # otherwise have lived in.
+  set(windows_unsafe_names_prepass_output "${work_root}/windows-unsafe-names-prepass")
+  run_cli(1 stdout stderr unpack "${tes3_windows_unsafe_names_fixture}" "${windows_unsafe_names_prepass_output}")
+  require_contains("${stdout}" "extracted 0 of 6" "rejected-destination extraction count")
+  require_not_exists("${windows_unsafe_names_prepass_output}/textures" "destination directory for a rejected entry")
+  require_no_children("${windows_unsafe_names_prepass_output}" "rejected-destination extraction output")
 endif()
 
 set(corrupt_compressed_fixture "${generated_archive_dir}/malformed_corrupt_compressed_payload.bsa")
