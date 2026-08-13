@@ -19,17 +19,24 @@ enum class ba2_record_identity_source {
     writer_entry,
 };
 
-/// BA2 archive path spelling after display-separator preservation and canonical
-/// lookup normalization.
+/// BA2 archive path spelling as the archive stores it, plus its canonical key.
+///
+/// `stored_path` is the BA2 filename-table spelling: case preserved, separators
+/// normalized to `/` because that is what Bethesda's own packer writes
+/// (`wbBSArchive.pas:1539-1540`, "archive2.exe uses /"). It is the value BA2
+/// writers serialize verbatim, so it must not be repointed at the display
+/// separator -- readers convert it for display separately, via
+/// `detail::normalize_display_separators`. BA2 hashes fold separators
+/// (`CreateHashFO4`), so the stored spelling carries no lookup constraint.
 struct ba2_record_path {
-    std::string display_path;
+    std::string stored_path;
     std::string canonical_path;
 };
 
 /// Subtype-specific lookup facts that bind a BA2 path to its stored record
 /// fields.
 struct ba2_record_identity {
-    std::string display_path;
+    std::string stored_path;
     std::string canonical_path;
     std::array<std::byte, 4> extension{};
     std::uint32_t name_hash{};

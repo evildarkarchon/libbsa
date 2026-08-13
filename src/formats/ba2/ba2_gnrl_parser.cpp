@@ -206,9 +206,16 @@ result<std::vector<entry_metadata>> materialize_entries(
                 }
             }
 
+            // BA2 stores `/` in its filename table; the display spelling libbsa
+            // reports is `\` on every format. Convert here rather than in
+            // `resolve_ba2_record_path`, which the BA2 writers share for the
+            // bytes they serialize.
+            auto display_path = std::move(identity.value().stored_path);
+            detail::normalize_display_separators(display_path);
+
             auto entry = entry_metadata{
                 std::move(identity.value().canonical_path),
-                std::move(identity.value().display_path), records[index].size, stored_size,
+                std::move(display_path), records[index].size, stored_size,
                 records[index].offset, records[index].name_hash,
                 compression_for(records[index], profile), records[index].unknown, false, 0U};
             // Assigned rather than appended positionally: the aggregate already

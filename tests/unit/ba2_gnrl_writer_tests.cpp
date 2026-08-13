@@ -29,6 +29,17 @@ namespace {
 
 constexpr auto non_ascii_path_token_wide = L"libbsa-Angstrom-日本語";
 
+/// Returns the display spelling `entry_metadata::original_path` reports for an
+/// archive path a caller supplied.
+///
+/// Display separators are `\` on every format because libbsa is Windows-only.
+/// That is independent of the stored spelling: BA2 serializes `/`, matching
+/// Bethesda's own packer (issue #54).
+std::string display_path_of(std::string value) {
+    std::replace(value.begin(), value.end(), '/', '\\');
+    return value;
+}
+
 class native_handle_guard final {
    public:
     explicit native_handle_guard(HANDLE handle) noexcept : handle_{handle} {}
@@ -287,7 +298,10 @@ void require_raw_round_trip(const std::filesystem::path& output,
         auto found = opened.value().find(expected_entry.path);
         REQUIRE(found.has_value());
         REQUIRE(found.value().has_value());
-        CHECK(found.value()->original_path == expected_entry.path);
+        // The archive stores the caller's spelling with `/` separators, matching
+        // archive2.exe, but the reader reports display paths with `\` on every
+        // format (issue #54). Lookup is unaffected either way.
+        CHECK(found.value()->original_path == display_path_of(expected_entry.path));
         CHECK(found.value()->raw_size == expected_entry.bytes.size());
         CHECK(found.value()->stored_size == expected_entry.bytes.size());
         CHECK(found.value()->compression == libbsa::entry_compression::none);
@@ -684,7 +698,9 @@ TEST_CASE("BA2 GNRL writer stores lowercase extension FourCCs on disk",
     auto found = opened.value().find("Meshes/Upper.NIF");
     REQUIRE(found.has_value());
     REQUIRE(found.value().has_value());
-    CHECK(found.value()->original_path == "Meshes/Upper.NIF");
+    // The stored spelling is still "Meshes/Upper.NIF" -- asserted against the
+    // name table above -- but display separators are `\` (issue #54).
+    CHECK(found.value()->original_path == "Meshes\\Upper.NIF");
 }
 
 TEST_CASE("BA2 GNRL writer places mixed zero-length records at the current payload cursor",

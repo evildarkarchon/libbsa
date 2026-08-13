@@ -171,7 +171,7 @@ result<ba2_record_identity> make_gnrl_identity(ba2_record_path path,
     const auto stem = dot == std::string_view::npos ? file_name : file_name.substr(0U, dot);
     const auto name_hash = detail::hash_fo4(stem);
     const auto directory_hash = detail::hash_fo4(directory);
-    return ba2_record_identity{std::move(path.display_path), std::move(path.canonical_path),
+    return ba2_record_identity{std::move(path.stored_path), std::move(path.canonical_path),
                                extension.value(), name_hash, directory_hash};
 }
 
@@ -193,7 +193,7 @@ result<ba2_record_identity> make_dx10_identity(ba2_record_path path,
 
     const auto name_hash = detail::hash_fo4(stem);
     const auto directory_hash = detail::hash_fo4(directory);
-    return ba2_record_identity{std::move(path.display_path), std::move(path.canonical_path),
+    return ba2_record_identity{std::move(path.stored_path), std::move(path.canonical_path),
                                extension.value(), name_hash, directory_hash};
 }
 
@@ -201,10 +201,10 @@ result<ba2_record_identity> make_dx10_identity(ba2_record_path path,
 
 result<ba2_record_path> resolve_ba2_record_path(ba2_subtype subtype, std::string_view archive_path,
                                                 ba2_record_identity_source source) {
-    std::string display_path{archive_path};
-    std::replace(display_path.begin(), display_path.end(), '\\', '/');
+    std::string stored_path{archive_path};
+    std::replace(stored_path.begin(), stored_path.end(), '\\', '/');
 
-    auto canonical = detail::normalize_archive_path(display_path);
+    auto canonical = detail::normalize_archive_path(stored_path);
     if (!canonical) {
         if (source == ba2_record_identity_source::filename_table) {
             return error{error_code::format_error, invalid_path_message(subtype)};
@@ -212,7 +212,7 @@ result<ba2_record_path> resolve_ba2_record_path(ba2_subtype subtype, std::string
         return canonical.error();
     }
 
-    return ba2_record_path{std::move(display_path), std::move(canonical.value().value)};
+    return ba2_record_path{std::move(stored_path), std::move(canonical.value().value)};
 }
 
 result<ba2_record_identity> make_ba2_record_identity(ba2_subtype subtype,

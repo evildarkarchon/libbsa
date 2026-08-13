@@ -77,8 +77,14 @@ std::vector<std::byte> bytes_from_text(std::string_view value) {
     return bytes;
 }
 
+/// Converts a manifest's stored path spelling into the display spelling
+/// `entry_metadata::original_path` reports.
+///
+/// Manifests record the archive's stored spelling, which differs by format: the
+/// BSA families store `\`, BA2 stores `/`. Display is `\` for all of them, since
+/// libbsa is Windows-only (issue #54).
 std::string archive_original_path_from_manifest(std::string value) {
-    std::replace(value.begin(), value.end(), '\\', '/');
+    std::replace(value.begin(), value.end(), '/', '\\');
     return value;
 }
 

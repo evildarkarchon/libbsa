@@ -509,8 +509,11 @@ TEST_CASE("tes3_bsa_writer output reopens through reader lookup and extraction A
     const auto disk_entry = require_finds_entry(opened.value(), "Meshes/Disk/Probe.NIF");
     const auto memory_entry = require_finds_entry(opened.value(), "textures/Memory/Probe.dds");
     const auto root_entry = require_finds_entry(opened.value(), "Readme.txt");
-    CHECK(disk_entry.original_path == "Meshes/Disk/Probe.NIF");
-    CHECK(memory_entry.original_path == "textures/Memory/Probe.dds");
+    // The lookups above use the caller's `/` spelling and still resolve, because
+    // canonical normalization folds separators. What comes back is the archive's
+    // stored spelling, which for TES3 is Bethesda's `\` (issues #54).
+    CHECK(disk_entry.original_path == "Meshes\\Disk\\Probe.NIF");
+    CHECK(memory_entry.original_path == "textures\\Memory\\Probe.dds");
     CHECK(root_entry.original_path == "Readme.txt");
 
     const auto file_count = read_u32_le_at(archive_bytes, 8U);

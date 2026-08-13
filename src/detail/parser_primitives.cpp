@@ -119,7 +119,7 @@ result<std::string> archive_string_from_bytes(std::span<const std::byte> bytes,
 }
 
 void normalize_display_separators(std::string& value) noexcept {
-    std::replace(value.begin(), value.end(), '\\', '/');
+    std::replace(value.begin(), value.end(), '/', '\\');
 }
 
 }  // namespace libbsa::detail

@@ -38,7 +38,7 @@ TEST_CASE("BA2 record identity derives GNRL lookup facts from writer paths",
         ba2_record_identity_source::writer_entry);
 
     REQUIRE(identity.has_value());
-    CHECK(identity.value().display_path == "Meshes/MixedCase/Probe.NIF");
+    CHECK(identity.value().stored_path == "Meshes/MixedCase/Probe.NIF");
     CHECK(identity.value().canonical_path == "meshes/mixedcase/probe.nif");
     // The reference lowercases before String2Magic on write
     // (wbBSArchive.pas:1543) and FindFileRecordFO4 compares the stored FourCC
@@ -74,7 +74,7 @@ TEST_CASE("BA2 record identity derives DX10 lookup facts from texture stems",
         ba2_record_identity_source::writer_entry);
 
     REQUIRE(identity.has_value());
-    CHECK(identity.value().display_path == "Textures/Set/Probe.DDS");
+    CHECK(identity.value().stored_path == "Textures/Set/Probe.DDS");
     CHECK(identity.value().canonical_path == "textures/set/probe.dds");
     CHECK(identity.value().extension == fourcc('d', 'd', 's'));
     CHECK(identity.value().name_hash == 0x117C9837U);

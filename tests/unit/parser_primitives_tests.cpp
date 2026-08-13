@@ -205,9 +205,12 @@ TEST_CASE("parser_primitives materialize archive strings through result errors",
 }
 
 TEST_CASE("parser_primitives normalize display separators only", "[unit][parser_primitives]") {
+    // Display is `\` on every format because libbsa is Windows-only; what a
+    // format stores is a separate question, and BA2 stores `/` (issue #54).
+    // Casing is untouched, which is the "only" in this case's name.
     std::string path = R"(Meshes\Actors/FaceGen\foo.nif)";
 
     libbsa::detail::normalize_display_separators(path);
 
-    REQUIRE(path == "Meshes/Actors/FaceGen/foo.nif");
+    REQUIRE(path == R"(Meshes\Actors\FaceGen\foo.nif)");
 }

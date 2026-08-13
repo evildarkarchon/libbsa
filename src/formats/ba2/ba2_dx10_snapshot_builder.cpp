@@ -183,7 +183,7 @@ result<ba2_dx10_writer_entry> ba2_dx10_build_writer_entry_snapshot(
     }
 
     ba2_dx10_writer_entry entry;
-    entry.archive_path_original = std::move(path.value().display_path);
+    entry.archive_path_original = std::move(path.value().stored_path);
     entry.archive_path_canonical = std::move(path.value().canonical_path);
     entry.metadata = source.value().metadata;
     entry.subresources.reserve(source.value().subresources.size());

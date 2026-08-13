@@ -66,7 +66,10 @@ The TES3 success manifest records the flat Morrowind BSA reader contract. Each
 entry records:
 
 - `path` — canonical lowercase `/` lookup path expected from libbsa.
-- `original_path` — archive-derived spelling; tests normalize display separators to `/`.
+- `original_path` — the archive's stored spelling. Tests convert it to the display
+  spelling `entry_metadata::original_path` reports, which uses `\` separators on every
+  format because libbsa is Windows-only. Stored spellings differ by format: the BSA
+  families store `\`, BA2 stores `/` because Bethesda's own packer does.
 - `lookup_variants` — case and separator variants that should resolve to the entry.
 - `raw_tes3_data_offset` — the TES3 file-record offset relative to the raw data section.
 - `payload_offset` — the public archive-absolute payload offset expected from `entry_metadata`.

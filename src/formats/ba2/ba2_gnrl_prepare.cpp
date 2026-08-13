@@ -149,7 +149,7 @@ result<ba2_gnrl_prepared_entry> prepare_entry(const ba2_profile& profile,
         return identity.error();
     }
 
-    return ba2_gnrl_prepared_entry{identity.value().display_path,
+    return ba2_gnrl_prepared_entry{identity.value().stored_path,
                                    identity.value().canonical_path,
                                    identity.value().extension,
                                    identity.value().name_hash,
@@ -171,7 +171,7 @@ result<ba2_gnrl_writer_entry> ba2_gnrl_make_writer_entry(std::string_view archiv
     }
 
     ba2_gnrl_writer_entry entry;
-    entry.archive_path_original = std::move(path.value().display_path);
+    entry.archive_path_original = std::move(path.value().stored_path);
     entry.archive_path_canonical = std::move(path.value().canonical_path);
     entry.options = options;
     return entry;

@@ -314,7 +314,12 @@ TEST_CASE("TES4 BSA writer raw output reopens for every target profile",
             auto found = opened.value().find(path);
             REQUIRE(found.has_value());
             REQUIRE(found.value().has_value());
-            CHECK(found.value()->original_path == path);
+            // TES4 stores the folder and file names separately and natively with
+            // `\`; display joins them the same way (issue #54). The lookup above
+            // still uses the caller's `/` spelling, which canonicalizes the same.
+            auto expected_display = path;
+            std::replace(expected_display.begin(), expected_display.end(), '/', '\\');
+            CHECK(found.value()->original_path == expected_display);
             CHECK(found.value()->compression == libbsa::entry_compression::none);
 
             auto upper_lookup = opened.value().find("MESHES/UPPER/MODEL.NIF");

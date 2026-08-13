@@ -79,8 +79,14 @@ std::uint64_t hex_u64_from_manifest(const nlohmann::json& value) {
     return std::stoull(value.get<std::string>(), nullptr, 16);
 }
 
+/// Converts a manifest's stored path spelling into the display spelling
+/// `entry_metadata::original_path` reports.
+///
+/// Manifests record the archive's stored spelling, which differs by format: the
+/// BSA families store `\`, BA2 stores `/`. Display is `\` for all of them, since
+/// libbsa is Windows-only (issue #54).
 std::string archive_original_path_from_manifest(std::string value) {
-    std::replace(value.begin(), value.end(), '\\', '/');
+    std::replace(value.begin(), value.end(), '/', '\\');
     return value;
 }
 

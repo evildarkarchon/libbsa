@@ -169,11 +169,21 @@ struct archive_metadata {
 
 /// Entry-level metadata exposed for lookup, listing, and extraction.
 ///
-/// `path` is the canonical normalized lookup key. `original_path` preserves the
-/// archive-derived display spelling joined with `/` separators, independent of
-/// host filesystem path rules. `payload_offset` is always an archive-absolute
-/// byte offset for every archive variant; format-specific relative offsets stay
-/// inside parser internals and fixture manifests.
+/// `path` is the canonical normalized lookup key: lowercased, with `/`
+/// separators. `original_path` preserves the archive-derived display spelling --
+/// the stored casing, with separators reported as `\`, the platform separator
+/// for this Windows-only library.
+///
+/// The display separator is deliberately uniform across formats and is not the
+/// stored spelling. The BSA families store `\`, while BA2 stores `/` because
+/// Bethesda's own packer does; `original_path` reports `\` for all of them.
+/// Neither spelling affects lookup, since canonical normalization folds `\` to
+/// `/`, so a caller may pass `original_path` straight back to `find` or
+/// `extract`.
+///
+/// `payload_offset` is always an archive-absolute byte offset for every archive
+/// variant; format-specific relative offsets stay inside parser internals and
+/// fixture manifests.
 struct entry_metadata {
     std::string path;
     std::string original_path;

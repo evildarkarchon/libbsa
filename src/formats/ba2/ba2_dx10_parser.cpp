@@ -244,9 +244,15 @@ result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10
                                      records[index].cube_maps_raw,
                                      std::move(chunks.value())};
 
+            // BA2 stores `/`; libbsa reports `\` for display on every format.
+            // See the matching note in the GNRL parser for why the conversion is
+            // here and not in the writer-shared identity helper.
+            auto display_path = std::move(identity.value().stored_path);
+            detail::normalize_display_separators(display_path);
+
             auto entry = entry_metadata{
                 std::move(identity.value().canonical_path),
-                std::move(identity.value().display_path), entry_raw_size, stored_payload_size,
+                std::move(display_path), entry_raw_size, stored_payload_size,
                 payload_offset, records[index].name_hash,
                 has_compressed_chunk ? profile.default_compression() : entry_compression::none,
                 records[index].unknown_tex, false, 0U, std::move(texture)};

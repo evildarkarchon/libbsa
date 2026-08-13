@@ -75,8 +75,14 @@ libbsa::entry_compression entry_compression_from_manifest(std::string_view value
     return libbsa::entry_compression::lz4_block;
 }
 
+/// Converts a manifest's stored path spelling into the display spelling
+/// `entry_metadata::original_path` reports.
+///
+/// Manifests record the archive's stored spelling, which differs by format: the
+/// BSA families store `\`, BA2 stores `/`. Display is `\` for all of them,
+/// since libbsa is Windows-only (issue #54).
 std::string archive_original_path_from_manifest(std::string value) {
-    std::replace(value.begin(), value.end(), '\\', '/');
+    std::replace(value.begin(), value.end(), '/', '\\');
     return value;
 }
 
@@ -433,7 +439,9 @@ TEST_CASE(
 
     const auto& entry = entries.value().front();
     REQUIRE(entry.path == archive_path);
-    REQUIRE(entry.original_path == archive_path);
+    // `archive_path` is the stored spelling; display separators are `\` on every
+    // format because libbsa is Windows-only (issue #54).
+    REQUIRE(entry.original_path == archive_original_path_from_manifest(archive_path));
     REQUIRE(entry.payload_offset == payload_offset);
     REQUIRE(entry.raw_size == 1U);
     REQUIRE(entry.stored_size == 1U);
@@ -498,7 +506,8 @@ TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename t
     REQUIRE(found.has_value());
     REQUIRE(found.value().has_value());
     CHECK(found.value()->path == "meshes/endtable/alpha.nif");
-    CHECK(found.value()->original_path == archive_path);
+    // `archive_path` is the stored spelling; display separators are `\`.
+    CHECK(found.value()->original_path == archive_original_path_from_manifest(archive_path));
     CHECK(found.value()->payload_offset == record_table_end);
     CHECK(found.value()->raw_size == payload.size());
     CHECK(found.value()->stored_size == payload.size());

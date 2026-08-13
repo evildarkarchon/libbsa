@@ -265,7 +265,9 @@ TEST_CASE("BA2 Archive Opening materializes non-empty DX10 metadata from its sta
         opened.value().entries.begin(), opened.value().entries.end(),
         [](const auto& entry) { return entry.path == "textures/generated/fo4raw.dds"; });
     REQUIRE(texture_entry != opened.value().entries.end());
-    CHECK(texture_entry->original_path == "Textures/Generated/Fo4Raw.dds");
+    // The BA2 name table stores "Textures/Generated/Fo4Raw.dds"; display
+    // separators are `\` on every format, since libbsa is Windows-only (#54).
+    CHECK(texture_entry->original_path == "Textures\\Generated\\Fo4Raw.dds");
     CHECK(texture_entry->compression == libbsa::entry_compression::none);
     REQUIRE(texture_entry->texture.has_value());
     CHECK(texture_entry->texture->width == 2U);

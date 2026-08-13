@@ -52,7 +52,11 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
             normalize_display_separators(folder_original);
             for (const auto& record : folder.files) {
                 const auto& file_name = table.file_names[name_index++];
-                auto original_path = folder_original + "/" + file_name;
+                // TES4 stores the folder path with `\` natively and the file name
+                // separately, so the display join uses the same separator the
+                // format already uses. The normalize call still runs, to cover a
+                // separator spelled the other way inside either half.
+                auto original_path = folder_original + "\\" + file_name;
                 normalize_display_separators(original_path);
                 auto canonical = detail::normalize_archive_path(original_path);
                 if (!canonical) {

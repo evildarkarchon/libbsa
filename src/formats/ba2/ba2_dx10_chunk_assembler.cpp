@@ -215,7 +215,7 @@ result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
     }
 
     ba2_dx10_prepared_entry prepared{
-        identity.value().display_path,
+        identity.value().stored_path,
         identity.value().canonical_path,
         identity.value().extension,
         identity.value().name_hash,
