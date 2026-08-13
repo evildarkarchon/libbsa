@@ -142,10 +142,29 @@ std::uint64_t read_u64_le(std::span<const std::byte> bytes, std::size_t& offset)
     return value;
 }
 
+std::array<std::byte, 4> read_ascii4(std::span<const std::byte> bytes, std::size_t& offset) {
+    REQUIRE(offset + 4U <= bytes.size());
+    std::array<std::byte, 4> value{};
+    for (std::size_t index = 0; index < value.size(); ++index) {
+        value[index] = bytes[offset + index];
+    }
+    offset += 4U;
+    return value;
+}
+
+constexpr std::array<std::byte, 4> fourcc(char first, char second, char third,
+                                          char fourth = '\0') noexcept {
+    return {std::byte{static_cast<unsigned char>(first)},
+            std::byte{static_cast<unsigned char>(second)},
+            std::byte{static_cast<unsigned char>(third)},
+            std::byte{static_cast<unsigned char>(fourth)}};
+}
+
 struct physical_record {
     std::uint64_t offset{};
     std::uint32_t packed_size{};
     std::uint32_t raw_size{};
+    std::array<std::byte, 4> extension{};
 };
 
 struct physical_layout {
@@ -178,14 +197,17 @@ physical_layout read_physical_layout(const std::filesystem::path& archive_path) 
     layout.records.reserve(file_count);
     for (std::uint32_t index = 0; index < file_count; ++index) {
         (void)read_u32_le(bytes, offset);
-        offset += 4U;
+        // The Ext FourCC is captured rather than skipped: it is the only stored
+        // field the game matches exactly (FindFileRecordFO4 compares TMagic4
+        // with `=`), so its on-disk casing needs an assertion of its own.
+        const auto extension = read_ascii4(bytes, offset);
         (void)read_u32_le(bytes, offset);
         (void)read_u32_le(bytes, offset);
         const auto payload_offset = read_u64_le(bytes, offset);
         const auto packed_size = read_u32_le(bytes, offset);
         const auto raw_size = read_u32_le(bytes, offset);
         REQUIRE(read_u32_le(bytes, offset) == 0xBAAD'F00DU);
-        layout.records.push_back(physical_record{payload_offset, packed_size, raw_size});
+        layout.records.push_back(physical_record{payload_offset, packed_size, raw_size, extension});
     }
 
     REQUIRE(layout.file_table_offset <= bytes.size());
@@ -619,6 +641,50 @@ TEST_CASE("BA2 GNRL writer raw Fallout 4 output reopens with end filename table"
                             {"Zero/Empty.txt", empty_bytes, 0U}},
                            1U, libbsa::archive_variant::fallout4, std::nullopt, std::nullopt,
                            std::nullopt);
+}
+
+TEST_CASE("BA2 GNRL writer stores lowercase extension FourCCs on disk",
+          "[unit][ba2_gnrl_writer][physical-layout][compat]") {
+    // wbBSArchive.pas:1543 writes `String2Magic(LowerCase(fext))` and
+    // FindFileRecordFO4 compares the stored TMagic4 exactly against
+    // `String2Magic(LowerCase(ext))`. An uppercase stored Ext therefore makes
+    // the record unreachable in game even though libbsa's own case-insensitive
+    // read path finds it (issue #44). Assert the bytes that actually land on
+    // disk, since the reader cannot observe this deviation.
+    const auto payload = bytes_from_text("extension casing payload");
+    libbsa::ba2_gnrl_writer writer{libbsa::ba2_gnrl_target::fallout4, overwriting_raw_options()};
+    REQUIRE(writer.add_bytes("Meshes/Upper.NIF", payload).has_value());
+    REQUIRE(writer.add_bytes("Meshes/Mixed.NiF", payload).has_value());
+    REQUIRE(writer.add_bytes("Meshes/Lower.nif", payload).has_value());
+    // Truncation and case folding compose: the reference lowercases the whole
+    // extension and String2Magic then keeps the first four characters, exactly
+    // as retail Fallout4 - Interface.ba2 stores '.STRINGS' as 'stri'.
+    REQUIRE(writer.add_bytes("Strings/Fallout4_en.STRINGS", payload).has_value());
+    // An extensionless entry still yields #0#0#0#0, unaffected by the rule.
+    REQUIRE(writer.add_bytes("Meshes/NoExtension", payload).has_value());
+
+    const auto output = output_path("extension-casing-layout.ba2");
+    REQUIRE(writer.write_to(output.string()).has_value());
+
+    const auto layout = read_physical_layout(output);
+    REQUIRE(layout.names == std::vector<std::string>{"Meshes/Lower.nif", "Meshes/Mixed.NiF",
+                                                     "Meshes/NoExtension", "Meshes/Upper.NIF",
+                                                     "Strings/Fallout4_en.STRINGS"});
+    REQUIRE(layout.records.size() == 5U);
+    CHECK(layout.records[0].extension == fourcc('n', 'i', 'f'));
+    CHECK(layout.records[1].extension == fourcc('n', 'i', 'f'));
+    CHECK(layout.records[2].extension == std::array<std::byte, 4>{});
+    CHECK(layout.records[3].extension == fourcc('n', 'i', 'f'));
+    CHECK(layout.records[4].extension == fourcc('s', 't', 'r', 'i'));
+
+    // The filename table keeps the caller's spelling; only the lookup field is
+    // folded, matching the reference's Name/Ext split.
+    auto opened = libbsa::archive_reader::open(output.string());
+    REQUIRE(opened.has_value());
+    auto found = opened.value().find("Meshes/Upper.NIF");
+    REQUIRE(found.has_value());
+    REQUIRE(found.value().has_value());
+    CHECK(found.value()->original_path == "Meshes/Upper.NIF");
 }
 
 TEST_CASE("BA2 GNRL writer places mixed zero-length records at the current payload cursor",

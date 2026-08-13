@@ -190,6 +190,13 @@ constexpr std::uint32_t dx10_magic = 0x3031'5844U;
 /// Reading this many leading bytes is enough to decode any supported header.
 constexpr std::size_t widest_ba2_fixed_header_size = 36U;
 
+// Restated rather than pulled from ba2_constants.hpp for the same reason as the
+// magics above: a corpus oracle must not agree with the code it checks by
+// construction. NameHash u32, Ext FourCC, DirHash u32, Unknown u32, Offset u64,
+// PackedSize u32, Size u32, BAADF00D u32.
+constexpr std::size_t retail_gnrl_record_size = 36U;
+constexpr std::size_t retail_gnrl_extension_offset = 4U;
+
 /// Reads BA2 magic, version, and subtype from `path`.
 ///
 /// Returns `std::nullopt` when the file is unreadable, shorter than the twelve
@@ -429,6 +436,90 @@ TEST_CASE("retail BA2 headers resolve at every shipped version",
     if (probed_archives == 0U) {
         SKIP("The local corpus holds no BA2 archives to probe.");
     }
+}
+
+TEST_CASE("every retail BA2 GNRL record stores a lowercase extension FourCC",
+          "[requires-game-fixture][unit][ba2][gnrl][compat]") {
+    // libbsa lowercases the Ext FourCC on write because the reference does
+    // (wbBSArchive.pas:1543) and FindFileRecordFO4 matches the stored TMagic4
+    // exactly against String2Magic(LowerCase(ext)) -- an uppercase byte makes
+    // the record unreachable in game (issue #44). libbsa's own read path
+    // compares case-insensitively, so no round-trip test can observe a
+    // regression here; only retail bytes can, which is why this claim lives
+    // against the corpus rather than in a comment.
+    auto fixture_root = local_fixture_root();
+    if (!fixture_root.has_value()) {
+        SKIP(
+            "Set LIBBSA_GAME_FIXTURES or place local game archives under "
+            "tests/fixtures/local; these files are not committed.");
+    }
+
+    std::size_t scanned_archives = 0U;
+    std::size_t scanned_records = 0U;
+    std::size_t uppercase_records = 0U;
+    std::error_code iteration_error;
+    std::filesystem::directory_iterator iterator{*fixture_root, iteration_error};
+    REQUIRE_FALSE(iteration_error);
+
+    for (const auto& directory_entry : iterator) {
+        if (!directory_entry.is_regular_file()) {
+            continue;
+        }
+        auto probe = probe_ba2_header(directory_entry.path());
+        if (!probe.has_value() || probe->subtype_magic != gnrl_magic) {
+            continue;
+        }
+
+        auto header_bytes =
+            read_leading_bytes(directory_entry.path(), widest_ba2_fixed_header_size);
+        REQUIRE(header_bytes.has_value());
+        std::error_code size_error;
+        const auto archive_size = std::filesystem::file_size(directory_entry.path(), size_error);
+        REQUIRE_FALSE(size_error);
+        auto header = libbsa::formats::ba2::decode_ba2_archive_header(*header_bytes, archive_size);
+        REQUIRE(header.has_value());
+        ++scanned_archives;
+
+        const auto name = directory_entry.path().filename().string();
+        const auto file_count = header.value().materialize_metadata().file_count;
+
+        std::ifstream stream{directory_entry.path(), std::ios::binary};
+        REQUIRE(stream.is_open());
+        stream.seekg(static_cast<std::streamoff>(header.value().profile().header_size()));
+        REQUIRE(stream.good());
+
+        // Records are walked one at a time rather than slurped: the largest
+        // retail GNRL tables run to hundreds of thousands of records, and the
+        // corpus is read-only reference data, not something to buffer whole.
+        std::array<char, retail_gnrl_record_size> record{};
+        for (std::uint32_t index = 0; index < file_count; ++index) {
+            stream.read(record.data(), static_cast<std::streamsize>(record.size()));
+            REQUIRE(stream.gcount() == static_cast<std::streamsize>(record.size()));
+            ++scanned_records;
+
+            for (std::size_t byte_index = 0; byte_index < 4U; ++byte_index) {
+                const auto value =
+                    static_cast<unsigned char>(record[retail_gnrl_extension_offset + byte_index]);
+                if (value >= 'A' && value <= 'Z') {
+                    // Reported by position, never by content: retail archive
+                    // bytes must not leak into test output.
+                    UNSCOPED_INFO("uppercase Ext byte in " << name << " record " << index
+                                                           << " byte " << byte_index);
+                    ++uppercase_records;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (scanned_archives == 0U) {
+        SKIP("The local corpus holds no BA2 GNRL archives to scan.");
+    }
+
+    INFO("scanned " << scanned_records << " GNRL records across " << scanned_archives
+                    << " archives");
+    CHECK(scanned_records > 0U);
+    CHECK(uppercase_records == 0U);
 }
 
 TEST_CASE("a retail BA2 GNRL archive opens, lists, and extracts end to end",

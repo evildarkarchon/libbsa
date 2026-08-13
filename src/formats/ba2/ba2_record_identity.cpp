@@ -82,6 +82,12 @@ std::byte ascii_lower_byte(std::byte byte) noexcept {
     return static_cast<std::byte>(value);
 }
 
+/// Compares a stored record Ext FourCC with the derived one, ignoring ASCII case.
+///
+/// libbsa writes lowercase, as the reference does (issue #44), but the read path
+/// stays deliberately tolerant: an archive from another tool may store mixed
+/// case, and rejecting it would refuse data the field still identifies
+/// unambiguously. Producing mixed case is the bug; accepting it is not.
 bool extension_fourcc_matches(const std::array<std::byte, 4>& stored,
                               const std::array<std::byte, 4>& expected) noexcept {
     for (std::size_t index = 0; index < stored.size(); ++index) {
@@ -110,7 +116,16 @@ result<std::array<std::byte, 4>> extension_fourcc_for(ba2_subtype subtype,
             return error{diagnostic_code_for(source),
                          non_printable_extension_message(subtype, source)};
         }
-        fourcc[index] = static_cast<std::byte>(value);
+        // Case folding happens here rather than relying on callers passing an
+        // already-canonical name: the reference folds before String2Magic
+        // (wbBSArchive.pas:1543) and FindFileRecordFO4 then matches the stored
+        // TMagic4 exactly, so an uppercase byte reaching the record hides it
+        // from the game (issue #44). Every caller does currently pass the
+        // canonical path, but the ba2_record_path overload takes a caller-built
+        // struct, so keeping the guarantee local costs one call and removes a
+        // silent way to regress. Folding after the printable-ASCII check keeps
+        // the diagnostic reporting the byte the caller actually supplied.
+        fourcc[index] = ascii_lower_byte(static_cast<std::byte>(value));
     }
     return fourcc;
 }
@@ -118,8 +133,6 @@ result<std::array<std::byte, 4>> extension_fourcc_for(ba2_subtype subtype,
 result<ba2_record_identity> make_gnrl_identity(ba2_record_path path,
                                                ba2_record_identity_source source) {
     const auto [directory, file_name] = split_directory_file(path.canonical_path);
-    const auto [display_directory, display_file_name] = split_directory_file(path.display_path);
-    (void)display_directory;
     if (file_name.empty()) {
         return error{diagnostic_code_for(source), missing_gnrl_file_name_message(source)};
     }
@@ -132,12 +145,13 @@ result<ba2_record_identity> make_gnrl_identity(ba2_record_path path,
     // archives: 35,602 GNRL records across Fallout 4 v1/v8 and Starfield v2 all
     // match the stem hash and none match the full-filename hash.
     //
-    // Writer derivation keeps the caller's extension casing for byte-stable
-    // output; parser validation still compares stored and expected extension
-    // bytes case-insensitively. The hash basis is always the canonical stem,
-    // since hash_fo4 lowercases ASCII anyway.
-    const auto extension_file_name =
-        source == ba2_record_identity_source::writer_entry ? display_file_name : file_name;
+    // Both derivation sources read the canonical file name, so GNRL and DX10
+    // share one rule; the writer used to read the caller's display spelling
+    // instead and stored its casing, which hid the record from the game
+    // (issue #44 -- extension_fourcc_for now owns the case folding). The hash
+    // basis is the canonical stem either way, since hash_fo4 lowercases ASCII
+    // anyway.
+    //
     // An absent extension is ordinary, not malformed. TES5Edit's SplitNameExt
     // yields an empty Ext when the file name carries no dot or ends in one, and
     // String2Magic('') yields #0#0#0#0; both the FO4 writer
@@ -145,19 +159,16 @@ result<ba2_record_identity> make_gnrl_identity(ba2_record_path path,
     // through that path. Retail Fallout4 - Meshes.ba2 and
     // Starfield - Animations.ba2 both ship extensionless GNRL records, so
     // requiring an extension rejected whole archives (issue #43).
-    const auto dot = extension_file_name.find_last_of('.');
-    const auto extension_text = dot == std::string_view::npos
-                                    ? std::string_view{}
-                                    : extension_file_name.substr(dot + 1U);
+    const auto dot = file_name.find_last_of('.');
+    const auto extension_text =
+        dot == std::string_view::npos ? std::string_view{} : file_name.substr(dot + 1U);
 
     auto extension = extension_fourcc_for(ba2_subtype::gnrl, extension_text, source);
     if (!extension) {
         return extension.error();
     }
 
-    const auto canonical_dot = file_name.find_last_of('.');
-    const auto stem =
-        canonical_dot == std::string_view::npos ? file_name : file_name.substr(0U, canonical_dot);
+    const auto stem = dot == std::string_view::npos ? file_name : file_name.substr(0U, dot);
     const auto name_hash = detail::hash_fo4(stem);
     const auto directory_hash = detail::hash_fo4(directory);
     return ba2_record_identity{std::move(path.display_path), std::move(path.canonical_path),

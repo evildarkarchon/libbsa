@@ -22,6 +22,13 @@ constexpr std::array<std::byte, 4> fourcc(char first, char second, char third,
             std::byte{static_cast<unsigned char>(fourth)}};
 }
 
+/// One archive path and the record Ext FourCC both derivation sources must yield.
+struct extension_case {
+    std::string_view path;
+    ba2_subtype subtype;
+    std::array<std::byte, 4> extension;
+};
+
 }  // namespace
 
 TEST_CASE("BA2 record identity derives GNRL lookup facts from writer paths",
@@ -33,7 +40,11 @@ TEST_CASE("BA2 record identity derives GNRL lookup facts from writer paths",
     REQUIRE(identity.has_value());
     CHECK(identity.value().display_path == "Meshes/MixedCase/Probe.NIF");
     CHECK(identity.value().canonical_path == "meshes/mixedcase/probe.nif");
-    CHECK(identity.value().extension == fourcc('N', 'I', 'F'));
+    // The reference lowercases before String2Magic on write
+    // (wbBSArchive.pas:1543) and FindFileRecordFO4 compares the stored FourCC
+    // exactly against a lowercased query, so an uppercase stored Ext makes the
+    // record unreachable in game (issue #44).
+    CHECK(identity.value().extension == fourcc('n', 'i', 'f'));
     // NameHash covers the stem "probe", not "probe.nif" (which would hash to
     // 0x658C15FC). The extension lives in the FourCC field instead.
     CHECK(identity.value().name_hash == 0x117C9837U);
@@ -176,12 +187,7 @@ TEST_CASE("BA2 record identity truncates extensions to the four-byte record fiel
     // TES5Edit's String2Magic copies at most four characters and has no error
     // path. Retail Fallout 4 depends on it: Interface.ba2 stores .STRINGS,
     // .ILSTRINGS, and .DLSTRINGS records as 'stri', 'ilst', and 'dlst'.
-    struct truncation_case {
-        std::string_view path;
-        ba2_subtype subtype;
-        std::array<std::byte, 4> extension;
-    };
-    const auto cases = std::to_array<truncation_case>({
+    const auto cases = std::to_array<extension_case>({
         {"Strings/Fallout4_en.STRINGS", ba2_subtype::gnrl, fourcc('s', 't', 'r', 'i')},
         {"Strings/Fallout4_en.ILSTRINGS", ba2_subtype::gnrl, fourcc('i', 'l', 's', 't')},
         {"Strings/Fallout4_en.DLSTRINGS", ba2_subtype::gnrl, fourcc('d', 'l', 's', 't')},
@@ -196,22 +202,45 @@ TEST_CASE("BA2 record identity truncates extensions to the four-byte record fiel
         REQUIRE(identity.has_value());
         CHECK(identity.value().extension == truncation.extension);
 
-        // The writer path must also truncate rather than reject. Its stored
-        // casing is asserted case-insensitively here because GNRL writer
-        // derivation currently preserves the caller's casing while the
-        // reference lowercases on write; that deviation is tracked separately
-        // and is not what this case is about.
+        // The writer path must also truncate rather than reject, and it must
+        // store the lowercased bytes the reference writes (issue #44), so the
+        // expectation here is byte-exact rather than case-insensitive.
         auto writer = libbsa::formats::ba2::make_ba2_record_identity(
             truncation.subtype, truncation.path, ba2_record_identity_source::writer_entry);
 
         REQUIRE(writer.has_value());
-        for (std::size_t index = 0; index < truncation.extension.size(); ++index) {
-            const auto actual = std::tolower(
-                std::to_integer<unsigned char>(writer.value().extension.at(index)));
-            const auto expected =
-                std::tolower(std::to_integer<unsigned char>(truncation.extension.at(index)));
-            CHECK(actual == expected);
-        }
+        CHECK(writer.value().extension == truncation.extension);
+    }
+}
+
+TEST_CASE("BA2 record identity lowercases writer extensions for both subtypes",
+          "[unit][ba2_record_identity][compat]") {
+    // wbBSArchive.pas:1543 writes `String2Magic(LowerCase(fext))`, and
+    // FindFileRecordFO4 compares the stored TMagic4 with `=` against
+    // `String2Magic(LowerCase(ext))`. Storing the caller's casing therefore
+    // hides the record from the game. Every stored Ext field in the retail
+    // Fallout 4 and Starfield corpus is lowercase, including the truncated
+    // `stri`/`ilst`/`dlst` records in Fallout4 - Interface.ba2, whose filename
+    // table spells the extension in uppercase.
+    const auto cases = std::to_array<extension_case>({
+        {"Meshes/Probe.NIF", ba2_subtype::gnrl, fourcc('n', 'i', 'f')},
+        {"Meshes\\Probe.NiF", ba2_subtype::gnrl, fourcc('n', 'i', 'f')},
+        {"Textures/Probe.DDS", ba2_subtype::dx10, fourcc('d', 'd', 's')},
+    });
+
+    for (const auto& casing : cases) {
+        INFO(casing.path);
+        auto writer = libbsa::formats::ba2::make_ba2_record_identity(
+            casing.subtype, casing.path, ba2_record_identity_source::writer_entry);
+        REQUIRE(writer.has_value());
+        CHECK(writer.value().extension == casing.extension);
+
+        // Both derivation sources agree, so a libbsa-written archive re-parses
+        // to the same identity it was written from.
+        auto parsed = libbsa::formats::ba2::make_ba2_record_identity(
+            casing.subtype, casing.path, ba2_record_identity_source::filename_table);
+        REQUIRE(parsed.has_value());
+        CHECK(parsed.value().extension == writer.value().extension);
     }
 }
 
