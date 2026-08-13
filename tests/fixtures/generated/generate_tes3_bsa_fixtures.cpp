@@ -116,11 +116,14 @@ std::uint32_t hash_high32(std::uint64_t value) noexcept {
     return static_cast<std::uint32_t>(value >> 32U);
 }
 
+/// Orders entries the way a retail TES3 archive orders its records.
+///
+/// A hash record stores the first-half byte sum then the second-half sum, and
+/// the table is sorted by those words in that order -- which is ascending
+/// `hash_tes3` value. This generator used to compare the low word first, an
+/// order no retail archive uses (issue #46).
 bool tes3_hash_less(const entry_spec& lhs, const entry_spec& rhs) noexcept {
-    if (hash_low32(lhs.archive_hash) != hash_low32(rhs.archive_hash)) {
-        return hash_low32(lhs.archive_hash) < hash_low32(rhs.archive_hash);
-    }
-    return hash_high32(lhs.archive_hash) < hash_high32(rhs.archive_hash);
+    return lhs.archive_hash < rhs.archive_hash;
 }
 
 std::vector<entry_spec> success_entries() {
@@ -191,8 +194,12 @@ std::vector<std::byte> build_tes3_archive(std::vector<entry_spec>& entries) {
     for (const auto& entry : entries) {
         writer.zstring(entry.path);
     }
+    // Bethesda's on-disk word order: first-half sum, then second-half sum. That
+    // is the high then the low half of `hash_tes3`, so a `u64` write would emit
+    // them transposed (issue #46).
     for (const auto& entry : entries) {
-        writer.u64(entry.archive_hash);
+        writer.u32(hash_high32(entry.archive_hash));
+        writer.u32(hash_low32(entry.archive_hash));
     }
     for (const auto& entry : entries) {
         writer.raw(entry.payload);
@@ -225,10 +232,14 @@ void overwrite_u32(std::vector<std::byte>& bytes, std::size_t offset, std::uint3
     }
 }
 
-void overwrite_u64(std::vector<std::byte>& bytes, std::size_t offset, std::uint64_t value) {
-    for (std::uint32_t index = 0; index < 8U; ++index) {
-        bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
-    }
+/// Overwrites a TES3 hash record in Bethesda's on-disk word order.
+///
+/// Malformed fixtures have to mutate the record the way the format stores it, or
+/// they exercise the transposition rather than the defect they name (issue #46).
+void overwrite_tes3_hash_record(std::vector<std::byte>& bytes, std::size_t offset,
+                                std::uint64_t hash) {
+    overwrite_u32(bytes, offset, hash_high32(hash));
+    overwrite_u32(bytes, offset + 4U, hash_low32(hash));
 }
 
 std::string success_manifest(const std::vector<entry_spec>& entries) {
@@ -361,14 +372,16 @@ void generate_malformed(const std::filesystem::path& output_dir) {
         entries.empty() ? 0U
                         : entries.front().payload_offset - entries.front().raw_tes3_data_offset -
                               entries.size() * 8U;
-    overwrite_u64(hash_mismatch, hash_table_start, entries.front().archive_hash ^ 0x1000ULL);
+    overwrite_tes3_hash_record(hash_mismatch, hash_table_start,
+                               entries.front().archive_hash ^ 0x1000ULL);
     write_file(output_dir / "tes3_stored_hash_mismatch.bsa", hash_mismatch);
 
     auto hash_collision = valid;
     // This intentionally duplicates a stored hash record so parser validation
     // reaches the collision branch before the second entry's mismatched name hash
     // can mask the fixture's purpose.
-    overwrite_u64(hash_collision, hash_table_start + 8U, entries.front().archive_hash);
+    overwrite_tes3_hash_record(hash_collision, hash_table_start + 8U,
+                               entries.front().archive_hash);
     write_file(output_dir / "tes3_hash_collision.bsa", hash_collision);
 
     std::vector<entry_spec> unsorted = entries;
@@ -378,7 +391,24 @@ void generate_malformed(const std::filesystem::path& output_dir) {
     write_file(output_dir / "tes3_unsorted_hash_records.bsa", build_tes3_archive(unsorted));
 
     auto raw_offset_regression = valid;
-    overwrite_u32(raw_offset_regression, tes3_header_size + 4U, 1U);
+    // Shift a payload by one byte inside the data section. A parser that honours
+    // data-section-relative offsets then sees the entry overlap its successor, or
+    // run one byte past the archive when it is the last payload; a parser that
+    // treated the field as archive-absolute would not.
+    //
+    // The record has to be one with a non-empty payload. Empty entries contribute
+    // no payload span at all, so shifting one proves nothing -- and record 0 is
+    // an empty entry under the retail hash ordering issue #46 corrected, which is
+    // exactly how this fixture silently stopped rejecting anything.
+    const auto non_empty = std::find_if(entries.begin(), entries.end(), [](const entry_spec& entry) {
+        return !entry.payload.empty();
+    });
+    if (non_empty == entries.end()) {
+        throw std::runtime_error("TES3 malformed fixtures need one non-empty payload");
+    }
+    const auto non_empty_index =
+        static_cast<std::size_t>(std::distance(entries.begin(), non_empty));
+    overwrite_u32(raw_offset_regression, tes3_header_size + non_empty_index * 8U + 4U, 1U);
     write_file(output_dir / "tes3_raw_offset_absolute_regression.bsa", raw_offset_regression);
 
     write_text(output_dir / "tes3_malformed_manifest.json", malformed_manifest());

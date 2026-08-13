@@ -164,6 +164,22 @@ result<std::vector<std::string>> read_names(std::span<const std::byte> table_byt
     return names;
 }
 
+/// Reads the TES3 hash table and returns each record as a `hash_tes3` value.
+///
+/// A hash record is two consecutive little-endian `u32` values: the first-half
+/// byte sum, then the second-half byte sum. `hash_tes3` packs those the other way
+/// round -- first-half sum in the high 32 bits -- so reading the eight bytes as a
+/// single `u64` transposes the halves. libbsa used to do exactly that and then
+/// compare the result against the recomputed name hash, which is why no record in
+/// any retail TES3 archive ever matched and `Morrowind.bsa` could not be opened
+/// (issue #46).
+///
+/// The reference is not a usable oracle here. `TwbBSArchive.LoadFromFile` reads
+/// the field with `fStream.ReadUInt64` and `FindFileRecordTES3` compares that
+/// value directly against `CreateHashTES3`, a comparison that cannot match on
+/// vanilla data; TES3 lookup by name in BSArchPro appears to be unexercised.
+/// Retail bytes settle it: all 11090 records of vanilla `Morrowind.bsa` match the
+/// composition below and none match a `u64` read.
 result<std::vector<std::uint64_t>> read_hashes(detail::binary_reader& reader,
                                                std::uint32_t file_count) {
     std::vector<std::uint64_t> hashes;
@@ -172,11 +188,13 @@ result<std::vector<std::uint64_t>> read_hashes(detail::binary_reader& reader,
         return reserved.error();
     }
     for (std::uint32_t index = 0; index < file_count; ++index) {
-        const auto hash = reader.read_u64_le();
-        if (!hash) {
+        const auto first_half_sum = reader.read_u32_le();
+        const auto second_half_sum = reader.read_u32_le();
+        if (!first_half_sum || !second_half_sum) {
             return error{error_code::format_error, "TES3 BSA hash table is truncated"};
         }
-        hashes.push_back(hash.value());
+        hashes.push_back(static_cast<std::uint64_t>(first_half_sum.value()) << 32U |
+                         second_half_sum.value());
     }
     return hashes;
 }
@@ -211,15 +229,18 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
         if (!reserved_spans) {
             return reserved_spans.error();
         }
-        std::optional<std::uint64_t> previous_hash_sort_key;
+        std::optional<std::uint64_t> previous_stored_hash;
 
         for (std::size_t index = 0; index < records.size(); ++index) {
             const auto stored_hash = hashes[index];
-            const auto sort_key = detail::tes3_hash_sort_key(stored_hash);
-            if (previous_hash_sort_key && sort_key < previous_hash_sort_key.value()) {
+            // `read_hashes` already composed the record in `hash_tes3` order, so
+            // the stored value is its own sort key: comparing it compares the two
+            // stored words in the order they appear on disk. All 11090 records of
+            // vanilla `Morrowind.bsa` are sorted this way (issue #46).
+            if (previous_stored_hash && stored_hash < previous_stored_hash.value()) {
                 return error{error_code::format_error, "TES3 BSA hash records are not sorted"};
             }
-            previous_hash_sort_key = sort_key;
+            previous_stored_hash = stored_hash;
             // Duplicate stored hashes are malformed even when one name would also
             // fail recomputation; check them first so collision fixtures exercise the
             // TES3 collision branch rather than being hidden by mismatch validation.
@@ -227,6 +248,19 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                 return error{error_code::format_error,
                              "TES3 BSA contains duplicate stored hash records"};
             }
+            // The hash basis is the name exactly as stored, backslashes and all.
+            // `CreateHashTES3` folds ASCII case but has no separator folding,
+            // unlike `CreateHashFO4`, so normalizing to forward slashes first
+            // changes the hash: only 1 of the 11090 names in vanilla
+            // `Morrowind.bsa` hashes the same either way. Display separator
+            // normalization therefore happens below, on a copy, after hashing.
+            //
+            // This disagreement stays fatal, unlike the BA2 record-identity
+            // cross-check that issue #43 demoted to a warning. That demotion was
+            // driven by retail archives that actually fail; every record of every
+            // retail TES3 archive measured agrees, so there is no evidence a TES3
+            // tolerance is needed, and a mismatch here still means the archive is
+            // genuinely corrupt.
             const auto computed_hash = detail::hash_tes3(names[index]);
             if (stored_hash != computed_hash) {
                 return error{error_code::format_error,

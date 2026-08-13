@@ -1,5 +1,6 @@
 #include "formats/bsa/tes3_bsa_serialize.hpp"
 
+#include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/host_file.hpp>
 
@@ -209,8 +210,15 @@ result<void> tes3_write_archive_bytes(std::span<const tes3_prepared_entry> entri
             return written.error();
         }
     }
+    // A TES3 hash record is two consecutive little-endian `u32` values: the
+    // first-half byte sum, then the second-half sum. `hash_tes3` packs those the
+    // other way round, so writing it as one `u64` emits Bethesda's words
+    // transposed -- archives Morrowind cannot resolve by name, even though
+    // libbsa's own reader round-tripped them because it read them back the same
+    // wrong way. Retail `Morrowind.bsa` is the authority (issue #46).
     for (const auto& entry : entries) {
-        if (!(written = writer.write_u64_le(entry.hash))) {
+        if (!(written = writer.write_u32_le(detail::tes3_hash_high32(entry.hash))) ||
+            !(written = writer.write_u32_le(detail::tes3_hash_low32(entry.hash)))) {
             return written.error();
         }
     }

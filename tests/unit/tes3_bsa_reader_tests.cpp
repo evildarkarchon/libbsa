@@ -127,20 +127,8 @@ void overwrite_u32_le(std::vector<std::byte>& bytes, std::size_t offset, std::ui
     }
 }
 
-void overwrite_u64_le(std::vector<std::byte>& bytes, std::size_t offset, std::uint64_t value) {
-    for (std::uint32_t index = 0; index < 8U; ++index) {
-        bytes.at(offset + index) = static_cast<std::byte>((value >> (index * 8U)) & 0xFFU);
-    }
-}
-
 void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
     for (std::uint32_t index = 0; index < 4U; ++index) {
-        bytes.push_back(static_cast<std::byte>((value >> (index * 8U)) & 0xFFU));
-    }
-}
-
-void append_u64_le(std::vector<std::byte>& bytes, std::uint64_t value) {
-    for (std::uint32_t index = 0; index < 8U; ++index) {
         bytes.push_back(static_cast<std::byte>((value >> (index * 8U)) & 0xFFU));
     }
 }
@@ -170,11 +158,31 @@ std::uint32_t checked_test_u32(std::size_t value, std::string_view description) 
     return static_cast<std::uint32_t>(value);
 }
 
+/// Appends a TES3 hash record in Bethesda's on-disk word order.
+///
+/// A record's eight hash bytes are two consecutive `u32` values: the first-half
+/// sum -- the high 32 bits of `hash_tes3` -- followed by the second-half sum.
+/// Reading them as one little-endian `u64` transposes the halves. Retail
+/// `Morrowind.bsa` settles the order: all 11090 records match this composition
+/// and none match a direct `u64` read (issue #46).
+void append_tes3_hash_record(std::vector<std::byte>& bytes, std::uint64_t hash) {
+    append_u32_le(bytes, libbsa::detail::tes3_hash_high32(hash));
+    append_u32_le(bytes, libbsa::detail::tes3_hash_low32(hash));
+}
+
+/// Overwrites the TES3 hash record at `offset` in Bethesda's on-disk word order.
+void overwrite_tes3_hash_record(std::vector<std::byte>& bytes, std::size_t offset,
+                                std::uint64_t hash) {
+    overwrite_u32_le(bytes, offset, libbsa::detail::tes3_hash_high32(hash));
+    overwrite_u32_le(bytes, offset + 4U, libbsa::detail::tes3_hash_low32(hash));
+}
+
 bool tes3_hash_less(const synthetic_tes3_entry& lhs, const synthetic_tes3_entry& rhs) noexcept {
-    const auto lhs_key = libbsa::detail::tes3_hash_sort_key(lhs.archive_hash);
-    const auto rhs_key = libbsa::detail::tes3_hash_sort_key(rhs.archive_hash);
-    if (lhs_key != rhs_key) {
-        return lhs_key < rhs_key;
+    // Retail record order compares the stored words in the order they appear on
+    // disk, which is exactly ascending `hash_tes3` value. libbsa previously
+    // compared low32 first, an order no retail archive uses (issue #46).
+    if (lhs.archive_hash != rhs.archive_hash) {
+        return lhs.archive_hash < rhs.archive_hash;
     }
     return lhs.path < rhs.path;
 }
@@ -242,7 +250,7 @@ synthetic_tes3_archive build_synthetic_tes3_archive(std::vector<synthetic_tes3_e
         bytes.push_back(std::byte{0});
     }
     for (const auto& entry : entries) {
-        append_u64_le(bytes, entry.archive_hash);
+        append_tes3_hash_record(bytes, entry.archive_hash);
     }
     bytes.insert(bytes.end(), payload_bytes.begin(), payload_bytes.end());
 
@@ -539,6 +547,9 @@ TEST_CASE(
         const auto archive = test_case.at("archive").get<std::string>();
         const auto expected =
             error_code_from_manifest(test_case.at("expected_error").get<std::string>());
+        // Without this the loop reports only a line number, which says nothing
+        // about which of the ten malformed cases regressed.
+        INFO("case=" << test_case.at("id").get<std::string>() << " archive=" << archive);
 
         if (test_case.at("id").get<std::string>() == "tes3_stored_hash_mismatch") {
             REQUIRE(test_case.at("structural_issue").get<std::string>() == "stored_hash_mismatch");
@@ -608,6 +619,45 @@ TEST_CASE("tes3_bsa_entries accepts adjacent spans and zero-byte boundary entrie
     CHECK(second.value()->raw_size == 2U);
 }
 
+TEST_CASE("tes3_bsa hash records store the first-half sum before the second",
+          "[unit][tes3_bsa_metadata][compat]") {
+    // Issue #46. `CreateHashTES3` returns the first-half sum in the high 32 bits
+    // and the second-half sum in the low 32 bits, but a record serializes them in
+    // the opposite order: first-half sum first. Reading the eight bytes as one
+    // little-endian `u64` therefore yields the halves transposed, which is what
+    // libbsa used to compare against the recomputed name hash -- and why no
+    // record in vanilla `Morrowind.bsa` ever matched. This pins the byte layout
+    // directly so a regression cannot hide behind a self-consistent round trip.
+    const std::string path{"meshes/order/probe.nif"};
+    auto archive = build_synthetic_tes3_archive(
+        {{.path = path, .payload = bytes_from_text("hash"), .raw_offset = 0U}});
+
+    const auto expected_hash = libbsa::detail::hash_tes3(path);
+    const auto hash_table_start = 12U + read_u32_le(archive.bytes, 4U);
+    const auto first_word = read_u32_le(archive.bytes, hash_table_start);
+    const auto second_word = read_u32_le(archive.bytes, hash_table_start + 4U);
+
+    CHECK(first_word == libbsa::detail::tes3_hash_high32(expected_hash));
+    CHECK(second_word == libbsa::detail::tes3_hash_low32(expected_hash));
+    CHECK((static_cast<std::uint64_t>(first_word) << 32U | second_word) == expected_hash);
+    // A naive little-endian `u64` read composes the halves the other way round.
+    // Guard the distinction explicitly: a hash whose halves happen to be equal
+    // would make this test pass under either reading.
+    CHECK(first_word != second_word);
+
+    const auto archive_path =
+        std::filesystem::temp_directory_path() / "libbsa_tes3_hash_word_order.bsa";
+    write_binary_file(archive_path, archive.bytes);
+
+    auto opened = libbsa::archive_reader::open(archive_path.string());
+
+    REQUIRE(opened.has_value());
+    auto found = opened.value().find(path);
+    REQUIRE(found.has_value());
+    REQUIRE(found.value().has_value());
+    CHECK(found.value()->archive_hash == expected_hash);
+}
+
 TEST_CASE("tes3_bsa_malformed reports unsorted hashes before payload overlap",
           "[unit][tes3_bsa_malformed]") {
     std::vector<synthetic_tes3_entry> entries{
@@ -620,8 +670,7 @@ TEST_CASE("tes3_bsa_malformed reports unsorted hashes before payload overlap",
     }
     std::sort(entries.begin(), entries.end(), tes3_hash_less);
     std::swap(entries[0], entries[1]);
-    REQUIRE(libbsa::detail::tes3_hash_sort_key(entries[0].archive_hash) >
-            libbsa::detail::tes3_hash_sort_key(entries[1].archive_hash));
+    REQUIRE(entries[0].archive_hash > entries[1].archive_hash);
 
     auto archive = build_synthetic_tes3_archive(std::move(entries), false);
     const auto archive_path =
@@ -740,7 +789,7 @@ TEST_CASE("tes3_bsa_malformed maps invalid archive names to format_error",
                    });
 
     const auto hash_table_start = 12U + read_u32_le(bytes, 4U);
-    overwrite_u64_le(bytes, hash_table_start, libbsa::detail::hash_tes3(mutated_name));
+    overwrite_tes3_hash_record(bytes, hash_table_start, libbsa::detail::hash_tes3(mutated_name));
     const auto mutated =
         std::filesystem::temp_directory_path() / "libbsa_tes3_invalid_archive_name.bsa";
     write_binary_file(mutated, bytes);

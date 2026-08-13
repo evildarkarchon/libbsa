@@ -226,6 +226,13 @@ here so a future run can tell a genuine regression from the status quo:
 | 1 | `format_error: TES4 BSA file name lengths do not match header total` |
 | 1 | `format_error: TES3 BSA stored hash does not match parsed name` |
 
+The TES3 row was also resolved after this measurement was taken. Issue #46 showed the archive is well
+formed and libbsa read the hash field wrongly: a TES3 hash record stores the two half-sums as consecutive
+`u32` values, first-half sum first, and libbsa read the eight bytes as one little-endian `u64`, which
+transposes the halves relative to `hash_tes3`. All 11090 records of vanilla `Morrowind.bsa` match the
+corrected composition and none matched the old one, so the archive was rejected on its very first record.
+It now opens.
+
 The TES4 row was resolved after this measurement was taken. Issue #45 showed the archive is well formed:
 it declares a file-name table 105 bytes longer than its names consume, which the reference never checks.
 libbsa now accepts it and reports `bsa_file_name_table_trailing_bytes` instead. That was confirmed by

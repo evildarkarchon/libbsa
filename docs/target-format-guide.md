@@ -8,6 +8,10 @@ TES5Edit/ is a read-only reference and must not be used as a fixture workspace, 
 
 TES3 BSA covers Morrowind archives. Public metadata reports `archive_type::bsa`, `archive_variant::tes3`, no compression, and TES3-specific hash and data-section offset behavior through stable `entry_metadata` values. The public `tes3_bsa_writer` creates raw/uncompressed archives and accepts only overwrite policy plus shared `write_execution_options`.
 
+A TES3 hash record stores the two half-sums as consecutive little-endian `u32` values, first-half sum first, so it is not one little-endian `u64`; records are ordered by ascending composed hash. The hash basis is the name exactly as stored, backslashes included, because TES3 hashing folds ASCII case but not path separators. `entry_metadata::archive_hash` reports the composed value.
+
+Unlike the BA2 record-identity cross-check, which issue #43 demoted to a `compatibility_warning_code::ba2_record_identity_mismatch` warning, a TES3 stored hash that disagrees with its own name stays a fatal `error_code::format_error`. That demotion answered retail BA2 archives that genuinely fail the check; every record of every retail TES3 archive measured agrees with its name, so there is no evidence a TES3 tolerance is needed.
+
 ## TES4-family BSA v103
 
 TES4-family BSA v103 covers Oblivion-style archives selected by `tes4_bsa_target::oblivion`. The writer emits target-compatible v103 BSA metadata and deflate-capable payload routing where compression is enabled by policy. Embedded file names are controlled by writer options and should be used only when the target format expects them. Earlier TES4-family BSA targets are limited to DX9 DDS texture formats when a `.dds` payload is parseable as texture metadata.

@@ -134,10 +134,13 @@ result<std::vector<tes3_prepared_entry>> tes3_prepare_entries(
 
     std::sort(prepared.begin(), prepared.end(),
               [](const tes3_prepared_entry& lhs, const tes3_prepared_entry& rhs) {
-                  // TES3 table order compares hash low32 first and high32 second;
-                  // the helper packs that order for sorting.
-                  return detail::tes3_hash_sort_key(lhs.hash) <
-                         detail::tes3_hash_sort_key(rhs.hash);
+                  // Retail record order compares the two stored hash words in the
+                  // order they appear on disk -- first-half sum, then second-half
+                  // sum -- which is ascending `hash_tes3` value. libbsa used to
+                  // compare low32 first, an order no retail archive uses; all
+                  // 11090 records of vanilla `Morrowind.bsa` are sorted the way
+                  // this comparator now sorts them (issue #46).
+                  return lhs.hash < rhs.hash;
               });
     return prepared;
 }

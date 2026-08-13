@@ -2,6 +2,8 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <detail/bethesda_hash.hpp>
+
 #include "formats/ba2/ba2_archive_header.hpp"
 
 #include <nlohmann/json.hpp>
@@ -263,6 +265,94 @@ std::optional<std::vector<std::byte>> read_leading_bytes(const std::filesystem::
     stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(count));
     bytes.resize(static_cast<std::size_t>(stream.gcount()));
     return bytes;
+}
+
+/// Decodes a little-endian `u32` from `bytes` at `offset`.
+std::uint32_t decode_u32_le(std::span<const std::byte> bytes, std::size_t offset) {
+    REQUIRE(offset + 4U <= bytes.size());
+    std::uint32_t value = 0U;
+    for (std::size_t index = 0; index < 4U; ++index) {
+        value |= static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset + index]))
+                 << (index * 8U);
+    }
+    return value;
+}
+
+/// Returns the TES3 BSA file count when `path` carries a TES3 fixed header.
+///
+/// TES3 has no `BSA\0` magic; the format is identified by its leading version
+/// word `0x00000100`. Neither TES4-family BSA (`BSA\0`) nor BA2 (`BTDX`) can
+/// collide with that value, so the probe is unambiguous within a game corpus.
+/// Returns `std::nullopt` for anything else, which is how the TES3 sweep below
+/// skips non-TES3 archives without opening them.
+std::optional<std::uint32_t> probe_tes3_bsa_file_count(const std::filesystem::path& path) {
+    auto header = read_leading_bytes(path, 12U);
+    if (!header.has_value() || header->size() < 12U) {
+        return std::nullopt;
+    }
+    if (decode_u32_le(*header, 0U) != 0x0000'0100U) {
+        return std::nullopt;
+    }
+    return decode_u32_le(*header, 8U);
+}
+
+/// A retail TES3 BSA's name table and hash table, decoded straight from bytes.
+///
+/// The point of decoding independently of libbsa's parser is that the parser is
+/// what is under test: issue #46 was a defect the parser and writer shared, so
+/// only bytes Bethesda wrote can arbitrate the on-disk layout.
+struct retail_tes3_tables {
+    /// Stored name spellings exactly as serialized, backslashes preserved.
+    std::vector<std::string> names;
+
+    /// Hash records composed as `(first_word << 32) | second_word`.
+    std::vector<std::uint64_t> stored_hashes;
+};
+
+/// Reads the name and hash tables of a TES3 BSA without using libbsa's parser.
+///
+/// Only the metadata prefix is read, never the data section, so this stays cheap
+/// against multi-gigabyte retail archives.
+std::optional<retail_tes3_tables> read_retail_tes3_tables(const std::filesystem::path& path,
+                                                          std::uint32_t file_count) {
+    auto header = read_leading_bytes(path, 12U);
+    if (!header.has_value() || header->size() < 12U) {
+        return std::nullopt;
+    }
+    const auto hash_table_start = 12U + static_cast<std::size_t>(decode_u32_le(*header, 4U));
+    const auto table_size = hash_table_start + static_cast<std::size_t>(file_count) * 8U;
+
+    auto bytes = read_leading_bytes(path, table_size);
+    if (!bytes.has_value() || bytes->size() < table_size) {
+        return std::nullopt;
+    }
+
+    const auto name_offsets_start = 12U + static_cast<std::size_t>(file_count) * 8U;
+    const auto name_table_start = name_offsets_start + static_cast<std::size_t>(file_count) * 4U;
+
+    retail_tes3_tables tables;
+    tables.names.reserve(file_count);
+    tables.stored_hashes.reserve(file_count);
+    for (std::uint32_t index = 0; index < file_count; ++index) {
+        const auto name_offset = decode_u32_le(*bytes, name_offsets_start + index * 4U);
+        auto start = name_table_start + static_cast<std::size_t>(name_offset);
+        auto end = start;
+        while (end < hash_table_start && bytes->at(end) != std::byte{0}) {
+            ++end;
+        }
+        std::string name;
+        name.reserve(end - start);
+        for (auto cursor = start; cursor < end; ++cursor) {
+            name.push_back(static_cast<char>(std::to_integer<unsigned char>(bytes->at(cursor))));
+        }
+        tables.names.push_back(std::move(name));
+
+        const auto record = hash_table_start + static_cast<std::size_t>(index) * 8U;
+        const auto first_word = decode_u32_le(*bytes, record);
+        const auto second_word = decode_u32_le(*bytes, record + 4U);
+        tables.stored_hashes.push_back(static_cast<std::uint64_t>(first_word) << 32U | second_word);
+    }
+    return tables;
 }
 
 /// Restates the BA2 header version to game-family mapping independently of the
@@ -820,6 +910,169 @@ TEST_CASE("a retail TES4-family BSA extracts every zlib-compressed entry",
 
     if (compressed_entries == 0U) {
         SKIP("The smallest TES4-family BSA in the corpus stores no compressed entries.");
+    }
+}
+
+TEST_CASE("every retail TES3 BSA opens and lists its full entry count",
+          "[requires-game-fixture][unit][bsa][tes3][compat]") {
+    // Issue #46: vanilla `Morrowind.bsa` could not be opened at all. libbsa read
+    // each eight-byte hash record as one little-endian `u64` and compared that to
+    // `hash_tes3`, but a record stores the two half-sums as consecutive `u32`
+    // values in the opposite order, so the comparison failed on the very first
+    // record of every retail TES3 archive.
+    auto fixture_root = local_fixture_root();
+    if (!fixture_root.has_value()) {
+        SKIP(
+            "Set LIBBSA_GAME_FIXTURES or place local game archives under "
+            "tests/fixtures/local; these files are not committed.");
+    }
+
+    std::size_t opened_archives = 0U;
+    std::error_code iteration_error;
+    std::filesystem::directory_iterator iterator{*fixture_root, iteration_error};
+    REQUIRE_FALSE(iteration_error);
+
+    for (const auto& directory_entry : iterator) {
+        if (!directory_entry.is_regular_file()) {
+            continue;
+        }
+        auto file_count = probe_tes3_bsa_file_count(directory_entry.path());
+        if (!file_count.has_value()) {
+            continue;
+        }
+
+        const auto name = directory_entry.path().filename().string();
+        INFO("archive=" << name << " file_count=" << *file_count);
+
+        auto opened = libbsa::archive_reader::open(directory_entry.path().string());
+        REQUIRE(opened.has_value());
+        ++opened_archives;
+
+        auto metadata = opened.value().metadata();
+        REQUIRE(metadata.has_value());
+        CHECK(metadata.value().type == libbsa::archive_type::bsa);
+        CHECK(metadata.value().variant == libbsa::archive_variant::tes3);
+        CHECK(metadata.value().version == 0x0000'0100U);
+        CHECK(metadata.value().file_count == *file_count);
+
+        auto entries = opened.value().entries();
+        REQUIRE(entries.has_value());
+        REQUIRE(entries.value().size() == *file_count);
+
+        // Lookup has to reach a listed path. TES3 stores backslash-separated
+        // names and libbsa normalizes them for display and canonical keys, so
+        // this also pins that the normalization is reversible for lookup.
+        const auto& first = entries.value().front();
+        auto found = opened.value().find(first.path);
+        REQUIRE(found.has_value());
+        REQUIRE(found.value().has_value());
+        CHECK(found.value()->path == first.path);
+    }
+
+    if (opened_archives == 0U) {
+        SKIP("The local corpus holds no TES3 BSA archives.");
+    }
+}
+
+TEST_CASE("retail TES3 BSA hash records store the first-half sum before the second",
+          "[requires-game-fixture][unit][bsa][tes3][compat]") {
+    // The reference is not a usable oracle here. `TwbBSArchive.LoadFromFile`
+    // reads the field with `fStream.ReadUInt64` and `FindFileRecordTES3` compares
+    // that value directly against `CreateHashTES3`, a comparison that cannot
+    // match on any archive measured below -- TES3 lookup by name in BSArchPro
+    // appears to be unexercised. Retail bytes are the authority (issue #46).
+    auto fixture_root = local_fixture_root();
+    if (!fixture_root.has_value()) {
+        SKIP(
+            "Set LIBBSA_GAME_FIXTURES or place local game archives under "
+            "tests/fixtures/local; these files are not committed.");
+    }
+
+    std::size_t checked_archives = 0U;
+    std::error_code iteration_error;
+    std::filesystem::directory_iterator iterator{*fixture_root, iteration_error};
+    REQUIRE_FALSE(iteration_error);
+
+    for (const auto& directory_entry : iterator) {
+        if (!directory_entry.is_regular_file()) {
+            continue;
+        }
+        auto file_count = probe_tes3_bsa_file_count(directory_entry.path());
+        if (!file_count.has_value() || *file_count == 0U) {
+            continue;
+        }
+
+        const auto name = directory_entry.path().filename().string();
+        INFO("archive=" << name);
+
+        auto tables = read_retail_tes3_tables(directory_entry.path(), *file_count);
+        REQUIRE(tables.has_value());
+        REQUIRE(tables->names.size() == *file_count);
+        ++checked_archives;
+
+        std::size_t stored_order_matches = 0U;
+        std::size_t transposed_matches = 0U;
+        std::size_t equal_half_records = 0U;
+        std::size_t separator_sensitive_names = 0U;
+        std::size_t backslash_names = 0U;
+        for (std::uint32_t index = 0; index < *file_count; ++index) {
+            const auto& stored_name = tables->names[index];
+            const auto stored = tables->stored_hashes[index];
+            const auto expected = libbsa::detail::hash_tes3(stored_name);
+            if (stored == expected) {
+                ++stored_order_matches;
+            }
+            // The composition a naive little-endian `u64` read produces: the two
+            // half-words the other way round.
+            if ((stored << 32U | stored >> 32U) == expected) {
+                ++transposed_matches;
+            }
+            if (libbsa::detail::tes3_hash_high32(stored) ==
+                libbsa::detail::tes3_hash_low32(stored)) {
+                ++equal_half_records;
+            }
+
+            if (stored_name.find('\\') != std::string::npos) {
+                ++backslash_names;
+                auto forward = stored_name;
+                std::replace(forward.begin(), forward.end(), '\\', '/');
+                if (libbsa::detail::hash_tes3(forward) != expected) {
+                    ++separator_sensitive_names;
+                }
+            }
+        }
+
+        // Every record, not a sample: a partial match would mean the composition
+        // is right by accident on some names rather than being the layout.
+        INFO("stored_order_matches=" << stored_order_matches
+                                     << " transposed_matches=" << transposed_matches);
+        CHECK(stored_order_matches == *file_count);
+        // A record matches under both readings exactly when its two stored words
+        // are equal, since transposing then leaves the value unchanged. Pinning
+        // the transposed count to that set is far stronger than "fewer than all"
+        // -- on this corpus both sides are zero -- while staying immune to an
+        // archive that happens to contain such a name.
+        INFO("equal_half_records=" << equal_half_records);
+        CHECK(transposed_matches == equal_half_records);
+
+        // `CreateHashTES3` has no separator folding, unlike `CreateHashFO4`, so
+        // the hash basis is the stored backslash spelling. Normalizing to forward
+        // slashes before hashing is a second, independent way to get this wrong;
+        // assert the two really do differ rather than trusting the reading.
+        INFO("backslash_names=" << backslash_names
+                                << " separator_sensitive_names=" << separator_sensitive_names);
+        if (backslash_names > 0U) {
+            CHECK(separator_sensitive_names > 0U);
+        }
+
+        // Retail record order is ascending stored-hash value, which is the words
+        // compared in the order they appear on disk. libbsa's writer used to sort
+        // by the low word first, an order no retail archive uses.
+        CHECK(std::is_sorted(tables->stored_hashes.begin(), tables->stored_hashes.end()));
+    }
+
+    if (checked_archives == 0U) {
+        SKIP("The local corpus holds no TES3 BSA archives.");
     }
 }
 
