@@ -285,7 +285,10 @@ TEST_CASE("tes3 writer preparation stage prepares and sorts minimal memory entri
 
     REQUIRE(prepared.has_value());
     REQUIRE(prepared.value().size() == 1U);
-    CHECK(prepared.value()[0].archive_path_original == "Textures/Stage/Probe.dds");
+    // The serialized spelling is Bethesda's, backslashes and all, because it is
+    // also the `hash_tes3` basis and TES3 hashing does not fold separators
+    // (issue #54).
+    CHECK(prepared.value()[0].archive_path_original == "Textures\\Stage\\Probe.dds");
     CHECK(prepared.value()[0].payload_size == 10U);
     CHECK(prepared.value()[0].from_memory);
 }

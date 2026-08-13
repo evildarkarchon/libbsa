@@ -20,11 +20,26 @@ constexpr detail::host_file_context tes3_prepare_source_context{
     .changed_error = "TES3 BSA disk source changed during finalization",
     .allocation_description = "TES3 BSA disk source"};
 
+/// Returns the spelling a TES3 name-table entry is serialized and hashed with.
+///
+/// Morrowind resolves a file by hashing the stored name, and `hash_tes3` folds
+/// ASCII case but not path separators: 11089 of the 11090 names in vanilla
+/// `Morrowind.bsa` hash differently after a `\` to `/` swap. Bethesda stores
+/// backslashes in all 11090, so a forward-slash name is one the game cannot
+/// find. libbsa used to normalize the other way, which made its TES3 output
+/// unresolvable regardless of the hash word order (issue #54).
+///
+/// The reference rejects a forward slash rather than converting it
+/// (`TAsset.IsValidAssetName`, `wbAssets.pas:302`). libbsa normalizes instead, so
+/// callers may pass either spelling and neither is an error.
+///
+/// Casing is deliberately left alone. The reference lowercases stored names
+/// (`wbBSArchive.pas:1367`), but `CreateHashTES3` folds case, so preserving the
+/// caller's spelling costs no lookup compatibility and keeps the display path
+/// faithful to what the caller asked for.
 std::string preserved_archive_path(std::string_view archive_path) {
     std::string preserved{archive_path};
-    // TES3 serializes a flat name table, but libbsa still normalizes separators
-    // so callers get stable archive keys without losing the caller's path casing.
-    std::replace(preserved.begin(), preserved.end(), '\\', '/');
+    std::replace(preserved.begin(), preserved.end(), '/', '\\');
     return preserved;
 }
 

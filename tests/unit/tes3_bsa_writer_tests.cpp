@@ -217,9 +217,15 @@ struct direct_tes3_layout_entry {
 };
 
 std::vector<expected_tes3_layout_entry> expected_hash_sorted_layout() {
+    // The writer serializes Bethesda's separator whatever spelling the caller
+    // used: the matching `add_bytes` calls pass "Meshes/Mixed/Probe.NIF" with
+    // forward slashes and "textures\\Memory\\Probe.dds" with backslashes, and
+    // both reach the name table as backslash paths. `hash_tes3` folds ASCII case
+    // but not separators, so the stored spelling is also the hash basis, and a
+    // forward-slash name is one Morrowind cannot resolve (issue #54).
     std::vector<expected_tes3_layout_entry> entries{
-        {.serialized_name = "Meshes/Mixed/Probe.NIF", .payload = bytes_from_text("nif-data")},
-        {.serialized_name = "textures/Memory/Probe.dds", .payload = bytes_from_text("dds-data")},
+        {.serialized_name = "Meshes\\Mixed\\Probe.NIF", .payload = bytes_from_text("nif-data")},
+        {.serialized_name = "textures\\Memory\\Probe.dds", .payload = bytes_from_text("dds-data")},
         {.serialized_name = "Readme.txt", .payload = {}},
     };
     for (auto& entry : entries) {
