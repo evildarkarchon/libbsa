@@ -16,6 +16,10 @@ _Avoid_: Source payload, raw payload, final stored buffer
 The assignment of a Stored Payload to a location in the archive payload area, together with any sharing of that location between records. Placement is authoritative for location and sharing; it is not authoritative for payload creation, compression, or record geometry.
 _Avoid_: dedupe, payload sharing, offset assignment
 
+**Sharing Eligibility**:
+The format-specific condition that decides whether two byte-equal Stored Payloads are allowed to occupy one location. It exists because a shared location must also satisfy every record field describing how the payload is decoded, which byte equality alone does not guarantee.
+_Avoid_: dedupe key, decode contract, chunk compatibility
+
 **Payload Span Exclusivity**:
 The property that any two Stored Payload spans in one archive are either identical in placement or completely disjoint. Distinct spans never partially overlap, so no entry can read bytes that belong to another entry's payload.
 _Avoid_: overlap check, span collision, payload aliasing
@@ -51,8 +55,10 @@ _Avoid_: DX10 layout result, assigned chunks, payload ownership flags
 ## Relationships
 
 - Archive layout assigns a Stored Payload to a payload-area location. The location and any sharing of that location are not properties of the Stored Payload itself.
+- Payload Placement shares a location only when the Stored Payloads are byte-equal and Sharing Eligibility holds. Byte equality alone is not sufficient.
 
 ## Behaviors
 
 - Stored Payload equality is exact byte equality. A fingerprint may narrow equality candidates but never establishes equality on its own.
+- Sharing Eligibility is a precondition, never a proof. It can forbid a share that byte equality would permit, and never authorises one that byte equality forbids.
 - Payload Placement gives a newly placed Stored Payload the payload cursor as it stands at that moment; a Stored Payload that shares an earlier location inherits that location instead. A zero-length Stored Payload takes the cursor and does not advance it, so it shares an offset with whatever is placed next — another payload, or the filename table when nothing follows. BA2 DX10 is the exception: it rejects a zero-length texture chunk rather than placing one (ADR-0001).

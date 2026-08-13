@@ -91,3 +91,20 @@ BA2 DX10 is now the only family that treats an empty payload specially. TES3 BSA
 and BA2 GNRL all accept one and place it at the write cursor as it stands, matching
 `TwbBSArchive.PackData`'s unconditional `Offset := Position`. See issue #37, which aligned GNRL with
 that rule.
+
+## Amendment (2026-08-12): the narrowing-key claim does not hold for BA2 DX10
+
+Context fact 1 says a dedupe key is only a bucketing device, so changing the key alone changes no
+output. That generalised one family too far.
+
+BA2 DX10's candidate key carries `raw_size`, `packed_size` and `compression` alongside size and
+fingerprint (`ba2_dx10_layout.cpp`), and those fields are load-bearing rather than narrowing: removing
+them would permit a share between byte-equal chunks whose records declare different decode sizes,
+leaving one record describing content it cannot produce. For that family the key is a sharing
+precondition. The original claim does hold for TES4-family BSA and BA2 GNRL, where differing
+compression yields differing stored bytes and `exactly_equals` refuses the share unaided.
+
+`CONTEXT.md` now names the missing concept as Sharing Eligibility, kept distinct from the narrowing
+key. A planned Payload Placement module moves DX10's decode facts out of the key into an explicit
+eligibility check, which would make fact 1 true for all four families. Until that lands, read fact 1
+as scoped to TES4-family BSA and BA2 GNRL.
