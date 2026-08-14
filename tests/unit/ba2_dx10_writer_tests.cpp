@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "support/private_temp_root.hpp"
+
 #include <detail/bethesda_hash.hpp>
 
 #include <libbsa/libbsa.hpp>
@@ -118,23 +120,103 @@ std::filesystem::path unique_non_ascii_output_path(std::string_view stem) {
     return path;
 }
 
-/// Lists BA2 DX10 snapshot temp directories without querying metadata for
-/// unrelated temp entries.
+/// Lists BA2 DX10 snapshot temp directories owned by this process, without
+/// querying metadata for unrelated temp entries.
+///
+/// Scoped to the process's private temp root rather than to the system temp
+/// root. The writer resolves `std::filesystem::temp_directory_path()`, which
+/// under issue #62 is the private root, so nothing writer-owned is missed. What
+/// the narrower scan drops is precisely what this process does *not* own: a
+/// second test binary's snapshots, and a real libbsa tool's in-flight snapshot
+/// directory belonging to the user. Scanning the shared root made the
+/// before/after diff below a guess about ownership; scanning the private root
+/// makes it a fact.
 std::set<std::filesystem::path> snapshot_directories() {
     std::set<std::filesystem::path> paths;
+    std::error_code fs_error;
     for (const auto& entry :
-         std::filesystem::directory_iterator{std::filesystem::temp_directory_path()}) {
+         std::filesystem::directory_iterator{libbsa::tests::private_temp_root(), fs_error}) {
         const auto name = entry.path().filename().string();
         if (name.rfind(snapshot_directory_prefix, 0U) != 0U) {
             continue;
         }
 
-        std::error_code fs_error;
-        if (entry.is_directory(fs_error)) {
+        std::error_code entry_error;
+        if (entry.is_directory(entry_error)) {
             paths.insert(entry.path());
         }
     }
+    REQUIRE_FALSE(fs_error);
     return paths;
+}
+
+/// This process's private temp root in canonical form, resolved once.
+///
+/// Resolved on first use and cached for the life of the process, which is safe
+/// only because every caller runs inside a test body -- by which point the
+/// listener has installed the root. A caller that ran earlier would cache an
+/// empty path and leave the guard below refusing everything for the whole run.
+const std::filesystem::path& canonical_private_temp_root() {
+    static const std::filesystem::path root = [] {
+        std::error_code fs_error;
+        auto canonical = std::filesystem::canonical(libbsa::tests::private_temp_root(), fs_error);
+        // The listener already canonicalises the system root it builds under, so
+        // this normally changes nothing; falling back to the raw path keeps a
+        // canonicalisation failure from silently widening the guard below.
+        return fs_error ? libbsa::tests::private_temp_root() : canonical;
+    }();
+    return root;
+}
+
+/// Reports whether `path` names something strictly inside this process's private
+/// temp root.
+///
+/// `weakly_canonical` rather than `canonical` because every caller asks this
+/// about a directory that is *expected to be gone* -- the recovery removal below
+/// only matters when the writer failed to delete -- and canonicalising a missing
+/// path fails. `weakly_canonical` resolves the longest existing prefix, which is
+/// always at least the private root itself, and normalises the rest lexically.
+///
+/// The private root is rejected along with everything outside it: deleting the
+/// root would take the rest of the process's test state with it.
+bool is_inside_private_temp_root(const std::filesystem::path& path) {
+    const auto& root = canonical_private_temp_root();
+    if (root.empty()) {
+        return false;
+    }
+
+    std::error_code fs_error;
+    const auto resolved = std::filesystem::weakly_canonical(path, fs_error);
+    if (fs_error) {
+        return false;
+    }
+
+    const auto relative = resolved.lexically_relative(root);
+    return !relative.empty() && relative != "." && *relative.begin() != "..";
+}
+
+/// Deletes `path` and everything under it, but only if `path` lies inside this
+/// process's private temp root.
+///
+/// Keep the guard even though issue #62 already makes it unreachable. Every
+/// directory `snapshot_directories()` can now hand a caller is inside the private
+/// root by construction, so the refusal branch never fires today -- that is the
+/// point, not a reason to delete it as dead code. What this buys is the property
+/// that the helper *cannot* damage state it does not own, and that property has
+/// to survive someone later widening the scan back to the system temp root, where
+/// a real libbsa tool's in-flight snapshot directory is sitting (issue #64). A
+/// guard that only exists while the caller happens to be careful is not a guard.
+///
+/// @param path Directory to remove. A path outside the private root is left
+///        untouched; a removal that fails is ignored, since this is a recovery
+///        step and not the behaviour under test.
+void remove_snapshot_directory_if_owned(const std::filesystem::path& path) {
+    if (!is_inside_private_temp_root(path)) {
+        return;
+    }
+
+    std::error_code fs_error;
+    std::filesystem::remove_all(path, fs_error);
 }
 
 /// Returns only the writer-owned snapshot directories created after a baseline
@@ -156,10 +238,9 @@ void require_snapshot_directories_removed(const std::set<std::filesystem::path>&
     for (const auto& path : paths) {
         INFO("writer-owned BA2 DX10 snapshot directory: " << path.string());
         CHECK_FALSE(std::filesystem::exists(path));
-        std::error_code fs_error;
         // If the behavior under test regresses, keep later test runs isolated by
         // removing our own directory.
-        std::filesystem::remove_all(path, fs_error);
+        remove_snapshot_directory_if_owned(path);
     }
 }
 
@@ -908,10 +989,9 @@ TEST_CASE("BA2 DX10 writer state removes snapshot temp directory on teardown",
     for (const auto& path : staged_snapshot_dirs) {
         INFO("teardown-owned BA2 DX10 snapshot directory: " << path.string());
         CHECK_FALSE(std::filesystem::exists(path));
-        std::error_code fs_error;
         // If this check fails, still remove the test-created snapshot so later runs
         // start cleanly.
-        std::filesystem::remove_all(path, fs_error);
+        remove_snapshot_directory_if_owned(path);
     }
 }
 
@@ -1146,6 +1226,61 @@ TEST_CASE(
     REQUIRE_FALSE(added.has_value());
     CHECK(added.error().code == libbsa::error_code::format_error);
     CHECK(new_snapshot_directories_since(before).empty());
+}
+
+TEST_CASE(
+    "BA2 DX10 snapshot cleanup refuses to remove a directory outside the "
+    "private temp root",
+    "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup][security]") {
+    // Stands in for a real libbsa tool packing a DX10 archive on this machine
+    // while the suite runs: a directory carrying the production snapshot name
+    // prefix, mid-write, owned by somebody else. It sits in the *system* temp
+    // root because that is where such a directory really would be, and because
+    // that is exactly the place the cleanup helpers must not reach into.
+    //
+    // Both accessors return an empty path when the listener has not run, and an
+    // empty system root would silently turn the composition below into a
+    // *relative* path -- so this test would create and delete a directory in the
+    // process working directory, which is the build tree. Assert rather than
+    // discover that the way this test's own tearing-down is scoped depends on
+    // the listener having installed.
+    REQUIRE_FALSE(libbsa::tests::system_temp_root().empty());
+    REQUIRE_FALSE(libbsa::tests::private_temp_root().empty());
+    const auto outside = libbsa::tests::system_temp_root() /
+                         (std::string{snapshot_directory_prefix} + "guard-" +
+                          libbsa::tests::private_temp_root().filename().string());
+
+    // The directory lives in a root shared with the rest of the machine, so it
+    // is removed on every exit path, including an aborted assertion.
+    struct removing_scope {
+        std::filesystem::path path;
+        ~removing_scope() {
+            std::error_code fs_error;
+            std::filesystem::remove_all(path, fs_error);
+        }
+    } const scope{outside};
+
+    // Clears a leftover from a previous run that died before its scope ran, so
+    // the create below is the one that reports. The error is dropped on purpose:
+    // nothing is normally here, and if the removal genuinely failed then
+    // create_directories reports it.
+    std::error_code fs_error;
+    std::filesystem::remove_all(outside, fs_error);
+    REQUIRE(std::filesystem::create_directories(outside));
+    const auto occupant = outside / "entry-0-mip0.bin";
+    const std::vector<std::byte> occupant_bytes{std::byte{0x44}, std::byte{0x44}, std::byte{0x53}};
+    write_binary_file(occupant, occupant_bytes);
+
+    remove_snapshot_directory_if_owned(outside);
+
+    INFO("snapshot directory outside the private temp root: " << outside.string());
+    CHECK(std::filesystem::is_directory(outside));
+    CHECK(read_binary_file(occupant) == occupant_bytes);
+
+    // The scan must not offer it up either. A helper that refuses to delete only
+    // what it was handed, while still enumerating other people's directories, is
+    // one careless caller away from deleting them.
+    CHECK_FALSE(snapshot_directories().contains(outside));
 }
 
 TEST_CASE("BA2 DX10 writer is consumed after successful write attempts",
