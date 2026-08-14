@@ -72,8 +72,9 @@ would leak information for no benefit. Ownership is a test-side question and sta
   scope and needs its own work.
 - Setup and teardown run once per **test case**, not once per suite run: `catch_discover_tests`
   registers one CTest test per `TEST_CASE`, so each case is its own process. Setup is one
-  `CreateDirectory` plus four environment writes and teardown is one `remove_all`; anything more
-  expensive would be paid several hundred times per lane.
+  `CreateDirectory`, one `CreateFile`, four environment writes, and one sweep; teardown is one
+  `CloseHandle` plus one `remove_all`. Anything more expensive would be paid several hundred times
+  per lane.
 - The private root's location is exposed through `libbsa::tests::private_temp_root()`, and the
   original system root through `libbsa::tests::system_temp_root()`. A test that needs to talk about
   the shared root — to assert something did *not* land there — has to ask for it, because
@@ -90,8 +91,11 @@ would leak information for no benefit. Ownership is a test-side question and sta
   `GetTempPath2W` and reports an overlong result as `not_a_directory` rather than as a length error.
   The listener checks the length itself so the failure names its real cause, and the root name is
   kept short (`libbsa-tests-<pid>-<4 hex>`) because every path the suite builds nests under it.
-- Removal at exit is best-effort. A hard kill leaves a root behind; sweeping stale roots at start-up
-  is separate work (issue #63).
+- Removal at exit is best-effort, and stays that way: a hard kill leaves a root behind. What keeps
+  that from accumulating is the start-up sweep in the amendment below, not a stronger teardown.
+- Every root costs one open handle for the life of its process, and every start-up costs one
+  directory-search syscall pair plus one `CreateFile` per leftover found. The usual leftover count is
+  zero, which is what makes this affordable at one sweep per test case.
 
 ## Scope: the test binary only
 
@@ -109,3 +113,65 @@ root — under a private root that is true by construction, but the rule should 
 inferred (issue #64). It does not detect a genuinely concurrent second instance (issue #65), and it
 does not, by itself, prove the concurrency guarantee: that needs a test that actually runs two
 instances (issue #66).
+
+## Amendment (2026-08-14): liveness is an open handle, never an age
+
+A best-effort teardown accumulates. A run that crashed, was killed, or was force-terminated leaves its
+root behind, so start-up sweeps the system temp root for roots no live process owns.
+
+Sweeping is a destructive scan over directories the process does not own — structurally the same
+operation that caused the defect above — so the rule that decides what may be deleted is the decision
+worth recording, not the sweep itself.
+
+**A root may be removed only when this process can open its owner marker with exclusive access.** Every
+root's owner creates `.libbsa-tests-owner` inside the root at install time and holds that handle with
+`dwShareMode == 0` until uninstall. A second opener of a share-nothing handle is refused with
+`ERROR_SHARING_VIOLATION`, so an open that succeeds proves no process holds the marker.
+
+The rule is a handle rather than an age because Windows destroys a process's entire handle table when
+the process terminates, whatever terminated it — a clean exit, an unhandled exception,
+`TerminateProcess`, or the ASan lane aborting. The kernel maintains the liveness bit for us, and it
+cannot get stuck in either direction: there is no path where a dead process still holds a handle, and
+none where a live one has silently lost it.
+
+An age threshold has neither property, which is why it was rejected as the primary rule. A long ASan
+lane run can hold a root open for longer than any cutoff worth picking, and deleting it would
+reintroduce exactly the cross-process destruction this ADR exists to remove.
+
+One secondary branch is gated on age *in addition to* the rule above, never instead of it: a candidate
+root carrying **no marker at all** is removed once its creation time is older than an hour. A live
+owner is only ever in that state for the few microseconds between `create_directory` and the marker's
+`CreateFileW` — install fails loudly if the marker cannot be created, and nothing else deletes it — so
+an hour clears that race by some seven orders of magnitude. What the branch is for is a root whose
+*contents* were partly deleted: a failed `remove_all` can take the marker and then stop on a locked
+file, and without this branch that root would never be collectible again.
+
+That margin argument only holds if both stamps come from the same clock, which is the second thing
+worth recording. The branch compares the candidate against **this process's own root's creation
+stamp**, not against `GetSystemTimeAsFileTime()`. The wall clock belongs to the process; the creation
+stamp belongs to whichever filesystem hosts the temp root. Point `TEMP` at a network share whose
+server clock lags the client by more than the grace period — an ordinary enterprise configuration —
+and every freshly created root reads as aged out against the local clock, turning the microsecond
+race above into a live deletion. Two stamps from one clock have no skew to exploit, and the reference
+is always slightly behind the true present, which only makes the answer more conservative.
+
+The accepted cost is that a volume recording no creation times at all disables the branch entirely,
+since the reference reads as zero along with the candidates, and a marker-less root there is never
+collected. "Cannot tell" has to mean "leave it alone": the worst outcome of that answer is litter,
+while the opposite answer could delete a live root. The case is narrow — it needs a filesystem with no
+creation timestamps *and* a root that lost its marker, while the ordinary crashed-run leftover still
+has its marker and is collected by the primary rule.
+
+Scope and failure handling follow from the same caution. `FindFirstFileEx` is given the
+`libbsa-tests-*` pattern, so the filesystem does the filtering and no arbitrary temp entry ever reaches
+the loop, let alone `remove_all`; reparse points are skipped so a junction cannot redirect a delete out
+of the temp root. Failures are counted and skipped, never propagated — a leftover another user owns, or
+one holding a file open, is litter, and failing the run over it would make the suite depend on the
+machine's history rather than on the code.
+
+The sweep's counts are exposed through `libbsa::tests::startup_sweep_report()` because its decisions are
+otherwise unobservable from outside the process that made them. That is not a convenience: a live root
+survives a sweep that *tried* to delete it, since the owner's marker handle also blocks `remove_all`, so
+"the directory is still there" would pass against a sweep with no liveness rule at all. Only the counts
+distinguish considered-and-spared from attempted-and-refused, and the out-of-process test asserts on
+them.

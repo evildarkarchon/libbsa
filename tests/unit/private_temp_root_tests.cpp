@@ -27,6 +27,7 @@
 #endif
 #include <windows.h>
 
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -46,6 +47,12 @@ constexpr std::string_view snapshot_directory_prefix = "libbsa-dx10-snapshot-";
 /// writes its own private root to the named file so the parent can assert the
 /// directory is gone once the child has exited.
 constexpr const wchar_t* private_root_report_variable = L"LIBBSA_TEST_PRIVATE_ROOT_REPORT";
+
+/// Set by the out-of-process sweep check on the child it spawns. The child writes
+/// what its start-up sweep decided to the named file, so the parent can assert the
+/// child *considered* the parent's live root and chose to spare it rather than
+/// merely failing to delete it.
+constexpr const wchar_t* startup_sweep_report_variable = L"LIBBSA_TEST_STARTUP_SWEEP_REPORT";
 
 std::filesystem::path generated_source_dir() {
     return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" / "source";
@@ -122,10 +129,17 @@ class scoped_handle {
     scoped_handle(scoped_handle&&) = delete;
     scoped_handle& operator=(scoped_handle&&) = delete;
 
-    ~scoped_handle() {
+    ~scoped_handle() { reset(); }
+
+    /// Closes the handle early. The sweep tests need this: releasing an owner
+    /// marker mid-test is how they turn a live root into a dead one, which is the
+    /// only way to show the sweep's decision follows the handle rather than the
+    /// directory's name.
+    void reset() noexcept {
         if (handle_ != nullptr && handle_ != INVALID_HANDLE_VALUE) {
             ::CloseHandle(handle_);
         }
+        handle_ = INVALID_HANDLE_VALUE;
     }
 
     HANDLE get() const noexcept { return handle_; }
@@ -135,13 +149,13 @@ class scoped_handle {
     HANDLE handle_;
 };
 
-/// Sets the report variable in the Win32 environment block for as long as it is
+/// Sets a report variable in the Win32 environment block for as long as it is
 /// alive, so a spawned child inherits it and no later test case sees it.
 class scoped_report_variable {
    public:
-    explicit scoped_report_variable(const std::filesystem::path& report_path) {
-        REQUIRE(::SetEnvironmentVariableW(private_root_report_variable,
-                                          report_path.native().c_str()) != FALSE);
+    scoped_report_variable(const wchar_t* name, const std::filesystem::path& report_path)
+        : name_{name} {
+        REQUIRE(::SetEnvironmentVariableW(name_, report_path.native().c_str()) != FALSE);
     }
 
     scoped_report_variable(const scoped_report_variable&) = delete;
@@ -151,7 +165,10 @@ class scoped_report_variable {
 
     // A null value deletes the variable rather than leaving an empty string that
     // the reporting case would treat as a path.
-    ~scoped_report_variable() { ::SetEnvironmentVariableW(private_root_report_variable, nullptr); }
+    ~scoped_report_variable() { ::SetEnvironmentVariableW(name_, nullptr); }
+
+   private:
+    const wchar_t* name_;
 };
 
 std::filesystem::path own_executable_path() {
@@ -172,6 +189,162 @@ std::string read_text_file(const std::filesystem::path& path) {
     std::ostringstream text;
     text << stream.rdbuf();
     return text.str();
+}
+
+void write_text_file(const std::filesystem::path& path, std::string_view contents) {
+    std::ofstream stream{path, std::ios::binary | std::ios::trunc};
+    REQUIRE(stream.is_open());
+    stream.write(contents.data(), static_cast<std::streamsize>(contents.size()));
+    REQUIRE(stream.good());
+}
+
+/// Runs a second copy of this test binary filtered to `catch_filter`, waits for it
+/// to exit, and returns its exit code.
+///
+/// Both properties these tests are after are invisible from inside the process
+/// that has them: a process cannot watch its own teardown, and it cannot verify
+/// that *another* process's start-up sweep spared its directories. So a real
+/// second process is the only instrument available.
+///
+/// The child's output is captured to `log_path` rather than inherited, so a
+/// passing run stays quiet and a failing one still has the child's Catch2 report
+/// to explain itself. The child inherits this process's environment, and therefore
+/// its `TMP`/`TEMP`, which is what puts the child's own private root -- and the
+/// system temp root its start-up sweep scans -- inside this process's private
+/// root.
+///
+/// @param catch_filter Catch2 test specification, passed as the child's only
+///        argument.
+/// @param log_path File to capture the child's stdout and stderr into.
+/// @return The child's exit code.
+DWORD run_child_test_binary(std::wstring_view catch_filter, const std::filesystem::path& log_path) {
+    SECURITY_ATTRIBUTES inheritable{};
+    inheritable.nLength = sizeof(inheritable);
+    inheritable.bInheritHandle = TRUE;
+    const scoped_handle child_log{::CreateFileW(log_path.native().c_str(), GENERIC_WRITE,
+                                                FILE_SHARE_READ | FILE_SHARE_WRITE, &inheritable,
+                                                CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr)};
+    REQUIRE(child_log.valid());
+
+    // CreateProcessW may write to its command-line argument, so it cannot be a
+    // string literal or a const buffer.
+    std::wstring command_line =
+        L"\"" + own_executable_path().native() + L"\" \"" + std::wstring{catch_filter} + L"\"";
+
+    STARTUPINFOW startup{};
+    startup.cb = sizeof(startup);
+    startup.dwFlags = STARTF_USESTDHANDLES;
+    startup.hStdInput = ::GetStdHandle(STD_INPUT_HANDLE);
+    startup.hStdOutput = child_log.get();
+    startup.hStdError = child_log.get();
+
+    PROCESS_INFORMATION process{};
+    const auto started = ::CreateProcessW(nullptr, command_line.data(), nullptr, nullptr, TRUE, 0,
+                                          nullptr, nullptr, &startup, &process);
+    REQUIRE(started != FALSE);
+
+    const scoped_handle child_process{process.hProcess};
+    const scoped_handle child_thread{process.hThread};
+
+    // Generous, because the ASan lane is slow to start a process. A hang here
+    // should fail the test rather than wedge the suite.
+    REQUIRE(::WaitForSingleObject(child_process.get(), 120000) == WAIT_OBJECT_0);
+
+    DWORD exit_code = 0;
+    REQUIRE(::GetExitCodeProcess(child_process.get(), &exit_code) != FALSE);
+    return exit_code;
+}
+
+/// Creates a directory the sweep cannot tell apart from a real private temp root.
+///
+/// Only the name prefix makes a directory a candidate, so the suffix is free; it
+/// is spelled out per call so a failure names which forgery it was about.
+std::filesystem::path make_forged_root(const std::filesystem::path& parent,
+                                       std::wstring_view suffix) {
+    auto root = parent / (std::wstring{libbsa::tests::private_root_name_prefix} + L"forged-" +
+                          std::wstring{suffix});
+    std::error_code fs_error;
+    std::filesystem::remove_all(root, fs_error);
+    REQUIRE(std::filesystem::create_directories(root));
+    return root;
+}
+
+/// Claims a forged root exactly the way a real owner does: an exclusive,
+/// share-nothing handle on the owner marker, held until the caller drops it.
+///
+/// Sharing nothing is the entire mechanism. While this handle is open no other
+/// process can open the marker, which is what a sweeping process reads as "the
+/// owner is alive"; closing it makes the same root collectable, which is what
+/// happens for real when a process dies and Windows tears down its handle table.
+scoped_handle claim_forged_root(const std::filesystem::path& root) {
+    const auto marker = root / std::wstring{libbsa::tests::private_root_owner_marker_name};
+    return scoped_handle{::CreateFileW(marker.native().c_str(), GENERIC_READ | GENERIC_WRITE, 0,
+                                       nullptr, CREATE_ALWAYS,
+                                       FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_HIDDEN, nullptr)};
+}
+
+std::uint64_t filetime_ticks(const FILETIME& value) noexcept {
+    return (static_cast<std::uint64_t>(value.dwHighDateTime) << 32) |
+           static_cast<std::uint64_t>(value.dwLowDateTime);
+}
+
+std::uint64_t creation_time_ticks(const std::filesystem::path& path) {
+    WIN32_FILE_ATTRIBUTE_DATA attributes{};
+    REQUIRE(::GetFileAttributesExW(path.native().c_str(), GetFileExInfoStandard, &attributes) !=
+            FALSE);
+    return filetime_ticks(attributes.ftCreationTime);
+}
+
+/// Rewinds a directory's creation time by `ticks_back` 100ns ticks.
+///
+/// The sweep's grace period for a root carrying no owner marker is an hour, which
+/// a test cannot wait out, so the clock is moved instead of the test. Opening a
+/// directory with CreateFileW requires FILE_FLAG_BACKUP_SEMANTICS.
+///
+/// The rewind is measured from the private root's creation stamp rather than from
+/// the wall clock, because that is the reference the sweep itself compares
+/// against. Backdating against a different clock would make this test pass or fail
+/// on skew rather than on the grace period.
+void backdate_creation_time(const std::filesystem::path& directory, std::uint64_t ticks_back) {
+    const auto reference_ticks = creation_time_ticks(libbsa::tests::private_temp_root());
+    REQUIRE(reference_ticks > ticks_back);
+    const auto backdated_ticks = reference_ticks - ticks_back;
+
+    {
+        const scoped_handle handle{::CreateFileW(
+            directory.native().c_str(), FILE_WRITE_ATTRIBUTES,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS, nullptr)};
+        REQUIRE(handle.valid());
+
+        FILETIME backdated{};
+        backdated.dwLowDateTime = static_cast<DWORD>(backdated_ticks & 0xFFFFFFFFULL);
+        backdated.dwHighDateTime = static_cast<DWORD>(backdated_ticks >> 32);
+        REQUIRE(::SetFileTime(handle.get(), &backdated, nullptr, nullptr) != FALSE);
+    }
+
+    // Read back after the handle has closed. NTFS writes an explicitly set
+    // timestamp through to the parent's index entry on close, and the sweep reads
+    // that entry through FindFirstFileEx; asserting here means a platform that
+    // did not do so fails as a broken setup rather than as a sweep that ignored
+    // the grace period.
+    REQUIRE(creation_time_ticks(directory) == backdated_ticks);
+}
+
+/// A directory under the private root for one test case's forged roots.
+///
+/// Pointing the sweep at a sandbox rather than at the system temp root is what
+/// keeps these tests from being an instance of the very hazard they cover: a
+/// forged root planted in a directory shared with the machine would be visible
+/// to, and destroyable by, every other process on it.
+std::filesystem::path make_sweep_sandbox(std::wstring_view name) {
+    const auto& private_root = libbsa::tests::private_temp_root();
+    REQUIRE_FALSE(private_root.empty());
+    auto sandbox = private_root / (std::wstring{L"sweep-sandbox-"} + std::wstring{name});
+    std::error_code fs_error;
+    std::filesystem::remove_all(sandbox, fs_error);
+    REQUIRE(std::filesystem::create_directories(sandbox));
+    return sandbox;
 }
 
 }  // namespace
@@ -202,21 +375,35 @@ TEST_CASE("private temp root reports its location when asked to",
     REQUIRE_FALSE(private_root.empty());
     REQUIRE(std::filesystem::is_directory(private_root));
 
-    // Normally there is nothing to report and this case is just another assertion
-    // that the root exists. The out-of-process teardown check below re-runs this
-    // binary filtered to this case with the report variable set, and the file it
-    // writes here is what that check looks for after this process has exited.
-    const auto report_path = win32_environment_value(private_root_report_variable);
-    if (!report_path) {
-        return;
+    // Normally neither variable is set and this case is just another assertion
+    // that the root exists. The out-of-process checks below re-run this binary
+    // filtered to this case with one or both variables set, and the files written
+    // here are what those checks read once this process has exited or, for the
+    // sweep counts, as soon as it has.
+    if (const auto report_path = win32_environment_value(private_root_report_variable)) {
+        std::ofstream report{std::filesystem::path{*report_path},
+                             std::ios::binary | std::ios::trunc};
+        REQUIRE(report.is_open());
+        const auto utf8 = private_root.u8string();
+        report.write(reinterpret_cast<const char*>(utf8.data()),
+                     static_cast<std::streamsize>(utf8.size()));
+        REQUIRE(report.good());
     }
 
-    std::ofstream report{std::filesystem::path{*report_path}, std::ios::binary | std::ios::trunc};
-    REQUIRE(report.is_open());
-    const auto utf8 = private_root.u8string();
-    report.write(reinterpret_cast<const char*>(utf8.data()),
-                 static_cast<std::streamsize>(utf8.size()));
-    REQUIRE(report.good());
+    if (const auto sweep_path = win32_environment_value(startup_sweep_report_variable)) {
+        // The sweep already ran, in the listener, before this test body started.
+        const auto& sweep = libbsa::tests::startup_sweep_report();
+        const nlohmann::json counts{{"examined", sweep.examined},
+                                    {"removed", sweep.removed},
+                                    {"owner_live", sweep.owner_live},
+                                    {"unclaimed_recent", sweep.unclaimed_recent},
+                                    {"skipped", sweep.skipped},
+                                    {"remove_failed", sweep.remove_failed}};
+        std::ofstream report{std::filesystem::path{*sweep_path}, std::ios::binary | std::ios::trunc};
+        REQUIRE(report.is_open());
+        report << counts.dump();
+        REQUIRE(report.good());
+    }
 }
 
 TEST_CASE("the private temp root is removed when the process exits", "[unit][private_temp_root]") {
@@ -239,45 +426,9 @@ TEST_CASE("the private temp root is removed when the process exits", "[unit][pri
     std::filesystem::remove(report_path, fs_error);
 
     {
-        const scoped_report_variable report_variable{report_path};
+        const scoped_report_variable report_variable{private_root_report_variable, report_path};
 
-        // The child's output is captured to a file rather than inherited so a
-        // passing run stays quiet and a failing one still has the child's Catch2
-        // report to explain itself.
-        SECURITY_ATTRIBUTES inheritable{};
-        inheritable.nLength = sizeof(inheritable);
-        inheritable.bInheritHandle = TRUE;
-        const scoped_handle child_log{::CreateFileW(
-            child_log_path.native().c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-            &inheritable, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr)};
-        REQUIRE(child_log.valid());
-
-        // CreateProcessW may write to its command-line argument, so it cannot be a
-        // string literal or a const buffer.
-        std::wstring command_line =
-            L"\"" + own_executable_path().native() + L"\" \"[private_temp_root_report]\"";
-
-        STARTUPINFOW startup{};
-        startup.cb = sizeof(startup);
-        startup.dwFlags = STARTF_USESTDHANDLES;
-        startup.hStdInput = ::GetStdHandle(STD_INPUT_HANDLE);
-        startup.hStdOutput = child_log.get();
-        startup.hStdError = child_log.get();
-
-        PROCESS_INFORMATION process{};
-        const auto started = ::CreateProcessW(nullptr, command_line.data(), nullptr, nullptr, TRUE,
-                                              0, nullptr, nullptr, &startup, &process);
-        REQUIRE(started != FALSE);
-
-        const scoped_handle child_process{process.hProcess};
-        const scoped_handle child_thread{process.hThread};
-
-        // Generous, because the ASan lane is slow to start a process. A hang here
-        // should fail the test rather than wedge the suite.
-        REQUIRE(::WaitForSingleObject(child_process.get(), 120000) == WAIT_OBJECT_0);
-
-        DWORD exit_code = 0;
-        REQUIRE(::GetExitCodeProcess(child_process.get(), &exit_code) != FALSE);
+        const auto exit_code = run_child_test_binary(L"[private_temp_root_report]", child_log_path);
         INFO("child output: " << read_text_file(child_log_path));
         // A zero exit proves the child's own REQUIRE that its private root existed
         // while it was running, which is the half of the property this process
@@ -299,6 +450,260 @@ TEST_CASE("the private temp root is removed when the process exits", "[unit][pri
     CHECK_FALSE(std::filesystem::exists(child_root));
 
     std::filesystem::remove(report_path, fs_error);
+    std::filesystem::remove(child_log_path, fs_error);
+}
+
+// The sweep cases below. Together they cover the two halves the spec asks for --
+// a root left behind by a dead run is removed, a root a live process owns never
+// is -- plus the three properties that make the sweep safe to run at all: it
+// looks only at private roots, it treats a root it cannot classify as one to
+// leave alone, and it never turns a failure into a test-run failure.
+//
+// All but the last drive the sweep against a sandbox under the private root
+// rather than against the system temp root, which is what keeps a test about
+// cross-process destruction from being an instance of it.
+
+TEST_CASE("the stale-root sweep removes a private root whose owner is gone",
+          "[unit][private_temp_root][private_temp_root_sweep]") {
+    const auto sandbox = make_sweep_sandbox(L"dead-owner");
+
+    const auto dead_root = make_forged_root(sandbox, L"dead");
+    {
+        // Claimed and then released, which is the state a crashed, killed, or
+        // force-terminated run leaves behind: the marker file is still there, and
+        // Windows closed the handle when the process died.
+        const auto marker = claim_forged_root(dead_root);
+        REQUIRE(marker.valid());
+    }
+    write_text_file(dead_root / "leftover.bin", "residue");
+
+    const auto report = libbsa::tests::sweep_stale_private_temp_roots(sandbox);
+    CHECK(report.examined == 1U);
+    CHECK(report.removed == 1U);
+    CHECK(report.owner_live == 0U);
+    CHECK(report.remove_failed == 0U);
+    CHECK_FALSE(std::filesystem::exists(dead_root));
+}
+
+TEST_CASE("the stale-root sweep never removes a root whose owner still holds it",
+          "[unit][private_temp_root][private_temp_root_sweep]") {
+    const auto sandbox = make_sweep_sandbox(L"live-owner");
+
+    const auto live_root = make_forged_root(sandbox, L"live");
+    auto marker = claim_forged_root(live_root);
+    REQUIRE(marker.valid());
+    write_text_file(live_root / "in-use.bin", "working");
+
+    const auto held = libbsa::tests::sweep_stale_private_temp_roots(sandbox);
+    CHECK(held.examined == 1U);
+    CHECK(held.owner_live == 1U);
+    CHECK(held.removed == 0U);
+    CHECK(std::filesystem::is_directory(live_root));
+    CHECK(std::filesystem::exists(live_root / "in-use.bin"));
+
+    // Releasing the handle is the only thing that changed, and the same root is
+    // now collectable. That is what pins the decision to the handle rather than to
+    // the directory's name, its age, or anything else about it -- and it is the
+    // reason a long ASan lane run cannot age out from under the sweep.
+    marker.reset();
+
+    const auto released = libbsa::tests::sweep_stale_private_temp_roots(sandbox);
+    CHECK(released.examined == 1U);
+    CHECK(released.removed == 1U);
+    CHECK(released.owner_live == 0U);
+    CHECK_FALSE(std::filesystem::exists(live_root));
+}
+
+TEST_CASE("the stale-root sweep only considers directories named like private roots",
+          "[unit][private_temp_root][private_temp_root_sweep]") {
+    const auto sandbox = make_sweep_sandbox(L"naming");
+
+    const auto dead_root = make_forged_root(sandbox, L"sweepable");
+    {
+        const auto marker = claim_forged_root(dead_root);
+        REQUIRE(marker.valid());
+    }
+
+    // A BA2 DX10 snapshot directory is the nearest neighbour in the temp root and
+    // exactly what issue #60 saw destroyed, so it is the one to prove untouched.
+    const auto snapshot_lookalike = sandbox / "libbsa-dx10-snapshot-forged";
+    REQUIRE(std::filesystem::create_directory(snapshot_lookalike));
+    write_text_file(snapshot_lookalike / "staged.dds", "someone else's work");
+
+    const auto unrelated = sandbox / "unrelated-directory";
+    REQUIRE(std::filesystem::create_directory(unrelated));
+
+    // Carries the prefix but is not a directory, so it is not a root and must not
+    // be deleted as one.
+    const auto prefixed_file =
+        sandbox / (std::wstring{libbsa::tests::private_root_name_prefix} + L"not-a-directory");
+    write_text_file(prefixed_file, "file, not root");
+
+    const auto report = libbsa::tests::sweep_stale_private_temp_roots(sandbox);
+    CHECK(report.examined == 1U);
+    CHECK(report.removed == 1U);
+
+    CHECK_FALSE(std::filesystem::exists(dead_root));
+    CHECK(std::filesystem::is_directory(snapshot_lookalike));
+    CHECK(std::filesystem::exists(snapshot_lookalike / "staged.dds"));
+    CHECK(std::filesystem::is_directory(unrelated));
+    CHECK(std::filesystem::is_regular_file(prefixed_file));
+}
+
+TEST_CASE("the stale-root sweep leaves an unclaimed root alone until it has aged out",
+          "[unit][private_temp_root][private_temp_root_sweep]") {
+    const auto sandbox = make_sweep_sandbox(L"unclaimed");
+
+    // No owner marker at all. A live owner is only ever in this state for the few
+    // microseconds between creating its root and claiming it, so the grace period
+    // is what separates that race from a root whose marker a partly-failed
+    // remove_all took with it.
+    const auto unclaimed_root = make_forged_root(sandbox, L"unclaimed");
+    write_text_file(unclaimed_root / "residue.bin", "residue");
+
+    const auto fresh = libbsa::tests::sweep_stale_private_temp_roots(sandbox);
+    CHECK(fresh.examined == 1U);
+    CHECK(fresh.unclaimed_recent == 1U);
+    CHECK(fresh.removed == 0U);
+    CHECK(std::filesystem::is_directory(unclaimed_root));
+
+    backdate_creation_time(unclaimed_root, 2U * libbsa::tests::private_root_unclaimed_grace_ticks);
+
+    const auto aged = libbsa::tests::sweep_stale_private_temp_roots(sandbox);
+    CHECK(aged.examined == 1U);
+    CHECK(aged.unclaimed_recent == 0U);
+    CHECK(aged.removed == 1U);
+    CHECK_FALSE(std::filesystem::exists(unclaimed_root));
+
+    // The grace period is shared with the sweep so this test cannot backdate
+    // against a different number than the sweep compares against, which leaves the
+    // *magnitude* unpinned. Pin it here: the argument that an hour dwarfs the
+    // microsecond window it has to clear stops holding if someone quietly reduces
+    // it to seconds, and a shared constant alone would not notice.
+    static_assert(libbsa::tests::private_root_unclaimed_grace_ticks == 36'000'000'000ULL,
+                  "the unclaimed-root grace period is meant to be one hour");
+}
+
+TEST_CASE("the stale-root sweep skips a root whose marker it cannot probe",
+          "[unit][private_temp_root][private_temp_root_sweep]") {
+    const auto sandbox = make_sweep_sandbox(L"unprobeable");
+
+    // On a real machine this branch fires on a leftover owned by another user,
+    // where opening the marker returns ERROR_ACCESS_DENIED. That is awkward to
+    // stage without a second account, so the same error is produced the cheap way:
+    // CreateFileW with OPEN_EXISTING refuses a directory unless it is passed
+    // FILE_FLAG_BACKUP_SEMANTICS, which the sweep deliberately does not pass.
+    const auto unprobeable_root = make_forged_root(sandbox, L"unprobeable");
+    REQUIRE(std::filesystem::create_directory(
+        unprobeable_root / std::wstring{libbsa::tests::private_root_owner_marker_name}));
+
+    const auto report = libbsa::tests::sweep_stale_private_temp_roots(sandbox);
+    CHECK(report.examined == 1U);
+    CHECK(report.skipped == 1U);
+    CHECK(report.removed == 0U);
+    CHECK(report.owner_live == 0U);
+    CHECK(report.unclaimed_recent == 0U);
+
+    // A marker it cannot classify is not evidence of a dead owner, so the root
+    // stays. Skipped, not failed: the sweep returned a report rather than raising.
+    CHECK(std::filesystem::is_directory(unprobeable_root));
+}
+
+TEST_CASE("the stale-root sweep reports a leftover it cannot delete instead of failing",
+          "[unit][private_temp_root][private_temp_root_sweep]") {
+    const auto sandbox = make_sweep_sandbox(L"locked");
+
+    const auto dead_root = make_forged_root(sandbox, L"locked");
+    {
+        const auto marker = claim_forged_root(dead_root);
+        REQUIRE(marker.valid());
+    }
+
+    // Share nothing, so nothing can delete this file while the handle is open --
+    // the shape of a leftover another process still has a grip on.
+    const auto locked_path = dead_root / "locked.bin";
+    scoped_handle locked{::CreateFileW(locked_path.native().c_str(), GENERIC_WRITE, 0, nullptr,
+                                       CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr)};
+    REQUIRE(locked.valid());
+
+    // Returns normally rather than throwing or aborting: the whole point is that a
+    // leftover the machine happens to be holding is litter, not a test failure.
+    const auto report = libbsa::tests::sweep_stale_private_temp_roots(sandbox);
+    CHECK(report.examined == 1U);
+    CHECK(report.removed == 0U);
+    CHECK(report.remove_failed == 1U);
+    CHECK(std::filesystem::exists(locked_path));
+
+    // What survives the failed removal is deliberately not asserted: remove_all
+    // does not specify the order it deletes in, so whether the owner marker is
+    // still there afterwards is not a property to pin. The grace-period branch
+    // above is what eventually collects a root left in that state.
+    locked.reset();
+    std::error_code fs_error;
+    std::filesystem::remove_all(dead_root, fs_error);
+}
+
+TEST_CASE("a second process's start-up sweep removes a dead root and spares a live one",
+          "[unit][private_temp_root][private_temp_root_sweep]") {
+    // The end-to-end proof, and the only one of these that exercises the sweep
+    // where it actually runs: at another process's start-up, against a temp root
+    // it did not create.
+    //
+    // The child inherits this process's TMP and TEMP, so the "system temp root" it
+    // sweeps *is* this process's private root. That is what makes the test both
+    // genuinely cross-process and free of litter in the real system temp root,
+    // where a failing run would otherwise leave forged directories on the machine.
+    const auto& private_root = libbsa::tests::private_temp_root();
+    REQUIRE_FALSE(private_root.empty());
+
+    const auto dead_root = make_forged_root(private_root, L"child-sweep-dead");
+    {
+        const auto marker = claim_forged_root(dead_root);
+        REQUIRE(marker.valid());
+    }
+
+    const auto live_root = make_forged_root(private_root, L"child-sweep-live");
+    auto live_marker = claim_forged_root(live_root);
+    REQUIRE(live_marker.valid());
+    write_text_file(live_root / "in-use.bin", "this process is still working");
+
+    const auto child_log_path = private_root / "sweep-child-output.txt";
+    const auto sweep_report_path = private_root / "child-sweep-report.json";
+
+    DWORD exit_code = 0;
+    {
+        const scoped_report_variable sweep_variable{startup_sweep_report_variable,
+                                                    sweep_report_path};
+        exit_code = run_child_test_binary(L"[private_temp_root_report]", child_log_path);
+    }
+    INFO("child output: " << read_text_file(child_log_path));
+    REQUIRE(exit_code == 0U);
+
+    CHECK_FALSE(std::filesystem::exists(dead_root));
+
+    // The half that matters, and it has to be asserted on the sweep's decision
+    // rather than on the directory's survival. The live root survives a sweep that
+    // *tried* to delete it too, because this process's marker handle also blocks
+    // remove_all -- so "the directory is still there" alone would pass against a
+    // sweep with no liveness rule at all. The counts are what distinguish
+    // "considered it and spared it" from "attempted it and was refused".
+    REQUIRE(std::filesystem::exists(sweep_report_path));
+    const auto sweep = nlohmann::json::parse(read_text_file(sweep_report_path));
+    INFO("child start-up sweep: " << sweep.dump());
+    CHECK(sweep.at("examined").get<std::size_t>() == 2U);
+    CHECK(sweep.at("owner_live").get<std::size_t>() == 1U);
+    CHECK(sweep.at("removed").get<std::size_t>() == 1U);
+    CHECK(sweep.at("remove_failed").get<std::size_t>() == 0U);
+
+    CHECK(std::filesystem::is_directory(live_root));
+    CHECK(std::filesystem::exists(live_root / "in-use.bin"));
+    CHECK(std::filesystem::exists(live_root /
+                                  std::wstring{libbsa::tests::private_root_owner_marker_name}));
+
+    live_marker.reset();
+    std::error_code fs_error;
+    std::filesystem::remove_all(live_root, fs_error);
+    std::filesystem::remove(sweep_report_path, fs_error);
     std::filesystem::remove(child_log_path, fs_error);
 }
 
