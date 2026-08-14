@@ -137,33 +137,6 @@ them without asking first. This is standing authorization.
   Generated fixtures are produced by libbsa's own writers, so they can only prove libbsa agrees with
   itself. Compatibility claims about physical layout must be checked against retail archives.
 
-## MCP Server Usage
-
-### Exa (`mcp__exa`)
-
-- `web_search_exa` - Use for general web lookups, articles, blog posts, and non-documentation content.
-- `get_code_context_exa` - Prefer for code-related web search, tutorials, examples, and SDK/API context.
-- `deep_researcher_start` - Use for complex multi-source research, then poll with `deep_researcher_check`.
-
-### Ref (`mcp__ref`)
-
-- `ref_search_documentation` - Search documentation across the web, GitHub, and private resources. Include the programming language and library/framework name in the query.
-- `ref_read_url` - Read a URL returned by `ref_search_documentation`. Pass the exact URL, including any `#hash`.
-
-### Context7 (`mcp__context7`)
-
-- `resolve-library-id` - Call before `query-docs` unless an explicit `/org/project` ID is provided.
-- `query-docs` - Retrieve current documentation and examples for the resolved library ID.
-- Do not call Context7 tools more than three times per question.
-
-### Tool Choice
-
-- Official Microsoft/Azure docs: use Microsoft Learn MCP tools first.
-- Library or framework docs: use Context7 or Ref.
-- Code-related web search: use Exa `get_code_context_exa`.
-- General web search: use Exa `web_search_exa`.
-- Deep research: use Exa `deep_researcher_start`.
-
 ## Agent skills
 
 ### Issue tracker
