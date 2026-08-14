@@ -109,7 +109,8 @@ The Payload Placement module (`src/detail/payload_placement.hpp`) carries the el
 that DX10's decode facts belong in. All three sharing families now place through that module.
 TES4-family BSA and BA2 GNRL deliberately supply no predicate, because they have no eligibility
 constraint to state; BA2 DX10 supplies its three decode facts as one, and its key is now stored size
-and fingerprint like theirs.
+and fingerprint like theirs. TES3 BSA places through the same module with sharing disabled, so all four
+families share one cursor and one span arithmetic even though only three of them can share a location.
 
 Fact 1 therefore holds again for every family that shares. It survives not because DX10's constraint
 went away but because the constraint moved to where it is visible as a correctness rule instead of

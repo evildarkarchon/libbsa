@@ -8,6 +8,7 @@
 #include "formats/ba2/ba2_gnrl_serialize.hpp"
 #include "formats/bsa/tes3_bsa_layout.hpp"
 #include "formats/bsa/tes3_bsa_prepare.hpp"
+#include "formats/bsa/tes3_bsa_serialize.hpp"
 #include "formats/bsa/tes4_bsa_constants.hpp"
 #include "formats/bsa/tes4_bsa_layout.hpp"
 #include "formats/bsa/tes4_bsa_prepare.hpp"
@@ -278,24 +279,108 @@ TEST_CASE("tes3 writer preparation stage reports malformed disk entries",
     CHECK(prepared.error().code == libbsa::error_code::io_error);
 }
 
-TEST_CASE("tes3 writer layout stage assigns raw offsets and rejects oversized spans",
+TEST_CASE("tes3 writer layout wires the payload placer to this family",
+          "[unit][writer-stage][tes3_bsa_writer][payload_placement]") {
+    // The cursor rule is covered once at the Payload Placement module's own
+    // interface. What has to be proven here is that TES3 hands the module the
+    // right family-specific construction values, because a wrong base offset is
+    // a mistake this family made — plus zero-length placement, which is kept per
+    // family deliberately: it is the subtlest rule in the project and each
+    // family's writer is where it is actually observable.
+    //
+    // The module's diagnostic label is deliberately not asserted here: its only
+    // labelled diagnostic is a 64-bit payload span overflow, and a TES3 payload
+    // size is a UInt32, so reaching it would take 2^32 entries. TES3's own
+    // oversize rejection is covered where it now lives, at serialization, and
+    // that the module echoes its label at all is proven at the module seam.
+
+    SECTION("offsets are data-section-relative, so the base offset is zero") {
+        std::vector<libbsa::formats::bsa::tes3_prepared_entry> entries(2U);
+        entries[0].payload_size = 4U;
+        entries[1].payload_size = 8U;
+
+        auto placed = libbsa::formats::bsa::tes3_place_payloads(entries);
+
+        REQUIRE(placed.has_value());
+        CHECK(entries[0].raw_offset == 0U);
+        CHECK(entries[1].raw_offset == 4U);
+    }
+
+    SECTION("byte-identical entries keep distinct locations") {
+        // TES3's reader exempts no duplicate span, so an archive whose entries
+        // shared one location is one libbsa itself would refuse to reopen
+        // (ADR-0002, open question). This is the outcome that has to hold.
+        //
+        // It does not, on its own, prove the disabled policy is wired up: TES3
+        // offers the placer sizes rather than Stored Payloads, and a size-only
+        // subject cannot share under any policy, because byte equality is the
+        // sole authority for sharing and there are no bytes (ADR-0001). The
+        // explicit policy value is belt and braces, and it is there to record
+        // the decision where a reader will find it rather than to change what
+        // this function does.
+        std::vector<libbsa::formats::bsa::tes3_prepared_entry> entries(3U);
+        for (auto& entry : entries) {
+            entry.payload = bytes_from_text("same");
+            entry.payload_size = 4U;
+            entry.from_memory = true;
+        }
+
+        auto placed = libbsa::formats::bsa::tes3_place_payloads(entries);
+
+        REQUIRE(placed.has_value());
+        CHECK(entries[0].raw_offset == 0U);
+        CHECK(entries[1].raw_offset == 4U);
+        CHECK(entries[2].raw_offset == 8U);
+    }
+
+    SECTION("a zero-length payload takes the cursor without advancing it") {
+        std::vector<libbsa::formats::bsa::tes3_prepared_entry> entries(3U);
+        entries[0].payload_size = 4U;
+        entries[1].payload_size = 0U;
+        entries[2].payload_size = 2U;
+
+        auto placed = libbsa::formats::bsa::tes3_place_payloads(entries);
+
+        REQUIRE(placed.has_value());
+        CHECK(entries[0].raw_offset == 0U);
+        CHECK(entries[1].raw_offset == 4U);
+        CHECK(entries[2].raw_offset == 4U);
+    }
+}
+
+TEST_CASE("tes3 writer serialization rejects a payload span that will not fit a file record",
           "[unit][writer-stage][tes3_bsa_writer]") {
-    std::vector<libbsa::formats::bsa::tes3_prepared_entry> entries(2U);
-    entries[0].payload_size = 4U;
-    entries[1].payload_size = 8U;
-
-    auto assigned = libbsa::formats::bsa::tes3_assign_raw_offsets(entries);
-
-    REQUIRE(assigned.has_value());
-    CHECK(entries[0].raw_offset == 0U);
-    CHECK(entries[1].raw_offset == 4U);
-
+    // Placement runs on the module's 64-bit cursor, so the UInt32 a TES3 file
+    // record actually holds is checked here, when the record is written. The
+    // rejected condition is the span *end*, not the offset: the standalone
+    // assignment this replaced failed as soon as a running total passed UInt32,
+    // and the largest span end is that total, so the same archives are refused.
+    std::vector<libbsa::formats::bsa::tes3_prepared_entry> entries(3U);
+    entries[0].archive_path_original = "meshes\\oversize\\a.nif";
+    entries[1].archive_path_original = "meshes\\oversize\\b.nif";
+    entries[2].archive_path_original = "meshes\\oversize\\c.nif";
     entries[0].payload_size = std::numeric_limits<std::uint32_t>::max();
-    entries[1].payload_size = 1U;
-    auto oversized = libbsa::formats::bsa::tes3_assign_raw_offsets(entries);
+    entries[1].payload_size = std::numeric_limits<std::uint32_t>::max();
+    entries[2].payload_size = 1U;
+    for (auto& entry : entries) {
+        entry.from_memory = true;
+    }
 
-    REQUIRE_FALSE(oversized.has_value());
-    CHECK(oversized.error().code == libbsa::error_code::format_error);
+    auto placed = libbsa::formats::bsa::tes3_place_payloads(entries);
+    REQUIRE(placed.has_value());
+
+    const auto output_path = stage_output_path("tes3-oversize-span.bsa");
+    std::filesystem::remove(output_path);
+    auto written = libbsa::formats::bsa::tes3_write_archive_bytes(entries, output_path);
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::format_error);
+    // The diagnostic names TES3 so a caller packing several archives can tell
+    // which one failed without instrumenting the library.
+    CHECK(written.error().message.find("TES3") != std::string::npos);
+    // Metadata is assembled before the output stream is opened, so a rejected
+    // span leaves no partial archive behind.
+    CHECK_FALSE(std::filesystem::exists(output_path));
 }
 
 TEST_CASE("ba2 gnrl writer preparation stage prepares minimal memory entries",

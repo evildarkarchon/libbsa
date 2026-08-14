@@ -75,3 +75,9 @@ TES3's check rejects any overlap, including exact duplicates, while the other th
 precisely because writer dedupe may produce them. If libbsa's TES3 writer shares payload locations under
 ADR-0001, it can emit a TES3 archive its own reader refuses to reopen. This has not been verified and is
 recorded here so it is not mistaken for a settled decision.
+
+The write path now states the exclusion rather than implying it. TES3 places through the Payload Placement
+module (`src/formats/bsa/tes3_bsa_layout.cpp`) with `payload_sharing_policy::disabled`, so the decision is
+a greppable value at the call site instead of something a reader has to infer from sharing code that is
+not there. That records the question; it does not answer it. Enabling sharing for TES3 would still need
+this reader behaviour settled first, and would need a public writer option TES3 deliberately does not have.
