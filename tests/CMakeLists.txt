@@ -99,6 +99,7 @@ add_executable(libbsa_tests
   unit/host_file_tests.cpp
   unit/host_file_path_tests.cpp
   unit/host_path_correctness_boundary_tests.cpp
+  unit/temp_directory_redirection_tests.cpp
   unit/bethesda_hash_tests.cpp
 )
 
