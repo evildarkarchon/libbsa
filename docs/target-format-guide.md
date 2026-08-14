@@ -111,6 +111,8 @@ Destructor safety-net cleanup remains for BA2 DX10 writers that are abandoned be
 
 Residual abnormal-termination risk remains: a process crash, forced termination, hard termination, OS shutdown, or external temp-directory interference can leave residual BA2 DX10 snapshot artifacts behind. libbsa makes no cleanup guarantee for those abnormal conditions.
 
+External temp-directory interference is scoped to the calling process's temp root. A snapshot directory sits in whatever temp root the host process resolves, so for a library consumer this stays an accepted hazard: libbsa cannot fence off a directory it shares with the rest of the machine. A host that wants the hazard gone can remove it without any libbsa API, by pointing its own process temp environment at a directory it controls before calling the writer — snapshot directories follow, because the writer resolves its root through `std::filesystem::temp_directory_path()`. libbsa's own test suite does exactly that: every `libbsa_tests` process creates a private temp root and points its `TMP` and `TEMP` at it before the first test body runs, so snapshot directories created during the suite are invisible to every other process on the machine, and the snapshot-cleanup tests' before/after directory diff is a correct ownership proxy rather than a lucky one. ADR-0003 records that decision and why the isolation lives in the process environment rather than in a library seam.
+
 ## compatibility warnings
 
 Validation warnings use stable public `compatibility_warning_code` values. The warning catalog in `docs/compatibility-evidence.md` gives the rule and evidence for each code.

@@ -49,6 +49,10 @@ function(libbsa_link_internal_test_support target_name)
 endfunction()
 
 add_executable(libbsa_tests
+  # Shared test support. CATCH_REGISTER_LISTENER needs a compiled translation
+  # unit of its own: the force-included unit/test_source_root.hpp reaches every
+  # source file and would register the listener once per translation unit.
+  support/private_temp_root.cpp
   unit/result_tests.cpp
   unit/archive_reader_tests.cpp
   unit/archive_reader_dispatch_tests.cpp
@@ -100,6 +104,7 @@ add_executable(libbsa_tests
   unit/host_file_path_tests.cpp
   unit/host_path_correctness_boundary_tests.cpp
   unit/temp_directory_redirection_tests.cpp
+  unit/private_temp_root_tests.cpp
   unit/bethesda_hash_tests.cpp
 )
 
@@ -117,6 +122,9 @@ target_include_directories(libbsa_tests
   PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/src
+    # Lets any test include shared support headers as "support/<name>.hpp"
+    # instead of reaching across directories with a relative path.
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_compile_options(libbsa_tests
