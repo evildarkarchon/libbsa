@@ -1,5 +1,3 @@
-#include "fingerprint_collision_fixture.hpp"
-
 #include "formats/ba2/ba2_constants.hpp"
 #include "formats/ba2/ba2_dx10_layout.hpp"
 #include "formats/ba2/ba2_dx10_prepare.hpp"
@@ -48,11 +46,6 @@ std::vector<std::byte> bytes_from_text(std::string_view text) {
     }
     return bytes;
 }
-
-// The collision pair now lives in `fingerprint_collision_fixture.hpp` so the
-// Payload Placement module tests and these family-stage tests exercise the same
-// bytes rather than two copies that could drift apart.
-using libbsa::tests::fnv1a_fingerprint_collision;
 
 std::filesystem::path stage_test_dir() {
     auto path = std::filesystem::temp_directory_path() / "libbsa_writer_stage_tests";
@@ -959,55 +952,62 @@ TEST_CASE("ba2 dx10 writer preparation stage prepares multi-mip and cubemap entr
     CHECK(cubemap_prepared.value()[0].chunks.size() == 6U);
 }
 
-TEST_CASE("ba2 dx10 writer layout stage plans distinct and shared payload placements",
-          "[unit][writer-stage][ba2_dx10_writer]") {
+TEST_CASE("ba2 dx10 writer layout wires the payload placer to this family",
+          "[unit][writer-stage][ba2_dx10_writer][payload_placement]") {
+    // The sharing rule itself is covered once at the Payload Placement module's
+    // own interface. What has to be proven here is only that DX10 hands the
+    // module the right family-specific construction values, because a wrong base
+    // offset or a wrong policy is a mistake this family made.
+    //
+    // The module's diagnostic label is deliberately not asserted here, because
+    // no input to this function can reach it. The module's only labelled
+    // diagnostic is a 64-bit payload span overflow; DX10's base offset is
+    // derived from the header and record table, and its stored sizes are real
+    // payload bytes, so the cursor cannot be driven out of the 64-bit range from
+    // this seam. That the label is echoed at all is covered at the module seam.
     const auto payload = bytes_from_text("dx10-shared");
     const auto profile = require_dx10_profile();
 
-    auto distinct =
-        ba2_dx10_prepared_stage_entries("Textures/Stage/Distinct.dds", {payload, payload});
-    auto distinct_plan =
-        libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(distinct), profile, false);
+    SECTION("the payload area starts past the header and record table") {
+        auto entries =
+            ba2_dx10_prepared_stage_entries("Textures/Stage/Base.dds", {payload, payload});
+        auto plan =
+            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, false);
 
-    REQUIRE(distinct_plan.has_value());
-    REQUIRE(distinct_plan.value().records.size() == 1U);
-    REQUIRE(distinct_plan.value().records[0].chunks.size() == 2U);
-    REQUIRE(distinct_plan.value().payloads.size() == 2U);
-    CHECK(distinct_plan.value().records[0].chunks[0].payload_index == 0U);
-    CHECK(distinct_plan.value().records[0].chunks[1].payload_index == 1U);
-    CHECK(distinct_plan.value().payloads[0].offset != distinct_plan.value().payloads[1].offset);
+        REQUIRE(plan.has_value());
+        REQUIRE(plan.value().payloads.size() == 2U);
+        const auto expected_base_offset = profile.header_size() + expected_ba2_dx10_record_size +
+                                          (2U * expected_ba2_dx10_chunk_header_size);
+        CHECK(plan.value().payloads[0].offset == expected_base_offset);
+        CHECK(plan.value().payloads[1].offset == expected_base_offset + payload.size());
+    }
 
-    auto deduped =
-        ba2_dx10_prepared_stage_entries("Textures/Stage/Deduped.dds", {payload, payload});
-    auto deduped_plan =
-        libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(deduped), profile, true);
+    SECTION("the dedupe flag selects the placer's sharing policy") {
+        auto distinct =
+            ba2_dx10_prepared_stage_entries("Textures/Stage/Distinct.dds", {payload, payload});
+        auto distinct_plan =
+            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(distinct), profile, false);
 
-    REQUIRE(deduped_plan.has_value());
-    REQUIRE(deduped_plan.value().records.size() == 1U);
-    REQUIRE(deduped_plan.value().records[0].chunks.size() == 2U);
-    REQUIRE(deduped_plan.value().payloads.size() == 1U);
-    CHECK(deduped_plan.value().records[0].chunks[0].payload_index == 0U);
-    CHECK(deduped_plan.value().records[0].chunks[1].payload_index == 0U);
-}
+        REQUIRE(distinct_plan.has_value());
+        REQUIRE(distinct_plan.value().records.size() == 1U);
+        REQUIRE(distinct_plan.value().records[0].chunks.size() == 2U);
+        REQUIRE(distinct_plan.value().payloads.size() == 2U);
+        CHECK(distinct_plan.value().records[0].chunks[0].payload_index == 0U);
+        CHECK(distinct_plan.value().records[0].chunks[1].payload_index == 1U);
+        CHECK(distinct_plan.value().payloads[0].offset != distinct_plan.value().payloads[1].offset);
 
-TEST_CASE("ba2 dx10 writer layout verifies exact payload equality after narrowing",
-          "[unit][writer-stage][ba2_dx10_writer][dedupe]") {
-    const auto collision = fnv1a_fingerprint_collision();
-    const auto profile = require_dx10_profile();
-    auto entries = ba2_dx10_prepared_stage_entries("Textures/Stage/Collision.dds",
-                                                   {collision.distinct_a, collision.distinct_b});
-    REQUIRE(entries[0].chunks[0].payload.fingerprint() ==
-            entries[0].chunks[1].payload.fingerprint());
+        auto deduped =
+            ba2_dx10_prepared_stage_entries("Textures/Stage/Deduped.dds", {payload, payload});
+        auto deduped_plan =
+            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(deduped), profile, true);
 
-    auto plan = libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
-
-    REQUIRE(plan.has_value());
-    REQUIRE(plan.value().payloads.size() == 2U);
-    CHECK(plan.value().records[0].chunks[0].payload_index == 0U);
-    CHECK(plan.value().records[0].chunks[1].payload_index == 1U);
-    CHECK(plan.value().payloads[0].payload.fingerprint() ==
-          plan.value().payloads[1].payload.fingerprint());
-    CHECK(plan.value().payloads[0].offset != plan.value().payloads[1].offset);
+        REQUIRE(deduped_plan.has_value());
+        REQUIRE(deduped_plan.value().records.size() == 1U);
+        REQUIRE(deduped_plan.value().records[0].chunks.size() == 2U);
+        REQUIRE(deduped_plan.value().payloads.size() == 1U);
+        CHECK(deduped_plan.value().records[0].chunks[0].payload_index == 0U);
+        CHECK(deduped_plan.value().records[0].chunks[1].payload_index == 0U);
+    }
 }
 
 TEST_CASE("ba2 dx10 writer layout preserves first occurrence and physical geometry",
@@ -1146,8 +1146,19 @@ TEST_CASE("ba2 dx10 writer serialization rejects invalid plan payload references
     CHECK(serialized.error().code == libbsa::error_code::invalid_argument);
 }
 
-TEST_CASE("ba2 dx10 writer layout includes decode facts in dedupe candidates",
-          "[unit][writer-stage][ba2_dx10_writer][dedupe]") {
+TEST_CASE("ba2 dx10 writer layout supplies decode facts as Sharing Eligibility",
+          "[unit][writer-stage][ba2_dx10_writer][dedupe][payload_placement]") {
+    // Sharing Eligibility as a rule is covered generically at the Payload
+    // Placement module's own interface. What this covers is DX10's wiring of it:
+    // that this family supplies raw size, packed size and compression method as
+    // the predicate, so byte-equal chunks whose records disagree on any of the
+    // three still receive distinct locations.
+    //
+    // The coverage lives at this seam rather than at the public writer seam
+    // because it cannot be reached from there: the preparer derives all three
+    // facts from the DDS input, so byte-equal chunks with disagreeing decode
+    // facts cannot be constructed through the public writer API. Each section
+    // below manufactures one by mutating a prepared entry directly.
     const auto payload = bytes_from_text("dx10-compatible-bytes");
     const auto profile = require_dx10_profile();
 
@@ -1188,5 +1199,33 @@ TEST_CASE("ba2 dx10 writer layout includes decode facts in dedupe candidates",
         REQUIRE(plan.value().payloads.size() == 2U);
         CHECK(plan.value().records[0].chunks[0].payload_index !=
               plan.value().records[0].chunks[1].payload_index);
+    }
+
+    SECTION("an earlier share does not desynchronise later eligibility lookups") {
+        // The predicate looks a candidate's decode facts up by the payload index
+        // the placer handed out, from a vector this family appends to itself. A
+        // share mints no new index, so it must append nothing; appending anyway
+        // would push the vector one ahead of the placer's and every later lookup
+        // would read some other chunk's facts.
+        //
+        // The first two chunks share, and the fourth then has to match against a
+        // candidate at index 1. Under a desynchronised vector index 1 would hold
+        // the shorter payload's facts, so the fourth chunk would be refused and a
+        // third location would appear. The two payloads differ in length, which
+        // makes their raw and packed sizes differ without any mutation.
+        const auto shorter = bytes_from_text("dx10-a");
+        const auto longer = bytes_from_text("dx10-bbbbb");
+        auto entries = ba2_dx10_prepared_stage_entries(
+            "Textures/Stage/ShareThenMatch.dds", {shorter, shorter, longer, longer});
+        auto plan =
+            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
+
+        REQUIRE(plan.has_value());
+        REQUIRE(plan.value().payloads.size() == 2U);
+        REQUIRE(plan.value().records[0].chunks.size() == 4U);
+        CHECK(plan.value().records[0].chunks[0].payload_index == 0U);
+        CHECK(plan.value().records[0].chunks[1].payload_index == 0U);
+        CHECK(plan.value().records[0].chunks[2].payload_index == 1U);
+        CHECK(plan.value().records[0].chunks[3].payload_index == 1U);
     }
 }

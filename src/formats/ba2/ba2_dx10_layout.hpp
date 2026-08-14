@@ -59,6 +59,13 @@ struct ba2_dx10_placement_plan {
 /// Canonical entry and entry-local chunk order select the first compatible
 /// payload representative. Fingerprints narrow candidates only when
 /// deduplication is enabled; exact Stored Payload equality authorizes sharing.
+///
+/// Sharing additionally requires that the two chunks' records agree on raw size,
+/// packed size and compression method. That is supplied to Payload Placement as
+/// a Sharing Eligibility predicate rather than folded into the narrowing key,
+/// because it is a correctness precondition and not a bucketing device: a share
+/// across disagreeing decode facts would leave a record describing content it
+/// cannot produce (ADR-0001).
 result<ba2_dx10_placement_plan> ba2_dx10_plan_placements(
     std::vector<ba2_dx10_prepared_entry> entries, const ba2_profile& profile,
     bool deduplicate_payloads);

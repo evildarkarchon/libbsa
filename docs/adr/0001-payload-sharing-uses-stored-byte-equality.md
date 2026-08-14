@@ -92,21 +92,25 @@ and BA2 GNRL all accept one and place it at the write cursor as it stands, match
 `TwbBSArchive.PackData`'s unconditional `Offset := Position`. See issue #37, which aligned GNRL with
 that rule.
 
-## Amendment (2026-08-12): the narrowing-key claim does not hold for BA2 DX10
+## Amendment (2026-08-12): the narrowing-key claim did not hold for BA2 DX10
 
 Context fact 1 says a dedupe key is only a bucketing device, so changing the key alone changes no
 output. That generalised one family too far.
 
-BA2 DX10's candidate key carries `raw_size`, `packed_size` and `compression` alongside size and
-fingerprint (`ba2_dx10_layout.cpp`), and those fields are load-bearing rather than narrowing: removing
-them would permit a share between byte-equal chunks whose records declare different decode sizes,
-leaving one record describing content it cannot produce. For that family the key is a sharing
-precondition. The original claim does hold for TES4-family BSA and BA2 GNRL, where differing
+BA2 DX10's candidate key carried `raw_size`, `packed_size` and `compression` alongside size and
+fingerprint (`ba2_dx10_layout.cpp`), and those fields were load-bearing rather than narrowing:
+removing them would have permitted a share between byte-equal chunks whose records declare different
+decode sizes, leaving one record describing content it cannot produce. For that family the key was a
+sharing precondition. The original claim did hold for TES4-family BSA and BA2 GNRL, where differing
 compression yields differing stored bytes and `exactly_equals` refuses the share unaided.
 
-`CONTEXT.md` now names the missing concept as Sharing Eligibility, kept distinct from the narrowing
-key. The Payload Placement module (`src/detail/payload_placement.hpp`) carries the eligibility
-predicate that DX10's decode facts belong in. TES4-family BSA and BA2 GNRL now place through that
-module and deliberately supply no predicate, because they have no eligibility constraint to state;
-BA2 DX10 has not migrated. Until DX10's key gives those facts up, read fact 1 as scoped to
-TES4-family BSA and BA2 GNRL.
+`CONTEXT.md` names the missing concept as Sharing Eligibility, kept distinct from the narrowing key.
+The Payload Placement module (`src/detail/payload_placement.hpp`) carries the eligibility predicate
+that DX10's decode facts belong in. All three sharing families now place through that module.
+TES4-family BSA and BA2 GNRL deliberately supply no predicate, because they have no eligibility
+constraint to state; BA2 DX10 supplies its three decode facts as one, and its key is now stored size
+and fingerprint like theirs.
+
+Fact 1 therefore holds again for every family that shares. It survives not because DX10's constraint
+went away but because the constraint moved to where it is visible as a correctness rule instead of
+being mistaken for performance narrowing.
