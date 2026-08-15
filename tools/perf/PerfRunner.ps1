@@ -4,7 +4,7 @@
 Shared timed-invocation helpers for the tools/perf measurement scripts.
 
 .DESCRIPTION
-Maintainer tooling for issue #47/#52. Both measurement scripts need the same
+Maintainer tooling for issue #47/#52. The measurement scripts need the same
 thing: run `bsa` once, time only the process, and keep the harness out of the
 measurement. That shape lived in both scripts and drifted — one captured stdout
 into a PowerShell collection inside the stopwatch while the other redirected to a
@@ -178,13 +178,13 @@ function Resolve-CorpusPath {
 function Assert-OutsideCorpus {
     <#
     .SYNOPSIS
-    Throws if a directory that will be deleted or written to sits inside the corpus.
+    Throws if a path that will be deleted or written sits inside the corpus.
 
     .DESCRIPTION
     AGENTS.md makes the retail corpus strictly read-only: it must never be
-    modified, moved, renamed or deleted. These scripts delete their scratch
-    directories between runs, so one mistyped argument could otherwise point that
-    deletion at the corpus. Checked before anything is created or removed.
+    modified, moved, renamed or deleted. These scripts delete scratch directories
+    and write result CSVs, so one mistyped argument could otherwise modify the
+    corpus. Checked before anything is created, removed or overwritten.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Path,

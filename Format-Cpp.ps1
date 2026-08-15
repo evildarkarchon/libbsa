@@ -6,6 +6,17 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $rootPath = (Resolve-Path -LiteralPath $Root).ProviderPath
+$directorySeparators = [char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+$normalizedRootPath = [System.IO.Path]::GetFullPath($rootPath).TrimEnd($directorySeparators)
+$tes5EditPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'TES5Edit')).TrimEnd($directorySeparators)
+
+# Child-name pruning below cannot protect traversal that starts inside the
+# reference submodule, so reject that root before discovering any files.
+if ([System.String]::Equals($normalizedRootPath, $tes5EditPath, [System.StringComparison]::OrdinalIgnoreCase) -or
+    $normalizedRootPath.StartsWith($tes5EditPath + [System.IO.Path]::DirectorySeparatorChar,
+        [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Refusing to format '$Root': it is inside the read-only TES5Edit reference tree '$tes5EditPath'."
+}
 
 $formatExtensions = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 foreach ($extension in @('.cc', '.cpp', '.h', '.hpp')) {

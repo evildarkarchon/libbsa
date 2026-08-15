@@ -50,7 +50,7 @@ what open-cost measurements should use: open cost does not depend on worker coun
 
 .PARAMETER OutputCsv
 Where to write the result table. Defaults to a file under the current directory
-named after the label.
+named after the label. Must not be inside the corpus.
 
 .PARAMETER Label
 Free-form name for this run, recorded in every row so results from several builds
@@ -89,18 +89,20 @@ $ErrorActionPreference = 'Stop'
 
 $bsaPath = (Resolve-Path -LiteralPath $Bsa).Path
 $archivePath = (Resolve-Path -LiteralPath $Archive).Path
+$corpusPath = Split-Path -Parent $archivePath
+
+if (-not $OutputCsv) { $OutputCsv = Join-Path (Get-Location) "command-open-cost-$Label.csv" }
+Assert-OutsideCorpus -Path $OutputCsv -CorpusPath $corpusPath
 
 # The scratch tree is deleted between runs, so refuse one that sits inside the
 # read-only corpus before anything is created.
-Assert-OutsideCorpus -Path $ScratchRoot -CorpusPath (Split-Path -Parent $archivePath)
+Assert-OutsideCorpus -Path $ScratchRoot -CorpusPath $corpusPath
 New-Item -ItemType Directory -Force -Path $ScratchRoot | Out-Null
 $ScratchRoot = (Resolve-Path -LiteralPath $ScratchRoot).Path
 
 $stdoutFile = Join-Path $ScratchRoot 'stdout.txt'
 $stderrFile = Join-Path $ScratchRoot 'stderr.txt'
 $warmUp = -not $NoWarmUp
-
-if (-not $OutputCsv) { $OutputCsv = Join-Path (Get-Location) "command-open-cost-$Label.csv" }
 
 function Measure-OneCommand {
     <#

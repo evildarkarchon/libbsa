@@ -417,3 +417,22 @@ add_test(
 set_tests_properties(validate_fixture_manifests PROPERTIES
   LABELS "unit;fixture;malformed;compatibility_matrix"
 )
+
+if(WIN32)
+  find_program(LIBBSA_POWERSHELL_EXECUTABLE NAMES pwsh REQUIRED)
+
+  add_test(
+    NAME readonly_tool_boundaries
+    COMMAND ${LIBBSA_POWERSHELL_EXECUTABLE}
+      -NoLogo
+      -NoProfile
+      -NonInteractive
+      -File ${CMAKE_CURRENT_SOURCE_DIR}/tooling/readonly-tool-boundaries.ps1
+      -SourceDirectory ${PROJECT_SOURCE_DIR}
+      -BinaryDirectory ${CMAKE_BINARY_DIR}
+  )
+
+  set_tests_properties(readonly_tool_boundaries PROPERTIES
+    LABELS "unit;tooling;filesystem_boundary"
+  )
+endif()

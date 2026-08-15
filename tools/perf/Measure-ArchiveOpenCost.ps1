@@ -21,7 +21,8 @@ rejection, must be identical across builds.
 
 Only read-only subcommands are swept. `unpack` is measured by
 `Measure-CommandOpenCost.ps1` against a single archive instead, so that this
-script never needs a writable destination and can never delete anything.
+script never needs an archive-output destination. Harness scratch files and the
+result CSV are its only writes, and both must remain outside the corpus.
 
 Retail archives are not redistributable. This script records file names, byte
 sizes, entry counts, header metadata and timings only. It never reads or emits
@@ -52,7 +53,7 @@ Optional wildcard applied to archive file names, e.g. 'Starfield*'.
 
 .PARAMETER OutputCsv
 Where to write the per-archive result table. Defaults to a file under the current
-directory named after the label and command.
+directory named after the label and command. Must not be inside the corpus.
 
 .PARAMETER Label
 Free-form name for this measurement run, recorded in every row so that results
@@ -97,14 +98,15 @@ $ErrorActionPreference = 'Stop'
 $corpusPath = Resolve-CorpusPath -Explicit $Corpus
 $bsaPath = (Resolve-Path -LiteralPath $Bsa).Path
 
+if (-not $OutputCsv) { $OutputCsv = Join-Path (Get-Location) "archive-open-cost-$Label-$Command.csv" }
+Assert-OutsideCorpus -Path $OutputCsv -CorpusPath $corpusPath
+
 if (-not $ScratchRoot) { $ScratchRoot = Join-Path ([System.IO.Path]::GetTempPath()) "libbsa-perf-$Label-$Command" }
 Assert-OutsideCorpus -Path $ScratchRoot -CorpusPath $corpusPath
 New-Item -ItemType Directory -Force -Path $ScratchRoot | Out-Null
 $ScratchRoot = (Resolve-Path -LiteralPath $ScratchRoot).Path
 $stdoutFile = Join-Path $ScratchRoot 'stdout.txt'
 $stderrFile = Join-Path $ScratchRoot 'stderr.txt'
-
-if (-not $OutputCsv) { $OutputCsv = Join-Path (Get-Location) "archive-open-cost-$Label-$Command.csv" }
 
 $archives = Get-ChildItem -LiteralPath $corpusPath -Recurse -File -Filter $Filter |
     Where-Object { $_.Extension -in @('.bsa', '.ba2') } |
