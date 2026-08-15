@@ -56,7 +56,11 @@ result<ba2_gnrl_placement_plan> ba2_gnrl_plan_placements(
         }
         const auto stored_size = static_cast<std::uint32_t>(payload.size());
 
-        const detail::payload_narrowing_key key{stored_size, payload.fingerprint()};
+        // A disabled placer never reads the narrowing key, so keep owned
+        // payload fingerprinting lazy on the default dedupe-off path.
+        const detail::payload_narrowing_key key{
+            stored_size,
+            deduplicate_payloads ? payload.fingerprint() : std::uint64_t{0}};
         auto placed =
             placer.place(key, detail::payload_placement_subject::of_payload(std::move(payload)));
         if (!placed) {

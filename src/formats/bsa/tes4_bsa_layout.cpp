@@ -233,7 +233,11 @@ result<tes4_placement_plan> tes4_plan_placements(std::vector<tes4_prepared_folde
                 return stored_size.error();
             }
 
-            const detail::payload_narrowing_key key{stored_size.value(), payload.fingerprint()};
+            // A disabled placer never reads the narrowing key, so keep owned
+            // payload fingerprinting lazy on the default dedupe-off path.
+            const detail::payload_narrowing_key key{
+                stored_size.value(),
+                options.deduplicate_payloads ? payload.fingerprint() : std::uint64_t{0}};
             auto placed = placer.place(
                 key, detail::payload_placement_subject::of_payload(std::move(payload)));
             if (!placed) {
