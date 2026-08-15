@@ -53,6 +53,7 @@ add_executable(libbsa_tests
   # unit of its own: the force-included unit/test_source_root.hpp reaches every
   # source file and would register the listener once per translation unit.
   support/private_temp_root.cpp
+  support/single_instance_guard.cpp
   unit/result_tests.cpp
   unit/archive_reader_tests.cpp
   unit/archive_reader_dispatch_tests.cpp
@@ -105,6 +106,7 @@ add_executable(libbsa_tests
   unit/host_path_correctness_boundary_tests.cpp
   unit/temp_directory_redirection_tests.cpp
   unit/private_temp_root_tests.cpp
+  unit/single_instance_guard_tests.cpp
   unit/bethesda_hash_tests.cpp
 )
 

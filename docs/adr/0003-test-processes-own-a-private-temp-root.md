@@ -110,9 +110,9 @@ decision stops a later ticket from giving them the same treatment if that change
 
 It does not make the BA2 DX10 cleanup helpers *structurally* incapable of deleting outside their own
 root — under a private root that is true by construction, but the rule should be stated rather than
-inferred (issue #64). It does not detect a genuinely concurrent second instance (issue #65), and it
-does not, by itself, prove the concurrency guarantee: that needs a test that actually runs two
-instances (issue #66).
+inferred (issue #64). It does not detect a genuinely concurrent second instance; ADR-0004 adds a
+single-instance guard for that, sharing this ADR's listener. And it does not, by itself, prove the
+concurrency guarantee: that needs a test that actually runs two instances (issue #66).
 
 ## Amendment (2026-08-14): liveness is an open handle, never an age
 

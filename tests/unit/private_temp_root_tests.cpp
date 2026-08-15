@@ -15,6 +15,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include "support/child_test_process.hpp"
 #include "support/private_temp_root.hpp"
 
 #include <libbsa/libbsa.hpp>
@@ -32,7 +33,6 @@
 #include <fstream>
 #include <optional>
 #include <set>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -43,16 +43,18 @@ namespace {
 
 constexpr std::string_view snapshot_directory_prefix = "libbsa-dx10-snapshot-";
 
-/// Set by the out-of-process teardown check on the child it spawns. The child
-/// writes its own private root to the named file so the parent can assert the
-/// directory is gone once the child has exited.
-constexpr const wchar_t* private_root_report_variable = L"LIBBSA_TEST_PRIVATE_ROOT_REPORT";
-
-/// Set by the out-of-process sweep check on the child it spawns. The child writes
-/// what its start-up sweep decided to the named file, so the parent can assert the
-/// child *considered* the parent's live root and chose to spare it rather than
-/// merely failing to delete it.
-constexpr const wchar_t* startup_sweep_report_variable = L"LIBBSA_TEST_STARTUP_SWEEP_REPORT";
+// Spawning a second copy of this binary, and the parent/child reporting protocol
+// it uses, are shared with the single-instance guard tests; see
+// tests/support/child_test_process.hpp. Pulled in by name rather than qualified at
+// every use, because these read as local vocabulary in the bodies below.
+using libbsa::tests::private_root_report_variable;
+using libbsa::tests::read_text_file;
+using libbsa::tests::run_child_test_binary;
+using libbsa::tests::scoped_environment_variable;
+using libbsa::tests::scoped_handle;
+using libbsa::tests::startup_sweep_report_variable;
+using libbsa::tests::win32_environment_value;
+using libbsa::tests::write_text_file;
 
 std::filesystem::path generated_source_dir() {
     return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" / "source";
@@ -101,158 +103,6 @@ std::set<std::filesystem::path> snapshot_directories_under(const std::filesystem
     }
     REQUIRE_FALSE(fs_error);
     return paths;
-}
-
-/// Reads a variable from the Win32 process environment block. The report
-/// variable is handed to the child through that block, and the CRT's own copy of
-/// a variable set by the parent after start-up is not guaranteed to carry it.
-std::optional<std::wstring> win32_environment_value(const wchar_t* name) {
-    const auto required = ::GetEnvironmentVariableW(name, nullptr, 0);
-    if (required == 0) {
-        return std::nullopt;
-    }
-
-    std::wstring value(required, L'\0');
-    const auto written = ::GetEnvironmentVariableW(name, value.data(), required);
-    REQUIRE(written < required);
-    value.resize(written);
-    return value;
-}
-
-/// Closes a Win32 handle on destruction so a failing REQUIRE cannot leak one.
-class scoped_handle {
-   public:
-    explicit scoped_handle(HANDLE handle) noexcept : handle_{handle} {}
-
-    scoped_handle(const scoped_handle&) = delete;
-    scoped_handle& operator=(const scoped_handle&) = delete;
-    scoped_handle(scoped_handle&&) = delete;
-    scoped_handle& operator=(scoped_handle&&) = delete;
-
-    ~scoped_handle() { reset(); }
-
-    /// Closes the handle early. The sweep tests need this: releasing an owner
-    /// marker mid-test is how they turn a live root into a dead one, which is the
-    /// only way to show the sweep's decision follows the handle rather than the
-    /// directory's name.
-    void reset() noexcept {
-        if (handle_ != nullptr && handle_ != INVALID_HANDLE_VALUE) {
-            ::CloseHandle(handle_);
-        }
-        handle_ = INVALID_HANDLE_VALUE;
-    }
-
-    HANDLE get() const noexcept { return handle_; }
-    bool valid() const noexcept { return handle_ != nullptr && handle_ != INVALID_HANDLE_VALUE; }
-
-   private:
-    HANDLE handle_;
-};
-
-/// Sets a report variable in the Win32 environment block for as long as it is
-/// alive, so a spawned child inherits it and no later test case sees it.
-class scoped_report_variable {
-   public:
-    scoped_report_variable(const wchar_t* name, const std::filesystem::path& report_path)
-        : name_{name} {
-        REQUIRE(::SetEnvironmentVariableW(name_, report_path.native().c_str()) != FALSE);
-    }
-
-    scoped_report_variable(const scoped_report_variable&) = delete;
-    scoped_report_variable& operator=(const scoped_report_variable&) = delete;
-    scoped_report_variable(scoped_report_variable&&) = delete;
-    scoped_report_variable& operator=(scoped_report_variable&&) = delete;
-
-    // A null value deletes the variable rather than leaving an empty string that
-    // the reporting case would treat as a path.
-    ~scoped_report_variable() { ::SetEnvironmentVariableW(name_, nullptr); }
-
-   private:
-    const wchar_t* name_;
-};
-
-std::filesystem::path own_executable_path() {
-    // Deliberately larger than MAX_PATH: a build tree can sit deeper than that,
-    // and GetModuleFileNameW signals truncation only by filling the buffer.
-    std::wstring buffer(4096, L'\0');
-    const auto written =
-        ::GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
-    REQUIRE(written > 0);
-    REQUIRE(static_cast<std::size_t>(written) < buffer.size());
-    buffer.resize(written);
-    return std::filesystem::path{buffer};
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream stream{path, std::ios::binary};
-    REQUIRE(stream.is_open());
-    std::ostringstream text;
-    text << stream.rdbuf();
-    return text.str();
-}
-
-void write_text_file(const std::filesystem::path& path, std::string_view contents) {
-    std::ofstream stream{path, std::ios::binary | std::ios::trunc};
-    REQUIRE(stream.is_open());
-    stream.write(contents.data(), static_cast<std::streamsize>(contents.size()));
-    REQUIRE(stream.good());
-}
-
-/// Runs a second copy of this test binary filtered to `catch_filter`, waits for it
-/// to exit, and returns its exit code.
-///
-/// Both properties these tests are after are invisible from inside the process
-/// that has them: a process cannot watch its own teardown, and it cannot verify
-/// that *another* process's start-up sweep spared its directories. So a real
-/// second process is the only instrument available.
-///
-/// The child's output is captured to `log_path` rather than inherited, so a
-/// passing run stays quiet and a failing one still has the child's Catch2 report
-/// to explain itself. The child inherits this process's environment, and therefore
-/// its `TMP`/`TEMP`, which is what puts the child's own private root -- and the
-/// system temp root its start-up sweep scans -- inside this process's private
-/// root.
-///
-/// @param catch_filter Catch2 test specification, passed as the child's only
-///        argument.
-/// @param log_path File to capture the child's stdout and stderr into.
-/// @return The child's exit code.
-DWORD run_child_test_binary(std::wstring_view catch_filter, const std::filesystem::path& log_path) {
-    SECURITY_ATTRIBUTES inheritable{};
-    inheritable.nLength = sizeof(inheritable);
-    inheritable.bInheritHandle = TRUE;
-    const scoped_handle child_log{::CreateFileW(log_path.native().c_str(), GENERIC_WRITE,
-                                                FILE_SHARE_READ | FILE_SHARE_WRITE, &inheritable,
-                                                CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr)};
-    REQUIRE(child_log.valid());
-
-    // CreateProcessW may write to its command-line argument, so it cannot be a
-    // string literal or a const buffer.
-    std::wstring command_line =
-        L"\"" + own_executable_path().native() + L"\" \"" + std::wstring{catch_filter} + L"\"";
-
-    STARTUPINFOW startup{};
-    startup.cb = sizeof(startup);
-    startup.dwFlags = STARTF_USESTDHANDLES;
-    startup.hStdInput = ::GetStdHandle(STD_INPUT_HANDLE);
-    startup.hStdOutput = child_log.get();
-    startup.hStdError = child_log.get();
-
-    PROCESS_INFORMATION process{};
-    const auto started = ::CreateProcessW(nullptr, command_line.data(), nullptr, nullptr, TRUE, 0,
-                                          nullptr, nullptr, &startup, &process);
-    REQUIRE(started != FALSE);
-
-    const scoped_handle child_process{process.hProcess};
-    const scoped_handle child_thread{process.hThread};
-
-    // Generous, because the ASan lane is slow to start a process. A hang here
-    // should fail the test rather than wedge the suite.
-    REQUIRE(::WaitForSingleObject(child_process.get(), 120000) == WAIT_OBJECT_0);
-
-    DWORD exit_code = 0;
-    REQUIRE(::GetExitCodeProcess(child_process.get(), &exit_code) != FALSE);
-    return exit_code;
 }
 
 /// Creates a directory the sweep cannot tell apart from a real private temp root.
@@ -426,7 +276,8 @@ TEST_CASE("the private temp root is removed when the process exits", "[unit][pri
     std::filesystem::remove(report_path, fs_error);
 
     {
-        const scoped_report_variable report_variable{private_root_report_variable, report_path};
+        const scoped_environment_variable report_variable{private_root_report_variable,
+                                                          report_path};
 
         const auto exit_code = run_child_test_binary(L"[private_temp_root_report]", child_log_path);
         INFO("child output: " << read_text_file(child_log_path));
@@ -672,8 +523,8 @@ TEST_CASE("a second process's start-up sweep removes a dead root and spares a li
 
     DWORD exit_code = 0;
     {
-        const scoped_report_variable sweep_variable{startup_sweep_report_variable,
-                                                    sweep_report_path};
+        const scoped_environment_variable sweep_variable{startup_sweep_report_variable,
+                                                         sweep_report_path};
         exit_code = run_child_test_binary(L"[private_temp_root_report]", child_log_path);
     }
     INFO("child output: " << read_text_file(child_log_path));

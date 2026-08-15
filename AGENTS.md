@@ -118,6 +118,22 @@ Test expectations:
 - Never keep production or library code around exclusively for test compatibility. When an API or behavior changes, migrate affected tests to the current API or remove obsolete tests; test-only compatibility shims in product code are not allowed. This is mandatory.
 - Do not use the `TES5Edit/` submodule as a mutable test fixture.
 
+### Running two test binaries at once
+
+`libbsa_tests` refuses to start when another instance is already running, and exits non-zero with a
+diagnostic naming the condition. If you see that message, it is the guard, not a defect in the code
+under test — check for a second `ctest` run or a stray test process from an earlier session.
+
+Set `LIBBSA_TEST_ALLOW_CONCURRENT` to any non-empty value, in the environment of every instance that
+may overlap, to run two on purpose. Doing so is safe: each process owns a private temp root and
+cannot see another process's temp state. The guard is a legibility aid, not the isolation mechanism.
+ADR-0004 records why it exists anyway, and ADR-0003 records the isolation.
+
+The same guard means `ctest -j` (or `CTEST_PARALLEL_LEVEL`) refuses most of the suite, since every
+test case is its own process. Run CTest serially, as every preset does. Parallel runs were already
+out of scope before the guard — tests inside one run still share fixed temp-derived names — so the
+opt-out will let a parallel run *start* but will not make it correct.
+
 ### Local game archive corpus
 
 `tests/fixtures/local/` holds an uncommitted corpus of vanilla retail archives copied from the

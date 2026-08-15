@@ -118,6 +118,16 @@
 // owns, or one holding a file open, is litter; turning it into a test-run failure
 // would make the suite fail on the machine's history rather than on the code.
 //
+// == The listener also runs the single-instance guard ==
+//
+// `test_process_startup_listener` below is the process's whole start-up hook, not
+// just this file's. It takes the single-instance guard (issue #65,
+// `tests/support/single_instance_guard.cpp`) before installing the root, because
+// two separately registered listeners would run in static-initialisation order
+// across translation units, which is unspecified. The guard is a legibility
+// mechanism rather than a safety one -- the private root is what makes concurrency
+// safe -- so nothing in this file depends on it.
+//
 // == Granularity ==
 //
 // `catch_discover_tests` registers one CTest test per TEST_CASE, so each test
@@ -130,6 +140,8 @@
 // zero, and the usual cost is one directory-search syscall pair.
 
 #include "support/private_temp_root.hpp"
+
+#include "support/single_instance_guard.hpp"
 
 #include <catch2/interfaces/catch_interfaces_reporter.hpp>
 #include <catch2/reporters/catch_reporter_event_listener.hpp>
@@ -680,24 +692,41 @@ private_temp_root_state& state() {
     return instance;
 }
 
-/// Installs the private temp root before any test body runs and tears it down
-/// when the run ends.
+/// Runs the test process's start-up and shutdown work: the single-instance guard
+/// first, then the private temp root.
 ///
 /// testRunStarting is the earliest hook that runs after Catch2 has parsed its
 /// command line and before the first test case, which is what the acceptance
-/// criterion asks for. Listing test cases does not go through a test run, so
-/// `--list-tests` -- which `catch_discover_tests` invokes at test time under
-/// DISCOVERY_MODE PRE_TEST -- creates no root.
-class private_temp_root_listener final : public Catch::EventListenerBase {
+/// criteria for both pieces ask for. Listing test cases does not go through a test
+/// run, so `--list-tests` -- which `catch_discover_tests` invokes at test time
+/// under DISCOVERY_MODE PRE_TEST -- neither creates a root nor takes the lock.
+///
+/// The guard (issue #65) shares this listener rather than registering one of its
+/// own, because two listeners would run in static-initialisation order across
+/// translation units, which is unspecified. Ordering it first is what keeps a
+/// refused instance from creating a temp root and running a sweep on its way to
+/// being told it should not have started. `tests/support/single_instance_guard.cpp`
+/// has the full reasoning.
+class test_process_startup_listener final : public Catch::EventListenerBase {
    public:
     using Catch::EventListenerBase::EventListenerBase;
 
-    void testRunStarting(const Catch::TestRunInfo& /*run_info*/) override { state().install(); }
+    void testRunStarting(const Catch::TestRunInfo& /*run_info*/) override {
+        // Throws on refusal, so nothing below runs for a second concurrent
+        // instance.
+        acquire_single_instance_guard();
+        state().install();
+    }
 
-    void testRunEnded(const Catch::TestRunStats& /*run_stats*/) override { state().uninstall(); }
+    void testRunEnded(const Catch::TestRunStats& /*run_stats*/) override {
+        state().uninstall();
+        // Released last, so the lock still covers the removal of this process's
+        // temp root rather than ending at the last test body.
+        release_single_instance_guard();
+    }
 };
 
-CATCH_REGISTER_LISTENER(private_temp_root_listener)
+CATCH_REGISTER_LISTENER(test_process_startup_listener)
 
 }  // namespace
 
