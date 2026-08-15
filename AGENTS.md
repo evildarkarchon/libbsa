@@ -113,7 +113,7 @@ Test expectations:
 
 - Add focused tests for archive parsing, writing, round-tripping, and compatibility behavior as those surfaces are implemented.
 - Prefer fixture-based tests that prove byte-level or metadata-level compatibility with known archive behavior.
-- Label tests for CTest filtering, following the labels already in `tests/CMakeLists.txt` (`unit`, `fixture`, `roundtrip`, `malformed`, `cli`, `export_surface`, and similar).
+- Label tests for CTest filtering, following the labels already in `tests/CMakeLists.txt` (`unit`, `fixture`, `roundtrip`, `malformed`, `cli`, `export_surface`, `concurrency`, and similar).
 - Archive parsers consume untrusted binary data, so exercise malformed headers, oversized sizes, truncated payloads, and decompression failures — especially under the ASan lane.
 - Never keep production or library code around exclusively for test compatibility. When an API or behavior changes, migrate affected tests to the current API or remove obsolete tests; test-only compatibility shims in product code are not allowed. This is mandatory.
 - Do not use the `TES5Edit/` submodule as a mutable test fixture.
@@ -133,6 +133,16 @@ The same guard means `ctest -j` (or `CTEST_PARALLEL_LEVEL`) refuses most of the 
 test case is its own process. Run CTest serially, as every preset does. Parallel runs were already
 out of scope before the guard — tests inside one run still share fixed temp-derived names — so the
 opt-out will let a parallel run *start* but will not make it correct.
+
+The `concurrent_test_instances` CTest case is the proof that all of this holds. It starts two test
+binaries at the same time, filtered to the BA2 DX10 snapshot cleanup cases and both carrying the
+opt-out, requires both to exit zero, and then requires an instance started *without* the opt-out to
+be refused. It carries the `concurrency` label, so `ctest -L concurrency` runs it alone and
+`ctest -LE concurrency` leaves it out; it costs well under a second. Its driver lives in
+`tests/concurrency/`. It also holds a CTest `RESOURCE_LOCK`, which is what would keep a future
+second concurrency case from being scheduled inside it — that property only bites under `ctest -j`,
+which this repository does not use, so today it is a statement of intent for whoever adds the second
+one rather than a constraint doing active work.
 
 ### Local game archive corpus
 

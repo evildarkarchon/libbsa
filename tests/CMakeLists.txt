@@ -366,6 +366,47 @@ if(WIN32 AND BUILD_SHARED_LIBS)
   )
 endif()
 
+# The concurrency guarantee from issue #60 is the one property no in-process test can
+# fail on: it is about two libbsa_tests processes at once, and each Catch2 case runs
+# alone in its own process. Issue #66 therefore drives it from a script, the same way
+# the package-consumer, CLI integration, and export-surface checks are driven.
+add_test(
+  NAME concurrent_test_instances
+  COMMAND ${CMAKE_COMMAND}
+    -DLIBBSA_TEST_BINARY=$<TARGET_FILE:libbsa_tests>
+    -DLIBBSA_BINARY_DIR=${CMAKE_BINARY_DIR}
+    -DLIBBSA_LOCK_HOLDER_SCRIPT=${CMAKE_CURRENT_SOURCE_DIR}/concurrency/hold-single-instance-lock.ps1
+    -DCONFIG=$<CONFIG>
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/concurrency/concurrent-test-instances.cmake
+)
+
+set_tests_properties(concurrent_test_instances PROPERTIES
+  LABELS "concurrency;single_instance_guard"
+  # The first use of RESOURCE_LOCK in this repository. It makes the case
+  # un-nestable: CTest will not schedule two tests holding the same lock at the
+  # same time, so a future second concurrency case cannot run inside this one and
+  # have its instances counted against this one's guard.
+  #
+  # It does not, and cannot, stop the *rest* of the suite from overlapping with
+  # this case, and the second half deliberately holds the guard's real lock while
+  # it runs -- so any libbsa_tests process scheduled alongside it would be refused.
+  # Nothing arranges that today: RESOURCE_LOCK only has an effect under `ctest -j`,
+  # every preset runs CTest serially, and AGENTS.md records that a parallel run is
+  # out of scope for reasons that predate this case.
+  RESOURCE_LOCK "libbsa_test_binary_instances"
+  # Bounds a hang. The script applies its own, tighter timeout per instance, so
+  # reaching this one means the script itself is stuck rather than a test binary.
+  TIMEOUT 900
+)
+
+# Mirrors the DL_PATHS that catch_discover_tests injects for the discovered cases:
+# this case launches the same binary itself, so it has to supply the same search
+# path for the libbsa DLL and for the ASan runtime DLLs copied beside the binary.
+set_property(TEST concurrent_test_instances PROPERTY ENVIRONMENT_MODIFICATION
+  "PATH=path_list_prepend:$<TARGET_FILE_DIR:libbsa>"
+  "PATH=path_list_prepend:$<TARGET_FILE_DIR:libbsa_tests>"
+)
+
 add_test(
   NAME validate_fixture_manifests
   COMMAND Python3::Interpreter

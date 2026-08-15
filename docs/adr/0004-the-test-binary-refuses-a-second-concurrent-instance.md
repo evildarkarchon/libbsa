@@ -103,5 +103,7 @@ orders are correct — the root's teardown backstop cleans up either way — but
 ## What this does not do
 
 It does not make concurrency safe — ADR-0003 did that — and it does not prove the concurrency
-guarantee. That needs a test that actually runs two instances, which is issue #66 and which uses this
-guard's opt-out to do it.
+guarantee. That needs a test that actually runs two instances, which is the `concurrent_test_instances`
+CTest case from issue #66, driven by `tests/concurrency/concurrent-test-instances.cmake`. That case
+uses this guard's opt-out to start its two instances, and then covers the guard itself by holding the
+named mutex above and requiring an instance started *without* the opt-out to be refused.
