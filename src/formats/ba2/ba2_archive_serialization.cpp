@@ -15,11 +15,11 @@ namespace libbsa::formats::ba2 {
 namespace {
 
 struct serialization_messages {
-    std::string_view output_open;
-    std::string_view streaming;
-    std::string_view final_stream;
-    std::string_view file_count;
-    std::string_view filename_length;
+    std::string_view output_open_error;
+    std::string_view streaming_error;
+    std::string_view final_stream_error;
+    std::string_view file_count_description;
+    std::string_view filename_length_description;
 };
 
 constexpr serialization_messages gnrl_messages{
@@ -115,6 +115,8 @@ result<void> write_header(stream_writer& writer, const ba2_profile& profile,
                           const ba2_stored_header_fields& stored_header_fields,
                           std::uint64_t record_count, std::uint64_t filename_table_offset,
                           std::string_view file_count_description) {
+    // The established failure contract narrows the file count only after emitting
+    // BTDX, version and subtype, so an overflow leaves that exact 12-byte prefix.
     auto written = writer.write_u32_le(ba2_btdx_magic);
     if (!(written = writer.write_u32_le(profile.version())) ||
         !(written = writer.write_u32_le(profile.subtype_magic()))) {
@@ -244,14 +246,17 @@ result<void> serialize_with_adapter(const ba2_profile& profile,
                                     const PlacementPlan& plan,
                                     const std::filesystem::path& output_path,
                                     const serialization_messages& messages) {
+    // Typed overloads reject a wrong subtype first. For a matching profile, the
+    // established contract creates or truncates output before validating plan
+    // geometry, making an output-open error authoritative over a malformed plan.
     std::ofstream output{output_path, std::ios::binary | std::ios::trunc};
     if (!output) {
-        return error{error_code::io_error, std::string{messages.output_open}};
+        return error{error_code::io_error, std::string{messages.output_open_error}};
     }
 
-    stream_writer writer{output, messages.streaming};
+    stream_writer writer{output, messages.streaming_error};
     auto written = write_header(writer, profile, stored_header_fields, plan.records.size(),
-                                plan.filename_table_offset, messages.file_count);
+                                plan.filename_table_offset, messages.file_count_description);
     if (!written) {
         return written.error();
     }
@@ -267,6 +272,8 @@ result<void> serialize_with_adapter(const ba2_profile& profile,
     for (const auto& placement : plan.payloads) {
         auto emitted = placement.payload.emit(output);
         if (!emitted) {
+            // Stored Payload owns the precise source I/O diagnostic. Translating
+            // it here would hide the failure and break the established contract.
             return emitted.error();
         }
     }
@@ -276,14 +283,14 @@ result<void> serialize_with_adapter(const ba2_profile& profile,
     // table offset after packing. Keep the order even though an overlong name
     // consequently leaves a partial archive.
     for (const auto& record : plan.records) {
-        if (!(written =
-                  write_name(writer, record.archive_path_original, messages.filename_length))) {
+        if (!(written = write_name(writer, record.archive_path_original,
+                                   messages.filename_length_description))) {
             return written.error();
         }
     }
 
     if (!output) {
-        return error{error_code::io_error, std::string{messages.final_stream}};
+        return error{error_code::io_error, std::string{messages.final_stream_error}};
     }
     return {};
 }
