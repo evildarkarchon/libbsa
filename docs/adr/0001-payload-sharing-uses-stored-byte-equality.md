@@ -115,3 +115,19 @@ families share one cursor and one span arithmetic even though only three of them
 Fact 1 therefore holds again for every family that shares. It survives not because DX10's constraint
 went away but because the constraint moved to where it is visible as a correctness rule instead of
 being mistaken for performance narrowing.
+
+## Amendment (2026-08-19): eligibility facts are owned by Payload Placement
+
+BA2 DX10 now uses Payload Placement's constrained lane. Each offered chunk supplies the raw size,
+packed size, and compression method that its record will serialize. The DX10-owned rule is pure,
+non-throwing, and receives an accepted candidate's facts first and the offered chunk's facts second.
+
+Payload Placement retains those facts beside each accepted unique Stored Payload for exactly as long
+as that payload can be a sharing candidate. A shared offer does not become a candidate, and the facts
+are discarded when placement state is released. DX10 therefore has no parallel accepted-facts
+collection and never observes a candidate index merely to recover eligibility state.
+
+These facts remain separate from the narrowing key. Stored size and fingerprint select candidates;
+the family rule rejects decode-incompatible candidates before the potentially expensive byte
+comparison; exact Stored Payload equality remains the only authority that permits sharing. TES3 BSA,
+TES4 BSA, and BA2 GNRL continue to use unconstrained Payload Placement and supply no artificial facts.

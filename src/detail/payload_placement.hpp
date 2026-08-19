@@ -54,24 +54,6 @@ struct payload_narrowing_key {
     }
 };
 
-/// Legacy callback deciding whether an earlier payload is a legal sharing partner.
-///
-/// The predicate receives the index of an already-accepted payload — the same
-/// index `payload_placement::payload_index` reports — so a family can look the
-/// candidate up in its own record table and compare whatever record fields
-/// govern decoding. BA2 DX10 uses this for its raw size, packed size and
-/// compression method: byte-equal chunks whose records declare different decode
-/// facts must not share, or a record would describe content it cannot produce.
-///
-/// Sharing Eligibility is a precondition, never a proof. Returning `true` does
-/// not authorise a share; byte equality still has to hold (CONTEXT.md).
-///
-/// An empty predicate means "no constraint", which is why families without one
-/// omit the argument rather than passing an always-true lambda. This callback is
-/// retained only until BA2 DX10 migrates to `constrained_payload_placer`; new
-/// constrained callers must not adopt the leaked candidate-index contract.
-using payload_sharing_eligibility = std::function<bool(std::size_t candidate_payload_index)>;
-
 /// True when `Rule` is a const, non-throwing pairwise rule returning exactly `bool`.
 ///
 /// The accepted facts are always the first argument and offered facts the
@@ -207,10 +189,10 @@ class payload_placement_engine final {
 
     /// Places one subject using the lane's candidate rule and acceptance factory.
     ///
-    /// `eligible` receives accepted state and its stable payload index. It runs
-    /// before exact comparison. `accept` receives a newly placed payload and
-    /// whether candidate state will be retained, allowing the constrained lane
-    /// to discard facts when sharing is disabled.
+    /// `eligible` receives accepted state and runs before exact comparison.
+    /// `accept` receives a newly placed payload and whether candidate state will
+    /// be retained, allowing the constrained lane to discard facts when sharing
+    /// is disabled.
     template <typename Eligible, typename Accept>
     result<payload_placement> place(const payload_narrowing_key& key,
                                     payload_placement_subject subject, Eligible&& eligible,
@@ -237,8 +219,7 @@ class payload_placement_engine final {
                     // for snapshot-backed payloads that means disk reads. Both
                     // conditions must hold for a share, so this ordering changes
                     // only what the answer costs, never which candidate wins.
-                    if (!std::invoke(eligible, accepted_payloads_[candidate_index],
-                                     candidate_index)) {
+                    if (!std::invoke(eligible, accepted_payloads_[candidate_index])) {
                         continue;
                     }
 
@@ -384,17 +365,10 @@ class payload_placer final {
     /// Places one subject, sharing an earlier location when that is authorised.
     ///
     /// Sharing requires all of: the policy is `enabled`, the subject carries
-    /// bytes, an already-accepted payload sits in the same narrowing-key
-    /// bucket, `eligible` accepts that candidate, and the two Stored Payloads
-    /// are exactly byte-equal. Candidates are examined in acceptance order and
-    /// the first that satisfies every condition wins, so the earliest accepted
-    /// payload stays the sharing representative.
-    ///
-    /// `eligible` is evaluated *before* byte comparison because comparison
-    /// streams through a bounded scratch buffer and is by far the expensive
-    /// half. Both conditions must hold for a share, so the order cannot change
-    /// which candidate wins — only how much work it costs to find out. An empty
-    /// `eligible` imposes no constraint.
+    /// bytes, an already-accepted payload sits in the same narrowing-key bucket,
+    /// and the two Stored Payloads are exactly byte-equal. Candidates are
+    /// examined in acceptance order and the first exact match wins, so the
+    /// earliest accepted payload stays the sharing representative.
     ///
     /// A new location takes the cursor as it stands and then advances it by the
     /// stored size. A zero-length subject therefore takes the cursor without
@@ -410,8 +384,7 @@ class payload_placer final {
     /// longer owns the payloads its indices refer to, so a further placement
     /// would mint an index that aliases a payload the caller already holds.
     result<payload_placement> place(const payload_narrowing_key& key,
-                                    payload_placement_subject subject,
-                                    const payload_sharing_eligibility& eligible = {});
+                                    payload_placement_subject subject);
 
     /// Returns the cursor, i.e. the first offset past the placed payload area.
     ///
@@ -474,8 +447,7 @@ class constrained_payload_placer final {
     /// facts. Exact Stored Payload comparison remains authoritative.
     result<payload_placement> place(const payload_narrowing_key& key,
                                     payload_placement_subject subject, Facts offered_facts) {
-        const auto eligible = [this, &offered_facts](const accepted_payload& candidate,
-                                                     std::size_t) noexcept {
+        const auto eligible = [this, &offered_facts](const accepted_payload& candidate) noexcept {
             // Candidate buckets exist only when sharing is enabled, and enabled
             // acceptance always stores facts, so dereferencing cannot observe an
             // empty optional. Avoiding `value()` keeps this infallible rule path

@@ -42,14 +42,8 @@ payload_placer::payload_placer(std::uint64_t base_offset, payload_sharing_policy
     : engine_(base_offset, sharing_policy, diagnostic_label) {}
 
 result<payload_placement> payload_placer::place(const payload_narrowing_key& key,
-                                                payload_placement_subject subject,
-                                                const payload_sharing_eligibility& eligible) {
-    const auto candidate_is_eligible = [&eligible](const placed_payload&,
-                                                   std::size_t candidate_index) {
-        // An empty legacy predicate means the family declared no
-        // eligibility constraint, so every candidate passes.
-        return !eligible || eligible(candidate_index);
-    };
+                                                payload_placement_subject subject) {
+    const auto candidate_is_eligible = [](const placed_payload&) noexcept { return true; };
     const auto accept = [](placed_payload placed, bool) { return placed; };
     return engine_.place(key, std::move(subject), candidate_is_eligible, accept);
 }

@@ -61,11 +61,12 @@ struct ba2_dx10_placement_plan {
 /// deduplication is enabled; exact Stored Payload equality authorizes sharing.
 ///
 /// Sharing additionally requires that the two chunks' records agree on raw size,
-/// packed size and compression method. That is supplied to Payload Placement as
-/// a Sharing Eligibility predicate rather than folded into the narrowing key,
-/// because it is a correctness precondition and not a bucketing device: a share
-/// across disagreeing decode facts would leave a record describing content it
-/// cannot produce (ADR-0001).
+/// packed size and compression method. DX10 supplies those family-owned facts
+/// through constrained Payload Placement, which retains facts beside accepted
+/// unique candidates and compares accepted facts first with offered facts second.
+/// The rule narrows candidates before exact Stored Payload equality authorizes a
+/// share; facts are not part of the bucketing key and are never exposed in the
+/// released plan (ADR-0001).
 result<ba2_dx10_placement_plan> ba2_dx10_plan_placements(
     std::vector<ba2_dx10_prepared_entry> entries, const ba2_profile& profile,
     bool deduplicate_payloads);

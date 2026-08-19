@@ -32,6 +32,15 @@ struct chunk_decode_facts {
     bool operator==(const chunk_decode_facts& other) const noexcept = default;
 };
 
+/// Decides whether accepted and offered chunk facts satisfy Sharing Eligibility.
+struct chunk_decode_facts_agree {
+    /// Compares accepted facts first and offered facts second without side effects.
+    bool operator()(const chunk_decode_facts& accepted,
+                    const chunk_decode_facts& offered) const noexcept {
+        return accepted == offered;
+    }
+};
+
 bool multiply_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& product) noexcept {
     if (lhs != 0U && rhs > std::numeric_limits<std::uint64_t>::max() / lhs) {
         return false;
@@ -71,7 +80,6 @@ result<ba2_dx10_placement_plan> ba2_dx10_plan_placements(
     }
 
     std::uint64_t record_bytes = 0;
-    std::size_t total_chunks = 0;
     for (const auto& entry : entries) {
         auto valid = validate_entry_shape(entry);
         if (!valid) {
@@ -86,10 +94,6 @@ result<ba2_dx10_placement_plan> ba2_dx10_plan_placements(
             !detail::add_fits_u64(record_bytes, entry_record_bytes, record_bytes)) {
             return error{error_code::format_error, "BA2 DX10 record table size overflows"};
         }
-        if (total_chunks > std::numeric_limits<std::size_t>::max() - entry.chunks.size()) {
-            return error{error_code::format_error, "BA2 DX10 total chunk count overflows"};
-        }
-        total_chunks += entry.chunks.size();
     }
 
     ba2_dx10_placement_plan plan;
@@ -104,18 +108,11 @@ result<ba2_dx10_placement_plan> ba2_dx10_plan_placements(
 
     // Deduplication stays opt-in, so the caller's flag selects the policy rather
     // than this layout deciding it.
-    detail::payload_placer placer{payload_base_offset,
-                                  deduplicate_payloads ? detail::payload_sharing_policy::enabled
-                                                       : detail::payload_sharing_policy::disabled,
-                                  "BA2 DX10"};
-
-    // Decode facts for every payload the placer has accepted, indexed by the
-    // payload index it handed back for that payload. The placer mints indices in
-    // strict acceptance order, so appending here on each non-shared placement is
-    // what keeps this vector indexed exactly as the placer indexes its own
-    // payloads; the eligibility predicate relies on that correspondence.
-    std::vector<chunk_decode_facts> accepted_decode_facts;
-    accepted_decode_facts.reserve(total_chunks);
+    detail::constrained_payload_placer<chunk_decode_facts, chunk_decode_facts_agree> placer{
+        payload_base_offset,
+        deduplicate_payloads ? detail::payload_sharing_policy::enabled
+                             : detail::payload_sharing_policy::disabled,
+        "BA2 DX10", chunk_decode_facts_agree{}};
 
     plan.records.reserve(entries.size());
     for (auto& entry : entries) {
@@ -149,29 +146,16 @@ result<ba2_dx10_placement_plan> ba2_dx10_plan_placements(
 
             const chunk_decode_facts facts{chunk.raw_size, chunk.packed_size, chunk.compression};
 
-            // Sharing Eligibility: the reason DX10's narrowing key can be stored
-            // size and fingerprint like every other sharing family's. Byte
-            // equality alone does not authorise a share here, because a shared
-            // location must also satisfy every record field describing how the
-            // payload is decoded.
+            // Sharing Eligibility keeps DX10's narrowing key to stored size and
+            // fingerprint like every other sharing family. The constrained
+            // placer owns each accepted payload's facts and supplies them to the
+            // rule before these offered facts; no candidate index or parallel
+            // family registry can drift out of sync.
             //
-            // The placer evaluates this before exact byte comparison. Both
-            // conditions must hold for a share, so that ordering changes only
-            // what the answer costs and never which candidate wins (ADR-0001,
-            // CONTEXT.md).
-            //
-            // `facts` is captured by value so the predicate stays valid after
-            // this chunk's payload is moved into the subject below.
-            //
-            // `at` rather than `operator[]`: the index correspondence below is
-            // an invariant this function maintains by hand, and a future edit
-            // that returned between the placement and the append would silently
-            // read the wrong candidate's facts. A programmer precondition
-            // violation is the one case AGENTS.md reserves exceptions for.
-            const detail::payload_sharing_eligibility decode_facts_agree =
-                [&accepted_decode_facts, facts](std::size_t candidate_payload_index) {
-                    return accepted_decode_facts.at(candidate_payload_index) == facts;
-                };
+            // Eligibility only narrows candidates. Exact Stored Payload equality
+            // remains the authority for sharing, and offered facts are retained
+            // only when this payload becomes a unique accepted candidate
+            // (ADR-0001, CONTEXT.md).
 
             // The fingerprint is requested only under an enabled sharing policy,
             // because that is the only policy under which the placer reads the
@@ -185,19 +169,11 @@ result<ba2_dx10_placement_plan> ba2_dx10_plan_placements(
                 deduplicate_payloads ? chunk.payload.fingerprint() : std::uint64_t{0}};
             auto placed = placer.place(
                 key, detail::payload_placement_subject::of_payload(std::move(chunk.payload)),
-                decode_facts_agree);
+                facts);
             if (!placed) {
                 return placed.error();
             }
             const auto payload_index = placed.value().payload_index.value();
-            // Only a new payload mints a new index, so only a new payload
-            // appends. Appending on a share would push this vector one ahead of
-            // the placer's and every later eligibility lookup would read some
-            // other chunk's decode facts.
-            if (!placed.value().shared) {
-                accepted_decode_facts.push_back(facts);
-            }
-
             record.chunks.push_back(ba2_dx10_placed_chunk{
                 chunk.packed_size,
                 chunk.raw_size,

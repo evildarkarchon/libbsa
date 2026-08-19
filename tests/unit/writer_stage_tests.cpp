@@ -1236,7 +1236,7 @@ TEST_CASE("ba2 dx10 writer layout supplies decode facts as Sharing Eligibility",
     // Sharing Eligibility as a rule is covered generically at the Payload
     // Placement module's own interface. What this covers is DX10's wiring of it:
     // that this family supplies raw size, packed size and compression method as
-    // the predicate, so byte-equal chunks whose records disagree on any of the
+    // constrained rule, so byte-equal chunks whose records disagree on any of the
     // three still receive distinct locations.
     //
     // The coverage lives at this seam rather than at the public writer seam
@@ -1255,9 +1255,17 @@ TEST_CASE("ba2 dx10 writer layout supplies decode facts as Sharing Eligibility",
             libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
 
         REQUIRE(plan.has_value());
+        REQUIRE(plan.value().records.size() == 1U);
+        REQUIRE(plan.value().records[0].chunks.size() == 2U);
         REQUIRE(plan.value().payloads.size() == 2U);
-        CHECK(plan.value().records[0].chunks[0].payload_index !=
-              plan.value().records[0].chunks[1].payload_index);
+        const auto& first = plan.value().records[0].chunks[0];
+        const auto& second = plan.value().records[0].chunks[1];
+        CHECK(first.payload_index == 0U);
+        CHECK(second.payload_index == 1U);
+        CHECK(first.raw_size != second.raw_size);
+        CHECK(first.packed_size == second.packed_size);
+        CHECK(first.compression == second.compression);
+        CHECK(plan.value().payloads[1].offset == plan.value().payloads[0].offset + payload.size());
     }
 
     SECTION("packed size") {
@@ -1268,9 +1276,17 @@ TEST_CASE("ba2 dx10 writer layout supplies decode facts as Sharing Eligibility",
             libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
 
         REQUIRE(plan.has_value());
+        REQUIRE(plan.value().records.size() == 1U);
+        REQUIRE(plan.value().records[0].chunks.size() == 2U);
         REQUIRE(plan.value().payloads.size() == 2U);
-        CHECK(plan.value().records[0].chunks[0].payload_index !=
-              plan.value().records[0].chunks[1].payload_index);
+        const auto& first = plan.value().records[0].chunks[0];
+        const auto& second = plan.value().records[0].chunks[1];
+        CHECK(first.payload_index == 0U);
+        CHECK(second.payload_index == 1U);
+        CHECK(first.raw_size == second.raw_size);
+        CHECK(first.packed_size != second.packed_size);
+        CHECK(first.compression == second.compression);
+        CHECK(plan.value().payloads[1].offset == plan.value().payloads[0].offset + payload.size());
     }
 
     SECTION("compression route") {
@@ -1281,36 +1297,16 @@ TEST_CASE("ba2 dx10 writer layout supplies decode facts as Sharing Eligibility",
             libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
 
         REQUIRE(plan.has_value());
+        REQUIRE(plan.value().records.size() == 1U);
+        REQUIRE(plan.value().records[0].chunks.size() == 2U);
         REQUIRE(plan.value().payloads.size() == 2U);
-        CHECK(plan.value().records[0].chunks[0].payload_index !=
-              plan.value().records[0].chunks[1].payload_index);
-    }
-
-    SECTION("an earlier share does not desynchronise later eligibility lookups") {
-        // The predicate looks a candidate's decode facts up by the payload index
-        // the placer handed out, from a vector this family appends to itself. A
-        // share mints no new index, so it must append nothing; appending anyway
-        // would push the vector one ahead of the placer's and every later lookup
-        // would read some other chunk's facts.
-        //
-        // The first two chunks share, and the fourth then has to match against a
-        // candidate at index 1. Under a desynchronised vector index 1 would hold
-        // the shorter payload's facts, so the fourth chunk would be refused and a
-        // third location would appear. The two payloads differ in length, which
-        // makes their raw and packed sizes differ without any mutation.
-        const auto shorter = bytes_from_text("dx10-a");
-        const auto longer = bytes_from_text("dx10-bbbbb");
-        auto entries = ba2_dx10_prepared_stage_entries(
-            "Textures/Stage/ShareThenMatch.dds", {shorter, shorter, longer, longer});
-        auto plan =
-            libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
-
-        REQUIRE(plan.has_value());
-        REQUIRE(plan.value().payloads.size() == 2U);
-        REQUIRE(plan.value().records[0].chunks.size() == 4U);
-        CHECK(plan.value().records[0].chunks[0].payload_index == 0U);
-        CHECK(plan.value().records[0].chunks[1].payload_index == 0U);
-        CHECK(plan.value().records[0].chunks[2].payload_index == 1U);
-        CHECK(plan.value().records[0].chunks[3].payload_index == 1U);
+        const auto& first = plan.value().records[0].chunks[0];
+        const auto& second = plan.value().records[0].chunks[1];
+        CHECK(first.payload_index == 0U);
+        CHECK(second.payload_index == 1U);
+        CHECK(first.raw_size == second.raw_size);
+        CHECK(first.packed_size == second.packed_size);
+        CHECK(first.compression != second.compression);
+        CHECK(plan.value().payloads[1].offset == plan.value().payloads[0].offset + payload.size());
     }
 }

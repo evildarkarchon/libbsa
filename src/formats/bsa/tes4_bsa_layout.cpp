@@ -212,11 +212,11 @@ result<tes4_placement_plan> tes4_plan_placements(std::vector<tes4_prepared_folde
     // Deduplication stays opt-in, so the writer option selects the policy rather
     // than this layout deciding it.
     //
-    // No Sharing Eligibility predicate is supplied, and the omission is the
-    // documentation: TES4-family records carry no decode facts beyond their
-    // stored bytes, so differing compression already yields differing stored
-    // bytes and exact byte equality refuses the share unaided (ADR-0001). An
-    // always-true predicate here would claim a constraint exists.
+    // TES4-family BSA deliberately stays on unconstrained Payload Placement:
+    // its records carry no decode facts beyond their stored bytes, so differing
+    // compression already yields differing stored bytes and exact byte equality
+    // refuses the share unaided. Manufacturing facts would claim a constraint
+    // exists where none does (ADR-0001).
     detail::payload_placer placer{payload_base_offset,
                                   options.deduplicate_payloads
                                       ? detail::payload_sharing_policy::enabled

@@ -35,7 +35,6 @@ using libbsa::detail::payload_narrowing_key;
 using libbsa::detail::payload_placement;
 using libbsa::detail::payload_placement_subject;
 using libbsa::detail::payload_placer;
-using libbsa::detail::payload_sharing_eligibility;
 using libbsa::detail::payload_sharing_policy;
 using libbsa::detail::payload_sharing_rule_for;
 using libbsa::detail::placed_payload;
@@ -118,6 +117,12 @@ concept accepts_placement_without_facts =
         placer.place(key, std::move(subject));
     };
 
+template <typename Placer>
+concept accepts_candidate_index_callback =
+    requires(Placer& placer, payload_narrowing_key key, payload_placement_subject subject) {
+        placer.place(key, std::move(subject), +[](std::size_t) { return true; });
+    };
+
 std::vector<std::byte> bytes_from_text(std::string_view text) {
     std::vector<std::byte> bytes;
     bytes.reserve(text.size());
@@ -166,16 +171,14 @@ std::string materialize(const stored_payload& payload) {
 /// Stored Payload facts — so byte-equal payloads always land in one bucket and
 /// the tests exercise the confirmation step rather than bucket bookkeeping.
 libbsa::result<payload_placement> place_bytes(payload_placer& placer,
-                                              const std::vector<std::byte>& bytes,
-                                              const payload_sharing_eligibility& eligible = {}) {
+                                              const std::vector<std::byte>& bytes) {
     auto payload = stored_payload::from_owned_bytes(bytes);
     const payload_narrowing_key key{payload.size(), payload.fingerprint()};
-    return placer.place(key, payload_placement_subject::of_payload(std::move(payload)), eligible);
+    return placer.place(key, payload_placement_subject::of_payload(std::move(payload)));
 }
 
-libbsa::result<payload_placement> place_text(payload_placer& placer, std::string_view text,
-                                             const payload_sharing_eligibility& eligible = {}) {
-    return place_bytes(placer, bytes_from_text(text), eligible);
+libbsa::result<payload_placement> place_text(payload_placer& placer, std::string_view text) {
+    return place_bytes(placer, bytes_from_text(text));
 }
 
 /// Offers `bytes` and mandatory facts through the constrained placement lane.
@@ -228,6 +231,7 @@ TEST_CASE("payload_placement keeps exclusive ownership of what it accepts",
     STATIC_REQUIRE_FALSE(std::is_copy_constructible_v<payload_placement_subject>);
     STATIC_REQUIRE_FALSE(std::is_copy_assignable_v<payload_placement_subject>);
     STATIC_REQUIRE(std::is_nothrow_move_constructible_v<payload_placement_subject>);
+    STATIC_REQUIRE_FALSE(accepts_candidate_index_callback<payload_placer>);
 }
 
 TEST_CASE("payload_placement starts at the base offset and advances by stored size",
@@ -296,53 +300,11 @@ TEST_CASE("payload_placement refuses to share a fingerprint collision without by
     CHECK(placer.placed_payload_count() == 2U);
 }
 
-TEST_CASE("payload_placement never shares when a Sharing Eligibility predicate refuses",
-          "[unit][payload_placement][dedupe]") {
-    payload_placer placer{test_base_offset, payload_sharing_policy::enabled, test_label};
-    const payload_sharing_eligibility refuse_every_candidate = [](std::size_t) { return false; };
-
-    const auto first = require_placed(place_text(placer, "identical", refuse_every_candidate));
-    const auto second = require_placed(place_text(placer, "identical", refuse_every_candidate));
-
-    CHECK_FALSE(second.shared);
-    CHECK(second.offset == first.offset + 9U);
-    CHECK(placer.placed_payload_count() == 2U);
-}
-
-TEST_CASE("payload_placement lets Sharing Eligibility choose among byte-equal candidates",
-          "[unit][payload_placement][dedupe]") {
-    payload_placer placer{test_base_offset, payload_sharing_policy::enabled, test_label};
-    const payload_sharing_eligibility refuse_every_candidate = [](std::size_t) { return false; };
-
-    // Two byte-equal payloads forced into distinct locations, so the bucket
-    // holds two live candidates rather than one.
-    const auto first = require_placed(place_text(placer, "identical", refuse_every_candidate));
-    const auto second = require_placed(place_text(placer, "identical", refuse_every_candidate));
-    REQUIRE(first.payload_index.has_value());
-    REQUIRE(second.payload_index.has_value());
-
-    const auto second_index = second.payload_index.value();
-    const payload_sharing_eligibility accept_only_second = [second_index](std::size_t candidate) {
-        return candidate == second_index;
-    };
-    const auto third = require_placed(place_text(placer, "identical", accept_only_second));
-
-    // Without eligibility the earliest candidate would win. Proving the later
-    // one wins here shows the predicate genuinely gates each candidate rather
-    // than gating the placement as a whole.
-    CHECK(third.shared);
-    CHECK(third.payload_index == second.payload_index);
-    CHECK(third.offset == second.offset);
-    CHECK(placer.placed_payload_count() == 2U);
-}
-
-TEST_CASE("payload_placement treats an omitted Sharing Eligibility predicate as always eligible",
+TEST_CASE("unconstrained payload placement shares the earliest exact candidate",
           "[unit][payload_placement][dedupe]") {
     payload_placer placer{test_base_offset, payload_sharing_policy::enabled, test_label};
 
     const auto first = require_placed(place_text(placer, "no-constraint"));
-    // No predicate argument at all: the call site states that this family has
-    // no eligibility constraint rather than passing an always-true lambda.
     const auto second = require_placed(place_text(placer, "no-constraint"));
 
     CHECK(second.shared);
@@ -599,10 +561,9 @@ TEST_CASE("payload_placement rejects a payload span that leaves the 64-bit range
 TEST_CASE("payload_placement with sharing disabled assigns every placement its own location",
           "[unit][payload_placement][dedupe]") {
     payload_placer placer{test_base_offset, payload_sharing_policy::disabled, test_label};
-    const payload_sharing_eligibility accept_every_candidate = [](std::size_t) { return true; };
 
-    const auto first = require_placed(place_text(placer, "identical", accept_every_candidate));
-    const auto second = require_placed(place_text(placer, "identical", accept_every_candidate));
+    const auto first = require_placed(place_text(placer, "identical"));
+    const auto second = require_placed(place_text(placer, "identical"));
 
     CHECK_FALSE(first.shared);
     CHECK_FALSE(second.shared);
