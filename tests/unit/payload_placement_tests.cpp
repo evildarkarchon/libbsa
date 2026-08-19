@@ -2,14 +2,20 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <detail/host_file.hpp>
 #include <detail/payload_placement.hpp>
 #include <detail/stored_payload.hpp>
+#include <detail/writer_publish.hpp>
 
 #include <libbsa/result.hpp>
+
+#include <support/private_temp_root.hpp>
 
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <limits>
 #include <memory>
 #include <span>
@@ -43,6 +49,12 @@ constexpr std::string_view test_label = "Caller Family";
 // A base offset with no family meaning, chosen so that a returned offset that
 // forgot to include it is obviously wrong rather than accidentally right.
 constexpr std::uint64_t test_base_offset = 4096U;
+
+constexpr libbsa::detail::host_file_context snapshot_source_context{
+    "Payload Placement test failed to open source",
+    "Payload Placement test failed to inspect source",
+    "Payload Placement test failed to read source", "Payload Placement test source changed",
+    "Payload Placement test source"};
 
 struct test_sharing_facts {
     std::uint32_t compatibility_mask{};
@@ -115,6 +127,32 @@ std::vector<std::byte> bytes_from_text(std::string_view text) {
     return bytes;
 }
 
+/// Writes one snapshot source inside the test process's private temp root.
+void write_binary_file(const std::filesystem::path& path, std::span<const std::byte> bytes) {
+    std::ofstream output{path, std::ios::binary | std::ios::trunc};
+    REQUIRE(output.good());
+    output.write(reinterpret_cast<const char*>(bytes.data()),
+                 static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(output.good());
+}
+
+/// Creates a snapshot-backed Stored Payload whose body path can later be made unavailable.
+stored_payload make_snapshot_payload(const libbsa::detail::finalization_workspace& workspace,
+                                     std::size_t identity, std::span<const std::byte> bytes) {
+    const auto source_path = libbsa::tests::private_temp_root() /
+                             ("payload-placement-source-" + std::to_string(identity) + ".bin");
+    write_binary_file(source_path, bytes);
+    auto resolved = libbsa::detail::resolve_host_file_path(source_path.string());
+    REQUIRE(resolved.has_value());
+    auto opened =
+        libbsa::detail::stable_host_file_session::open(resolved.value(), snapshot_source_context);
+    REQUIRE(opened.has_value());
+    auto snapshot = libbsa::detail::stored_payload::from_workspace_snapshot(
+        {}, std::move(opened).value(), workspace, identity, 2U);
+    REQUIRE(snapshot.has_value());
+    return std::move(snapshot).value();
+}
+
 std::string materialize(const stored_payload& payload) {
     std::ostringstream output{std::ios::binary};
     auto emitted = payload.emit(output);
@@ -145,6 +183,15 @@ template <typename Facts, typename Rule>
 libbsa::result<payload_placement> place_bytes(constrained_payload_placer<Facts, Rule>& placer,
                                               const std::vector<std::byte>& bytes, Facts facts) {
     auto payload = stored_payload::from_owned_bytes(bytes);
+    const payload_narrowing_key key{payload.size(), payload.fingerprint()};
+    return placer.place(key, payload_placement_subject::of_payload(std::move(payload)),
+                        std::move(facts));
+}
+
+/// Offers an existing Stored Payload and mandatory facts through the constrained lane.
+template <typename Facts, typename Rule>
+libbsa::result<payload_placement> place_payload(constrained_payload_placer<Facts, Rule>& placer,
+                                                stored_payload payload, Facts facts) {
     const payload_narrowing_key key{payload.size(), payload.fingerprint()};
     return placer.place(key, payload_placement_subject::of_payload(std::move(payload)),
                         std::move(facts));
@@ -349,6 +396,85 @@ TEST_CASE("constrained payload placement keeps exact equality authoritative afte
     CHECK(second.offset != first.offset);
     CHECK(second.payload_index != first.payload_index);
     CHECK(placer.placed_payload_count() == 2U);
+}
+
+TEST_CASE("constrained payload placement continues to a later eligible exact candidate",
+          "[unit][payload_placement][dedupe][collision]") {
+    constrained_payload_placer<test_sharing_facts, matching_facts_rule> placer{
+        test_base_offset, payload_sharing_policy::enabled, test_label, matching_facts_rule{}};
+    const auto collision = fnv1a_fingerprint_collision();
+
+    // All four offers have one narrowing key. The final offer must skip the
+    // first candidate by facts, reject the second by exact bytes, and share the
+    // third, preserving the candidates' acceptance order throughout.
+    const auto ineligible =
+        require_placed(place_bytes(placer, collision.distinct_b, test_sharing_facts{1U}));
+    const auto unequal =
+        require_placed(place_bytes(placer, collision.distinct_a, test_sharing_facts{3U}));
+    const auto later_exact =
+        require_placed(place_bytes(placer, collision.distinct_b, test_sharing_facts{3U}));
+    const auto offered =
+        require_placed(place_bytes(placer, collision.distinct_b, test_sharing_facts{3U}));
+
+    CHECK_FALSE(ineligible.shared);
+    CHECK_FALSE(unequal.shared);
+    CHECK_FALSE(later_exact.shared);
+    CHECK(offered.shared);
+    CHECK(offered.payload_index == later_exact.payload_index);
+    CHECK(offered.offset == later_exact.offset);
+    CHECK(placer.placed_payload_count() == 3U);
+}
+
+TEST_CASE("constrained payload placement skips unavailable ineligible snapshots",
+          "[unit][payload_placement][dedupe][snapshot][failure]") {
+    auto reserved = libbsa::detail::finalization_workspace::reserve(
+        libbsa::tests::private_temp_root() / "payload-placement-ordering.bsa", test_label);
+    REQUIRE(reserved.has_value());
+    auto workspace = std::move(reserved).value();
+    constexpr std::size_t snapshot_identity = 1U;
+    const auto bytes = bytes_from_text("candidate bytes");
+
+    constrained_payload_placer<test_sharing_facts, matching_facts_rule> placer{
+        test_base_offset, payload_sharing_policy::enabled, test_label, matching_facts_rule{}};
+    const auto candidate = require_placed(
+        place_payload(placer, make_snapshot_payload(workspace, snapshot_identity, bytes),
+                      test_sharing_facts{1U}));
+
+    std::error_code removal_error;
+    REQUIRE(std::filesystem::remove(workspace.snapshot_path(snapshot_identity), removal_error));
+    REQUIRE_FALSE(removal_error);
+
+    const auto offered = place_bytes(placer, bytes, test_sharing_facts{2U});
+    REQUIRE(offered.has_value());
+    CHECK_FALSE(offered.value().shared);
+    CHECK(offered.value().offset == candidate.offset + bytes.size());
+    CHECK(placer.placed_payload_count() == 2U);
+}
+
+TEST_CASE("constrained payload placement propagates unavailable eligible snapshot errors unchanged",
+          "[unit][payload_placement][dedupe][snapshot][failure]") {
+    auto reserved = libbsa::detail::finalization_workspace::reserve(
+        libbsa::tests::private_temp_root() / "payload-placement-error.bsa", test_label);
+    REQUIRE(reserved.has_value());
+    auto workspace = std::move(reserved).value();
+    constexpr std::size_t snapshot_identity = 2U;
+    const auto bytes = bytes_from_text("candidate bytes");
+
+    constrained_payload_placer<test_sharing_facts, matching_facts_rule> placer{
+        test_base_offset, payload_sharing_policy::enabled, test_label, matching_facts_rule{}};
+    require_placed(place_payload(placer, make_snapshot_payload(workspace, snapshot_identity, bytes),
+                                 test_sharing_facts{1U}));
+
+    std::error_code removal_error;
+    REQUIRE(std::filesystem::remove(workspace.snapshot_path(snapshot_identity), removal_error));
+    REQUIRE_FALSE(removal_error);
+
+    const auto offered = place_bytes(placer, bytes, test_sharing_facts{1U});
+    REQUIRE_FALSE(offered.has_value());
+    CHECK(offered.error().code == error_code::io_error);
+    CHECK(offered.error().message == "Stored Payload failed to open workspace snapshot");
+    CHECK(placer.cursor() == test_base_offset + bytes.size());
+    CHECK(placer.placed_payload_count() == 1U);
 }
 
 TEST_CASE("constrained payload placement selects the earliest eligible exact representative",
