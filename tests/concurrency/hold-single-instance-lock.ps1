@@ -43,8 +43,9 @@ param(
     # but a reader should not have to know that to follow the invocation.
     [Parameter(Mandatory = $true)][string] $ChildCommand,
 
-    # Arguments for that executable. None of them may contain spaces: they are
-    # handed to Start-Process, whose PowerShell 5.1 quoting is not worth relying on.
+    # Arguments for that executable. None of them may contain spaces: Windows
+    # PowerShell 5.1 has no ProcessStartInfo.ArgumentList, so they are joined into
+    # the single command-line string ProcessStartInfo.Arguments requires.
     [string[]] $ChildArguments = @(),
 
     # Where the command's stdout, stderr, and exit code are recorded. The caller
@@ -93,6 +94,8 @@ if (Test-Path -LiteralPath $optOutPath) {
 
 $mutex = New-Object System.Threading.Mutex($false, $LockName)
 $held = $false
+$process = $null
+$processStarted = $false
 try {
     try {
         $held = $mutex.WaitOne(0)
@@ -109,24 +112,55 @@ try {
         exit $exitHarnessLockUnavailable
     }
 
-    $process = Start-Process -FilePath $ChildCommand `
-        -ArgumentList $ChildArguments `
-        -NoNewWindow `
-        -PassThru `
-        -RedirectStandardOutput $StdoutFile `
-        -RedirectStandardError $StderrFile
-    if ($null -eq $process) {
-        Write-Diagnostic "hold-single-instance-lock.ps1: failed to start '$ChildCommand'."
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $ChildCommand
+    $startInfo.Arguments = $ChildArguments -join ' '
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+
+    # Start the owned Process object directly. On Windows PowerShell 5.1,
+    # Start-Process may not retain its native handle long enough for ExitCode to
+    # remain observable when a fast child exits before the caller caches Handle.
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+    try {
+        if (-not $process.Start()) {
+            Write-Diagnostic "hold-single-instance-lock.ps1: failed to start '$ChildCommand'."
+            exit $exitHarnessChildNotStarted
+        }
+        $processStarted = $true
+    }
+    catch {
+        Write-Diagnostic "hold-single-instance-lock.ps1: failed to start '$ChildCommand': $($_.Exception.Message)"
         exit $exitHarnessChildNotStarted
     }
 
-    # Touching .Handle caches the process handle in this PowerShell object. Without
-    # it, PowerShell 5.1 can report a null ExitCode after the process has exited,
-    # because the underlying handle was released before it was read.
-    $null = $process.Handle
+    # Drain both redirected streams asynchronously so neither pipe can fill while
+    # the parent is waiting for the other stream or for the process itself.
+    $stdout = $process.StandardOutput.ReadToEndAsync()
+    $stderr = $process.StandardError.ReadToEndAsync()
+    $exitedBeforeTimeout = $process.WaitForExit($TimeoutSeconds * 1000)
+    if (-not $exitedBeforeTimeout) {
+        try {
+            $process.Kill()
+        }
+        catch [System.InvalidOperationException] {
+            # The child exited between the timed wait and Kill; it still missed the
+            # deadline, and the unconditional wait below completes stream draining.
+        }
+    }
 
-    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
-        $process.Kill()
+    # The parameterless overload completes asynchronous output handling after the
+    # finite wait (or Kill) before the task results and ExitCode are observed.
+    $process.WaitForExit()
+
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($StdoutFile, $stdout.Result, $utf8NoBom)
+    [System.IO.File]::WriteAllText($StderrFile, $stderr.Result, $utf8NoBom)
+
+    if (-not $exitedBeforeTimeout) {
         Write-Diagnostic "hold-single-instance-lock.ps1: '$ChildCommand' did not exit within $TimeoutSeconds seconds and was killed."
         exit $exitHarnessChildTimedOut
     }
@@ -134,6 +168,29 @@ try {
     Set-Content -LiteralPath $ExitCodeFile -Value ([string] $process.ExitCode) -Encoding Ascii
 }
 finally {
+    if ($null -ne $process) {
+        try {
+            if ($processStarted) {
+                try {
+                    if (-not $process.HasExited) {
+                        $process.Kill()
+                    }
+                }
+                catch [System.InvalidOperationException] {
+                    # The child exited between HasExited and Kill, so there is no
+                    # remaining process to terminate before releasing the mutex.
+                }
+
+                # An exception after Start must not release the mutex while its
+                # child is still alive. Normal paths have already completed this.
+                $process.WaitForExit()
+            }
+        }
+        finally {
+            $process.Dispose()
+        }
+    }
+
     # Released before the handle is disposed, and only when this thread owns it:
     # ReleaseMutex from a non-owning thread throws. Disposing without releasing
     # would abandon the mutex, which the guard recovers from -- but abandonment is

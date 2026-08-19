@@ -15,10 +15,12 @@
 #
 # 1. Two instances, filtered to the BA2 DX10 snapshot cleanup cases and both carrying
 #    the #65 opt-out, run concurrently and both exit zero.
-# 2. A third instance started *without* the opt-out, while the guard's lock is held,
+# 2. A fast child proves the lock holder records an exact non-zero exit code and
+#    keeps its stdout and stderr separate.
+# 3. A third instance started *without* the opt-out, while the guard's lock is held,
 #    exits non-zero and says why.
 #
-# The first is the regression proof. The second covers the guard from #65 in the same
+# The first is the regression proof. The third covers the guard from #65 in the same
 # case, because the opt-out the first half depends on and the refusal it disables are
 # two halves of one mechanism.
 #
@@ -81,6 +83,11 @@ set(instance_timeout_seconds 300)
 set(windows_powershell "$ENV{SystemRoot}/System32/WindowsPowerShell/v1.0/powershell.exe")
 if(NOT EXISTS "${windows_powershell}")
   message(FATAL_ERROR "Windows PowerShell is required to hold the single-instance lock: ${windows_powershell}")
+endif()
+
+set(command_interpreter "$ENV{ComSpec}")
+if(NOT EXISTS "${command_interpreter}")
+  message(FATAL_ERROR "The Windows command interpreter is required to probe the lock holder: ${command_interpreter}")
 endif()
 
 set(work_root "${LIBBSA_BINARY_DIR}/concurrent-test-instances/${CONFIG}")
@@ -204,7 +211,63 @@ foreach(instance_index RANGE 0 1)
 endforeach()
 
 # ---------------------------------------------------------------------------
-# 2. A second instance without the opt-out must be refused, and must say why.
+# 2. The lock holder must preserve a fast child's exact process result.
+# ---------------------------------------------------------------------------
+
+set(fast_child_stdout_log "${work_root}/fast-child-stdout.txt")
+set(fast_child_stderr_log "${work_root}/fast-child-stderr.txt")
+set(fast_child_exit_code_file "${work_root}/fast-child-exit-code.txt")
+string(RANDOM LENGTH 16 ALPHABET 0123456789abcdef fast_child_lock_suffix)
+
+# Kept space-free to honour hold-single-instance-lock.ps1's Windows PowerShell 5.1
+# argument contract. cmd.exe's echo. spelling emits the marker without the dot.
+set(fast_child_arguments "/d/c\"echo.holder-fast-stdout&echo.holder-fast-stderr>&2&exit/b37\"")
+
+execute_process(
+  COMMAND "${windows_powershell}"
+    -NoProfile
+    -NonInteractive
+    -ExecutionPolicy Bypass
+    -File "${LIBBSA_LOCK_HOLDER_SCRIPT}"
+    -LockName "Local\\libbsa-tests-fast-child-${fast_child_lock_suffix}"
+    -OptOutVariable "${single_instance_opt_out_variable}"
+    -ChildCommand "${command_interpreter}"
+    -ChildArguments "${fast_child_arguments}"
+    -StdoutFile "${fast_child_stdout_log}"
+    -StderrFile "${fast_child_stderr_log}"
+    -ExitCodeFile "${fast_child_exit_code_file}"
+    -TimeoutSeconds ${instance_timeout_seconds}
+  RESULT_VARIABLE fast_child_holder_result
+  OUTPUT_VARIABLE fast_child_holder_stdout
+  ERROR_VARIABLE fast_child_holder_stderr
+  TIMEOUT ${instance_timeout_seconds}
+)
+
+read_log_file("${fast_child_stdout_log}" fast_child_stdout)
+read_log_file("${fast_child_stderr_log}" fast_child_stderr)
+set(fast_child_exit_code "")
+if(EXISTS "${fast_child_exit_code_file}")
+  file(READ "${fast_child_exit_code_file}" fast_child_exit_code)
+  string(STRIP "${fast_child_exit_code}" fast_child_exit_code)
+endif()
+string(STRIP "${fast_child_stdout}" fast_child_stdout)
+string(STRIP "${fast_child_stderr}" fast_child_stderr)
+
+if(NOT fast_child_holder_result STREQUAL "0")
+  record_failure("The single-instance lock holder failed while probing fast-child result capture.\n  result: ${fast_child_holder_result}\n  stdout:\n${fast_child_holder_stdout}\n  stderr:\n${fast_child_holder_stderr}")
+endif()
+if(NOT fast_child_exit_code STREQUAL "37")
+  record_failure("The fast child exit code was not recorded exactly.\n  expected: 37\n  actual: ${fast_child_exit_code}")
+endif()
+if(NOT fast_child_stdout STREQUAL "holder-fast-stdout")
+  record_failure("The fast child's stdout was not captured exactly.\n  expected: holder-fast-stdout\n  actual: ${fast_child_stdout}")
+endif()
+if(NOT fast_child_stderr STREQUAL "holder-fast-stderr")
+  record_failure("The fast child's stderr was not captured exactly.\n  expected: holder-fast-stderr\n  actual: ${fast_child_stderr}")
+endif()
+
+# ---------------------------------------------------------------------------
+# 3. A second instance without the opt-out must be refused, and must say why.
 # ---------------------------------------------------------------------------
 
 set(probe_stdout_log "${work_root}/refused-instance-stdout.txt")
