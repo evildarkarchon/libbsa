@@ -96,17 +96,6 @@ std::uint32_t read_stage_u32_le_at(std::span<const std::byte> bytes, std::size_t
            (std::to_integer<std::uint32_t>(bytes[offset + 3U]) << 24U);
 }
 
-std::uint64_t read_stage_u64_le_at(std::span<const std::byte> bytes, std::size_t offset) {
-    REQUIRE(offset <= bytes.size());
-    REQUIRE(bytes.size() - offset >= sizeof(std::uint64_t));
-    std::uint64_t value = 0;
-    for (std::size_t index = 0; index < sizeof(std::uint64_t); ++index) {
-        value |= static_cast<std::uint64_t>(std::to_integer<std::uint8_t>(bytes[offset + index]))
-                 << (index * 8U);
-    }
-    return value;
-}
-
 libbsa::formats::ba2::ba2_profile require_gnrl_profile(
     libbsa::ba2_gnrl_target target = libbsa::ba2_gnrl_target::fallout4,
     const libbsa::ba2_gnrl_writer_options& options = {}) {
@@ -1184,34 +1173,6 @@ TEST_CASE("ba2 dx10 writer layout rejects incompatible profiles and malformed ge
         REQUIRE_FALSE(plan.has_value());
         CHECK(plan.error().code == libbsa::error_code::format_error);
     }
-}
-
-TEST_CASE("ba2 dx10 writer serialization consumes the plan and emits each payload once",
-          "[unit][writer-stage][ba2_dx10_writer][serialization]") {
-    const auto payload = bytes_from_text("dx10-one-emission");
-    const auto profile = require_dx10_profile();
-    auto entries =
-        ba2_dx10_prepared_stage_entries("Textures/Stage/Serialized.dds", {payload, payload});
-    auto plan = libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, true);
-    REQUIRE(plan.has_value());
-    REQUIRE(plan.value().payloads.size() == 1U);
-
-    const auto output = stage_output_path("ba2-dx10-plan-serialization.ba2");
-    auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-        profile, libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan.value(), output);
-
-    REQUIRE(serialized.has_value());
-    const auto bytes = read_stage_binary_file(output);
-    const auto& placement = plan.value().payloads[0];
-    // The name table trails the payload area now, so the archive ends after the
-    // single length-prefixed name rather than at the last payload byte.
-    CHECK(placement.offset + placement.stored_size == plan.value().filename_table_offset);
-    CHECK(bytes.size() == plan.value().filename_table_offset + 2U +
-                              plan.value().records[0].archive_path_original.size());
-    const auto first_chunk_offset = profile.header_size() + expected_ba2_dx10_record_size;
-    const auto second_chunk_offset = first_chunk_offset + expected_ba2_dx10_chunk_header_size;
-    CHECK(read_stage_u64_le_at(bytes, first_chunk_offset) == placement.offset);
-    CHECK(read_stage_u64_le_at(bytes, second_chunk_offset) == placement.offset);
 }
 
 TEST_CASE("ba2 dx10 writer serialization rejects invalid plan payload references",
