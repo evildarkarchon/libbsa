@@ -44,6 +44,10 @@ _Avoid_: Detected BA2 format, BA2 header info
 A coherent observation that resolves one BA2 archive's header and materializes its metadata while the observed host archive remains stable.
 _Avoid_: BA2 detection pass, BA2 parser dispatch
 
+**BA2 Archive Serialization**:
+The ordered byte representation of one complete BA2 archive: its fixed header, subtype record table, unique Stored Payloads in physical order, and filename table. It preserves the order and placement already established by format-specific planning; it does not create, compress, or place payloads.
+_Avoid_: BA2 envelope serialization, BA2 writer serialization, BA2 save pipeline
+
 **BA2 Record Identity**:
 The subtype-specific lookup facts that bind a BA2 archive path to its stored record fields, including hash input, extension FourCC, and canonical path matching.
 _Avoid_: BA2 record key pieces, path helper fields, hash tuple
