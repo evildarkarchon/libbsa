@@ -7,9 +7,11 @@
 
 #include <libbsa/result.hpp>
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <span>
 #include <sstream>
 #include <stdexcept>
@@ -22,12 +24,15 @@
 namespace {
 
 using libbsa::error_code;
+using libbsa::detail::constrained_payload_placer;
 using libbsa::detail::payload_narrowing_key;
 using libbsa::detail::payload_placement;
 using libbsa::detail::payload_placement_subject;
 using libbsa::detail::payload_placer;
 using libbsa::detail::payload_sharing_eligibility;
 using libbsa::detail::payload_sharing_policy;
+using libbsa::detail::payload_sharing_rule_for;
+using libbsa::detail::placed_payload;
 using libbsa::detail::stored_payload;
 using libbsa::tests::fnv1a_fingerprint_collision;
 
@@ -38,6 +43,68 @@ constexpr std::string_view test_label = "Caller Family";
 // A base offset with no family meaning, chosen so that a returned offset that
 // forgot to include it is obviously wrong rather than accidentally right.
 constexpr std::uint64_t test_base_offset = 4096U;
+
+struct test_sharing_facts {
+    std::uint32_t compatibility_mask{};
+    std::shared_ptr<void> lifetime{};
+};
+
+struct matching_facts_rule {
+    /// Returns whether the accepted and offered facts name the same group.
+    bool operator()(const test_sharing_facts& accepted,
+                    const test_sharing_facts& offered) const noexcept {
+        return accepted.compatibility_mask == offered.compatibility_mask;
+    }
+};
+
+struct overlapping_facts_rule {
+    /// Returns whether accepted and offered facts have any compatible bit in common.
+    bool operator()(const test_sharing_facts& accepted,
+                    const test_sharing_facts& offered) const noexcept {
+        return (accepted.compatibility_mask & offered.compatibility_mask) != 0U;
+    }
+};
+
+struct successor_facts_rule {
+    /// Accepts only the next offered fact, making argument order observable.
+    bool operator()(const test_sharing_facts& accepted,
+                    const test_sharing_facts& offered) const noexcept {
+        return accepted.compatibility_mask + 1U == offered.compatibility_mask;
+    }
+};
+
+struct throwing_facts_rule {
+    /// Deliberately lacks `noexcept` so the rule concept must reject it.
+    bool operator()(const test_sharing_facts&, const test_sharing_facts&) const { return true; }
+};
+
+struct non_boolean_facts_rule {
+    /// Deliberately returns a non-Boolean value so the rule concept must reject it.
+    int operator()(const test_sharing_facts&, const test_sharing_facts&) const noexcept {
+        return 1;
+    }
+};
+
+struct mutable_only_facts_rule {
+    /// Deliberately requires mutable state so the rule concept must reject it.
+    bool operator()(const test_sharing_facts&, const test_sharing_facts&) noexcept { return true; }
+};
+
+struct counting_facts_rule {
+    std::size_t* calls{};
+
+    /// Counts evaluations so sharing-disabled placement can prove it invokes no rule.
+    bool operator()(const test_sharing_facts&, const test_sharing_facts&) const noexcept {
+        ++*calls;
+        return true;
+    }
+};
+
+template <typename Placer>
+concept accepts_placement_without_facts =
+    requires(Placer& placer, payload_narrowing_key key, payload_placement_subject subject) {
+        placer.place(key, std::move(subject));
+    };
 
 std::vector<std::byte> bytes_from_text(std::string_view text) {
     std::vector<std::byte> bytes;
@@ -71,6 +138,23 @@ libbsa::result<payload_placement> place_bytes(payload_placer& placer,
 libbsa::result<payload_placement> place_text(payload_placer& placer, std::string_view text,
                                              const payload_sharing_eligibility& eligible = {}) {
     return place_bytes(placer, bytes_from_text(text), eligible);
+}
+
+/// Offers `bytes` and mandatory facts through the constrained placement lane.
+template <typename Facts, typename Rule>
+libbsa::result<payload_placement> place_bytes(constrained_payload_placer<Facts, Rule>& placer,
+                                              const std::vector<std::byte>& bytes, Facts facts) {
+    auto payload = stored_payload::from_owned_bytes(bytes);
+    const payload_narrowing_key key{payload.size(), payload.fingerprint()};
+    return placer.place(key, payload_placement_subject::of_payload(std::move(payload)),
+                        std::move(facts));
+}
+
+/// Offers text bytes and mandatory facts through the constrained placement lane.
+template <typename Facts, typename Rule>
+libbsa::result<payload_placement> place_text(constrained_payload_placer<Facts, Rule>& placer,
+                                             std::string_view text, Facts facts) {
+    return place_bytes(placer, bytes_from_text(text), std::move(facts));
 }
 
 /// Offers a bare length, as a family that has not adopted Stored Payload does.
@@ -217,6 +301,143 @@ TEST_CASE("payload_placement treats an omitted Sharing Eligibility predicate as 
     CHECK(second.shared);
     CHECK(second.offset == first.offset);
     CHECK(placer.placed_payload_count() == 1U);
+}
+
+TEST_CASE("constrained payload placement requires facts and a non-throwing pairwise rule",
+          "[unit][payload_placement][dedupe]") {
+    using constrained_placer = constrained_payload_placer<test_sharing_facts, matching_facts_rule>;
+
+    STATIC_REQUIRE(payload_sharing_rule_for<matching_facts_rule, test_sharing_facts>);
+    STATIC_REQUIRE_FALSE(payload_sharing_rule_for<throwing_facts_rule, test_sharing_facts>);
+    STATIC_REQUIRE_FALSE(payload_sharing_rule_for<non_boolean_facts_rule, test_sharing_facts>);
+    STATIC_REQUIRE_FALSE(payload_sharing_rule_for<mutable_only_facts_rule, test_sharing_facts>);
+    STATIC_REQUIRE_FALSE(accepts_placement_without_facts<constrained_placer>);
+    STATIC_REQUIRE(accepts_placement_without_facts<payload_placer>);
+    STATIC_REQUIRE(std::same_as<decltype(std::declval<constrained_placer&&>().release()),
+                                std::vector<placed_payload>>);
+}
+
+TEST_CASE("constrained payload placement shares only byte-equal payloads with compatible facts",
+          "[unit][payload_placement][dedupe]") {
+    constrained_payload_placer<test_sharing_facts, matching_facts_rule> placer{
+        test_base_offset, payload_sharing_policy::enabled, test_label, matching_facts_rule{}};
+
+    const auto first = require_placed(place_text(placer, "identical", test_sharing_facts{1U}));
+    const auto compatible = require_placed(place_text(placer, "identical", test_sharing_facts{1U}));
+    const auto incompatible =
+        require_placed(place_text(placer, "identical", test_sharing_facts{2U}));
+
+    CHECK(compatible.shared);
+    CHECK(compatible.payload_index == first.payload_index);
+    CHECK_FALSE(incompatible.shared);
+    CHECK(incompatible.offset == first.offset + 9U);
+    CHECK(placer.placed_payload_count() == 2U);
+}
+
+TEST_CASE("constrained payload placement keeps exact equality authoritative after narrowing",
+          "[unit][payload_placement][dedupe][collision]") {
+    constrained_payload_placer<test_sharing_facts, matching_facts_rule> placer{
+        test_base_offset, payload_sharing_policy::enabled, test_label, matching_facts_rule{}};
+    const auto collision = fnv1a_fingerprint_collision();
+
+    const auto first =
+        require_placed(place_bytes(placer, collision.distinct_a, test_sharing_facts{1U}));
+    const auto second =
+        require_placed(place_bytes(placer, collision.distinct_b, test_sharing_facts{1U}));
+
+    CHECK_FALSE(second.shared);
+    CHECK(second.offset != first.offset);
+    CHECK(second.payload_index != first.payload_index);
+    CHECK(placer.placed_payload_count() == 2U);
+}
+
+TEST_CASE("constrained payload placement selects the earliest eligible exact representative",
+          "[unit][payload_placement][dedupe]") {
+    constrained_payload_placer<test_sharing_facts, overlapping_facts_rule> placer{
+        test_base_offset, payload_sharing_policy::enabled, test_label, overlapping_facts_rule{}};
+
+    // The first two facts do not overlap, so identical bytes become two live
+    // candidates. The third overlaps both and must choose the first accepted.
+    const auto first = require_placed(place_text(placer, "identical", test_sharing_facts{1U}));
+    const auto second = require_placed(place_text(placer, "identical", test_sharing_facts{2U}));
+    const auto third = require_placed(place_text(placer, "identical", test_sharing_facts{3U}));
+
+    REQUIRE_FALSE(second.shared);
+    CHECK(third.shared);
+    CHECK(third.payload_index == first.payload_index);
+    CHECK(third.offset == first.offset);
+}
+
+TEST_CASE("constrained payload placement passes accepted facts before offered facts",
+          "[unit][payload_placement][dedupe]") {
+    constrained_payload_placer<test_sharing_facts, successor_facts_rule> placer{
+        test_base_offset, payload_sharing_policy::enabled, test_label, successor_facts_rule{}};
+
+    const auto first = require_placed(place_text(placer, "identical", test_sharing_facts{1U}));
+    const auto second = require_placed(place_text(placer, "identical", test_sharing_facts{2U}));
+
+    CHECK(second.shared);
+    CHECK(second.payload_index == first.payload_index);
+}
+
+TEST_CASE("constrained payload placement retains facts only for accepted unique payloads",
+          "[unit][payload_placement][dedupe]") {
+    constrained_payload_placer<test_sharing_facts, successor_facts_rule> placer{
+        test_base_offset, payload_sharing_policy::enabled, test_label, successor_facts_rule{}};
+
+    auto first_lifetime = std::make_shared<int>(1);
+    const std::weak_ptr<void> first_retained = first_lifetime;
+    const auto first = require_placed(
+        place_text(placer, "identical", test_sharing_facts{1U, std::move(first_lifetime)}));
+    CHECK_FALSE(first_retained.expired());
+
+    auto shared_lifetime = std::make_shared<int>(2);
+    const std::weak_ptr<void> shared_discarded = shared_lifetime;
+    const auto shared = require_placed(
+        place_text(placer, "identical", test_sharing_facts{2U, std::move(shared_lifetime)}));
+    REQUIRE(shared.shared);
+    CHECK(shared.payload_index == first.payload_index);
+    CHECK(shared_discarded.expired());
+
+    auto later_lifetime = std::make_shared<int>(3);
+    const std::weak_ptr<void> later_retained = later_lifetime;
+    const auto later = require_placed(
+        place_text(placer, "identical", test_sharing_facts{3U, std::move(later_lifetime)}));
+    // A shared offer must not become a candidate: only accepted fact 1 remains,
+    // and the successor rule rejects offered fact 3 against it.
+    REQUIRE_FALSE(later.shared);
+    CHECK_FALSE(later_retained.expired());
+
+    const auto payloads = std::move(placer).release();
+    REQUIRE(payloads.size() == 2U);
+    CHECK(materialize(payloads[0].payload) == "identical");
+    CHECK(materialize(payloads[1].payload) == "identical");
+    CHECK(first_retained.expired());
+    CHECK(later_retained.expired());
+}
+
+TEST_CASE("constrained payload placement retains no facts when sharing is disabled",
+          "[unit][payload_placement][dedupe]") {
+    std::size_t rule_calls = 0U;
+    constrained_payload_placer<test_sharing_facts, counting_facts_rule> placer{
+        test_base_offset, payload_sharing_policy::disabled, test_label,
+        counting_facts_rule{&rule_calls}};
+
+    auto first_lifetime = std::make_shared<int>(1);
+    const std::weak_ptr<void> first_discarded = first_lifetime;
+    const auto first = require_placed(
+        place_text(placer, "identical", test_sharing_facts{1U, std::move(first_lifetime)}));
+    auto second_lifetime = std::make_shared<int>(2);
+    const std::weak_ptr<void> second_discarded = second_lifetime;
+    const auto second = require_placed(
+        place_text(placer, "identical", test_sharing_facts{1U, std::move(second_lifetime)}));
+
+    CHECK(rule_calls == 0U);
+    CHECK(first_discarded.expired());
+    CHECK(second_discarded.expired());
+    CHECK_FALSE(first.shared);
+    CHECK_FALSE(second.shared);
+    CHECK(second.offset == first.offset + 9U);
 }
 
 TEST_CASE("payload_placement gives a zero-length payload the cursor without advancing it",

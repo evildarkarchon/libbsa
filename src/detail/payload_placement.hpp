@@ -1,16 +1,20 @@
 #pragma once
 
+#include <detail/parser_primitives.hpp>
 #include <detail/stored_payload.hpp>
 
 #include <libbsa/result.hpp>
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <map>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -35,8 +39,8 @@ enum class payload_sharing_policy {
 /// candidates for sharing, never proven equal by it. Changing the key alone can
 /// therefore change how much comparison work happens, but not which payloads
 /// end up sharing a location (ADR-0001). Correctness constraints that must
-/// forbid a share belong in a `payload_sharing_eligibility` predicate instead,
-/// which is what keeps that claim true for every archive family.
+/// forbid a share belong in a Sharing Eligibility rule instead, which is what
+/// keeps that claim true for every archive family.
 struct payload_narrowing_key {
     std::uint64_t stored_size{};
     std::uint64_t fingerprint{};
@@ -50,7 +54,7 @@ struct payload_narrowing_key {
     }
 };
 
-/// Decides whether a byte-equal earlier payload is a legal sharing partner.
+/// Legacy callback deciding whether an earlier payload is a legal sharing partner.
 ///
 /// The predicate receives the index of an already-accepted payload — the same
 /// index `payload_placement::payload_index` reports — so a family can look the
@@ -63,8 +67,22 @@ struct payload_narrowing_key {
 /// not authorise a share; byte equality still has to hold (CONTEXT.md).
 ///
 /// An empty predicate means "no constraint", which is why families without one
-/// omit the argument rather than passing an always-true lambda.
+/// omit the argument rather than passing an always-true lambda. This callback is
+/// retained only until BA2 DX10 migrates to `constrained_payload_placer`; new
+/// constrained callers must not adopt the leaked candidate-index contract.
 using payload_sharing_eligibility = std::function<bool(std::size_t candidate_payload_index)>;
+
+/// True when `Rule` is a const, non-throwing pairwise rule returning exactly `bool`.
+///
+/// The accepted facts are always the first argument and offered facts the
+/// second. Requiring invocation through `const Rule&` rejects rules that need a
+/// mutable rule object; C++ cannot prove absence of external side effects, so
+/// callers retain the semantic obligation that the rule is otherwise pure.
+template <typename Rule, typename Facts>
+concept payload_sharing_rule_for =
+    requires(const Rule& rule, const Facts& accepted, const Facts& offered) {
+        { std::invoke(rule, accepted, offered) } noexcept -> std::same_as<bool>;
+    };
 
 /// What a family offers the placer for one placement: bytes, or just a length.
 ///
@@ -149,12 +167,186 @@ struct payload_placement {
     bool shared{};
 };
 
+namespace payload_placement_detail {
+
+/// One accepted constrained candidate, keeping its Stored Payload and facts together.
+template <typename Facts>
+struct constrained_accepted_payload {
+    placed_payload placed;
+    std::optional<Facts> facts;
+};
+
+/// Projects the public placed-payload representation from unconstrained state.
+inline const placed_payload& placed_payload_of(const placed_payload& accepted) noexcept {
+    return accepted;
+}
+
+/// Projects the public placed-payload representation from constrained state.
+template <typename Facts>
+const placed_payload& placed_payload_of(
+    const constrained_accepted_payload<Facts>& accepted) noexcept {
+    return accepted.placed;
+}
+
+/// Shared private engine for constrained and unconstrained Payload Placement.
+template <typename AcceptedPayload>
+class payload_placement_engine final {
+   public:
+    /// Starts a payload area at `base_offset` under one sharing policy.
+    payload_placement_engine(std::uint64_t base_offset, payload_sharing_policy sharing_policy,
+                             std::string_view diagnostic_label)
+        : cursor_(base_offset),
+          sharing_policy_(sharing_policy),
+          diagnostic_label_(diagnostic_label) {}
+
+    payload_placement_engine(const payload_placement_engine&) = delete;
+    payload_placement_engine& operator=(const payload_placement_engine&) = delete;
+    payload_placement_engine(payload_placement_engine&&) noexcept = default;
+    payload_placement_engine& operator=(payload_placement_engine&&) noexcept = default;
+    ~payload_placement_engine() noexcept = default;
+
+    /// Places one subject using the lane's candidate rule and acceptance factory.
+    ///
+    /// `eligible` receives accepted state and its stable payload index. It runs
+    /// before exact comparison. `accept` receives a newly placed payload and
+    /// whether candidate state will be retained, allowing the constrained lane
+    /// to discard facts when sharing is disabled.
+    template <typename Eligible, typename Accept>
+    result<payload_placement> place(const payload_narrowing_key& key,
+                                    payload_placement_subject subject, Eligible&& eligible,
+                                    Accept&& accept) {
+        if (released_) {
+            throw std::logic_error("libbsa::detail::payload_placer placed after release");
+        }
+
+        // A size-only subject can never share, and not merely because the families
+        // that offer one run with sharing disabled. Exact Stored Payload byte
+        // equality is the only authority for sharing (ADR-0001), and a subject
+        // without bytes cannot supply that proof under any policy.
+        const auto* offered = subject.payload();
+        if (sharing_policy_ == payload_sharing_policy::enabled && offered != nullptr) {
+            const auto bucket = candidate_buckets_.find(key);
+            if (bucket != candidate_buckets_.end()) {
+                // Candidates are held in acceptance order and the first that
+                // satisfies every condition wins, which is what keeps the earliest
+                // accepted payload the sharing representative.
+                for (const auto candidate_index : bucket->second) {
+                    // Sharing Eligibility is checked before byte comparison because
+                    // it is a cheap family-side field test while `exactly_equals`
+                    // streams both payloads through a bounded scratch buffer, and
+                    // for snapshot-backed payloads that means disk reads. Both
+                    // conditions must hold for a share, so this ordering changes
+                    // only what the answer costs, never which candidate wins.
+                    if (!std::invoke(eligible, accepted_payloads_[candidate_index],
+                                     candidate_index)) {
+                        continue;
+                    }
+
+                    auto equal = offered->exactly_equals(
+                        placed_payload_of(accepted_payloads_[candidate_index]).payload);
+                    if (!equal) {
+                        return equal.error();
+                    }
+                    if (equal.value()) {
+                        const auto& candidate =
+                            placed_payload_of(accepted_payloads_[candidate_index]);
+                        return payload_placement{candidate.offset, candidate_index, true};
+                    }
+                }
+            }
+        }
+
+        return place_at_cursor(key, std::move(subject), std::forward<Accept>(accept));
+    }
+
+    /// Returns the first offset past the placed payload area.
+    [[nodiscard]] std::uint64_t cursor() const noexcept { return cursor_; }
+
+    /// Returns the number of accepted unique Stored Payloads.
+    [[nodiscard]] std::size_t placed_payload_count() const noexcept {
+        return accepted_payloads_.size();
+    }
+
+    /// Returns whether accepted payloads participate in future candidate traversal.
+    [[nodiscard]] bool retains_candidates() const noexcept {
+        return sharing_policy_ == payload_sharing_policy::enabled;
+    }
+
+    /// Releases accepted lane state in acceptance order and invalidates placement.
+    [[nodiscard]] std::vector<AcceptedPayload> release() && {
+        auto released = std::move(accepted_payloads_);
+        accepted_payloads_.clear();
+        candidate_buckets_.clear();
+        released_ = true;
+        return released;
+    }
+
+   private:
+    /// Appends `subject` at the cursor and advances it, or reports overflow.
+    template <typename Accept>
+    result<payload_placement> place_at_cursor(const payload_narrowing_key& key,
+                                              payload_placement_subject subject, Accept&& accept) {
+        // The placement takes the cursor as it stands and the cursor only then
+        // advances by the stored size, so a zero-length subject leaves the cursor
+        // where it is and shares an offset with whatever is placed next — another
+        // payload, or the filename table when nothing follows. This matches
+        // `TwbBSArchive.PackData`, which records `Offset := Position`
+        // unconditionally and never special-cases an empty write.
+        const std::uint64_t offset = cursor_;
+        const std::uint64_t stored_size = subject.size();
+
+        std::uint64_t advanced = 0U;
+        if (!add_fits_u64(offset, stored_size, advanced)) {
+            return error{error_code::format_error, diagnostic_label_ + " payload span overflows"};
+        }
+
+        payload_placement placement{offset, std::nullopt, false};
+        if (subject.has_payload()) {
+            const std::size_t payload_index = accepted_payloads_.size();
+            placed_payload placed{offset, subject.take_payload()};
+            accepted_payloads_.push_back(
+                std::invoke(std::forward<Accept>(accept), std::move(placed), retains_candidates()));
+            // Registering the candidate here, in the single place a payload is ever
+            // accepted, is what makes the sharing index impossible to bypass. A
+            // caller has no other route to add a payload the index would not see.
+            //
+            // A disabled policy never consults the buckets, so it does not build
+            // them either. That keeps the default dedupe-off path free of a map
+            // insertion per archive entry and lets the constrained lane discard
+            // facts that no later placement could observe.
+            if (retains_candidates()) {
+                candidate_buckets_[key].push_back(payload_index);
+            }
+            placement.payload_index = payload_index;
+        }
+
+        cursor_ = advanced;
+        return placement;
+    }
+
+    std::uint64_t cursor_;
+    payload_sharing_policy sharing_policy_;
+    std::string diagnostic_label_;
+
+    /// Accepted lane state in placement order; positions are stable payload indices.
+    std::vector<AcceptedPayload> accepted_payloads_;
+
+    /// Candidate indices bucketed by narrowing key in acceptance order.
+    std::map<payload_narrowing_key, std::vector<std::size_t>> candidate_buckets_;
+
+    /// True once `release` has handed accepted state to its façade.
+    bool released_{false};
+};
+
+}  // namespace payload_placement_detail
+
 /// Owns Payload Placement for one archive being written.
 ///
-/// The module owns four things and only those four: the sharing decision
+/// The module owns the sharing decision
 /// (bucket by a narrowing key, confirm by exact Stored Payload byte equality),
 /// the payload cursor including the zero-length rule, overflow-checked payload
-/// span arithmetic, and the accepted Stored Payloads themselves.
+/// span arithmetic, the accepted Stored Payloads, and — for the constrained
+/// lane — the facts associated with each accepted sharing candidate.
 ///
 /// It deliberately owns the payloads rather than indexing into a family-owned
 /// collection. Stored Payload is move-only, and this is the only arrangement in
@@ -244,32 +436,84 @@ class payload_placer final {
     [[nodiscard]] std::vector<placed_payload> release() &&;
 
    private:
-    /// Appends `subject` at the cursor and advances it, or reports overflow.
-    result<payload_placement> place_at_cursor(const payload_narrowing_key& key,
-                                              payload_placement_subject subject);
+    payload_placement_detail::payload_placement_engine<placed_payload> engine_;
+};
 
-    std::uint64_t cursor_;
-    payload_sharing_policy sharing_policy_;
-    std::string diagnostic_label_;
+/// Owns constrained Payload Placement and its family-defined eligibility facts.
+///
+/// `Facts` remains family-owned vocabulary, while this module owns one facts
+/// value beside every accepted unique Stored Payload whenever sharing is
+/// enabled. `Rule` is stored by value and invoked as
+/// `rule(accepted_facts, offered_facts)` before exact byte comparison. Facts are
+/// mandatory for every `place` call, never exposed by `release`, and destroyed
+/// when accepted state is released.
+template <typename Facts, typename Rule>
+    requires std::move_constructible<Facts> && std::move_constructible<Rule> &&
+             payload_sharing_rule_for<Rule, Facts>
+class constrained_payload_placer final {
+   private:
+    using accepted_payload = payload_placement_detail::constrained_accepted_payload<Facts>;
 
-    /// Accepted payloads in placement order, each paired with the offset it was
-    /// given. Index positions are the `payload_index` values handed back to
-    /// callers and to eligibility predicates, so entries are only ever appended.
+   public:
+    /// Starts a constrained payload area and stores the family rule by value.
+    constrained_payload_placer(std::uint64_t base_offset, payload_sharing_policy sharing_policy,
+                               std::string_view diagnostic_label, Rule rule)
+        : engine_(base_offset, sharing_policy, diagnostic_label), rule_(std::move(rule)) {}
+
+    constrained_payload_placer(const constrained_payload_placer&) = delete;
+    constrained_payload_placer& operator=(const constrained_payload_placer&) = delete;
+    constrained_payload_placer(constrained_payload_placer&&) = default;
+    constrained_payload_placer& operator=(constrained_payload_placer&&) = default;
+    ~constrained_payload_placer() = default;
+
+    /// Places one subject with mandatory facts for this offered payload.
     ///
-    /// The offset lives beside the payload rather than in a parallel vector so
-    /// that accepting a payload is a single append and the two can never fall
-    /// out of step. Stored Payload itself deliberately carries no archive
-    /// location, so the pairing has to happen somewhere, and this is the only
-    /// place that knows it. `release` hands the pairs on intact for the same
-    /// reason.
-    std::vector<placed_payload> payloads_;
+    /// The rule sees accepted facts first and offered facts second. Offered
+    /// facts move into accepted state only when a new unique Stored Payload can
+    /// become a future candidate; shared and sharing-disabled offers retain no
+    /// facts. Exact Stored Payload comparison remains authoritative.
+    result<payload_placement> place(const payload_narrowing_key& key,
+                                    payload_placement_subject subject, Facts offered_facts) {
+        const auto eligible = [this, &offered_facts](const accepted_payload& candidate,
+                                                     std::size_t) noexcept {
+            // Candidate buckets exist only when sharing is enabled, and enabled
+            // acceptance always stores facts, so dereferencing cannot observe an
+            // empty optional. Avoiding `value()` keeps this infallible rule path
+            // statically non-throwing.
+            return std::invoke(rule_, *candidate.facts, offered_facts);
+        };
+        const auto accept = [&offered_facts](placed_payload placed, bool retain_facts) {
+            std::optional<Facts> accepted_facts;
+            if (retain_facts) {
+                accepted_facts.emplace(std::move(offered_facts));
+            }
+            return accepted_payload{std::move(placed), std::move(accepted_facts)};
+        };
+        return engine_.place(key, std::move(subject), eligible, accept);
+    }
 
-    /// Candidate indices into `payloads_`, bucketed by narrowing key and held
-    /// in acceptance order so the first accepted payload stays representative.
-    std::map<payload_narrowing_key, std::vector<std::size_t>> candidate_buckets_;
+    /// Returns the first offset past the placed payload area.
+    [[nodiscard]] std::uint64_t cursor() const noexcept { return engine_.cursor(); }
 
-    /// True once `release` has handed the accepted payloads away.
-    bool released_{false};
+    /// Returns the number of accepted unique Stored Payloads.
+    [[nodiscard]] std::size_t placed_payload_count() const noexcept {
+        return engine_.placed_payload_count();
+    }
+
+    /// Releases only placed payloads in acceptance order and destroys all facts.
+    [[nodiscard]] std::vector<placed_payload> release() && {
+        auto accepted = std::move(engine_).release();
+        std::vector<placed_payload> released;
+        released.reserve(accepted.size());
+        for (auto& candidate : accepted) {
+            released.push_back(std::move(candidate.placed));
+        }
+        return released;
+    }
+
+   private:
+    payload_placement_detail::payload_placement_engine<accepted_payload> engine_;
+    Rule rule_;
 };
 
 }  // namespace libbsa::detail
