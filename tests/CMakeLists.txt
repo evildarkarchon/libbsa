@@ -64,6 +64,7 @@ add_executable(libbsa_tests
   unit/writer_ownership_tests.cpp
   unit/writer_stage_tests.cpp
   unit/ba2_archive_serialization_tests.cpp
+  unit/ba2_archive_serialization_failure_contract_tests.cpp
   unit/benchmark_policy_tests.cpp
   unit/target_format_policy_tests.cpp
   unit/ba2_gnrl_writer_tests.cpp

@@ -1,7 +1,6 @@
 #include "formats/ba2/ba2_constants.hpp"
 #include "formats/ba2/ba2_dx10_layout.hpp"
 #include "formats/ba2/ba2_dx10_prepare.hpp"
-#include "formats/ba2/ba2_dx10_serialize.hpp"
 #include "formats/ba2/ba2_gnrl_layout.hpp"
 #include "formats/ba2/ba2_gnrl_prepare.hpp"
 #include "formats/ba2/ba2_profile.hpp"
@@ -1173,23 +1172,6 @@ TEST_CASE("ba2 dx10 writer layout rejects incompatible profiles and malformed ge
         REQUIRE_FALSE(plan.has_value());
         CHECK(plan.error().code == libbsa::error_code::format_error);
     }
-}
-
-TEST_CASE("ba2 dx10 writer serialization rejects invalid plan payload references",
-          "[unit][writer-stage][ba2_dx10_writer][serialization][validation]") {
-    const auto profile = require_dx10_profile();
-    auto entries = ba2_dx10_prepared_stage_entries("Textures/Stage/InvalidPlan.dds",
-                                                   {bytes_from_text("dx10-invalid-plan")});
-    auto plan = libbsa::formats::ba2::ba2_dx10_plan_placements(std::move(entries), profile, false);
-    REQUIRE(plan.has_value());
-    plan.value().records[0].chunks[0].payload_index = plan.value().payloads.size();
-
-    const auto output = stage_output_path("ba2-dx10-invalid-plan.ba2");
-    auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-        profile, libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan.value(), output);
-
-    REQUIRE_FALSE(serialized.has_value());
-    CHECK(serialized.error().code == libbsa::error_code::invalid_argument);
 }
 
 TEST_CASE("ba2 dx10 writer layout supplies decode facts as Sharing Eligibility",
