@@ -1,10 +1,10 @@
 #include "formats/ba2/ba2_constants.hpp"
+#include "formats/ba2/ba2_archive_serialization.hpp"
 #include "formats/ba2/ba2_dx10_layout.hpp"
 #include "formats/ba2/ba2_dx10_prepare.hpp"
 #include "formats/ba2/ba2_gnrl_layout.hpp"
 #include "formats/ba2/ba2_gnrl_prepare.hpp"
 #include "formats/ba2/ba2_profile.hpp"
-#include "formats/ba2/ba2_gnrl_serialize.hpp"
 #include "formats/bsa/tes3_bsa_layout.hpp"
 #include "formats/bsa/tes3_bsa_prepare.hpp"
 #include "formats/bsa/tes3_bsa_serialize.hpp"
@@ -608,8 +608,13 @@ TEST_CASE("ba2 gnrl writer serialization uses snapshots after original sources c
     CHECK(plan.value().records[0].payload_index == plan.value().records[1].payload_index);
 
     const auto output = stage_output_path("ba2-gnrl-snapshot-stable.ba2");
-    auto serialized =
-        libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(profile, options, plan.value(), output);
+    const libbsa::formats::ba2::ba2_stored_header_fields stored_header_fields{
+        options.starfield_unknown1,
+        options.starfield_unknown2,
+        options.starfield_compression_method,
+    };
+    auto serialized = libbsa::formats::ba2::serialize_ba2_archive(profile, stored_header_fields,
+                                                                  plan.value(), output);
     REQUIRE(serialized.has_value());
 
     auto opened = libbsa::archive_reader::open(output.string());
@@ -694,7 +699,8 @@ TEST_CASE("tes4 writer placement wires the payload placer to this family",
         REQUIRE(distinct_plan.value().folders.size() == 1U);
         REQUIRE(distinct_plan.value().folders[0].entries.size() == 2U);
         const auto distinct_first_index = distinct_plan.value().folders[0].entries[0].payload_index;
-        const auto distinct_second_index = distinct_plan.value().folders[0].entries[1].payload_index;
+        const auto distinct_second_index =
+            distinct_plan.value().folders[0].entries[1].payload_index;
         CHECK(distinct_first_index != distinct_second_index);
         CHECK(distinct_plan.value().payloads[distinct_first_index].offset !=
               distinct_plan.value().payloads[distinct_second_index].offset);
@@ -725,8 +731,7 @@ TEST_CASE("tes4 writer placement preserves the first occurrence as the shared pl
     // Preparation sorts entries into canonical record order, so the placement
     // order here is A, B, C and the first of the two identical payloads must own
     // the location the third entry reuses.
-    auto folders =
-        tes4_stage_folders({{"A.nif", shared}, {"B.nif", unique}, {"C.nif", shared}});
+    auto folders = tes4_stage_folders({{"A.nif", shared}, {"B.nif", unique}, {"C.nif", shared}});
 
     auto plan =
         libbsa::formats::bsa::tes4_plan_placements(std::move(folders), profile, options, 0U);

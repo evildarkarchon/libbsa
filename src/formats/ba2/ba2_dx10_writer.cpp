@@ -1,9 +1,9 @@
 #include "formats/ba2/ba2_dx10_writer.hpp"
 
+#include "formats/ba2/ba2_archive_serialization.hpp"
 #include "formats/ba2/ba2_dx10_layout.hpp"
 #include "formats/ba2/ba2_dx10_prepare.hpp"
 #include "formats/ba2/ba2_profile.hpp"
-#include "formats/ba2/ba2_dx10_serialize.hpp"
 
 #include <detail/host_file_path.hpp>
 #include <detail/writer_publish.hpp>
@@ -145,7 +145,7 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target, const ba2_dx10_write
         return validated.error();
     }
 
-    const ba2_dx10_stored_header_options stored_header_options{
+    const ba2_stored_header_fields stored_header_fields{
         options.starfield_unknown1,
         options.starfield_unknown2,
         options.starfield_compression_method,
@@ -166,8 +166,8 @@ result<void> write_ba2_dx10_archive(ba2_dx10_target target, const ba2_dx10_write
                 return plan.error();
             }
 
-            return ba2_dx10_write_archive_bytes(profile.value(), stored_header_options,
-                                                plan.value(), workspace.temporary_archive_path());
+            return serialize_ba2_archive(profile.value(), stored_header_fields, plan.value(),
+                                         workspace.temporary_archive_path());
         });
 }
 

@@ -1,5 +1,4 @@
-#include "formats/ba2/ba2_dx10_serialize.hpp"
-#include "formats/ba2/ba2_gnrl_serialize.hpp"
+#include "formats/ba2/ba2_archive_serialization.hpp"
 #include "formats/ba2/ba2_profile.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -99,8 +98,8 @@ TEST_CASE("BA2 Archive Serialization emits complete GNRL bytes in Placement Plan
 
     const auto profile = require_gnrl_profile(libbsa::ba2_gnrl_target::starfield_v3);
     const auto output = serialization_output_path("gnrl-complete-bytes.ba2");
-    auto serialized = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-        profile, libbsa::ba2_gnrl_writer_options{}, plan, output);
+    auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+        profile, libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
     REQUIRE(serialized.has_value());
     const auto expected = literal_bytes({
@@ -344,8 +343,8 @@ TEST_CASE("BA2 Archive Serialization emits complete DX10 bytes in Placement Plan
 
     const auto profile = require_dx10_profile(libbsa::ba2_dx10_target::starfield_v3);
     const auto output = serialization_output_path("dx10-complete-bytes.ba2");
-    auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-        profile, libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan, output);
+    auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+        profile, libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
     REQUIRE(serialized.has_value());
     const auto expected = literal_bytes({
@@ -583,8 +582,8 @@ TEST_CASE("BA2 Archive Serialization gates GNRL stored header defaults by profil
         const auto profile = require_gnrl_profile(test_case.target);
         const auto output = serialization_output_path(test_case.output_name);
 
-        auto serialized = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            profile, libbsa::ba2_gnrl_writer_options{}, plan, output);
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            profile, libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
         REQUIRE(serialized.has_value());
         CHECK(read_binary_file(output) == test_case.expected);
@@ -624,8 +623,8 @@ TEST_CASE("BA2 Archive Serialization gates DX10 stored header defaults by profil
         const auto profile = require_dx10_profile(test_case.target);
         const auto output = serialization_output_path(test_case.output_name);
 
-        auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-            profile, libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan, output);
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            profile, libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
         REQUIRE(serialized.has_value());
         CHECK(read_binary_file(output) == test_case.expected);

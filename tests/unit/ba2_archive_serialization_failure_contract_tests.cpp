@@ -1,5 +1,4 @@
-#include "formats/ba2/ba2_dx10_serialize.hpp"
-#include "formats/ba2/ba2_gnrl_serialize.hpp"
+#include "formats/ba2/ba2_archive_serialization.hpp"
 #include "formats/ba2/ba2_profile.hpp"
 
 #include <detail/host_file.hpp>
@@ -179,8 +178,8 @@ TEST_CASE("BA2 Archive Serialization rejects wrong profiles before output creati
         const auto absent_output = failure_output_path("gnrl-wrong-profile-absent.ba2");
         clear_test_path(absent_output);
 
-        auto absent = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            profile, libbsa::ba2_gnrl_writer_options{}, plan, absent_output);
+        auto absent = libbsa::formats::ba2::serialize_ba2_archive(
+            profile, libbsa::formats::ba2::ba2_stored_header_fields{}, plan, absent_output);
 
         REQUIRE_FALSE(absent.has_value());
         CHECK(absent.error().code == libbsa::error_code::invalid_argument);
@@ -191,8 +190,8 @@ TEST_CASE("BA2 Archive Serialization rejects wrong profiles before output creati
         clear_test_path(existing_output);
         write_binary_file(existing_output, sentinel);
 
-        auto existing = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            profile, libbsa::ba2_gnrl_writer_options{}, plan, existing_output);
+        auto existing = libbsa::formats::ba2::serialize_ba2_archive(
+            profile, libbsa::formats::ba2::ba2_stored_header_fields{}, plan, existing_output);
 
         REQUIRE_FALSE(existing.has_value());
         CHECK(existing.error().code == libbsa::error_code::invalid_argument);
@@ -206,8 +205,8 @@ TEST_CASE("BA2 Archive Serialization rejects wrong profiles before output creati
         const auto absent_output = failure_output_path("dx10-wrong-profile-absent.ba2");
         clear_test_path(absent_output);
 
-        auto absent = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-            profile, libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan, absent_output);
+        auto absent = libbsa::formats::ba2::serialize_ba2_archive(
+            profile, libbsa::formats::ba2::ba2_stored_header_fields{}, plan, absent_output);
 
         REQUIRE_FALSE(absent.has_value());
         CHECK(absent.error().code == libbsa::error_code::invalid_argument);
@@ -218,8 +217,8 @@ TEST_CASE("BA2 Archive Serialization rejects wrong profiles before output creati
         clear_test_path(existing_output);
         write_binary_file(existing_output, sentinel);
 
-        auto existing = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-            profile, libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan, existing_output);
+        auto existing = libbsa::formats::ba2::serialize_ba2_archive(
+            profile, libbsa::formats::ba2::ba2_stored_header_fields{}, plan, existing_output);
 
         REQUIRE_FALSE(existing.has_value());
         CHECK(existing.error().code == libbsa::error_code::invalid_argument);
@@ -235,8 +234,9 @@ TEST_CASE("BA2 Archive Serialization preserves exact output-open failures before
         clear_test_path(output);
         REQUIRE(std::filesystem::create_directories(output));
 
-        auto serialized = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            require_gnrl_profile(), libbsa::ba2_gnrl_writer_options{}, invalid_gnrl_plan(), output);
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            require_gnrl_profile(), libbsa::formats::ba2::ba2_stored_header_fields{},
+            invalid_gnrl_plan(), output);
 
         REQUIRE_FALSE(serialized.has_value());
         CHECK(serialized.error().code == libbsa::error_code::io_error);
@@ -249,8 +249,8 @@ TEST_CASE("BA2 Archive Serialization preserves exact output-open failures before
         clear_test_path(output);
         REQUIRE(std::filesystem::create_directories(output));
 
-        auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-            require_dx10_profile(), libbsa::formats::ba2::ba2_dx10_stored_header_options{},
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            require_dx10_profile(), libbsa::formats::ba2::ba2_stored_header_fields{},
             invalid_dx10_plan(), output);
 
         REQUIRE_FALSE(serialized.has_value());
@@ -307,8 +307,8 @@ TEST_CASE("BA2 Archive Serialization rejects GNRL payload references at each rec
         plan.records[0].payload_index = plan.payloads.size();
         const auto output = failure_output_path("gnrl-invalid-first-record.ba2");
 
-        auto serialized = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            require_gnrl_profile(), libbsa::ba2_gnrl_writer_options{}, plan, output);
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            require_gnrl_profile(), libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
         REQUIRE_FALSE(serialized.has_value());
         CHECK(serialized.error().code == libbsa::error_code::invalid_argument);
@@ -321,8 +321,8 @@ TEST_CASE("BA2 Archive Serialization rejects GNRL payload references at each rec
         plan.records[1].payload_index = plan.payloads.size();
         const auto output = failure_output_path("gnrl-invalid-second-record.ba2");
 
-        auto serialized = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            require_gnrl_profile(), libbsa::ba2_gnrl_writer_options{}, plan, output);
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            require_gnrl_profile(), libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
         REQUIRE_FALSE(serialized.has_value());
         CHECK(serialized.error().code == libbsa::error_code::invalid_argument);
@@ -363,9 +363,8 @@ TEST_CASE("BA2 Archive Serialization rejects DX10 chunk-count mismatch before th
     plan.filename_table_offset = 145U;
     const auto output = failure_output_path("dx10-chunk-count-second-record.ba2");
 
-    auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-        require_dx10_profile(), libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan,
-        output);
+    auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+        require_dx10_profile(), libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
     REQUIRE_FALSE(serialized.has_value());
     CHECK(serialized.error().code == libbsa::error_code::invalid_argument);
@@ -447,9 +446,8 @@ TEST_CASE("BA2 Archive Serialization rejects DX10 payload references as each chu
         plan.records[0].chunks[0].payload_index = plan.payloads.size();
         const auto output = failure_output_path("dx10-invalid-first-chunk.ba2");
 
-        auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-            require_dx10_profile(), libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan,
-            output);
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            require_dx10_profile(), libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
         REQUIRE_FALSE(serialized.has_value());
         CHECK(serialized.error().code == libbsa::error_code::invalid_argument);
@@ -462,9 +460,8 @@ TEST_CASE("BA2 Archive Serialization rejects DX10 payload references as each chu
         plan.records[0].chunks[1].payload_index = plan.payloads.size();
         const auto output = failure_output_path("dx10-invalid-second-chunk.ba2");
 
-        auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-            require_dx10_profile(), libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan,
-            output);
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            require_dx10_profile(), libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
         REQUIRE_FALSE(serialized.has_value());
         CHECK(serialized.error().code == libbsa::error_code::invalid_argument);
@@ -500,8 +497,8 @@ TEST_CASE("BA2 Archive Serialization validates filename lengths after every Stor
         plan.filename_table_offset = 63U;
         const auto output = failure_output_path("gnrl-oversized-filename.ba2");
 
-        auto serialized = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            require_gnrl_profile(), libbsa::ba2_gnrl_writer_options{}, plan, output);
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            require_gnrl_profile(), libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
         REQUIRE_FALSE(serialized.has_value());
         CHECK(serialized.error().code == libbsa::error_code::format_error);
@@ -600,9 +597,8 @@ TEST_CASE("BA2 Archive Serialization validates filename lengths after every Stor
         plan.filename_table_offset = 75U;
         const auto output = failure_output_path("dx10-oversized-filename.ba2");
 
-        auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-            require_dx10_profile(), libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan,
-            output);
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            require_dx10_profile(), libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
         REQUIRE_FALSE(serialized.has_value());
         CHECK(serialized.error().code == libbsa::error_code::format_error);
@@ -727,8 +723,8 @@ TEST_CASE("BA2 Archive Serialization propagates Stored Payload failures unchange
         plan.filename_table_offset = 64U;
         const auto output = failure_output_path("gnrl-stored-payload-failure.ba2");
 
-        auto serialized = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-            require_gnrl_profile(), libbsa::ba2_gnrl_writer_options{}, plan, output);
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            require_gnrl_profile(), libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
         REQUIRE_FALSE(serialized.has_value());
         CHECK(serialized.error().code == original_failure.error().code);
@@ -837,9 +833,8 @@ TEST_CASE("BA2 Archive Serialization propagates Stored Payload failures unchange
         plan.filename_table_offset = 76U;
         const auto output = failure_output_path("dx10-stored-payload-failure.ba2");
 
-        auto serialized = libbsa::formats::ba2::ba2_dx10_write_archive_bytes(
-            require_dx10_profile(), libbsa::formats::ba2::ba2_dx10_stored_header_options{}, plan,
-            output);
+        auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+            require_dx10_profile(), libbsa::formats::ba2::ba2_stored_header_fields{}, plan, output);
 
         REQUIRE_FALSE(serialized.has_value());
         CHECK(serialized.error().code == original_failure.error().code);

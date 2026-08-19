@@ -1,8 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "formats/ba2/ba2_archive_serialization.hpp"
 #include "formats/ba2/ba2_gnrl_layout.hpp"
 #include "formats/ba2/ba2_gnrl_prepare.hpp"
-#include "formats/ba2/ba2_gnrl_serialize.hpp"
 #include "formats/ba2/ba2_profile.hpp"
 
 #include <detail/writer_publish.hpp>
@@ -618,8 +618,13 @@ TEST_CASE("writer_publish cleans the workspace after every finalization stage fa
                 std::error_code removal_error;
                 REQUIRE(std::filesystem::remove(workspace.snapshot_path(0U), removal_error));
                 REQUIRE_FALSE(removal_error);
-                auto serialized = libbsa::formats::ba2::ba2_gnrl_write_archive_bytes(
-                    gnrl_profile.value(), options, plan.value(),
+                const libbsa::formats::ba2::ba2_stored_header_fields stored_header_fields{
+                    options.starfield_unknown1,
+                    options.starfield_unknown2,
+                    options.starfield_compression_method,
+                };
+                auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+                    gnrl_profile.value(), stored_header_fields, plan.value(),
                     workspace.temporary_archive_path());
                 REQUIRE_FALSE(serialized.has_value());
                 REQUIRE(std::filesystem::exists(workspace.temporary_archive_path()));
@@ -635,4 +640,3 @@ TEST_CASE("writer_publish cleans the workspace after every finalization stage fa
         CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
     }
 }
-

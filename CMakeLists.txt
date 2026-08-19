@@ -148,6 +148,7 @@ set(libbsa_library_sources
   src/detail/zlib_codec.cpp
   src/formats/ba2/ba2_archive_header.cpp
   src/formats/ba2/ba2_archive_opening.cpp
+  src/formats/ba2/ba2_archive_serialization.cpp
   src/formats/ba2/ba2_profile.cpp
   src/formats/ba2/ba2_record_identity.cpp
   src/formats/ba2/ba2_dx10_records.cpp
@@ -158,13 +159,11 @@ set(libbsa_library_sources
   src/formats/ba2/ba2_dx10_prepare.cpp
   src/formats/ba2/ba2_dx10_snapshot_builder.cpp
   src/formats/ba2/ba2_dx10_layout.cpp
-  src/formats/ba2/ba2_dx10_serialize.cpp
   src/formats/ba2/ba2_dx10_writer.cpp
   src/formats/ba2/ba2_gnrl_parser.cpp
   src/formats/ba2/ba2_gnrl_reader.cpp
   src/formats/ba2/ba2_gnrl_prepare.cpp
   src/formats/ba2/ba2_gnrl_layout.cpp
-  src/formats/ba2/ba2_gnrl_serialize.cpp
   src/formats/ba2/ba2_gnrl_writer.cpp
   src/formats/bsa/bsa_format_detector.cpp
   src/formats/bsa/tes3_bsa_parser.cpp
