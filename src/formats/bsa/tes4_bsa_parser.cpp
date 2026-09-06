@@ -8,13 +8,12 @@
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/byte_vector.hpp>
-#include <detail/host_file.hpp>
 #include <detail/parser_primitives.hpp>
 #include <detail/payload_span_exclusivity.hpp>
 
 #include <algorithm>
-#include <fstream>
 #include <limits>
+#include <span>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -23,8 +22,6 @@ namespace libbsa::formats::bsa {
 namespace {
 
 using detail::normalize_display_separators;
-using detail::read_file_bytes_at;
-using detail::span_fits;
 
 template <typename PayloadReader>
 result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size,
@@ -121,11 +118,12 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     }
 }
 
+/// Materializes the catalog from observed TES4 tables and a same-observation prefix reader.
 template <typename PayloadReader>
-result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> table_bytes,
-                                                     std::size_t archive_size,
-                                                     const tes4_bsa_profile& profile,
-                                                     PayloadReader& read_payload_bytes) {
+result<opened_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> table_bytes,
+                                                       std::size_t archive_size,
+                                                       const tes4_bsa_profile& profile,
+                                                       PayloadReader& read_payload_bytes) {
     auto table = read_tes4_bsa_raw_table(table_bytes, archive_size, profile);
     if (!table) {
         return table.error();
@@ -135,69 +133,31 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_impl(std::span<const std::byte> 
         return entries.error();
     }
     (void)table.value().header.file_flags;
-    archive_metadata metadata{archive_type::bsa,           profile.variant(),
-                              table.value().header.version, table.value().header.archive_flags,
+    archive_metadata metadata{archive_type::bsa,
+                              profile.variant(),
+                              table.value().header.version,
+                              table.value().header.archive_flags,
                               table.value().header.file_count,
                               profile.compressed_entry_metadata()};
     // Assigned rather than passed positionally so the aggregate initializer above
     // does not have to name the unrelated BA2 metadata optional in between.
     metadata.file_name_table_has_trailing_bytes = table.value().file_name_table_has_trailing_bytes;
     metadata.folder_name_table_length_mismatch = table.value().folder_name_table_length_mismatch;
-    return tes4_bsa_archive{std::move(metadata), std::move(entries.value())};
+    return opened_bsa_archive{std::move(metadata), std::move(entries.value())};
 }
 
 }  // namespace
 
-result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes,
-                                                detected_bsa_format detected) {
-    auto profile = make_tes4_bsa_profile_from_header(detected.version);
-    if (!profile) {
-        return profile.error();
-    }
-    auto read_payload_bytes = [bytes](std::uint64_t offset,
-                                      std::size_t count) -> result<std::vector<std::byte>> {
-        if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
-            return error{error_code::format_error,
-                         "TES4 BSA payload offset exceeds platform limits"};
-        }
-        const auto start = static_cast<std::size_t>(offset);
-        if (!span_fits(start, count, bytes.size())) {
-            return error{error_code::format_error, "TES4 BSA payload prefix is truncated"};
-        }
-        const auto payload = bytes.subspan(start, count);
-        auto copied = detail::make_byte_vector(payload.size(), "TES4 BSA payload prefix");
-        if (!copied) {
-            return copied.error();
-        }
-        std::copy(payload.begin(), payload.end(), copied.value().begin());
-        return std::move(copied).value();
-    };
-    return parse_tes4_bsa_archive_impl(bytes, bytes.size(), profile.value(), read_payload_bytes);
-}
-
-result<tes4_bsa_archive> parse_tes4_bsa_archive_file(const detail::host_file_path& host_path,
-                                                     std::uint64_t archive_size,
-                                                     detected_bsa_format detected) {
-    // Generic detection carries only raw syntax. Resolve the TES4 BSA Profile before
-    // file-backed table sizing so every version-derived decision shares one owner.
-    auto profile = make_tes4_bsa_profile_from_header(detected.version);
-    if (!profile) {
-        return profile.error();
-    }
+result<opened_bsa_archive> materialize_tes4_bsa_archive(const bsa_archive_source& source,
+                                                        const tes4_bsa_profile& profile) {
+    // BSA Archive Opening resolves the TES4 BSA Profile before table sizing,
+    // so every version-derived decision shares that observation's header facts.
+    const auto archive_size = source.size();
     if (archive_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
         return error{error_code::format_error, "TES4 BSA archive exceeds platform limits"};
     }
 
-    const detail::host_file_context host_context{
-        "failed to open archive host path", "failed to determine archive host path size",
-        "failed while reading archive host path", "archive host path changed while reading",
-        "TES4 BSA metadata table"};
-    auto input = detail::open_host_file(host_path, host_context);
-    if (!input) {
-        return input.error();
-    }
-    auto header_bytes =
-        read_file_bytes_at(input.value(), 0U, tes4_bsa_header_size, "TES4 BSA fixed header");
+    auto header_bytes = source.read_exact(0U, tes4_bsa_header_size, "TES4 BSA fixed header");
     if (!header_bytes) {
         return header_bytes.error();
     }
@@ -221,34 +181,23 @@ result<tes4_bsa_archive> parse_tes4_bsa_archive_file(const detail::host_file_pat
     // by walking it, so this read must not depend on TotalFolderNameLength being
     // right. Over-reading costs at most 256 bytes per folder, kilobytes against
     // the megabytes of table a retail archive carries.
-    auto read_bound =
-        tes4_bsa_metadata_table_read_bound(header.value(), profile.value().folder_record_size(),
-                                           static_cast<std::size_t>(archive_size));
+    auto read_bound = tes4_bsa_metadata_table_read_bound(
+        header.value(), profile.folder_record_size(), static_cast<std::size_t>(archive_size));
     if (!read_bound) {
         return read_bound.error();
     }
 
-    auto table_bytes =
-        read_file_bytes_at(input.value(), 0U, read_bound.value(), "TES4 BSA metadata table");
+    auto table_bytes = source.read_exact(0U, read_bound.value(), "TES4 BSA metadata table");
     if (!table_bytes) {
         return table_bytes.error();
     }
 
-    auto read_payload_bytes = [&input](std::uint64_t offset,
-                                       std::size_t count) -> result<std::vector<std::byte>> {
-        return read_file_bytes_at(input.value(), offset, count, "TES4 BSA payload prefix");
+    auto read_payload_bytes = [&source](std::uint64_t offset,
+                                        std::size_t count) -> result<std::vector<std::byte>> {
+        return source.read_exact(offset, count, "TES4 BSA payload prefix");
     };
     return parse_tes4_bsa_archive_impl(table_bytes.value(), static_cast<std::size_t>(archive_size),
-                                       profile.value(), read_payload_bytes);
-}
-
-result<archive_metadata> parse_tes4_bsa_metadata(std::span<const std::byte> bytes,
-                                                 detected_bsa_format detected) {
-    auto archive = parse_tes4_bsa_archive(bytes, detected);
-    if (!archive) {
-        return archive.error();
-    }
-    return archive.value().metadata;
+                                       profile, read_payload_bytes);
 }
 
 }  // namespace libbsa::formats::bsa

@@ -3,10 +3,8 @@
 #include "formats/ba2/ba2_archive_opening.hpp"
 #include "formats/ba2/ba2_dx10_reader.hpp"
 #include "formats/ba2/ba2_gnrl_reader.hpp"
-#include "formats/bsa/bsa_format_detector.hpp"
-#include "formats/bsa/tes3_bsa_parser.hpp"
+#include "formats/bsa/bsa_archive_opening.hpp"
 #include "formats/bsa/tes3_bsa_reader.hpp"
-#include "formats/bsa/tes4_bsa_parser.hpp"
 #include "formats/bsa/tes4_bsa_reader.hpp"
 
 #include <detail/archive_path.hpp>
@@ -91,10 +89,6 @@ result<std::vector<std::byte>> read_detection_prefix(const detail::host_file_pat
     return detail::read_host_file_prefix(host_path, 36U, archive_open_host_context());
 }
 
-result<std::uint64_t> archive_file_size(const detail::host_file_path& host_path) {
-    return detail::inspect_host_file_size(host_path, archive_open_host_context());
-}
-
 /// Finds an entry in the parser-sorted Archive Entry Catalog after applying the
 /// public archive-path normalization contract.
 result<std::optional<entry_metadata>> find_entry_metadata(std::span<const entry_metadata> entries,
@@ -120,6 +114,7 @@ struct bulk_request_group {
 
 }  // namespace
 
+/// Resolves a host path, selects family opening, and stores its materialized catalog.
 result<archive_reader> archive_reader::open(std::string_view host_path) {
     if (host_path.empty()) {
         return error{error_code::invalid_argument, "archive path must not be empty"};
@@ -169,36 +164,17 @@ result<archive_reader> archive_reader::open(std::string_view host_path) {
                                   std::move(ba2_archive.value().entries), extract);
     }
 
-    auto detected = formats::bsa::detect_bsa_format(prefix.value());
-    if (!detected) {
-        return detected.error();
+    // BSA Archive Opening independently resolves TES3/TES4 and observes all
+    // metadata through its own stable session, just as BA2 opening does above.
+    auto bsa_archive = formats::bsa::open_bsa_archive(resolved_host_path.value());
+    if (!bsa_archive) {
+        return bsa_archive.error();
     }
-
-    auto archive_size = archive_file_size(resolved_host_path.value());
-    if (!archive_size) {
-        return archive_size.error();
-    }
-    if (detected.value().variant == archive_variant::tes3) {
-        auto tes3_archive = formats::bsa::parse_tes3_bsa_archive_file(
-            resolved_host_path.value(), archive_size.value(), detected.value());
-        if (!tes3_archive) {
-            return tes3_archive.error();
-        }
-
-        return make_opened_reader(tes3_archive.value().metadata,
-                                  std::move(tes3_archive.value().entries),
-                                  formats::bsa::extract_tes3_bsa_payload);
-    }
-
-    auto tes4_archive = formats::bsa::parse_tes4_bsa_archive_file(
-        resolved_host_path.value(), archive_size.value(), detected.value());
-    if (!tes4_archive) {
-        return tes4_archive.error();
-    }
-
-    return make_opened_reader(tes4_archive.value().metadata,
-                              std::move(tes4_archive.value().entries),
-                              formats::bsa::extract_tes4_bsa_payload_from_file);
+    const auto extract = bsa_archive.value().metadata.variant == archive_variant::tes3
+                             ? formats::bsa::extract_tes3_bsa_payload
+                             : formats::bsa::extract_tes4_bsa_payload_from_file;
+    return make_opened_reader(bsa_archive.value().metadata, std::move(bsa_archive.value().entries),
+                              extract);
 }
 
 result<archive_metadata> archive_reader::metadata() const {

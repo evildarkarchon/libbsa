@@ -4,7 +4,6 @@
 
 #include <detail/host_file_path.hpp>
 
-#include "formats/bsa/bsa_format_detector.hpp"
 #include "formats/bsa/tes3_bsa_reader.hpp"
 
 #include <detail/bethesda_hash.hpp>
@@ -295,27 +294,29 @@ class recording_sink final : public libbsa::payload_sink {
 
 }  // namespace
 
-TEST_CASE("tes3_bsa_detector classifies Morrowind magic bytes before parser dispatch",
-          "[unit][fixture][tes3_bsa_detector]") {
+TEST_CASE("tes3_bsa_opening recognizes the Morrowind archive version",
+          "[unit][fixture][bsa_archive_opening]") {
     const auto manifest = read_json_file(generated_archive_path("tes3_success_manifest.json"));
-    const auto prefix = read_binary_file_span(generated_archive_path("tes3_success.bsa"), 0U, 12U);
 
-    auto detected = libbsa::formats::bsa::detect_bsa_format(prefix);
+    auto opened = libbsa::archive_reader::open(generated_archive_path("tes3_success.bsa").string());
 
-    REQUIRE(detected.has_value());
-    REQUIRE(detected.value().variant == libbsa::archive_variant::tes3);
-    REQUIRE(detected.value().version == manifest.at("version").get<std::uint32_t>());
-    REQUIRE(detected.value().version == 0x00000100U);
+    REQUIRE(opened.has_value());
+    const auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    REQUIRE(metadata.value().variant == libbsa::archive_variant::tes3);
+    REQUIRE(metadata.value().version == manifest.at("version").get<std::uint32_t>());
+    REQUIRE(metadata.value().version == 0x00000100U);
 }
 
-TEST_CASE("tes3_bsa_detector leaves unrelated bytes unsupported", "[unit][tes3_bsa_detector]") {
-    constexpr std::array unrelated{std::byte{'N'}, std::byte{'O'}, std::byte{'P'}, std::byte{'E'},
-                                   std::byte{0},   std::byte{0},   std::byte{0},   std::byte{0}};
+TEST_CASE("tes3_bsa_opening leaves unrelated bytes unsupported", "[unit][bsa_archive_opening]") {
+    const auto path = std::filesystem::temp_directory_path() / "libbsa_tes3_unrelated_magic.bsa";
+    write_binary_file(path, {std::byte{'N'}, std::byte{'O'}, std::byte{'P'}, std::byte{'E'},
+                             std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}});
 
-    auto detected = libbsa::formats::bsa::detect_bsa_format(unrelated);
+    auto opened = libbsa::archive_reader::open(path.string());
 
-    REQUIRE_FALSE(detected.has_value());
-    REQUIRE(detected.error().code == libbsa::error_code::unsupported);
+    REQUIRE_FALSE(opened.has_value());
+    REQUIRE(opened.error().code == libbsa::error_code::unsupported);
 }
 
 TEST_CASE("tes3_bsa_metadata opens generated Morrowind archives",

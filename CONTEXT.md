@@ -28,6 +28,10 @@ _Avoid_: overlap check, span collision, payload aliasing
 A resolved description of a TES4-family BSA format member: its version and version-dependent layout, compression, embedded-name, and file-classification semantics. The same profile applies whether an archive is being read or written.
 _Avoid_: TES4 mode, TES4 target behavior, raw version checks
 
+**BSA Archive Opening**:
+A coherent observation that resolves one TES3 or TES4-family BSA archive's header and materializes its metadata while the observed host archive remains stable. The observation ends when metadata materialization completes; later payload extraction is a separate observation.
+_Avoid_: BSA detection pass, BSA parser dispatch
+
 **BA2 Profile**:
 A resolved description of a BA2 archive family member: its variant, subtype, header shape, and payload compression meaning.
 _Avoid_: BA2 mode, BA2 target info, raw version fields

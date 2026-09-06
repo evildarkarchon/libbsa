@@ -3,13 +3,12 @@
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
-#include <detail/host_file.hpp>
 #include <detail/parser_primitives.hpp>
 
 #include <algorithm>
-#include <fstream>
 #include <limits>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -44,7 +43,6 @@ using detail::add_fits;
 using detail::archive_string_from_bytes;
 using detail::multiply_fits;
 using detail::normalize_display_separators;
-using detail::read_file_bytes_at;
 using detail::span_fits;
 
 result<header_fields> read_header(detail::binary_reader& reader) {
@@ -347,22 +345,18 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     }
 }
 
-result<tes3_bsa_archive> parse_tes3_bsa_archive_impl(std::span<const std::byte> table_bytes,
-                                                     std::size_t archive_size,
-                                                     detected_bsa_format detected) {
+/// Parses the observed TES3 metadata table with the opening's authoritative size.
+result<opened_bsa_archive> parse_tes3_bsa_archive_impl(std::span<const std::byte> table_bytes,
+                                                       std::size_t archive_size) {
     if (table_bytes.size() < fixed_header_size) {
         return error{error_code::format_error, "TES3 BSA header is truncated"};
     }
-    if (detected.variant != archive_variant::tes3 || detected.version != tes3_magic_version) {
-        return error{error_code::unsupported, "detected BSA format is not TES3"};
-    }
-
     detail::binary_reader reader{table_bytes};
     auto header = read_header(reader);
     if (!header) {
         return header.error();
     }
-    if (header.value().version != detected.version) {
+    if (header.value().version != tes3_magic_version) {
         return error{error_code::format_error,
                      "TES3 BSA detected version does not match parsed header"};
     }
@@ -406,7 +400,7 @@ result<tes3_bsa_archive> parse_tes3_bsa_archive_impl(std::span<const std::byte> 
         return entries.error();
     }
 
-    return tes3_bsa_archive{
+    return opened_bsa_archive{
         archive_metadata{archive_type::bsa, archive_variant::tes3, header.value().version, 0U,
                          header.value().file_count, entry_compression::none},
         std::move(entries.value())};
@@ -414,28 +408,13 @@ result<tes3_bsa_archive> parse_tes3_bsa_archive_impl(std::span<const std::byte> 
 
 }  // namespace
 
-result<tes3_bsa_archive> parse_tes3_bsa_archive(std::span<const std::byte> bytes,
-                                                detected_bsa_format detected) {
-    return parse_tes3_bsa_archive_impl(bytes, bytes.size(), detected);
-}
-
-result<tes3_bsa_archive> parse_tes3_bsa_archive_file(const detail::host_file_path& host_path,
-                                                     std::uint64_t archive_size,
-                                                     detected_bsa_format detected) {
+result<opened_bsa_archive> materialize_tes3_bsa_archive(const bsa_archive_source& source) {
+    const auto archive_size = source.size();
     if (archive_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
         return error{error_code::format_error, "TES3 BSA archive exceeds platform limits"};
     }
 
-    const detail::host_file_context host_context{
-        "failed to open archive host path", "failed to determine archive host path size",
-        "failed while reading archive host path", "archive host path changed while reading",
-        "TES3 BSA metadata table"};
-    auto input = detail::open_host_file(host_path, host_context);
-    if (!input) {
-        return input.error();
-    }
-    auto header_bytes =
-        read_file_bytes_at(input.value(), 0U, fixed_header_size, "TES3 BSA fixed header");
+    auto header_bytes = source.read_exact(0U, fixed_header_size, "TES3 BSA fixed header");
     if (!header_bytes) {
         return header_bytes.error();
     }
@@ -453,13 +432,11 @@ result<tes3_bsa_archive> parse_tes3_bsa_archive_file(const detail::host_file_pat
     if (!table_size) {
         return table_size.error();
     }
-    auto table_bytes =
-        read_file_bytes_at(input.value(), 0U, table_size.value(), "TES3 BSA metadata table");
+    auto table_bytes = source.read_exact(0U, table_size.value(), "TES3 BSA metadata table");
     if (!table_bytes) {
         return table_bytes.error();
     }
-    return parse_tes3_bsa_archive_impl(table_bytes.value(), static_cast<std::size_t>(archive_size),
-                                       detected);
+    return parse_tes3_bsa_archive_impl(table_bytes.value(), static_cast<std::size_t>(archive_size));
 }
 
 }  // namespace libbsa::formats::bsa

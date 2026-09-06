@@ -165,7 +165,7 @@ set(libbsa_library_sources
   src/formats/ba2/ba2_gnrl_prepare.cpp
   src/formats/ba2/ba2_gnrl_layout.cpp
   src/formats/ba2/ba2_gnrl_writer.cpp
-  src/formats/bsa/bsa_format_detector.cpp
+  src/formats/bsa/bsa_archive_opening.cpp
   src/formats/bsa/tes3_bsa_parser.cpp
   src/formats/bsa/tes3_bsa_reader.cpp
   src/formats/bsa/tes3_bsa_prepare.cpp
