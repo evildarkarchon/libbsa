@@ -323,38 +323,31 @@ result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries) {
     return {};
 }
 
+/// Prepares sources in input order before choosing folder spellings and aggregating file flags.
+/// Worker failure leaves file_flags untouched; the workspace owns all snapshot cleanup.
 result<std::vector<tes4_prepared_folder>> tes4_prepare_folders(
     std::span<const tes4_writer_entry> entries, const tes4_bsa_profile& profile,
     const tes4_bsa_writer_options& options, std::uint32_t worker_count, std::uint32_t& file_flags,
     const detail::finalization_workspace& workspace) {
-    std::vector<std::optional<prepared_entry_result>> prepared_by_index(entries.size());
-    auto prepared_work = detail::run_indexed_work(
-        entries.size(), worker_count, [&](std::size_t index) -> result<void> {
-            auto prepared = prepare_one_entry(entries[index], profile, options, workspace, index);
-            if (!prepared) {
-                return prepared.error();
-            }
-            prepared_by_index[index] = std::move(prepared.value());
-            return {};
+    auto collected = detail::collect_indexed_work<prepared_entry_result>(
+        entries.size(), worker_count, [&](std::size_t index) {
+            return prepare_one_entry(entries[index], profile, options, workspace, index);
         });
-    if (!prepared_work) {
-        return prepared_work.error();
+    if (!collected) {
+        return collected.error();
     }
 
     std::map<std::string, prepared_folder_group> grouped;
     file_flags = 0U;
-    for (auto& prepared : prepared_by_index) {
-        if (!prepared.has_value()) {
-            return error{error_code::io_error, "TES4 BSA writer failed to prepare an entry"};
-        }
-        file_flags |= prepared->file_flags;
+    for (auto& prepared : collected.value()) {
+        file_flags |= prepared.file_flags;
         // TES4 folder hashes fold ASCII case, so mixed-case spellings of the
         // same virtual folder must serialize as one folder record.
-        auto [group, inserted] = grouped.try_emplace(prepared->entry.canonical_folder);
+        auto [group, inserted] = grouped.try_emplace(prepared.entry.canonical_folder);
         if (inserted) {
-            group->second.display_name = prepared->entry.folder;
+            group->second.display_name = prepared.entry.folder;
         }
-        group->second.entries.push_back(std::move(prepared->entry));
+        group->second.entries.push_back(std::move(prepared.entry));
     }
 
     std::vector<tes4_prepared_folder> folders;

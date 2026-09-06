@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <limits>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -179,6 +178,8 @@ result<ba2_dx10_prepared_chunk> ba2_dx10_assemble_chunk(
                                    end_mip.value(),     method,           std::move(payload)};
 }
 
+/// Assembles one entry's chunks in planned texture order, joining all work before returning.
+/// Failed assembly releases partial Stored Payloads while snapshot ownership stays with the caller.
 result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
     const ba2_profile& profile, const ba2_dx10_writer_options& options,
     const ba2_dx10_writer_entry& entry, std::uint32_t worker_count) {
@@ -228,31 +229,16 @@ result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
         dxgi_format.value(),
         entry.metadata.is_cubemap ? ba2_dx10_cubemap_raw : ba2_dx10_non_cubemap_raw,
         {}};
-    std::vector<std::optional<ba2_dx10_prepared_chunk>> chunks_by_index(
-        planned_chunks.value().size());
-    auto work = [&](std::size_t index) -> result<void> {
-        auto chunk =
-            ba2_dx10_assemble_chunk(profile, options, entry, planned_chunks.value()[index]);
-        if (!chunk) {
-            return chunk.error();
-        }
-        chunks_by_index[index] = std::move(chunk.value());
-        return {};
-    };
     // Indexed work preserves planned texture order even when worker_count enables
     // parallel assembly.
-    auto prepared_chunks =
-        detail::run_indexed_work(planned_chunks.value().size(), worker_count, work);
+    auto prepared_chunks = detail::collect_indexed_work<ba2_dx10_prepared_chunk>(
+        planned_chunks.value().size(), worker_count, [&](std::size_t index) {
+            return ba2_dx10_assemble_chunk(profile, options, entry, planned_chunks.value()[index]);
+        });
     if (!prepared_chunks) {
         return prepared_chunks.error();
     }
-    prepared.chunks.reserve(planned_chunks.value().size());
-    for (auto& chunk : chunks_by_index) {
-        if (!chunk.has_value()) {
-            return error{error_code::io_error, "BA2 DX10 worker did not prepare a texture chunk"};
-        }
-        prepared.chunks.push_back(std::move(chunk.value()));
-    }
+    prepared.chunks = std::move(prepared_chunks).value();
     return prepared;
 }
 

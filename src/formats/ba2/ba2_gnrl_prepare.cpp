@@ -154,7 +154,7 @@ result<ba2_gnrl_prepared_entry> prepare_entry(const ba2_profile& profile,
                                    identity.value().extension,
                                    identity.value().name_hash,
                                    identity.value().directory_hash,
-                                   entry.options.record_flags.value_or(0U),
+                                   entry.options.record_flags.value_or(ba2_gnrl_record_flags_default),
                                    packed_size,
                                    raw_size.value(),
                                    std::move(stored_payload)};
@@ -202,6 +202,8 @@ result<void> ba2_gnrl_validate_entries(std::span<const ba2_gnrl_writer_entry> en
     return {};
 }
 
+/// Prepares indexed source snapshots, then sorts complete entries by canonical path.
+/// The workspace must outlive returned Stored Payloads; worker failures expose no partial entries.
 result<std::vector<ba2_gnrl_prepared_entry>> ba2_gnrl_prepare_entries(
     const ba2_profile& profile, const ba2_gnrl_writer_options& options,
     std::span<const ba2_gnrl_writer_entry> entries, std::uint32_t worker_count,
@@ -210,29 +212,14 @@ result<std::vector<ba2_gnrl_prepared_entry>> ba2_gnrl_prepare_entries(
         return error{error_code::invalid_argument, "BA2 GNRL writer profile is not GNRL"};
     }
 
-    std::vector<std::optional<ba2_gnrl_prepared_entry>> prepared_by_index(entries.size());
-    auto work = [&](std::size_t index) -> result<void> {
-        auto prepared = prepare_entry(profile, options, entries[index], workspace, index);
-        if (!prepared) {
-            return prepared.error();
-        }
-        prepared_by_index[index] = std::move(prepared.value());
-        return {};
-    };
-
-    auto prepared_work = detail::run_indexed_work(entries.size(), worker_count, work);
-    if (!prepared_work) {
-        return prepared_work.error();
+    auto collected = detail::collect_indexed_work<ba2_gnrl_prepared_entry>(
+        entries.size(), worker_count, [&](std::size_t index) {
+            return prepare_entry(profile, options, entries[index], workspace, index);
+        });
+    if (!collected) {
+        return collected.error();
     }
-
-    std::vector<ba2_gnrl_prepared_entry> prepared;
-    prepared.reserve(entries.size());
-    for (auto& entry : prepared_by_index) {
-        if (!entry.has_value()) {
-            return error{error_code::io_error, "BA2 GNRL worker did not prepare an entry"};
-        }
-        prepared.push_back(std::move(entry.value()));
-    }
+    auto prepared = std::move(collected).value();
 
     // D-17 keeps Phase 8 deterministic with a canonical-path fallback because
     // traced BA2 writer evidence does not prove a stricter hash sort requirement.

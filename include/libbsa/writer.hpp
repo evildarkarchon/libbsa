@@ -175,6 +175,8 @@ struct ba2_gnrl_entry_options {
     entry_compression_policy compression = entry_compression_policy::inherit;
 
     /// Optional advanced BA2 GNRL record-flags override for compatibility cases.
+    /// When absent, writes the BSArch-compatible `0x00100100` general-record marker.
+    /// Explicit overrides are preserved verbatim, including zero.
     ///
     /// Hashes, payload offsets, stored sizes, raw sizes, and the `BAADF00D`
     /// sentinel remain writer-owned and are not caller-controlled.

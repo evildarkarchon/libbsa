@@ -1255,3 +1255,62 @@ TEST_CASE(
     REQUIRE_FALSE(rejected.has_value());
     REQUIRE(rejected.error().code == libbsa::error_code::format_error);
 }
+
+TEST_CASE("ba2_dx10 extracts BSArch aggregate cubemap faces and mips exactly once",
+          "[unit][fixture][ba2_dx10_extract][bsarch_cubemap]") {
+    const auto path = std::filesystem::temp_directory_path() / "libbsa-bsarch-cubemap-tail.ba2";
+    temp_file_cleanup cleanup{path};
+    // Hand-sized author-owned BC1 data: each of six faces has a 32-byte 8x8
+    // mip followed by an 8-byte 4x4 mip. Distinct face/mip markers catch a
+    // repeated chunk, missing face, or mip-major reconstruction.
+    std::vector<std::byte> expected;
+    for (unsigned int face = 0; face < 6; ++face) {
+        expected.insert(expected.end(), 32U, static_cast<std::byte>(0x10U + face));
+        expected.insert(expected.end(), 8U, static_cast<std::byte>(0x80U + face));
+    }
+    for (const bool split_first_mip : {false, true}) {
+        INFO("split_first_mip=" << split_first_mip);
+        const std::uint32_t chunk_count = split_first_mip ? 2U : 1U;
+        const std::uint32_t payload_offset = 48U + 24U * chunk_count;
+        const std::uint32_t names_offset = payload_offset + 240U;
+        std::vector<std::byte> bytes(names_offset + 10U, std::byte{0});
+        overwrite_u32_le(bytes, 0, 0x58445442U);  // BTDX.
+        overwrite_u32_le(bytes, 4, 1U);
+        overwrite_u32_le(bytes, 8, 0x30315844U);  // DX10.
+        overwrite_u32_le(bytes, 12, 1U);
+        overwrite_u64_le(bytes, 16, names_offset);
+        overwrite_u32_le(bytes, 24, libbsa::detail::hash_fo4("cube"));
+        overwrite_u32_le(bytes, 28, 0x00736464U);  // dds + NUL.
+        bytes[37] = static_cast<std::byte>(chunk_count);
+        overwrite_u16_le(bytes, 38, 24U);
+        overwrite_u16_le(bytes, 40, 8U);
+        overwrite_u16_le(bytes, 42, 8U);
+        bytes[44] = std::byte{2};
+        bytes[45] = std::byte{71};
+        overwrite_u16_le(bytes, 46, 0x801U);
+        overwrite_u64_le(bytes, 48, payload_offset);
+        overwrite_u32_le(bytes, 60, split_first_mip ? 32U : 240U);
+        overwrite_u16_le(bytes, 66, split_first_mip ? 0U : 1U);
+        overwrite_u32_le(bytes, 68, 0xBAADF00DU);
+        if (split_first_mip) {
+            overwrite_u64_le(bytes, 72, payload_offset + 32U);
+            overwrite_u32_le(bytes, 84, 208U);
+            overwrite_u16_le(bytes, 88, 1U);
+            overwrite_u16_le(bytes, 90, 1U);
+            overwrite_u32_le(bytes, 92, 0xBAADF00DU);
+        }
+        std::copy(expected.begin(), expected.end(), bytes.begin() + payload_offset);
+        overwrite_u16_le(bytes, names_offset, 8U);
+        const std::string filename{"cube.dds"};
+        for (std::size_t i = 0; i < filename.size(); ++i) {
+            bytes[names_offset + 2U + i] = static_cast<std::byte>(filename[i]);
+        }
+        write_binary_file(path, bytes);
+        auto reader = libbsa::archive_reader::open(path.string());
+        REQUIRE(reader.has_value());
+        const auto extracted = reader.value().extract_bytes(filename);
+        REQUIRE(extracted.has_value());
+        REQUIRE(extracted.value().size() == 148U + expected.size());
+        CHECK(std::equal(expected.begin(), expected.end(), extracted.value().begin() + 148U));
+    }
+}

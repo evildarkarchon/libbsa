@@ -2,6 +2,8 @@ find_package(Catch2 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+add_subdirectory(compat)
+
 function(libbsa_link_internal_test_support target_name)
   if(BUILD_SHARED_LIBS)
     set(libbsa_test_library_sources)
@@ -59,6 +61,7 @@ add_executable(libbsa_tests
   unit/archive_reader_dispatch_tests.cpp
   unit/bulk_extraction_tests.cpp
   unit/writer_execution_options_tests.cpp
+  unit/parallel_work_tests.cpp
   unit/bsa_writer_execution_tests.cpp
   unit/ba2_writer_execution_tests.cpp
   unit/writer_ownership_tests.cpp

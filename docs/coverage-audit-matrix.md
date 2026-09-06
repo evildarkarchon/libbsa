@@ -27,7 +27,7 @@ Use these paths as the default evidence set when reading the matrix:
 - Fixture policy and provenance: `tests/fixtures/README.md` and the generated fixture manifests under `tests/fixtures/generated/archives/`.
 - Malformed-hardening index: `tests/fixtures/generated/compatibility_matrix.json` plus the family malformed manifests it references.
 
-Optional local corpora are advisory evidence only; see [Advisory local evidence](#advisory-local-evidence).
+Ordinary CI does not require retail archives. Releases additionally require independent local evidence under [ADR-0005](adr/0005-releases-require-independent-archive-interoperability-evidence.md); see [Independent release evidence and optional local checks](#independent-release-evidence-and-optional-local-checks).
 
 ## Family/axis matrix
 
@@ -116,20 +116,24 @@ Material subrows:
 
 It is **not** the full support matrix. It does not replace the reader, extraction, writer, round-trip, package-consumer, docs-policy, or optional local-corpus evidence listed above. The family/axis tables in this document are the human support matrix; the JSON file is one default evidence input for malformed handling and validation diagnostics.
 
-## Advisory local evidence
+## Independent release evidence and optional local checks
 
 Two environment variables enable optional local compatibility checks:
 
 - `LIBBSA_GAME_FIXTURES` points tests at local game-derived archives or a local `bsarchpro_expected.json` manifest.
 - `LIBBSA_BSARCHPRO_EXPECTED` points directly at a BSArchPro-derived comparison manifest.
 
-The executable harness is `tests/unit/local_game_fixture_tests.cpp`. It is tagged `[requires-game-fixture]` and skips by default when local inputs are absent. When present, it opens each listed archive through libbsa and compares public metadata plus optional extracted bytes or FNV-1a payload hashes against the BSArchPro-derived expectations.
+The legacy harness is `tests/unit/local_game_fixture_tests.cpp`. It is tagged `[requires-game-fixture]` and skips by default when local inputs are absent. When present, it opens each listed archive through libbsa and compares public metadata plus optional extracted bytes or FNV-1a payload hashes against the BSArchPro-derived expectations.
 
-Absent local/copyrighted inputs do **not** block default green status, because default proof must stay reproducible from committed legal/generated fixtures and writer-output archives. Present local-only checks also do **not** replace default proof: they are advisory smoke/compare evidence that may justify future hardening work, not a substitute for committed tests or docs-policy coverage.
+Absent local/copyrighted inputs do **not** block default green status, because default proof must stay reproducible from committed legal/generated fixtures and writer-output archives. These focused legacy checks remain supplemental evidence.
+
+[ADR-0005](adr/0005-releases-require-independent-archive-interoperability-evidence.md) adds a separate mandatory release gate implemented in [tests/compat](../tests/compat/README.md). Its enrolled baseline requires 101 retail archives, and the thorough run compares every entry of every supplied archive against pinned BSArch evidence, exercises 71 controlled interoperability cases, and independently checks libbsa repacks of every retail entry. Both MSVC Release static and shared lanes must produce complete successful evidence for the same clean revision and inputs, then pass `verify-release`. Missing baseline coverage, unexplained mismatches, or resource failures block that gate rather than becoming skips.
+
+This is a release requirement and an executable harness, not a claim that the entire corpus already passed. Reports establish Archive Interoperability for their bound inputs; they do not establish Game Acceptance or coverage of every game edition. Generated default proof and independent release evidence remain separately identified.
 
 ## Ranked gap list
 
-No high-risk executable-proof gap was found for the core open/list, extraction, writer, round-trip/reopen, malformed-handling, public API surface, or support-doc axes. The remaining gaps are lower-risk or intentionally deferred; they are listed so future work can improve confidence without overstating today's default evidence.
+The default audit found executable proof for the core open/list, extraction, writer, round-trip/reopen, malformed-handling, and public API surface axes. That proof does not establish independent interoperability. ADR-0005 elevates the comprehensive external comparison gap to a required release gate; each release still needs complete passing reports. The remaining taxonomy gap is deferred.
 
 The former `COV-GAP-001` validation-success gap is no longer open: `tests/unit/validation_api_tests.cpp` directly validates TES4 v103/v104/v105, BA2 GNRL Fallout 4/Starfield v2/Starfield v3, BA2 DX10 Fallout 4/Starfield v3, and writer-produced Starfield BA2 v3 method 0 deflate and method 3 raw LZ4 block routes through `validate_archive` with extractability enabled.
 
@@ -137,7 +141,7 @@ The former `COV-GAP-003` package-consumer runtime gap is no longer open: `packag
 
 | Rank | Gap ID | Risk | Affected family/axis | Evidence source | Downstream route |
 |---:|---|---|---|---|---|
-| 1 | `COV-GAP-002` | Low / Deferred | Full BSArchPro or real game-corpus compatibility comparisons for all families. | `tests/unit/local_game_fixture_tests.cpp`, `tests/fixtures/README.md`, and `docs/compatibility-evidence.md` document opt-in local checks, but default evidence intentionally avoids copyrighted archive bytes. | Future compatibility-hardening campaign using local manifests; keep default CI independent of local/copyrighted inputs. |
+| 1 | `COV-GAP-002` | Required release gate | Independent retail reading, controlled reciprocal writing, and retail repacking across supported profiles. | `tests/compat/runner.py`, its pinned oracle and 101-archive baseline, and ADR-0005 implement complete comparison and report verification. | Require passing thorough MSVC Release static/shared reports and `verify-release` for each candidate; implementation and enrollment alone do not close a failing or incomplete result. |
 | 2 | `COV-GAP-004` | Low / Deferred | Family-specific compatibility warning taxonomy for TES3 BSA. | `include/libbsa/validation.hpp`, `tests/unit/compatibility_warning_tests.cpp`, and `docs/compatibility-evidence.md` prove every current public warning code; no TES3-specific warning is currently claimed. BA2 DX10 is now covered by `ba2_record_identity_mismatch`. | Add warning codes only when a known target interoperability risk is identified and can be proven with default generated or writer-output evidence. |
 
 ## Maintenance rule

@@ -1,0 +1,1188 @@
+{
+  "schema": 1,
+  "provenance": "Local retail archive identities only; no payload bytes",
+  "archives": [
+    {
+      "path": "Fallout - Meshes.bsa",
+      "size": 1061624491,
+      "sha256": "054e299829ff24fd4bd4edf69f6424346b400c87379cee39bec02e4d082bf85a",
+      "profile": {
+        "type": "bsa",
+        "version": 104,
+        "subtype": "",
+        "entry_count": 19587
+      }
+    },
+    {
+      "path": "Fallout - Misc.bsa",
+      "size": 1905069,
+      "sha256": "61a2fdcff07eda5a19ceea6bb9cf661b250d36a231818e33d3d23be94f9299c2",
+      "profile": {
+        "type": "bsa",
+        "version": 104,
+        "subtype": "",
+        "entry_count": 142
+      }
+    },
+    {
+      "path": "Fallout - Sound.bsa",
+      "size": 850985572,
+      "sha256": "b134e1e2381473e9a803fd3631b3de51184294b912e6120bc53dd3cde1c3d561",
+      "profile": {
+        "type": "bsa",
+        "version": 104,
+        "subtype": "",
+        "entry_count": 6465
+      }
+    },
+    {
+      "path": "Fallout - Textures.bsa",
+      "size": 1196767196,
+      "sha256": "68c0f4beb00e07cc06361e3a5be0909873220731db3bd43bc013e85544b67578",
+      "profile": {
+        "type": "bsa",
+        "version": 104,
+        "subtype": "",
+        "entry_count": 11470
+      }
+    },
+    {
+      "path": "Fallout - Textures2.bsa",
+      "size": 961249657,
+      "sha256": "bdaa85989b30a68c2c9ce79a07b167ecd72942df47f2e58c4a0299b016410dc2",
+      "profile": {
+        "type": "bsa",
+        "version": 104,
+        "subtype": "",
+        "entry_count": 10605
+      }
+    },
+    {
+      "path": "Fallout - Voices1.bsa",
+      "size": 1602331889,
+      "sha256": "e6e24f4e4201fd1a31a5a00db492dfdf82274406660c2ecbfb1ade9b93e45460",
+      "profile": {
+        "type": "bsa",
+        "version": 104,
+        "subtype": "",
+        "entry_count": 105517
+      }
+    },
+    {
+      "path": "Fallout4 - Animations.ba2",
+      "size": 359787743,
+      "sha256": "cb4078200533b44da25df7e30bcb5e82c2a2e78dce333e1a0f4350f0ff559223",
+      "profile": {
+        "type": "ba2",
+        "version": 8,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 29716
+      }
+    },
+    {
+      "path": "Fallout4 - Interface.ba2",
+      "size": 489064288,
+      "sha256": "b4282934b1785f6aee98d54d568f8b482e60d43f094ca48faddbaa61ff350bc0",
+      "profile": {
+        "type": "ba2",
+        "version": 8,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 1101
+      }
+    },
+    {
+      "path": "Fallout4 - Materials.ba2",
+      "size": 1770496,
+      "sha256": "f613de90cca5157b2b77913f9dd78427ac6444f920e574843deda6ec606f167c",
+      "profile": {
+        "type": "ba2",
+        "version": 8,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 6899
+      }
+    },
+    {
+      "path": "Fallout4 - Meshes.ba2",
+      "size": 1491573805,
+      "sha256": "45c70efe7ab87c0a015eb0aa4d8c72508f74149f5869541c5fb4203c5f206130",
+      "profile": {
+        "type": "ba2",
+        "version": 8,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 42426
+      }
+    },
+    {
+      "path": "Fallout4 - MeshesExtra.ba2",
+      "size": 1377740102,
+      "sha256": "c6c1fe6cdf8d1dc0130c794e229738e6bb9fe064bd74fc3fa430518ad5791c52",
+      "profile": {
+        "type": "ba2",
+        "version": 8,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 125837
+      }
+    },
+    {
+      "path": "Fallout4 - Misc.ba2",
+      "size": 17356927,
+      "sha256": "a70c58200a31b9ee6491ba88d7be9cf03104a4551c13f7b5b9cb53b8f06b9178",
+      "profile": {
+        "type": "ba2",
+        "version": 8,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 8570
+      }
+    },
+    {
+      "path": "Fallout4 - Nvflex.ba2",
+      "size": 6385127,
+      "sha256": "a8860a48168ccabc38628eb0cd4635bf6d0e4a661a96e7c4e7dc7855124db1cd",
+      "profile": {
+        "type": "ba2",
+        "version": 1,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 32
+      }
+    },
+    {
+      "path": "Fallout4 - Shaders.ba2",
+      "size": 12845022,
+      "sha256": "4ac98b8fe72385f0cd13053bf5e81203fdaabe101377011e152457b705060659",
+      "profile": {
+        "type": "ba2",
+        "version": 8,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 1
+      }
+    },
+    {
+      "path": "Fallout4 - Sounds.ba2",
+      "size": 1575702490,
+      "sha256": "e7d863b2ec8e795c7f9c6f75da2db4a2d889ef77a1be3fbf9fc4662254af9ffd",
+      "profile": {
+        "type": "ba2",
+        "version": 8,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 8869
+      }
+    },
+    {
+      "path": "Fallout4 - Startup.ba2",
+      "size": 46577656,
+      "sha256": "51fa1f2fa6a4e7d6ebc290ca7dc4a174ccc451572a551f6ab4115408eff74976",
+      "profile": {
+        "type": "ba2",
+        "version": 8,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 86
+      }
+    },
+    {
+      "path": "Fallout4 - Textures1.ba2",
+      "size": 2709070014,
+      "sha256": "b9c78dca7fa5871dff7ee525bd7f9932a68abbe413cc2b3006b73fc6148d0509",
+      "profile": {
+        "type": "ba2",
+        "version": 7,
+        "subtype": "DX10",
+        "method": 0,
+        "entry_count": 3551
+      }
+    },
+    {
+      "path": "Fallout4 - Textures2.ba2",
+      "size": 2420982983,
+      "sha256": "d2866d991b2a28766bec04f9ac958ac2a0ed58def5b62eb24de2d82f31d72911",
+      "profile": {
+        "type": "ba2",
+        "version": 7,
+        "subtype": "DX10",
+        "method": 0,
+        "entry_count": 3551
+      }
+    },
+    {
+      "path": "Fallout4 - Textures3.ba2",
+      "size": 2095724697,
+      "sha256": "f8ffa5a323f2eba32b3520222daae27a4a4a5572a9d904529dd4b0514fd31d89",
+      "profile": {
+        "type": "ba2",
+        "version": 7,
+        "subtype": "DX10",
+        "method": 0,
+        "entry_count": 3551
+      }
+    },
+    {
+      "path": "Fallout4 - Textures4.ba2",
+      "size": 2005844637,
+      "sha256": "0d1ea2f8872efdf8c489c64fb0560ab665b2389f92d6c1ad354c46d9a1b53827",
+      "profile": {
+        "type": "ba2",
+        "version": 7,
+        "subtype": "DX10",
+        "method": 0,
+        "entry_count": 3551
+      }
+    },
+    {
+      "path": "Fallout4 - Textures5.ba2",
+      "size": 1965886787,
+      "sha256": "d18fdfe1dd38976ee2437f8886ff70cf56f82d0384708204c0cc8ffc673b9c24",
+      "profile": {
+        "type": "ba2",
+        "version": 7,
+        "subtype": "DX10",
+        "method": 0,
+        "entry_count": 3551
+      }
+    },
+    {
+      "path": "Fallout4 - Textures6.ba2",
+      "size": 1399972840,
+      "sha256": "8fb004013b6639903d882236534c3bc452a1a1a250049f384b5ae9114767a9ea",
+      "profile": {
+        "type": "ba2",
+        "version": 7,
+        "subtype": "DX10",
+        "method": 0,
+        "entry_count": 3551
+      }
+    },
+    {
+      "path": "Fallout4 - Textures7.ba2",
+      "size": 547749609,
+      "sha256": "df532e8d7ce7c3f013cf847955f1f977b14ae6507c2d00236c94143ef89998d3",
+      "profile": {
+        "type": "ba2",
+        "version": 7,
+        "subtype": "DX10",
+        "method": 0,
+        "entry_count": 3551
+      }
+    },
+    {
+      "path": "Fallout4 - Textures8.ba2",
+      "size": 603820524,
+      "sha256": "10e2d52493123bfabf5c8193793ea518425744d0c69bb03429fc5dfbb2d1768b",
+      "profile": {
+        "type": "ba2",
+        "version": 7,
+        "subtype": "DX10",
+        "method": 0,
+        "entry_count": 3551
+      }
+    },
+    {
+      "path": "Fallout4 - Textures9.ba2",
+      "size": 866812818,
+      "sha256": "b7af76f09e67dbbedb870da58509ea93ae42c5a029d980621232dd9f11d7182e",
+      "profile": {
+        "type": "ba2",
+        "version": 7,
+        "subtype": "DX10",
+        "method": 0,
+        "entry_count": 3542
+      }
+    },
+    {
+      "path": "Fallout4 - TexturesPatch.ba2",
+      "size": 3231829,
+      "sha256": "7775251adc54b2fa8ee7a82943db66c8db2d5c9a38e680aedff7af8ea0545436",
+      "profile": {
+        "type": "ba2",
+        "version": 8,
+        "subtype": "DX10",
+        "method": 0,
+        "entry_count": 7
+      }
+    },
+    {
+      "path": "Fallout4 - Voices.ba2",
+      "size": 2606358161,
+      "sha256": "fc03d878bc716df00189cf7e36e22e824cdc0796ed7921cf54f53d3545aa9e22",
+      "profile": {
+        "type": "ba2",
+        "version": 8,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 116101
+      }
+    },
+    {
+      "path": "Morrowind.bsa",
+      "size": 310459500,
+      "sha256": "3dcd5e6bfa08245521a53374bf733ee5c920df49103898a15aa31144ad64cf48",
+      "profile": {
+        "type": "bsa",
+        "version": 256,
+        "subtype": "",
+        "entry_count": 11090
+      }
+    },
+    {
+      "path": "Oblivion - Meshes.bsa",
+      "size": 671405897,
+      "sha256": "d05bb62f933856105536beb06c26bcdf5fa37f685152a39ece587e7f26b4e99b",
+      "profile": {
+        "type": "bsa",
+        "version": 103,
+        "subtype": "",
+        "entry_count": 20182
+      }
+    },
+    {
+      "path": "Oblivion - Misc.bsa",
+      "size": 7229551,
+      "sha256": "a84290011a4ed5a1ca8d8cff3822eda67bbacd47c750744b7d786cc0a5527ca5",
+      "profile": {
+        "type": "bsa",
+        "version": 103,
+        "subtype": "",
+        "entry_count": 115
+      }
+    },
+    {
+      "path": "Oblivion - Sounds.bsa",
+      "size": 330432865,
+      "sha256": "f11e92315666b7e6ee5f6936fa68300fb5234215c59d5e3836375f262fba05ec",
+      "profile": {
+        "type": "bsa",
+        "version": 103,
+        "subtype": "",
+        "entry_count": 1533
+      }
+    },
+    {
+      "path": "Oblivion - Textures - Compressed.bsa",
+      "size": 1217817848,
+      "sha256": "d6e6a2155bea688052862df471c631e93572d525fb81b4358da328bd34760bd2",
+      "profile": {
+        "type": "bsa",
+        "version": 103,
+        "subtype": "",
+        "entry_count": 18040
+      }
+    },
+    {
+      "path": "Oblivion - Voices1.bsa",
+      "size": 787373673,
+      "sha256": "c460dcfc57e060c4772af7a378fef81c22ed103a3f0fcbf0e13412a109b4134d",
+      "profile": {
+        "type": "bsa",
+        "version": 103,
+        "subtype": "",
+        "entry_count": 33198
+      }
+    },
+    {
+      "path": "Oblivion - Voices2.bsa",
+      "size": 1005007382,
+      "sha256": "2614300372de611b6d5644e73e6f7fcd0638d0621583da855e4f337dd450eba4",
+      "profile": {
+        "type": "bsa",
+        "version": 103,
+        "subtype": "",
+        "entry_count": 44582
+      }
+    },
+    {
+      "path": "Skyrim - Animations.bsa",
+      "size": 65155583,
+      "sha256": "f2e1bf18f6498d637998808a06ecf17220d17d123eceddbb796eced8b68dc68a",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 8979
+      }
+    },
+    {
+      "path": "Skyrim - Interface.bsa",
+      "size": 105799354,
+      "sha256": "5c8d5275eeaaa87eec84c893da8dc3bf977e0197eba86560bb0d1dc651432957",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 386
+      }
+    },
+    {
+      "path": "Skyrim - Meshes0.bsa",
+      "size": 1153126177,
+      "sha256": "3bcb3e42edb00aa63a06af43a6a5a092029632e9a3fdd2c90fced0cc07db5c7d",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 19443
+      }
+    },
+    {
+      "path": "Skyrim - Meshes1.bsa",
+      "size": 378762772,
+      "sha256": "49cc83cd6592a676481d62c8483657ac94aa51fc15c66b1a35a8f5fcbb870880",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 14242
+      }
+    },
+    {
+      "path": "Skyrim - Misc.bsa",
+      "size": 17713449,
+      "sha256": "ddb19908dcd5c135b8bba240e8dfcdb95395b569852f715d330396e9c1390b9d",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 14032
+      }
+    },
+    {
+      "path": "Skyrim - Shaders.bsa",
+      "size": 67308970,
+      "sha256": "4685203a8f115937e34fab3879c6b599734d8a913a698891866ed72385b5cfa5",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 1
+      }
+    },
+    {
+      "path": "Skyrim - Sounds.bsa",
+      "size": 1538656059,
+      "sha256": "196368d2987887e65c9687191373f9e57ceb3f931a959350552fda924d33ef84",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 6198
+      }
+    },
+    {
+      "path": "Skyrim - Textures0.bsa",
+      "size": 652490581,
+      "sha256": "47ce44b6c8265153875f6a52aa5dada1890ce6b22ae527c448270ffbf26c90ef",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 5891
+      }
+    },
+    {
+      "path": "Skyrim - Textures1.bsa",
+      "size": 1511492648,
+      "sha256": "92516f098211f961ff2bbe8b398d546d5dd62deea789f60a46e1b749c1e758f2",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 887
+      }
+    },
+    {
+      "path": "Skyrim - Textures2.bsa",
+      "size": 1345109830,
+      "sha256": "ebbbd4998a05ae520ce16a67ad27834487e4989f7b87aa5360acfcd95b5cc2b7",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 997
+      }
+    },
+    {
+      "path": "Skyrim - Textures3.bsa",
+      "size": 1406304717,
+      "sha256": "ad1557a02b7a2922f314c10c1c957ee09aea0be3732274cf737502929a6ba1b5",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 1777
+      }
+    },
+    {
+      "path": "Skyrim - Textures4.bsa",
+      "size": 1265325033,
+      "sha256": "53fe60b2831cd49f9d73ed36779ced234a310e0f76f229dd9d53ffa5c8c02bdf",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 1166
+      }
+    },
+    {
+      "path": "Skyrim - Textures5.bsa",
+      "size": 813639992,
+      "sha256": "f6cf263cd3753f2921c1a0e7d40aa10a37625cee3ba92e7d2bb8ce3b0147bf80",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 5095
+      }
+    },
+    {
+      "path": "Skyrim - Textures6.bsa",
+      "size": 97210200,
+      "sha256": "4ec70fe57e45d8331c70c47a037a619e08e2d663500a5607a7abde6f0da44cab",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 8813
+      }
+    },
+    {
+      "path": "Skyrim - Textures7.bsa",
+      "size": 677006639,
+      "sha256": "a494c65fe3472ea9898bfe8f30b651ae1a840fbb1099d2561898194d0551aeb3",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 7084
+      }
+    },
+    {
+      "path": "Skyrim - Textures8.bsa",
+      "size": 255927303,
+      "sha256": "31fb46d6aa2cdd4d7124063fa7ee77831448dee19ad8fb69793679cb9540af94",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 242
+      }
+    },
+    {
+      "path": "Skyrim - Voices_en0.bsa",
+      "size": 1807969854,
+      "sha256": "28eed50cac2f9606e045420e4426f6141de0b900f7e1ba021adc41bb8c9f1d08",
+      "profile": {
+        "type": "bsa",
+        "version": 105,
+        "subtype": "",
+        "entry_count": 75408
+      }
+    },
+    {
+      "path": "Starfield - Animations.ba2",
+      "size": 217602241,
+      "sha256": "76d361bbad60dc6a17bc45aa7e1b4068f425a1a57dfe37051acd8cd7985815b6",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 47162
+      }
+    },
+    {
+      "path": "Starfield - DensityMaps.ba2",
+      "size": 3289283813,
+      "sha256": "5e848b813df9a278b0b080f9b14f1b764cc25b9082944049510a652ad626b13b",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 7761
+      }
+    },
+    {
+      "path": "Starfield - FaceAnimation01.ba2",
+      "size": 4294892678,
+      "sha256": "3f1f8028a93c31618950ce25c45961cf75fd1c839c2aa180fa3fb4a53da02605",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 76659
+      }
+    },
+    {
+      "path": "Starfield - FaceAnimation02.ba2",
+      "size": 4294868358,
+      "sha256": "493c4290909ebbe6e0d5acdef4f0c90604aa0edad2cca40e6e1780b3c5fa9cad",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 59348
+      }
+    },
+    {
+      "path": "Starfield - FaceAnimation03.ba2",
+      "size": 4294946755,
+      "sha256": "15d7bc2d3e99bb7d9156ed1c358309a050457a31d8f9162cc4e702b8eb509daa",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 48535
+      }
+    },
+    {
+      "path": "Starfield - FaceAnimation04.ba2",
+      "size": 4025862230,
+      "sha256": "bdacf4446fcb4890edf841a169d40a9e34c028c6cc2fbfa94db37c05f14663c3",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 62100
+      }
+    },
+    {
+      "path": "Starfield - FaceAnimationPatch.ba2",
+      "size": 1619371713,
+      "sha256": "3271338c136804d24354cd3e996ba90eafb3dbd71878872327fbe9d3998b0fb9",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 20896
+      }
+    },
+    {
+      "path": "Starfield - FaceMeshes.ba2",
+      "size": 1303513304,
+      "sha256": "b8a4d0fe448f9fac01f867f4d4f25ff1725e0b0e37fe044488f551ef6828c70c",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 6114
+      }
+    },
+    {
+      "path": "Starfield - GeneratedTextures.ba2",
+      "size": 7886029,
+      "sha256": "fb55f92f9a22acacfbef87b2c7b70148644dc8afc1c774852859d968c7b6c1dc",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "DX10",
+        "method": 0,
+        "entry_count": 5749
+      }
+    },
+    {
+      "path": "Starfield - Interface.ba2",
+      "size": 135450443,
+      "sha256": "dab6aeebb7e54282818e9a1957e80baef22ae992c6363cbe910f92b8adf3e702",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 426
+      }
+    },
+    {
+      "path": "Starfield - Localization.ba2",
+      "size": 114281094,
+      "sha256": "c1944a84346a919226b97d10e10cd94a776cd7f0af84f52c9e9ec86ceedaf3d0",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 27
+      }
+    },
+    {
+      "path": "Starfield - LODMeshes.ba2",
+      "size": 13248517,
+      "sha256": "a7453db1a188b95a8edc8ed0c6b0a036d7c866feb81eb59a577ad8b613a798d4",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 20400
+      }
+    },
+    {
+      "path": "Starfield - LODMeshesPatch.ba2",
+      "size": 13132434,
+      "sha256": "29f9afb18d232a33ec11a2d464ae312840b373defb1f8b5af8a46c8ab354a001",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 20405
+      }
+    },
+    {
+      "path": "Starfield - LODTextures01.ba2",
+      "size": 4294808439,
+      "sha256": "8273fbe80a493afd62f90b3fe0135f9c7a5b41055cec79ac74828cfa4964fe12",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 58408
+      }
+    },
+    {
+      "path": "Starfield - LODTextures02.ba2",
+      "size": 51237581,
+      "sha256": "5a2b0cc9b995fc531d0265af573627a3fa8ff3812efa22922cb460fd9acb3605",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 654
+      }
+    },
+    {
+      "path": "Starfield - Materials.ba2",
+      "size": 17576684,
+      "sha256": "821e7394a60dad79594ead043df83091c5e03f8e27798156ca81a7b8c5cb9037",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 1
+      }
+    },
+    {
+      "path": "Starfield - Meshes01.ba2",
+      "size": 4294890544,
+      "sha256": "5a9efc59f9c145a93040058d08ed8a5c5320ce620e693cf745eabee9f010ff9a",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 320483
+      }
+    },
+    {
+      "path": "Starfield - Meshes02.ba2",
+      "size": 839607830,
+      "sha256": "0f729ca806b166bdd5fd7358822c74358341d901001aeb4f4ae630d846632cd8",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 70238
+      }
+    },
+    {
+      "path": "Starfield - MeshesPatch.ba2",
+      "size": 3823107890,
+      "sha256": "570036e63691a86ce3fe7f4de96a7ccfdc1c12893f518dd4f1b3d4c34e36f53c",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 354341
+      }
+    },
+    {
+      "path": "Starfield - Misc.ba2",
+      "size": 38072258,
+      "sha256": "b4a634a3452e5e346ee2fffe51a9ccfbf7e263dc63a8db999988fa9594d89fdf",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 4753
+      }
+    },
+    {
+      "path": "Starfield - Particles.ba2",
+      "size": 135947708,
+      "sha256": "e057c1fdcde4ea22b5c3cd981467fabf525f7e77d4af45b35d133f1ba32f9215",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 833
+      }
+    },
+    {
+      "path": "Starfield - PlanetData.ba2",
+      "size": 22468821,
+      "sha256": "2fb1fff5d8fc074718bf05022c099f3c87ef70e00050229b368ae7d680fbe5d5",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 1438
+      }
+    },
+    {
+      "path": "Starfield - Shaders.ba2",
+      "size": 95438190,
+      "sha256": "3dfc997e7e40b561e3bb3a4ad84687fe9f2c44565392c4cc4fac995189da8ba7",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 1
+      }
+    },
+    {
+      "path": "Starfield - Terrain01.ba2",
+      "size": 4291234512,
+      "sha256": "7e4ca094b4dafa25be5793f5c683da703d0edc100120789ae483eabc3932795c",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 885
+      }
+    },
+    {
+      "path": "Starfield - Terrain02.ba2",
+      "size": 4289749798,
+      "sha256": "287dd1b8f12738faadc15f4c619448a65013049d6c0a671297589c22803c433b",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 315
+      }
+    },
+    {
+      "path": "Starfield - Terrain03.ba2",
+      "size": 4269589746,
+      "sha256": "d0c6d94296666fa5fe70cc95657beaa49bb262ceabb36e5665abe874c3b34b9b",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 247
+      }
+    },
+    {
+      "path": "Starfield - Terrain04.ba2",
+      "size": 2602112668,
+      "sha256": "057a747992667955ce9a1060762c3f56d958616775c6ec04cec670f1dee4deaa",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 552
+      }
+    },
+    {
+      "path": "Starfield - TerrainPatch.ba2",
+      "size": 3143875,
+      "sha256": "825b92bae497311e7428c98b0bb9ce635a0581566001cc5cf39caa5ac96eb47f",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 5
+      }
+    },
+    {
+      "path": "Starfield - Textures01.ba2",
+      "size": 4293630648,
+      "sha256": "6b8a422fc2ed51928f5b3a305fc918ad50592e33e66fa11f70faa6f17d13bda8",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 5574
+      }
+    },
+    {
+      "path": "Starfield - Textures02.ba2",
+      "size": 4294481065,
+      "sha256": "1a33f7cf075dd01ac9d31481dc45aac2e544f0bbaa955c1072b9709e668b4ccf",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 4134
+      }
+    },
+    {
+      "path": "Starfield - Textures03.ba2",
+      "size": 4293851283,
+      "sha256": "5d81fadec0bd41b17ce993c675031078de0cac8c2e24336bf4fb0c84c4399084",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 3807
+      }
+    },
+    {
+      "path": "Starfield - Textures04.ba2",
+      "size": 4289987983,
+      "sha256": "715d8034f4bdd0680a3add850e28e2a2ae20cee04f76ab56a27c856e6c30b0be",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 3130
+      }
+    },
+    {
+      "path": "Starfield - Textures05.ba2",
+      "size": 4294590816,
+      "sha256": "01b8d55235fd0fffef9c0068f9f36e600a25961b970f548aa49c0ad3c5e1e2dd",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 7084
+      }
+    },
+    {
+      "path": "Starfield - Textures06.ba2",
+      "size": 4294938802,
+      "sha256": "4e4c1886f0d36ed3861704aa934c8760b2ca5c1b03799baa4212896e0c280ffb",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 2937
+      }
+    },
+    {
+      "path": "Starfield - Textures07.ba2",
+      "size": 4294061043,
+      "sha256": "b87a7c5662fc4542cc1973e1786dd6503ffb41f94c9ea4d4533ccefa3e368a5b",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 3630
+      }
+    },
+    {
+      "path": "Starfield - Textures08.ba2",
+      "size": 4290519058,
+      "sha256": "90163ac36b865a9880e152b135c5fc3411c397b103d80f20db3d0bf827e53ffb",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 2198
+      }
+    },
+    {
+      "path": "Starfield - Textures09.ba2",
+      "size": 4294392371,
+      "sha256": "fe62e5b729a014f5fa04f1926733a6859cca4b23789acd41b36bea5c2635be36",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 3218
+      }
+    },
+    {
+      "path": "Starfield - Textures10.ba2",
+      "size": 4294276207,
+      "sha256": "33839ad64646f519e935e3838057de267ac2c0465c16f2989eb1282f4108c72e",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 5706
+      }
+    },
+    {
+      "path": "Starfield - Textures11.ba2",
+      "size": 866957696,
+      "sha256": "dcfed8ea07444880ad16953bc0fe0b8088ef3c7b8e2d51df3a7ef87bdb3609d3",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 1327
+      }
+    },
+    {
+      "path": "Starfield - TexturesPatch01.ba2",
+      "size": 4288252660,
+      "sha256": "799bd21e2fef4c51c3cec24335cede972ba8660b0d4205b3eb642be0bd48f692",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 2958
+      }
+    },
+    {
+      "path": "Starfield - TexturesPatch02.ba2",
+      "size": 265961431,
+      "sha256": "871aa144c5d84da364806a6c47b62ac6d1c1291f44baafd7f4c7b0c85054ca4d",
+      "profile": {
+        "type": "ba2",
+        "version": 3,
+        "subtype": "DX10",
+        "method": 3,
+        "entry_count": 53
+      }
+    },
+    {
+      "path": "Starfield - Voices01.ba2",
+      "size": 4294919148,
+      "sha256": "9a1e720bd0dd10f266c1bfd1b642c62f8d3e39ccf8535fc0d98665b72fa89bcf",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 158843
+      }
+    },
+    {
+      "path": "Starfield - Voices02.ba2",
+      "size": 2499060585,
+      "sha256": "33809bee29daf86f0ad3dbca348448d0b604cb1838cce57d2657b2ff1e8fb463",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 86290
+      }
+    },
+    {
+      "path": "Starfield - VoicesPatch.ba2",
+      "size": 20901416,
+      "sha256": "800fa3ea2a6d82a5e8d3c21e32ae140fd75e497f0bec33ad3660e226f61aed80",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 928
+      }
+    },
+    {
+      "path": "Starfield - WwiseSounds01.ba2",
+      "size": 4294156448,
+      "sha256": "a4d1309b15289fa3e3ce530cb3d02df5ecd7fcf6195224882a7d42c817706e48",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 5502
+      }
+    },
+    {
+      "path": "Starfield - WwiseSounds02.ba2",
+      "size": 4294666354,
+      "sha256": "a12d61c6f7f1a4937dcc1de1e672e6a48318c46683c47909deb6983c15315646",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 6068
+      }
+    },
+    {
+      "path": "Starfield - WwiseSounds03.ba2",
+      "size": 4294654956,
+      "sha256": "35caf4ceee11092905759f49fb46c99853e5bcdd0fd45db17ba4985e2d6bb000",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 5715
+      }
+    },
+    {
+      "path": "Starfield - WwiseSounds04.ba2",
+      "size": 4264195266,
+      "sha256": "ff092d8b91d301f2a9647d52cc1f6b2501c5aa755de6bdedafd2236df04359f4",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 5799
+      }
+    },
+    {
+      "path": "Starfield - WwiseSounds05.ba2",
+      "size": 2975910486,
+      "sha256": "9870fd82b5b2261ac603c0bdf0bb1eaf274fd55053bda8796cfc441b9356883f",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 3602
+      }
+    },
+    {
+      "path": "Starfield - WwiseSoundsPatch.ba2",
+      "size": 897887201,
+      "sha256": "9146b1e415206a8782dfe77b678701ef8d35e0a9ee62e2e72afe6a998320160a",
+      "profile": {
+        "type": "ba2",
+        "version": 2,
+        "subtype": "GNRL",
+        "method": 0,
+        "entry_count": 3776
+      }
+    }
+  ]
+}

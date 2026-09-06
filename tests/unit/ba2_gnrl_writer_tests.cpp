@@ -242,7 +242,7 @@ physical_layout read_physical_layout(const std::filesystem::path& archive_path) 
 struct expected_entry {
     std::string path;
     std::vector<std::byte> bytes;
-    std::uint32_t record_flags{};
+    std::uint32_t record_flags{0x0010'0100U};
 };
 
 libbsa::ba2_gnrl_writer_options overwriting_raw_options() {
@@ -381,6 +381,35 @@ TEST_CASE("BA2 GNRL writer rejects empty disk source host paths", "[unit][ba2_gn
 
     REQUIRE_FALSE(added.has_value());
     REQUIRE(added.error().code == libbsa::error_code::invalid_argument);
+}
+
+TEST_CASE("BA2 GNRL writer defaults to the BSArch general-record marker",
+          "[unit][ba2_gnrl_writer][compat]") {
+    for (const auto& [target, header_size, file_name] :
+         {std::tuple{libbsa::ba2_gnrl_target::fallout4, 24U, "default-marker-fo4.ba2"},
+          std::tuple{libbsa::ba2_gnrl_target::starfield_v2, 32U, "default-marker-sfv2.ba2"},
+          std::tuple{libbsa::ba2_gnrl_target::starfield_v3, 36U, "default-marker-sfv3.ba2"}}) {
+        const auto output = output_path(file_name);
+        libbsa::ba2_gnrl_writer writer{target, overwriting_raw_options()};
+        const std::vector<std::byte> payload{std::byte{0x00}, std::byte{0xFF}, std::byte{0x7F}};
+        REQUIRE(writer.add_bytes("misc/default.bin", payload).has_value());
+        libbsa::ba2_gnrl_entry_options explicit_zero;
+        explicit_zero.record_flags = 0U;
+        REQUIRE(writer.add_bytes("misc/override.bin", payload, explicit_zero).has_value());
+        REQUIRE(writer.write_to(output.string()).has_value());
+
+        const auto layout = read_physical_layout(output);
+        const std::vector<std::string> expected_names{"misc/default.bin", "misc/override.bin"};
+        REQUIRE(layout.names == expected_names);
+        const auto bytes = read_binary_file(output);
+        std::size_t marker_offset = header_size + 12U;
+        // The reference's iFileFO4Unknown is 0x00100100. The pinned BSArch 1.0
+        // rejects zero here as "Invalid chunks count 0" before reading payloads;
+        // replacing this field alone restores extraction of the unchanged bytes.
+        CHECK(read_u32_le(bytes, marker_offset) == 0x0010'0100U);
+        marker_offset = header_size + 36U + 12U;
+        CHECK(read_u32_le(bytes, marker_offset) == 0U);
+    }
 }
 
 TEST_CASE("BA2 GNRL writer reports invalid archive paths as invalid arguments",
@@ -650,9 +679,9 @@ TEST_CASE("BA2 GNRL writer raw Fallout 4 output reopens with end filename table"
     REQUIRE(written.has_value());
 
     require_raw_round_trip(output,
-                           {{"Meshes/MixedCase/Alpha.nif", expected_original, 0U},
-                            {"Scripts/Quest.psc", disk_bytes, 0U},
-                            {"Zero/Empty.txt", empty_bytes, 0U}},
+                           {{"Meshes/MixedCase/Alpha.nif", expected_original, 0x0010'0100U},
+                            {"Scripts/Quest.psc", disk_bytes, 0x0010'0100U},
+                            {"Zero/Empty.txt", empty_bytes, 0x0010'0100U}},
                            1U, libbsa::archive_variant::fallout4, std::nullopt, std::nullopt,
                            std::nullopt);
 }
@@ -819,7 +848,7 @@ TEST_CASE(
         auto written = writer.write_to(output.string());
         REQUIRE(written.has_value());
 
-        require_raw_round_trip(output, {{"Meshes/MixedCase/Alpha.nif", bytes, 0U}}, version,
+        require_raw_round_trip(output, {{"Meshes/MixedCase/Alpha.nif", bytes, 0x0010'0100U}}, version,
                                libbsa::archive_variant::starfield, 1U, 0U, compression_method);
     }
 }
@@ -889,7 +918,7 @@ TEST_CASE(
         auto written = writer.write_to(output.string());
         REQUIRE(written.has_value());
 
-        require_compressed_round_trip(output, {{"NoExtensionInference/Generic.bin", bytes, 0U}},
+        require_compressed_round_trip(output, {{"NoExtensionInference/Generic.bin", bytes, 0x0010'0100U}},
                                       test_case.version,
                                       test_case.target == libbsa::ba2_gnrl_target::fallout4
                                           ? libbsa::archive_variant::fallout4

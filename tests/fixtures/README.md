@@ -95,14 +95,30 @@ Game-derived archives must not be committed to this repository.
 - Local copies may be placed under ignored `tests/fixtures/local`.
 - Larger local datasets may be stored outside the repository and referenced with
   the `LIBBSA_GAME_FIXTURES` environment variable.
-- Tests that require local game data must be tagged `requires-game-fixture` and
-  skipped by default when no local fixture path is configured.
+- Ordinary CTest cases that require local game data must be tagged
+  `requires-game-fixture` and skipped by default when no local fixture path is
+  configured. The separate strict release gate fails when required data is absent.
 - BSArchPro-derived comparison manifests may be provided with
   `LIBBSA_BSARCHPRO_EXPECTED`, or as `bsarchpro_expected.json` under
   `LIBBSA_GAME_FIXTURES`. The opt-in CTest case
   `BSArchPro-derived expected fixture comparisons are opt-in` opens each listed
   archive through libbsa and compares public metadata plus optional extracted
   payload bytes or FNV-1a hashes against the BSArchPro-derived expectations.
+
+The independent suite in [tests/compat](../compat/README.md) implements
+[ADR-0005](../../docs/adr/0005-releases-require-independent-archive-interoperability-evidence.md).
+It requires the enrolled 101-archive retail baseline and checks all entries in
+every supplied archive, reciprocal controlled writer cases, and independently
+validated retail repacks. Both MSVC Release static and shared lanes must pass its
+strict gate. Default CI remains runnable without retail inputs; default CI success
+alone does not satisfy this additional release requirement.
+
+Supply the pinned BSArch executable locally at `tests/fixtures/oracle/BSArch.exe`
+or through `LIBBSA_BSARCH`. Executables in that directory are ignored; the expected
+version/SHA-256 is committed in `tests/compat/oracle.json`. Keep extracted retail
+payloads, detailed reports, and oracle logs local. The suite's companion summary
+report is the artifact intended for publication. No successful full-corpus result
+is implied by baseline enrollment or these setup instructions.
 
 ### BSArchPro-derived comparison manifest schema
 
@@ -149,16 +165,19 @@ corpus output.
 `docs/compatibility-evidence.md` is the machine-checked compatibility evidence
 catalog for public validation warning codes. It links each warning rule to
 generated fixtures, writer-output archives, read-only reference notes, or
-optional local corpus checks.
+local corpus checks.
 
-Compatibility evidence must keep committed generated fixtures and writer-output
-archives as the mandatory path. Optional game archives or BSArchPro-derived
-compare output are smoke/compare only: tests must use the
-`requires-game-fixture` label, skip when `LIBBSA_GAME_FIXTURES` is unset, and
-must not commit copyrighted bytes or use `TES5Edit/` as a fixture workspace.
-The default opt-in harness for those comparisons is
-`tests/unit/local_game_fixture_tests.cpp`, driven by
-`LIBBSA_BSARCHPRO_EXPECTED` or local `bsarchpro_expected.json`.
+Committed generated fixtures and writer-output archives remain the mandatory
+ordinary-CI evidence path. The legacy optional comparisons in
+`tests/unit/local_game_fixture_tests.cpp` use `requires-game-fixture` and skip when
+local inputs are absent; `LIBBSA_BSARCHPRO_EXPECTED` or local
+`bsarchpro_expected.json` provides their optional manifest expectations.
+
+Independent release evidence is additionally required by ADR-0005 through
+`libbsa_compatibility_check` and the paired `verify-release` procedure in
+[tests/compat/README.md](../compat/README.md). Missing required coverage fails that
+gate. Neither lane may commit copyrighted bytes or use `TES5Edit/` as a fixture
+workspace. The gate targets Archive Interoperability, not Game Acceptance.
 
 ## Benchmark and generated data policy
 

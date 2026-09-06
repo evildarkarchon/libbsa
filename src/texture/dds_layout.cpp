@@ -189,6 +189,39 @@ void append_chunks_for_ranges(std::vector<planned_texture_chunk>& chunks,
     }
 }
 
+/// Recognizes the exact single-cubemap tail emitted by BSArch's DDS packer.
+/// Earlier chunks must each contain one leading mip of the first face; the
+/// final chunk contains its remaining mips followed by all five other faces.
+/// Arithmetic failures remain format errors rather than relaxing size checks.
+result<bool> is_bsarch_cubemap_tail(const dds_texture_layout& layout,
+                                  std::span<const texture_chunk_metadata> chunks,
+                                  std::size_t index, std::uint64_t first_face_tail_size) {
+    if (!layout.is_cubemap || layout.array_size != 1U || index + 1U != chunks.size()) {
+        return false;
+    }
+    const auto& tail = chunks[index];
+    if (tail.start_mip != index || tail.end_mip != layout.mip_count - 1U) {
+        return false;
+    }
+    for (std::size_t preceding = 0; preceding < index; ++preceding) {
+        if (chunks[preceding].start_mip != preceding ||
+            chunks[preceding].end_mip != preceding) {
+            return false;
+        }
+    }
+    auto face_size = mip_range_size(layout, 0U, layout.mip_count - 1U);
+    if (!face_size) {
+        return face_size.error();
+    }
+    std::uint64_t other_faces_size = 0;
+    std::uint64_t aggregate_size = 0;
+    if (!checked_mul(face_size.value(), 5U, other_faces_size) ||
+        !checked_add(first_face_tail_size, other_faces_size, aggregate_size)) {
+        return format_error("DDS layout aggregate cubemap size overflows");
+    }
+    return aggregate_size == tail.raw_size;
+}
+
 result<void> write_u32(detail::binary_writer& writer, std::uint32_t value) {
     auto written = writer.write_u32_le(value);
     if (!written) {
@@ -372,6 +405,21 @@ result<std::vector<logical_texture_segment>> validate_and_order_chunks(
             return expected_size.error();
         }
         if (expected_size.value() != chunk.raw_size) {
+            // BSArch v1.0 and wbBSArchive.pas:2060-2084 keep the remaining
+            // face-major DDS bytes in the last chunk, including five complete
+            // cube faces. Preserve that chunk once instead of inventing six
+            // independently compressed regions. Only the exact reference shape
+            // and six-face byte total qualify; per-face validation stays strict.
+            auto aggregate_tail =
+                is_bsarch_cubemap_tail(layout, chunks, source_chunk_index, expected_size.value());
+            if (!aggregate_tail) {
+                return aggregate_tail.error();
+            }
+            if (aggregate_tail.value()) {
+                segments.push_back(logical_texture_segment{0U, 0U, chunk.start_mip,
+                                                           chunk.end_mip, source_chunk_index});
+                return segments;
+            }
             return format_error("DDS layout chunk raw byte total does not match mip range");
         }
 

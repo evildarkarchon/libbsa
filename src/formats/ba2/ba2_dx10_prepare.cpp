@@ -74,7 +74,7 @@ result<std::vector<ba2_dx10_prepared_entry>> ba2_dx10_prepare_entries(
     std::vector<ba2_dx10_prepared_entry> prepared;
     prepared.reserve(entries.size());
     for (const auto& entry : entries) {
-        // The chunk seam still owns detail::run_indexed_work over planned chunk
+        // The chunk seam still owns detail::collect_indexed_work over planned chunk
         // indices; this coordinator only serializes entry preparation and final
         // canonical-path sorting.
         auto next = ba2_dx10_assemble_planned_entry(profile, options, entry, worker_count);

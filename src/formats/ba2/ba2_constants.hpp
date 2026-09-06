@@ -30,6 +30,11 @@ inline constexpr std::size_t ba2_dx10_record_size = 24U;
 // GNRL record and DX10 chunk.
 inline constexpr std::uint32_t ba2_record_sentinel = 0xBAAD'F00DU;
 
+// TwbBSArchive writes iFileFO4Unknown = $00100100 for GNRL records. BSArch 1.0
+// interprets the zero default as an invalid zero chunk count before extraction;
+// emit the reference marker so default files remain readable by that oracle.
+inline constexpr std::uint32_t ba2_gnrl_record_flags_default = 0x0010'0100U;
+
 // BA2 GNRL and DX10 records use PackedSize == 0 to mean the payload bytes are
 // stored raw.
 inline constexpr std::uint32_t ba2_packed_size_raw = 0U;

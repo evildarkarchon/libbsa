@@ -2,7 +2,7 @@
 
 This catalog maps public `libbsa::compatibility_warning_code` values to the rule they represent, the evidence that proves the rule, and the default gate that keeps the evidence reproducible.
 
-Generated legal fixtures and writer-output archives are the mandatory evidence path for public compatibility warnings. Optional local game or BSArchPro-derived checks may add smoke/compare confidence, but they are never required for the default suite and never replace committed legal fixtures, writer-output archives, package-consumer checks, or documentation policy tests.
+Generated legal fixtures and writer-output archives are the mandatory ordinary-CI evidence path for public compatibility warnings. Legacy local game or BSArchPro-derived manifest checks remain supplemental. [ADR-0005](adr/0005-releases-require-independent-archive-interoperability-evidence.md) separately requires full independent Archive Interoperability evidence for releases through [tests/compat](../tests/compat/README.md). That additional gate does not replace committed legal fixtures, writer-output archives, or package-consumer checks.
 
 Use this catalog together with `docs/coverage-audit-matrix.md` and `docs/public-api-reality-check.md`:
 
@@ -10,11 +10,11 @@ Use this catalog together with `docs/coverage-audit-matrix.md` and `docs/public-
 - `docs/public-api-reality-check.md` maps the current public API core to that proof and routes known public-story gaps without introducing a broader facade.
 - This file is narrower: it explains the compatibility-warning taxonomy that validation reports expose today.
 
-Default acceptance must continue to pass from repository-reproducible generated fixtures, writer-output archives, and policy tests alone. Optional local corpus checks are advisory evidence only; they may improve confidence in a developer workspace, but absent local or copyrighted inputs do not block default green status.
+Default acceptance must continue to pass from repository-reproducible generated fixtures, writer-output archives, and policy tests alone. Absent local or copyrighted inputs do not block default green status. They do block the separate strict release gate when required oracle or retail coverage is missing; ordinary CI success alone does not satisfy ADR-0005.
 
 ## Default fixture and round-trip proof sweep
 
-The default proof sweep uses committed legal generated fixtures, writer-output archives produced by the public writer APIs, the installed package-consumer runtime smoke, Catch2/CTest cases, and manifest validation only. It does not require local game archives, copied game payload bytes, or BSArchPro-derived comparison output. `LIBBSA_GAME_FIXTURES` and `LIBBSA_BSARCHPRO_EXPECTED` are optional advisory inputs for local smoke/compare confidence; unset variables must not block the default suite.
+The default proof sweep uses committed legal generated fixtures, writer-output archives produced by the public writer APIs, the installed package-consumer runtime smoke, Catch2/CTest cases, and manifest validation only. It does not require local game archives, copied game payload bytes, or BSArchPro-derived comparison output. `LIBBSA_GAME_FIXTURES` and `LIBBSA_BSARCHPRO_EXPECTED` enable the legacy focused checks; absent local inputs must not block the default suite. The thorough release command instead requires its enrolled retail baseline and pinned BSArch executable.
 
 The current default sweep covers four archive families:
 
@@ -64,7 +64,7 @@ ctest --preset windows-msvc-debug-static -L ba2_dx10_writer
 
 These commands intentionally avoid optional local corpus inputs. They prove the public default fixture, round-trip, and direct validation success story from committed synthetic assets; `docs/coverage-audit-matrix.md` remains the source of truth for per-family granularity.
 
-The executable opt-in comparison harness is `tests/unit/local_game_fixture_tests.cpp`; it consumes `LIBBSA_BSARCHPRO_EXPECTED` or a local `bsarchpro_expected.json` manifest under `LIBBSA_GAME_FIXTURES` and compares libbsa metadata plus optional extracted bytes or FNV-1a payload hashes against BSArchPro-derived expectations.
+The legacy opt-in comparison harness is `tests/unit/local_game_fixture_tests.cpp`; it consumes `LIBBSA_BSARCHPRO_EXPECTED` or a local `bsarchpro_expected.json` manifest under `LIBBSA_GAME_FIXTURES` and compares libbsa metadata plus optional extracted bytes or FNV-1a payload hashes against BSArchPro-derived expectations. The independent release harness in `tests/compat` requires complete catalogs and SHA-256/content evidence, controlled cross-tool writer cases, and independently checked retail repacks. Its successful static/shared reports must pass the documented `verify-release` procedure.
 
 ### `compressed_sound_payload`
 
@@ -107,13 +107,17 @@ The executable opt-in comparison harness is `tests/unit/local_game_fixture_tests
 - Corpus note (local corpus only): every archive in the retail corpus satisfies the total once the bzstring length prefix is excluded from the count (commit `e97a0e2f`), so no retail archive currently raises this warning. It is kept because the parser no longer needs the field to be right, not because retail archives get it wrong.
 - Corpus corroboration (issue #45, local corpus only): retail `Fallout - Voices1.bsa` declares a file-name table 105 bytes longer than its 105,517 names consume, and every surplus byte is NUL. Requiring exact consumption rejected that archive outright. libbsa does not verify that the surplus is NUL, and neither does the reference; the padding value is an observation about the corpus, not a parsed invariant. `tests/unit/local_game_fixture_tests.cpp` test `retail TES4-family BSA file-name table slack is a warning, not a rejection` asserts the implication over whatever archives a machine holds, and `every retail TES4-family BSA opens and lists its full entry count` proves the whole family opens.
 
-## Optional Local Corpus Checks
+## Local Corpus Checks and Required Release Evidence
 
-Local game archives or BSArchPro-derived comparison output may supplement this catalog only as smoke/compare checks. The local comparison manifest is exercised by the `BSArchPro-derived expected fixture comparisons are opt-in` CTest case. Such checks must:
+The legacy local comparison manifest is exercised by the `BSArchPro-derived expected fixture comparisons are opt-in` CTest case. These focused supplemental checks must:
 
-- Use the `[requires-game-fixture]` tag and remain skipped when `LIBBSA_GAME_FIXTURES` is unset.
+- Use the `[requires-game-fixture]` tag and remain skipped when neither an environment override nor the default local corpus provides the required input.
 - Read from ignored local data locations, not committed fixture directories.
 - Avoid committing copyrighted archive bytes, extracted game payloads, or BSArchPro-generated corpus output.
 - Treat `TES5Edit/` as read-only reference material, not a fixture workspace or output directory.
 
 Default acceptance must continue to pass from committed generated fixtures, writer-output archives, and policy tests alone.
+
+Release preparation additionally requires [ADR-0005](adr/0005-releases-require-independent-archive-interoperability-evidence.md): run `libbsa_compatibility_check` in both MSVC Release static and shared lanes and verify the paired reports with `tests/compat/runner.py verify-release`. The [suite instructions](../tests/compat/README.md) document the pinned local oracle, the 101-archive baseline, 71 controlled cases, comparison rules, resource controls, and report identities. Every supplied retail entry participates; missing required coverage and unexplained differences fail the gate. This document records that procedure, not a successful full-corpus result.
+
+BSA/GNRL decoded files require exact content equality. DX10 comparisons allow only independently validated equivalent DDS representations while requiring matching texture meaning and all surface bytes. Structural checks remain separate, and BSArch acceptance is not Game Acceptance. Detailed retail reports and oracle output stay local; publish only the content-free companion summary.

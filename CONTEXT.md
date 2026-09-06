@@ -4,6 +4,18 @@ libbsa models Bethesda archive formats as reusable library concepts, with compat
 
 ## Language
 
+**Archive Interoperability**:
+Agreement between libbsa and an independent archive tool on archive paths, decoded entry contents, and format-significant metadata, demonstrated by reading independently produced archives and independently reading libbsa-produced archives. It is distinct from Game Acceptance.
+_Avoid_: Self-roundtrip proof, game compatibility proof
+
+**Accepted Oracle Failure**:
+A specifically reviewed failure of the independent archive tool whose precisely identified evidence gap is permitted by the release policy while all remaining comparisons stay required. It does not establish Archive Interoperability for the original contents the oracle could not extract.
+_Avoid_: Oracle pass, archive exclusion, proven compatibility
+
+**Game Acceptance**:
+Evidence that a target game's engine can load and use an archive's entries as intended. Archive Interoperability alone does not establish Game Acceptance.
+_Avoid_: Tool acceptance, oracle acceptance
+
 **Archive Entry Catalog**:
 The ordered collection of canonical archive paths and parsed entry metadata materialized when an archive is opened. It is independent of archive family once established.
 _Avoid_: File list, backend entries

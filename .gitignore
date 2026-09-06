@@ -433,6 +433,9 @@ FodyWeavers.xsd
 # Local game-derived fixtures are not committed
 /tests/fixtures/local/*
 !/tests/fixtures/local/.gitkeep
+
+# BSArch is a locally supplied oracle, not a redistributable repository asset.
+/tests/fixtures/oracle/*.[eE][xX][eE]
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
