@@ -3,6 +3,7 @@
 #include <libbsa/libbsa.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -148,7 +149,9 @@ struct path_capture_state {
 
 class recording_sink_factory final : public libbsa::bulk_extract_sink_factory {
    public:
-    explicit recording_sink_factory(bool fail_writes = false) : fail_writes_(fail_writes) {}
+    /// Selects independent payload-write and completion failures for extraction contract tests.
+    explicit recording_sink_factory(bool fail_writes = false, bool fail_finish = false)
+        : fail_writes_(fail_writes), fail_finish_(fail_finish) {}
 
     libbsa::result<std::unique_ptr<libbsa::payload_sink>> create(
         std::string_view path, const libbsa::entry_metadata&) override {
@@ -164,7 +167,7 @@ class recording_sink_factory final : public libbsa::bulk_extract_sink_factory {
             new capturing_sink{std::move(capture), fail_writes_}};
     }
 
-    /// Records the finish result and whether the matching sink was destroyed first.
+    /// Records completion and prior sink destruction, then optionally reports a publish failure.
     libbsa::result<void> finish(std::string_view path, bool succeeded) override {
         const auto key = std::string{path};
         std::lock_guard lock{mutex_};
@@ -173,6 +176,9 @@ class recording_sink_factory final : public libbsa::bulk_extract_sink_factory {
         ++state.report.finish_count;
         state.report.finish_success.push_back(succeeded);
         state.report.destroyed_before_finish.push_back(capture->destroyed);
+        if (fail_finish_) {
+            return libbsa::error{libbsa::error_code::io_error, "sink publication failed"};
+        }
         return {};
     }
 
@@ -193,6 +199,7 @@ class recording_sink_factory final : public libbsa::bulk_extract_sink_factory {
 
    private:
     bool fail_writes_;
+    bool fail_finish_;
     mutable std::mutex mutex_;
     std::map<std::string, path_capture_state> path_states_;
 };
@@ -390,5 +397,48 @@ TEST_CASE("archive reader catalog and extraction dispatch preserve behavior acro
         REQUIRE(failed_path_report.finish_count == 1U);
         REQUIRE(failed_path_report.finish_success == std::vector<bool>{false});
         REQUIRE(failed_path_report.destroyed_before_finish == std::vector<bool>{true});
+    }
+}
+
+TEST_CASE("bulk extraction promotes finish failures without replacing extraction failures",
+          "[unit][fixture][reader_extraction_dispatch][bulk_extract_finish]") {
+    auto opened = libbsa::archive_reader::open(generated_archive_path("tes3_success.bsa").string());
+    REQUIRE(opened.has_value());
+    const std::array requests{libbsa::bulk_extract_request{.path = "meshes/tiny/probe.nif"},
+                              libbsa::bulk_extract_request{.path = "sound/fx/ping.wav"},
+                              libbsa::bulk_extract_request{.path = "meshes/tiny/probe.nif"}};
+
+    for (const auto worker_count : {1U, 2U}) {
+        for (const bool fail_writes : {false, true}) {
+            INFO("worker_count: " << worker_count << ", fail_writes: " << fail_writes);
+            recording_sink_factory sink_factory{fail_writes, true};
+            const auto extracted = opened.value().extract_entries(
+                requests, sink_factory, libbsa::bulk_extract_options{.worker_count = worker_count});
+
+            REQUIRE(extracted.has_value());
+            REQUIRE(extracted.value().size() == requests.size());
+            for (std::size_t index = 0; index < requests.size(); ++index) {
+                const auto& result = extracted.value().at(index);
+                REQUIRE_FALSE(result.succeeded());
+                REQUIRE(result.entry.has_value());
+                CHECK(result.entry->path == requests.at(index).path);
+                REQUIRE(result.failure.has_value());
+                CHECK(result.failure->code == libbsa::error_code::io_error);
+                CHECK(result.failure->message ==
+                      (fail_writes ? "sink rejected payload bytes" : "sink publication failed"));
+            }
+
+            const auto report = sink_factory.report();
+            REQUIRE(report.paths.size() == 2U);
+            for (const auto& path : {"meshes/tiny/probe.nif", "sound/fx/ping.wav"}) {
+                const auto& observed = report.paths.at(path);
+                CHECK(observed.create_count == 1U);
+                CHECK(observed.finish_count == 1U);
+                CHECK(observed.finish_success == std::vector<bool>{!fail_writes});
+                CHECK(observed.destroyed_before_finish == std::vector<bool>{true});
+                REQUIRE(observed.sink_bytes.size() == 1U);
+                CHECK(observed.sink_bytes.front().empty() == fail_writes);
+            }
+        }
     }
 }

@@ -123,6 +123,16 @@ libbsa_link_internal_test_support(libbsa_tests)
 
 target_compile_features(libbsa_tests PRIVATE cxx_std_20)
 
+if(LIBBSA_BUILD_CLI)
+  # Exercise the same private CLI operation without importing argument parsing or presentation.
+  target_sources(libbsa_tests PRIVATE
+    unit/cli_extraction_tests.cpp
+    ${PROJECT_SOURCE_DIR}/tools/cli/extraction.cpp
+    ${PROJECT_SOURCE_DIR}/tools/cli/path_support.cpp
+  )
+  target_include_directories(libbsa_tests PRIVATE ${PROJECT_SOURCE_DIR})
+endif()
+
 target_include_directories(libbsa_tests
   PRIVATE
     ${PROJECT_SOURCE_DIR}/include

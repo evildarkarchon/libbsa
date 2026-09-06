@@ -8,6 +8,10 @@ libbsa models Bethesda archive formats as reusable library concepts, with compat
 The ordered collection of canonical archive paths and parsed entry metadata materialized when an archive is opened. It is independent of archive family once established.
 _Avoid_: File list, backend entries
 
+**CLI Extraction**:
+One requested unpack operation from a host archive into a destination directory, covering archive opening, entry selection, destination preparation, and publication or cleanup of extracted files. An operation may succeed for some requested entries and fail for others while preserving their individual outcomes.
+_Avoid_: Unpack pipeline, extraction orchestration
+
 **Stored Payload**:
 The exact byte sequence an archive entry references in the archive payload area, after any format-required prefixing and compression. It is distinct from the decoded entry bytes and from the location assigned during archive layout.
 _Avoid_: Source payload, raw payload, final stored buffer

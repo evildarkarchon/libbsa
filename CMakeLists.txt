@@ -207,6 +207,8 @@ if(LIBBSA_BUILD_CLI)
 
   add_executable(bsa
     tools/cli/main.cpp
+    tools/cli/extraction.cpp
+    tools/cli/path_support.cpp
   )
 
   target_link_libraries(bsa
