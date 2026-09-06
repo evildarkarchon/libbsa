@@ -1,14 +1,12 @@
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 
-#include <detail/archive_path.hpp>
+#include "formats/ba2/ba2_profile.hpp"
+
 #include <detail/compression_router.hpp>
 #include <detail/host_file.hpp>
 #include <detail/payload_stream.hpp>
 
-#include <algorithm>
-#include <span>
-#include <string>
-#include <vector>
+#include <cstddef>
 
 namespace libbsa::formats::ba2 {
 namespace {
@@ -38,21 +36,6 @@ result<void> stream_raw_payload(const detail::host_file_path& host_path,
                                         sink, extraction_chunk_size, "BA2 GNRL entry payload");
 }
 
-result<detail::compression_method> compression_method_for(const entry_metadata& entry) {
-    switch (entry.compression) {
-        case entry_compression::deflate:
-            return detail::compression_method::deflate;
-        case entry_compression::lz4_block:
-            return detail::compression_method::lz4_block;
-        case entry_compression::none:
-            return error{error_code::format_error,
-                         "BA2 GNRL raw entries must not enter decompression routing"};
-        case entry_compression::lz4_frame:
-            return error{error_code::format_error, "BA2 GNRL does not support LZ4 frame payloads"};
-    }
-    return error{error_code::format_error, "BA2 GNRL entry has unknown compression metadata"};
-}
-
 result<void> extract_compressed_payload(const detail::host_file_path& host_path,
                                         const entry_metadata& entry, payload_sink& sink) {
     auto input = detail::open_host_file(host_path, ba2_gnrl_extraction_host_context());
@@ -60,7 +43,7 @@ result<void> extract_compressed_payload(const detail::host_file_path& host_path,
         return input.error();
     }
 
-    auto method = compression_method_for(entry);
+    auto method = ba2_compressed_payload_method(ba2_subtype::gnrl, entry.compression);
     if (!method) {
         return method.error();
     }
@@ -73,35 +56,6 @@ result<void> extract_compressed_payload(const detail::host_file_path& host_path,
 }
 
 }  // namespace
-
-result<std::vector<entry_metadata>> ba2_gnrl_entries(std::span<const entry_metadata> entries) {
-    return std::vector<entry_metadata>{entries.begin(), entries.end()};
-}
-
-result<std::optional<entry_metadata>> find_ba2_gnrl_entry(std::span<const entry_metadata> entries,
-                                                          std::string_view path) {
-    auto normalized = detail::normalize_archive_path(path);
-    if (!normalized) {
-        return normalized.error();
-    }
-
-    const auto found = std::lower_bound(
-        entries.begin(), entries.end(), normalized.value().value,
-        [](const entry_metadata& entry, const std::string& key) { return entry.path < key; });
-    if (found == entries.end() || found->path != normalized.value().value) {
-        return std::optional<entry_metadata>{};
-    }
-    return std::optional<entry_metadata>{*found};
-}
-
-result<bool> contains_ba2_gnrl_entry(std::span<const entry_metadata> entries,
-                                     std::string_view path) {
-    auto found = find_ba2_gnrl_entry(entries, path);
-    if (!found) {
-        return found.error();
-    }
-    return found.value().has_value();
-}
 
 result<void> extract_ba2_gnrl_payload(const detail::host_file_path& host_path,
                                       const entry_metadata& entry, payload_sink& sink) {

@@ -62,6 +62,63 @@ result<bool> path_is_reparse_point_noexcept(const std::filesystem::path& path,
 
 }  // namespace
 
+result<finalization_workspace> finalization_workspace::reserve(
+    const std::filesystem::path& output_path, std::string_view diagnostic_prefix) {
+    const auto parent = output_path.parent_path();
+    const auto filename = output_path.filename();
+    for (std::uint32_t counter = 0; counter < 64U; ++counter) {
+        auto candidate_name = filename;
+        candidate_name += ".libbsa-tmp-" + std::to_string(counter);
+        const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
+        std::error_code fs_error;
+        // Isolated directories keep cleanup from touching caller-owned
+        // deterministic siblings like `<archive>.tmp`.
+        if (std::filesystem::create_directory(candidate, fs_error)) {
+            return finalization_workspace{candidate};
+        }
+        if (fs_error) {
+            return error{error_code::io_error,
+                         prefixed_message(diagnostic_prefix,
+                                          "failed to reserve temporary output directory")};
+        }
+    }
+
+    return error{error_code::io_error,
+                 prefixed_message(diagnostic_prefix, "exhausted temporary output directory names")};
+}
+
+finalization_workspace::finalization_workspace(std::filesystem::path workspace_path)
+    : workspace_path_(std::move(workspace_path)),
+      temporary_archive_path_(workspace_path_ / "archive") {}
+
+finalization_workspace::~finalization_workspace() noexcept { cleanup(); }
+
+finalization_workspace::finalization_workspace(finalization_workspace&& other) noexcept
+    : workspace_path_(std::exchange(other.workspace_path_, {})),
+      temporary_archive_path_(std::exchange(other.temporary_archive_path_, {})) {}
+
+const std::filesystem::path& finalization_workspace::temporary_archive_path() const noexcept {
+    return temporary_archive_path_;
+}
+
+std::filesystem::path finalization_workspace::snapshot_path(
+    std::size_t stable_preparation_identity) const {
+    return workspace_path_ / ("snapshot-" + std::to_string(stable_preparation_identity) + ".bin");
+}
+
+void finalization_workspace::cleanup() noexcept {
+    if (workspace_path_.empty()) {
+        return;
+    }
+
+    std::error_code fs_error;
+    // Destruction runs after callback or publication outcome selection, so a
+    // cleanup problem must never replace that primary result.
+    std::filesystem::remove_all(workspace_path_, fs_error);
+    workspace_path_.clear();
+    temporary_archive_path_.clear();
+}
+
 result<void> validate_writer_output_path_before_publish(const std::filesystem::path& output_path,
                                                         bool overwrite_existing,
                                                         std::string_view diagnostic_prefix) {
@@ -99,38 +156,6 @@ result<void> validate_writer_output_path_before_publish(const std::filesystem::p
     }
 
     return {};
-}
-
-result<std::filesystem::path> reserve_writer_publish_directory(
-    const std::filesystem::path& output_path, std::string_view diagnostic_prefix) {
-    const auto parent = output_path.parent_path();
-    const auto filename = output_path.filename();
-    for (std::uint32_t counter = 0; counter < 64U; ++counter) {
-        auto candidate_name = filename;
-        candidate_name += ".libbsa-tmp-" + std::to_string(counter);
-        const auto candidate = parent.empty() ? candidate_name : parent / candidate_name;
-        std::error_code fs_error;
-        // Isolated directories keep cleanup from touching caller-owned
-        // deterministic siblings like `<archive>.tmp`.
-        if (std::filesystem::create_directory(candidate, fs_error)) {
-            return candidate;
-        }
-        if (fs_error) {
-            return error{error_code::io_error,
-                         prefixed_message(diagnostic_prefix,
-                                          "failed to reserve temporary output directory")};
-        }
-    }
-
-    return error{error_code::io_error,
-                 prefixed_message(diagnostic_prefix, "exhausted temporary output directory names")};
-}
-
-void cleanup_writer_publish_directory(const std::filesystem::path& temp_dir) noexcept {
-    std::error_code fs_error;
-    // Cleanup is best-effort so callers see the primary writer or publish
-    // failure.
-    std::filesystem::remove_all(temp_dir, fs_error);
 }
 
 result<void> publish_completed_writer_output(const std::filesystem::path& temp_path,

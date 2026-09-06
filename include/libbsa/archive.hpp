@@ -143,15 +143,47 @@ struct archive_metadata {
     std::uint32_t file_count;
     entry_compression default_compression;
     std::optional<ba2_archive_metadata> ba2;
+
+    /// True when the archive's file-name table declares more bytes than its
+    /// listed entries consume.
+    ///
+    /// The trailing bytes are ignored: the archive is fully listable and
+    /// extractable, and no entry is hidden by them. Retail TES4-family BSA
+    /// archives carry this condition, so libbsa reports it as a
+    /// `compatibility_warning_code::bsa_file_name_table_trailing_bytes` warning
+    /// rather than rejecting the archive. Only the TES4-family BSA parser
+    /// populates this today.
+    bool file_name_table_has_trailing_bytes{false};
+
+    /// True when the archive's declared folder-name table length disagrees with
+    /// the folder names it actually stores.
+    ///
+    /// The declared length is not used to locate anything: folder blocks are
+    /// walked sequentially, so a wrong value costs the archive nothing and every
+    /// entry stays listed and extractable. libbsa reports it as a
+    /// `compatibility_warning_code::bsa_folder_name_table_length_mismatch`
+    /// warning rather than rejecting the archive. Only the TES4-family BSA parser
+    /// populates this today.
+    bool folder_name_table_length_mismatch{false};
 };
 
 /// Entry-level metadata exposed for lookup, listing, and extraction.
 ///
-/// `path` is the canonical normalized lookup key. `original_path` preserves the
-/// archive-derived display spelling joined with `/` separators, independent of
-/// host filesystem path rules. `payload_offset` is always an archive-absolute
-/// byte offset for every archive variant; format-specific relative offsets stay
-/// inside parser internals and fixture manifests.
+/// `path` is the canonical normalized lookup key: lowercased, with `/`
+/// separators. `original_path` preserves the archive-derived display spelling --
+/// the stored casing, with separators reported as `\`, the platform separator
+/// for this Windows-only library.
+///
+/// The display separator is deliberately uniform across formats and is not the
+/// stored spelling. The BSA families store `\`, while BA2 stores `/` because
+/// Bethesda's own packer does; `original_path` reports `\` for all of them.
+/// Neither spelling affects lookup, since canonical normalization folds `\` to
+/// `/`, so a caller may pass `original_path` straight back to `find` or
+/// `extract`.
+///
+/// `payload_offset` is always an archive-absolute byte offset for every archive
+/// variant; format-specific relative offsets stay inside parser internals and
+/// fixture manifests.
 struct entry_metadata {
     std::string path;
     std::string original_path;
@@ -165,6 +197,17 @@ struct entry_metadata {
     std::uint32_t embedded_name_prefix_size;
     /// Optional texture metadata populated only for BA2 DX10 texture entries.
     std::optional<texture_metadata> texture;
+
+    /// True when the archive's stored record lookup fields disagree with this
+    /// entry's own filename-table path.
+    ///
+    /// Such an entry is still listed and extractable by path, but Bethesda-style
+    /// lookup by recomputed hash cannot reach it. Retail BA2 archives contain a
+    /// handful of these, so libbsa reports the disagreement as a
+    /// `compatibility_warning_code::ba2_record_identity_mismatch` warning rather
+    /// than rejecting the archive. Only BA2 parsers populate this today; BSA
+    /// parsers still reject stored-hash disagreement as a format error.
+    bool record_identity_mismatch{false};
 };
 
 /// Synchronous sink used by archive extraction APIs.

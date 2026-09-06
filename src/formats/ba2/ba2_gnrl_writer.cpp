@@ -1,8 +1,9 @@
 #include "formats/ba2/ba2_gnrl_writer.hpp"
 
+#include "formats/ba2/ba2_archive_serialization.hpp"
 #include "formats/ba2/ba2_gnrl_layout.hpp"
 #include "formats/ba2/ba2_gnrl_prepare.hpp"
-#include "formats/ba2/ba2_gnrl_serialize.hpp"
+#include "formats/ba2/ba2_profile.hpp"
 
 #include <detail/host_file_path.hpp>
 #include <detail/writer_publish.hpp>
@@ -112,9 +113,9 @@ result<void> write_ba2_gnrl_archive(ba2_gnrl_target target, const ba2_gnrl_write
         return error{error_code::invalid_argument, "BA2 GNRL output host path must not be empty"};
     }
 
-    auto target_options = ba2_gnrl_validate_target_options(target, options);
-    if (!target_options) {
-        return target_options.error();
+    auto profile = make_ba2_profile_for_gnrl_writer(target, options);
+    if (!profile) {
+        return profile.error();
     }
 
     auto output_path = detail::resolve_host_file_path(output_host_path);
@@ -127,24 +128,29 @@ result<void> write_ba2_gnrl_archive(ba2_gnrl_target target, const ba2_gnrl_write
         return validated.error();
     }
 
-    const auto version = ba2_gnrl_version_for(target);
-    auto prepared = ba2_gnrl_prepare_entries(target, options, entries, worker_count);
-    if (!prepared) {
-        return prepared.error();
-    }
-
-    std::uint64_t file_table_offset = 0;
-    auto offsets = ba2_gnrl_assign_payload_offsets(prepared.value(), version,
-                                                   options.deduplicate_payloads, file_table_offset);
-    if (!offsets) {
-        return offsets.error();
-    }
+    const ba2_stored_header_fields stored_header_fields{
+        options.starfield_unknown1,
+        options.starfield_unknown2,
+        options.starfield_compression_method,
+    };
 
     return detail::publish_writer_output(
         output_path.value().resolved, options.overwrite_existing, "BA2 GNRL writer",
-        [&](const std::filesystem::path& temp_path) -> result<void> {
-            return ba2_gnrl_write_archive_bytes(target, options, prepared.value(), version,
-                                                file_table_offset, temp_path);
+        [&](const detail::finalization_workspace& workspace) -> result<void> {
+            auto prepared = ba2_gnrl_prepare_entries(profile.value(), options, entries,
+                                                     worker_count, workspace);
+            if (!prepared) {
+                return prepared.error();
+            }
+
+            auto plan = ba2_gnrl_plan_placements(std::move(prepared).value(), profile.value(),
+                                                 options.deduplicate_payloads);
+            if (!plan) {
+                return plan.error();
+            }
+
+            return serialize_ba2_archive(profile.value(), stored_header_fields, plan.value(),
+                                         workspace.temporary_archive_path());
         });
 }
 

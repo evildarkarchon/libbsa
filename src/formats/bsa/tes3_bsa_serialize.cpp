@@ -1,7 +1,9 @@
 #include "formats/bsa/tes3_bsa_serialize.hpp"
 
+#include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
 #include <detail/host_file.hpp>
+#include <detail/parser_primitives.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -22,13 +24,10 @@ constexpr std::uint32_t name_offset_size = 4U;
 constexpr std::uint32_t hash_record_size = 8U;
 constexpr std::size_t payload_stream_chunk_size = 64U * 1024U;
 
-bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept {
-    if (lhs > std::numeric_limits<std::uint64_t>::max() - rhs) {
-        return false;
-    }
-    total = lhs + rhs;
-    return true;
-}
+// Name-table accumulation is 64-bit. It uses the shared overflow-checked add
+// rather than a private copy, which is the same primitive the Payload Placement
+// module applies to the payload cursor.
+using detail::add_fits_u64;
 
 result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view description) {
     if (value > std::numeric_limits<std::uint32_t>::max()) {
@@ -184,8 +183,28 @@ result<void> tes3_write_archive_bytes(std::span<const tes3_prepared_entry> entri
     }
 
     for (const auto& entry : entries) {
+        // A TES3 file record holds a UInt32 data-section-relative offset, so the
+        // placer's 64-bit offset narrows here, where the record is written.
+        //
+        // What is checked is the span end rather than the offset itself. The
+        // standalone offset assignment this replaced walked a UInt32 cursor and
+        // failed as soon as a running total passed UInt32; the largest span end
+        // is that total, so this refuses exactly the same archives, at the same
+        // entry, with the same message. Placement already proved the sum fits
+        // 64 bits.
+        //
+        // What did move is precedence: the span check now runs after the name
+        // table, file count, hash table and data section checks above, where it
+        // used to run before all of them. Only an archive that overflows both
+        // can tell, and it is refused either way. Writer diagnostic text is not
+        // a stable contract, and no test pins the order.
+        const auto span_end =
+            checked_u32(entry.raw_offset + entry.payload_size, "TES3 BSA payload span");
+        if (!span_end) {
+            return span_end.error();
+        }
         if (!(written = writer.write_u32_le(entry.payload_size)) ||
-            !(written = writer.write_u32_le(entry.raw_offset))) {
+            !(written = writer.write_u32_le(static_cast<std::uint32_t>(entry.raw_offset)))) {
             return written.error();
         }
     }
@@ -209,8 +228,18 @@ result<void> tes3_write_archive_bytes(std::span<const tes3_prepared_entry> entri
             return written.error();
         }
     }
+    // A TES3 hash record is two consecutive little-endian `u32` values: the
+    // first-half byte sum, then the second-half sum. `hash_tes3` packs those the
+    // other way round, so writing it as one `u64` emits Bethesda's words
+    // transposed -- archives Morrowind cannot resolve by name, even though
+    // libbsa's own reader round-tripped them because it read them back the same
+    // wrong way. The reference writer does what this loop now does:
+    // `fStream.WriteCardinal(Hash shr 32)` then
+    // `fStream.WriteCardinal(Hash and $FFFFFFFF)` (`wbBSArchive.pas:1613-1616`),
+    // and retail `Morrowind.bsa` agrees (issue #46).
     for (const auto& entry : entries) {
-        if (!(written = writer.write_u64_le(entry.hash))) {
+        if (!(written = writer.write_u32_le(detail::tes3_hash_high32(entry.hash))) ||
+            !(written = writer.write_u32_le(detail::tes3_hash_low32(entry.hash)))) {
             return written.error();
         }
     }

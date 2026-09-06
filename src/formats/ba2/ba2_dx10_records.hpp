@@ -1,9 +1,8 @@
 #pragma once
 
-#include <libbsa/archive.hpp>
-#include <libbsa/result.hpp>
+#include "formats/ba2/ba2_archive_source.hpp"
 
-#include <detail/binary_io.hpp>
+#include <libbsa/result.hpp>
 
 #include <array>
 #include <cstddef>
@@ -11,16 +10,6 @@
 #include <vector>
 
 namespace libbsa::formats::ba2 {
-
-/// Fixed BA2 DX10 header fields read before texture records are materialized.
-struct ba2_dx10_header_fields {
-    std::uint32_t magic;
-    std::uint32_t version;
-    std::uint32_t subtype;
-    std::uint32_t file_count;
-    std::uint64_t file_table_offset;
-    ba2_archive_metadata ba2;
-};
 
 /// Raw BA2 DX10 texture chunk record exactly as stored in the texture record
 /// table.
@@ -48,16 +37,20 @@ struct ba2_dx10_record {
     std::vector<ba2_dx10_chunk_record> chunks;
 };
 
-/// Returns the fixed BA2 header width for the detected DX10 archive version.
-[[nodiscard]] std::size_t ba2_dx10_fixed_header_size_for(std::uint32_t version) noexcept;
-
-/// Reads the fixed BA2 DX10 header without consuming texture records or
-/// filename-table bytes.
-[[nodiscard]] result<ba2_dx10_header_fields> read_ba2_dx10_header(detail::binary_reader& reader);
-
-/// Reads the fixed-width BA2 DX10 texture record and chunk tables without
+/// Reads the variable-width BA2 DX10 texture record and chunk tables without
 /// materializing public entries.
+///
+/// The table is walked record by record from `table_offset` because each record
+/// declares its own chunk count, so the table width is only knowable by parsing
+/// it. Reads never cross `archive_size`, and only one record's bytes are held at
+/// a time, which keeps opening a multi-gigabyte archive bounded.
+///
+/// `table_end` receives the archive-absolute byte after the last chunk record.
+/// It is the reader's own record-table extent rather than something derived from
+/// FileTableOffset, so the caller can validate archives whose filename table
+/// follows the payload area — the layout BSArchPro and Bethesda actually write.
 [[nodiscard]] result<std::vector<ba2_dx10_record>> read_ba2_dx10_records(
-    detail::binary_reader& reader, std::uint32_t file_count, std::uint64_t file_table_offset);
+    const ba2_archive_source& source, std::uint64_t table_offset, std::uint32_t file_count,
+    std::uint64_t archive_size, std::uint64_t& table_end);
 
 }  // namespace libbsa::formats::ba2

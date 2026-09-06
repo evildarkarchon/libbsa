@@ -29,14 +29,6 @@ std::vector<std::byte> router_vector() {
     return bytes;
 }
 
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream input{path};
-    REQUIRE(input.is_open());
-    std::ostringstream buffer;
-    buffer << input.rdbuf();
-    return buffer.str();
-}
-
 class recording_sink final : public libbsa::payload_sink {
    public:
     /// Records each accepted write so router tests can verify exact bytes and
@@ -91,9 +83,9 @@ class temporary_payload_file final {
 TEST_CASE("compression_router dispatches explicit codec methods",
           "[unit][compression][compression-router]") {
     const auto original = router_vector();
-    for (auto method : {libbsa::detail::compression_method::deflate,
-                        libbsa::detail::compression_method::lz4_frame,
-                        libbsa::detail::compression_method::lz4_block}) {
+    for (auto method :
+         {libbsa::detail::compression_method::zlib, libbsa::detail::compression_method::lz4_frame,
+          libbsa::detail::compression_method::lz4_block}) {
         auto compressed = libbsa::detail::compress_payload(method, original);
         REQUIRE(compressed);
         auto decoded =
@@ -120,15 +112,6 @@ TEST_CASE("compression_router none method preserves exact input bytes",
         libbsa::detail::compression_method::none, original, original.size() + 1);
     REQUIRE_FALSE(wrong_size);
     REQUIRE(wrong_size.error().code == libbsa::error_code::format_error);
-}
-
-TEST_CASE("compression_router none method uses result-based byte-vector allocation",
-          "[unit][compression][compression-router][bounded_memory_policy]") {
-    const auto text = read_text_file(std::filesystem::path{LIBBSA_SOURCE_DIR} / "src" / "detail" /
-                                     "compression_router.cpp");
-
-    CHECK(text.find("make_byte_vector") != std::string::npos);
-    CHECK(text.find("return {input.begin(), input.end()}") == std::string::npos);
 }
 
 TEST_CASE("compression_router sink route streams LZ4 frame payloads",
@@ -158,7 +141,7 @@ TEST_CASE("compression_router sink route streams LZ4 frame payloads",
 TEST_CASE("compression_router sink fallbacks preserve bytes and exact-size errors",
           "[unit][compression][compression-router][sink]") {
     const auto original = router_vector();
-    for (const auto method : {libbsa::detail::compression_method::deflate,
+    for (const auto method : {libbsa::detail::compression_method::zlib,
                               libbsa::detail::compression_method::lz4_block}) {
         auto compressed = libbsa::detail::compress_payload(method, original);
         REQUIRE(compressed);

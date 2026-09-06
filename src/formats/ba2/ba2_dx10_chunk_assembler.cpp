@@ -1,8 +1,8 @@
 #include "formats/ba2/ba2_dx10_chunk_assembler.hpp"
 
 #include "formats/ba2/ba2_constants.hpp"
+#include "formats/ba2/ba2_record_identity.hpp"
 
-#include <detail/bethesda_hash.hpp>
 #include <detail/byte_vector.hpp>
 #include <detail/host_file.hpp>
 #include <detail/parallel_work.hpp>
@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <limits>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -53,64 +52,6 @@ result<std::size_t> checked_size_t(std::uint64_t value, std::string_view descrip
                      std::string{description} + " exceeds platform size range"};
     }
     return static_cast<std::size_t>(value);
-}
-
-std::pair<std::string_view, std::string_view> split_directory_file(
-    std::string_view archive_path) noexcept {
-    const auto slash = archive_path.find_last_of('/');
-    if (slash == std::string_view::npos) {
-        return {{}, archive_path};
-    }
-    return {archive_path.substr(0, slash), archive_path.substr(slash + 1U)};
-}
-
-std::pair<std::string_view, std::string_view> split_stem_extension(
-    std::string_view file_name) noexcept {
-    const auto dot = file_name.find_last_of('.');
-    if (dot == std::string_view::npos || dot == 0U || dot + 1U == file_name.size()) {
-        return {{}, {}};
-    }
-    return {file_name.substr(0, dot), file_name.substr(dot + 1U)};
-}
-
-bool is_ascii_extension_byte(unsigned char value) noexcept {
-    return value > 0x20U && value <= 0x7EU;
-}
-
-result<std::array<std::byte, 4>> extension_fourcc_for(std::string_view extension) {
-    if (extension.size() > 4U) {
-        return error{error_code::invalid_argument,
-                     "BA2 DX10 extension exceeds four-byte record field"};
-    }
-
-    std::array<std::byte, 4> fourcc{std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
-    for (std::size_t index = 0; index < extension.size(); ++index) {
-        const auto value = static_cast<unsigned char>(extension[index]);
-        if (!is_ascii_extension_byte(value)) {
-            return error{error_code::invalid_argument,
-                         "BA2 DX10 extension must contain printable ASCII bytes"};
-        }
-        fourcc[index] = static_cast<std::byte>(value);
-    }
-    return fourcc;
-}
-
-result<detail::compression_method> compression_method_for(ba2_dx10_target target,
-                                                          std::uint32_t starfield_method) {
-    switch (target) {
-        case ba2_dx10_target::fallout4:
-            return detail::compression_method::deflate;
-        case ba2_dx10_target::starfield_v3:
-            if (starfield_method == ba2_starfield_compression_deflate) {
-                return detail::compression_method::deflate;
-            }
-            if (starfield_method == ba2_starfield_compression_lz4_block) {
-                return detail::compression_method::lz4_block;
-            }
-            return error{error_code::unsupported,
-                         "BA2 DX10 Starfield v3 compression method is unsupported"};
-    }
-    return error{error_code::invalid_argument, "BA2 DX10 writer target profile is not supported"};
 }
 
 result<void> append_snapshot_bytes(std::vector<std::byte>& bytes,
@@ -167,8 +108,12 @@ result<ba2_dx10_chunk_snapshot_batch> collect_chunk_snapshots(
 }  // namespace
 
 result<ba2_dx10_prepared_chunk> ba2_dx10_assemble_chunk(
-    ba2_dx10_target target, const ba2_dx10_writer_options& options,
+    const ba2_profile& profile, const ba2_dx10_writer_options& options,
     const ba2_dx10_writer_entry& source, const texture::planned_texture_chunk& planned) {
+    if (!profile.is_dx10()) {
+        return error{error_code::invalid_argument, "BA2 DX10 chunk profile is not DX10"};
+    }
+
     auto snapshots = collect_chunk_snapshots(source, planned);
     if (!snapshots) {
         return snapshots.error();
@@ -210,11 +155,9 @@ result<ba2_dx10_prepared_chunk> ba2_dx10_assemble_chunk(
                      "BA2 DX10 planned chunk size does not match source DDS bytes"};
     }
 
-    auto method = compression_method_for(target, options.starfield_compression_method);
-    if (!method) {
-        return method.error();
-    }
-    auto compressed = detail::compress_payload(method.value(), raw_bytes);
+    (void)options;
+    const auto method = profile.compressed_payload_method();
+    auto compressed = detail::compress_payload(method, raw_bytes);
     if (!compressed) {
         return compressed.error();
     }
@@ -222,23 +165,23 @@ result<ba2_dx10_prepared_chunk> ba2_dx10_assemble_chunk(
     if (!packed_size) {
         return packed_size.error();
     }
+    // The compressed Stored Payload is the only final-byte owner after this
+    // point; release assembled DDS bytes before carrying preparation forward.
+    std::vector<std::byte>{}.swap(raw_bytes);
+    auto payload = detail::stored_payload::from_owned_bytes(std::move(compressed).value());
     auto start_mip = checked_u16(planned.start_mip, "BA2 DX10 chunk start mip");
     auto end_mip = checked_u16(planned.end_mip, "BA2 DX10 chunk end mip");
     if (!start_mip || !end_mip) {
         return !start_mip ? start_mip.error() : end_mip.error();
     }
-    return ba2_dx10_prepared_chunk{0U,
-                                   packed_size.value(),
-                                   raw_size.value(),
-                                   start_mip.value(),
-                                   end_mip.value(),
-                                   method.value(),
-                                   true,
-                                   std::move(compressed.value())};
+    return ba2_dx10_prepared_chunk{packed_size.value(), raw_size.value(), start_mip.value(),
+                                   end_mip.value(),     method,           std::move(payload)};
 }
 
+/// Assembles one entry's chunks in planned texture order, joining all work before returning.
+/// Failed assembly releases partial Stored Payloads while snapshot ownership stays with the caller.
 result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
-    ba2_dx10_target target, const ba2_dx10_writer_options& options,
+    const ba2_profile& profile, const ba2_dx10_writer_options& options,
     const ba2_dx10_writer_entry& entry, std::uint32_t worker_count) {
     texture::dds_texture_layout layout{entry.metadata.width,      entry.metadata.height,
                                        entry.metadata.mip_count,  entry.metadata.dxgi_format,
@@ -251,15 +194,12 @@ result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
         return error{error_code::format_error, "BA2 DX10 writer planned no chunks for texture"};
     }
 
-    const auto [directory, file_name] = split_directory_file(entry.archive_path_canonical);
-    const auto [stem, extension_text] = split_stem_extension(file_name);
-    if (stem.empty() || extension_text.empty()) {
-        return error{error_code::invalid_argument,
-                     "BA2 DX10 archive path must include a file stem and extension"};
-    }
-    auto extension = extension_fourcc_for(extension_text);
-    if (!extension) {
-        return extension.error();
+    auto identity = make_ba2_record_identity(
+        ba2_subtype::dx10,
+        ba2_record_path{entry.archive_path_original, entry.archive_path_canonical},
+        ba2_record_identity_source::writer_entry);
+    if (!identity) {
+        return identity.error();
     }
 
     auto chunk_count = checked_u8(planned_chunks.value().size(), "BA2 DX10 chunk count");
@@ -276,11 +216,11 @@ result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
     }
 
     ba2_dx10_prepared_entry prepared{
-        entry.archive_path_original,
-        entry.archive_path_canonical,
-        extension.value(),
-        detail::hash_fo4(stem),
-        detail::hash_fo4(directory),
+        identity.value().stored_path,
+        identity.value().canonical_path,
+        identity.value().extension,
+        identity.value().name_hash,
+        identity.value().directory_hash,
         ba2_dx10_unknown_tex_default,
         chunk_count.value(),
         height.value(),
@@ -289,30 +229,16 @@ result<ba2_dx10_prepared_entry> ba2_dx10_assemble_planned_entry(
         dxgi_format.value(),
         entry.metadata.is_cubemap ? ba2_dx10_cubemap_raw : ba2_dx10_non_cubemap_raw,
         {}};
-    std::vector<std::optional<ba2_dx10_prepared_chunk>> chunks_by_index(
-        planned_chunks.value().size());
-    auto work = [&](std::size_t index) -> result<void> {
-        auto chunk = ba2_dx10_assemble_chunk(target, options, entry, planned_chunks.value()[index]);
-        if (!chunk) {
-            return chunk.error();
-        }
-        chunks_by_index[index] = std::move(chunk.value());
-        return {};
-    };
     // Indexed work preserves planned texture order even when worker_count enables
     // parallel assembly.
-    auto prepared_chunks =
-        detail::run_indexed_work(planned_chunks.value().size(), worker_count, work);
+    auto prepared_chunks = detail::collect_indexed_work<ba2_dx10_prepared_chunk>(
+        planned_chunks.value().size(), worker_count, [&](std::size_t index) {
+            return ba2_dx10_assemble_chunk(profile, options, entry, planned_chunks.value()[index]);
+        });
     if (!prepared_chunks) {
         return prepared_chunks.error();
     }
-    prepared.chunks.reserve(planned_chunks.value().size());
-    for (auto& chunk : chunks_by_index) {
-        if (!chunk.has_value()) {
-            return error{error_code::io_error, "BA2 DX10 worker did not prepare a texture chunk"};
-        }
-        prepared.chunks.push_back(std::move(chunk.value()));
-    }
+    prepared.chunks = std::move(prepared_chunks).value();
     return prepared;
 }
 

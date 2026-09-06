@@ -1,6 +1,7 @@
 #include "formats/ba2/ba2_constants.hpp"
 #include "formats/ba2/ba2_dx10_chunk_assembler.hpp"
 #include "formats/ba2/ba2_dx10_prepare.hpp"
+#include "formats/ba2/ba2_profile.hpp"
 #include "formats/ba2/ba2_dx10_snapshot_builder.hpp"
 #include "texture/dds_layout.hpp"
 #include "texture/directxtex_analyzer.hpp"
@@ -13,9 +14,12 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -79,6 +83,18 @@ std::vector<std::byte> repeated_bytes(std::size_t size, std::uint8_t seed) {
     return bytes;
 }
 
+libbsa::formats::ba2::ba2_profile require_dx10_profile(
+    libbsa::ba2_dx10_target target, const libbsa::ba2_dx10_writer_options& options) {
+    auto profile = libbsa::formats::ba2::make_ba2_profile_for_dx10_writer(target, options);
+    REQUIRE(profile.has_value());
+    return profile.value();
+}
+
+libbsa::formats::ba2::ba2_profile require_dx10_profile(
+    libbsa::ba2_dx10_target target = libbsa::ba2_dx10_target::fallout4) {
+    return require_dx10_profile(target, libbsa::ba2_dx10_writer_options{});
+}
+
 libbsa::formats::ba2::ba2_dx10_writer_entry snapshot_entry(
     std::string archive_path, const libbsa::texture::dds_texture_layout& layout,
     std::string snapshot_prefix) {
@@ -135,13 +151,27 @@ std::vector<std::byte> expected_chunk_bytes(const libbsa::texture::dds_texture_l
 void require_decoded_chunk_matches(const libbsa::formats::ba2::ba2_dx10_prepared_chunk& chunk,
                                    const libbsa::texture::dds_texture_layout& layout,
                                    const libbsa::texture::planned_texture_chunk& planned) {
+    REQUIRE(chunk.payload.size() == chunk.packed_size);
+    std::ostringstream stored_bytes{std::ios::binary};
+    auto emitted = chunk.payload.emit(stored_bytes);
+    REQUIRE(emitted.has_value());
+    const auto stored_text = stored_bytes.str();
+    const auto stored_payload =
+        std::as_bytes(std::span<const char>{stored_text.data(), stored_text.size()});
     auto decoded = libbsa::detail::decompress_payload_exact(
-        chunk.compression, chunk.stored_payload, static_cast<std::size_t>(planned.raw_size));
+        chunk.compression, stored_payload, static_cast<std::size_t>(planned.raw_size));
     REQUIRE(decoded.has_value());
     CHECK(decoded.value() == expected_chunk_bytes(layout, planned));
 }
 
 }  // namespace
+
+static_assert(std::is_move_constructible_v<libbsa::formats::ba2::ba2_dx10_prepared_chunk>);
+static_assert(std::is_nothrow_move_constructible_v<libbsa::formats::ba2::ba2_dx10_prepared_chunk>);
+static_assert(!std::is_copy_constructible_v<libbsa::formats::ba2::ba2_dx10_prepared_chunk>);
+static_assert(
+    std::is_same_v<decltype(std::declval<libbsa::formats::ba2::ba2_dx10_prepared_chunk>().payload),
+                   libbsa::detail::stored_payload>);
 
 TEST_CASE(
     "BA2 DX10 snapshot builder preserves add-time snapshot immutability "
@@ -199,12 +229,12 @@ TEST_CASE(
         REQUIRE(planned.has_value());
         REQUIRE(planned.value().size() == 1U);
 
+        const auto profile = require_dx10_profile();
         auto chunk = libbsa::formats::ba2::ba2_dx10_assemble_chunk(
-            libbsa::ba2_dx10_target::fallout4, libbsa::ba2_dx10_writer_options{}, source,
-            planned.value()[0]);
+            profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
 
         REQUIRE(chunk.has_value());
-        CHECK(chunk.value().compression == libbsa::detail::compression_method::deflate);
+        CHECK(chunk.value().compression == libbsa::detail::compression_method::zlib);
         require_decoded_chunk_matches(chunk.value(), layout, planned.value()[0]);
     }
 
@@ -216,9 +246,9 @@ TEST_CASE(
         REQUIRE(planned.value().size() == 12U);
 
         for (const auto& chunk_plan : planned.value()) {
+            const auto profile = require_dx10_profile();
             auto chunk = libbsa::formats::ba2::ba2_dx10_assemble_chunk(
-                libbsa::ba2_dx10_target::fallout4, libbsa::ba2_dx10_writer_options{}, source,
-                chunk_plan);
+                profile, libbsa::ba2_dx10_writer_options{}, source, chunk_plan);
 
             REQUIRE(chunk.has_value());
             require_decoded_chunk_matches(chunk.value(), layout, chunk_plan);
@@ -242,18 +272,18 @@ TEST_CASE(
 
     SECTION("truncated snapshot") {
         write_binary_file(source.subresources.front().snapshot_path, repeated_bytes(1U, 0x7FU));
+        const auto profile = require_dx10_profile();
         auto chunk = libbsa::formats::ba2::ba2_dx10_assemble_chunk(
-            libbsa::ba2_dx10_target::fallout4, libbsa::ba2_dx10_writer_options{}, source,
-            planned.value()[0]);
+            profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
         REQUIRE_FALSE(chunk.has_value());
         CHECK(chunk.error().code == libbsa::error_code::io_error);
     }
 
     SECTION("missing snapshot") {
         std::filesystem::remove(source.subresources.front().snapshot_path);
+        const auto profile = require_dx10_profile();
         auto chunk = libbsa::formats::ba2::ba2_dx10_assemble_chunk(
-            libbsa::ba2_dx10_target::fallout4, libbsa::ba2_dx10_writer_options{}, source,
-            planned.value()[0]);
+            profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
         REQUIRE_FALSE(chunk.has_value());
         CHECK(chunk.error().code == libbsa::error_code::io_error);
     }
@@ -270,26 +300,29 @@ TEST_CASE(
     auto planned = libbsa::texture::plan_dx10_chunks(layout, 0U);
     REQUIRE(planned.has_value());
 
-    auto fallout4 = libbsa::formats::ba2::ba2_dx10_assemble_chunk(libbsa::ba2_dx10_target::fallout4,
-                                                                  libbsa::ba2_dx10_writer_options{},
-                                                                  source, planned.value()[0]);
+    const auto fallout4_profile = require_dx10_profile();
+    auto fallout4 = libbsa::formats::ba2::ba2_dx10_assemble_chunk(
+        fallout4_profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
     REQUIRE(fallout4.has_value());
-    CHECK(fallout4.value().compression == libbsa::detail::compression_method::deflate);
+    CHECK(fallout4.value().compression == libbsa::detail::compression_method::zlib);
 
     libbsa::ba2_dx10_writer_options starfield_deflate_options;
     starfield_deflate_options.starfield_compression_method =
         libbsa::formats::ba2::ba2_starfield_compression_deflate;
+    const auto starfield_deflate_profile =
+        require_dx10_profile(libbsa::ba2_dx10_target::starfield_v3, starfield_deflate_options);
     auto starfield_deflate = libbsa::formats::ba2::ba2_dx10_assemble_chunk(
-        libbsa::ba2_dx10_target::starfield_v3, starfield_deflate_options, source,
-        planned.value()[0]);
+        starfield_deflate_profile, starfield_deflate_options, source, planned.value()[0]);
     REQUIRE(starfield_deflate.has_value());
-    CHECK(starfield_deflate.value().compression == libbsa::detail::compression_method::deflate);
+    CHECK(starfield_deflate.value().compression == libbsa::detail::compression_method::zlib);
 
     libbsa::ba2_dx10_writer_options starfield_lz4_options;
     starfield_lz4_options.starfield_compression_method =
         libbsa::formats::ba2::ba2_starfield_compression_lz4_block;
+    const auto starfield_lz4_profile =
+        require_dx10_profile(libbsa::ba2_dx10_target::starfield_v3, starfield_lz4_options);
     auto starfield_lz4 = libbsa::formats::ba2::ba2_dx10_assemble_chunk(
-        libbsa::ba2_dx10_target::starfield_v3, starfield_lz4_options, source, planned.value()[0]);
+        starfield_lz4_profile, starfield_lz4_options, source, planned.value()[0]);
     REQUIRE(starfield_lz4.has_value());
     CHECK(starfield_lz4.value().compression == libbsa::detail::compression_method::lz4_block);
 }

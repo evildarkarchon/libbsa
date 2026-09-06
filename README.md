@@ -48,7 +48,7 @@ Subcommands:
 - `bsa info <archive>` prints archive metadata.
 - `bsa validate [--strict] <archive>` prints validation diagnostics and compatibility warnings.
 
-Supported `--format` tokens are `bsa-tes3`, `bsa-oblivion`, `bsa-fo3`, `bsa-sse`, `ba2-gnrl-fo4`, `ba2-gnrl-sf-v2`, `ba2-gnrl-sf-v3`, `ba2-dx10-fo4`, and `ba2-dx10-sf-v3`.
+Supported `--format` tokens are `bsa-tes3`, `bsa-oblivion`, `bsa-fo3`, `bsa-sse`, `ba2-gnrl-fo4`, `ba2-gnrl-sf-v2`, `ba2-gnrl-sf-v3`, `ba2-dx10-fo4`, `ba2-dx10-sf-v2`, and `ba2-dx10-sf-v3`.
 
 Exit codes are stable categories: `0` for success, `1` for operational failures such as archive or host I/O errors, and `2` for usage errors.
 

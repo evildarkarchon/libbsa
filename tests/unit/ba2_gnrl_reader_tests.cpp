@@ -2,9 +2,7 @@
 
 #include <libbsa/libbsa.hpp>
 
-#include <detail/host_file_path.hpp>
-
-#include "formats/ba2/ba2_gnrl_parser.hpp"
+#include "ba2_record_identity_warning_check.hpp"
 #include "formats/ba2/ba2_gnrl_reader.hpp"
 
 #include <detail/bethesda_hash.hpp>
@@ -16,7 +14,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <limits>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -77,8 +75,14 @@ libbsa::entry_compression entry_compression_from_manifest(std::string_view value
     return libbsa::entry_compression::lz4_block;
 }
 
+/// Converts a manifest's stored path spelling into the display spelling
+/// `entry_metadata::original_path` reports.
+///
+/// Manifests record the archive's stored spelling, which differs by format: the
+/// BSA families store `\`, BA2 stores `/`. Display is `\` for all of them,
+/// since libbsa is Windows-only (issue #54).
 std::string archive_original_path_from_manifest(std::string value) {
-    std::replace(value.begin(), value.end(), '\\', '/');
+    std::replace(value.begin(), value.end(), '/', '\\');
     return value;
 }
 
@@ -158,6 +162,10 @@ struct synthetic_gnrl_record {
     std::string path;
     std::uint64_t offset;
     std::uint32_t size;
+    /// Replaces the stored NameHash the builder would otherwise derive from the
+    /// path, so a record can carry a BA2 Record Identity mismatch alongside
+    /// another structural defect.
+    std::optional<std::uint32_t> name_hash_override{};
 };
 
 std::vector<ba2_success_fixture> ba2_success_fixtures() {
@@ -221,7 +229,12 @@ std::vector<std::byte> make_synthetic_gnrl_archive(std::span<const synthetic_gnr
                                    ? std::string_view{record.path}
                                    : std::string_view{record.path}.substr(slash + 1U);
 
-        append_u32_le(bytes, libbsa::detail::hash_fo4(file_name));
+        // GNRL NameHash covers the extension-stripped stem, matching retail
+        // archives and TwbBSArchive.FindFileRecordFO4.
+        const auto dot = file_name.find_last_of('.');
+        const auto stem = dot == std::string_view::npos ? file_name : file_name.substr(0U, dot);
+
+        append_u32_le(bytes, record.name_hash_override.value_or(libbsa::detail::hash_fo4(stem)));
         append_ascii(bytes, std::string_view{"BIN\0", 4U});
         append_u32_le(bytes, libbsa::detail::hash_fo4(directory));
         append_u32_le(bytes, 0U);
@@ -238,6 +251,29 @@ std::vector<std::byte> make_synthetic_gnrl_archive(std::span<const synthetic_gnr
 
     bytes.insert(bytes.end(), payload.begin(), payload.end());
     return bytes;
+}
+
+/// Returns the offset of the first payload byte make_synthetic_gnrl_archive
+/// writes, which is where a legal stored span has to start.
+std::uint64_t synthetic_gnrl_payload_base(std::span<const std::string> paths) {
+    constexpr std::uint64_t fixed_header_size = 24U;
+    constexpr std::uint64_t gnrl_record_size = 36U;
+
+    auto base = fixed_header_size + (gnrl_record_size * paths.size());
+    for (const auto& path : paths) {
+        base += 2U + path.size();
+    }
+    return base;
+}
+
+/// Writes a synthetic archive and returns the diagnostic archive opening
+/// produced, which is the only outcome the precedence cases below observe.
+libbsa::error open_error_for(const std::filesystem::path& path,
+                             const std::vector<std::byte>& bytes) {
+    write_binary_file(path, bytes);
+    auto opened = libbsa::archive_reader::open(path.string());
+    REQUIRE_FALSE(opened.has_value());
+    return opened.error();
 }
 
 class temp_file_cleanup final {
@@ -270,8 +306,8 @@ void require_common_ba2_metadata(const nlohmann::json& manifest,
 
 }  // namespace
 
-TEST_CASE("ba2_gnrl_detector opens Fallout 4 GNRL metadata without Starfield fields",
-          "[unit][fixture][ba2_gnrl_detector]") {
+TEST_CASE("ba2_archive_opening opens Fallout 4 GNRL metadata without Starfield fields",
+          "[unit][fixture][ba2_archive_opening]") {
     const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_fo4_manifest.json"));
 
     auto opened = libbsa::archive_reader::open(generated_archive_path("ba2_gnrl_fo4.ba2").string());
@@ -286,9 +322,9 @@ TEST_CASE("ba2_gnrl_detector opens Fallout 4 GNRL metadata without Starfield fie
 }
 
 TEST_CASE(
-    "ba2_gnrl_detector opens Starfield v2 GNRL metadata with "
+    "ba2_archive_opening opens Starfield v2 GNRL metadata with "
     "version-gated unknowns",
-    "[unit][fixture][ba2_gnrl_detector]") {
+    "[unit][fixture][ba2_archive_opening]") {
     const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_sfv2_manifest.json"));
 
     auto opened =
@@ -306,9 +342,9 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "ba2_gnrl_detector opens Starfield v3 GNRL metadata with compression "
+    "ba2_archive_opening opens Starfield v3 GNRL metadata with compression "
     "method",
-    "[unit][fixture][ba2_gnrl_detector]") {
+    "[unit][fixture][ba2_archive_opening]") {
     const auto manifest = read_json_file(generated_archive_path("ba2_gnrl_sfv3_manifest.json"));
 
     auto opened =
@@ -327,9 +363,9 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "ba2_gnrl_detector rejects Phase 5 unsupported BA2 profiles with "
+    "ba2_archive_opening rejects unsupported BA2 profiles with "
     "stable errors",
-    "[unit][fixture][ba2_gnrl_detector]") {
+    "[unit][fixture][ba2_archive_opening]") {
     const auto manifest =
         read_json_file(generated_archive_path("ba2_gnrl_malformed_manifest.json"));
 
@@ -368,7 +404,7 @@ TEST_CASE(
     append_u32_le(bytes, 1U);
     append_u64_le(bytes, 60U);
 
-    append_u32_le(bytes, libbsa::detail::hash_fo4("sparse_payload.bin"));
+    append_u32_le(bytes, libbsa::detail::hash_fo4("sparse_payload"));
     append_ascii(bytes, std::string_view{"BIN\0", 4U});
     append_u32_le(bytes, libbsa::detail::hash_fo4("meshes"));
     append_u32_le(bytes, 0x0000002AU);
@@ -403,7 +439,9 @@ TEST_CASE(
 
     const auto& entry = entries.value().front();
     REQUIRE(entry.path == archive_path);
-    REQUIRE(entry.original_path == archive_path);
+    // `archive_path` is the stored spelling; display separators are `\` on every
+    // format because libbsa is Windows-only (issue #54).
+    REQUIRE(entry.original_path == archive_original_path_from_manifest(archive_path));
     REQUIRE(entry.payload_offset == payload_offset);
     REQUIRE(entry.raw_size == 1U);
     REQUIRE(entry.stored_size == 1U);
@@ -431,7 +469,7 @@ TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename t
     append_u32_le(bytes, file_count);
     append_u64_le(bytes, static_cast<std::uint64_t>(file_table_offset));  // FileTableOffset
 
-    append_u32_le(bytes, libbsa::detail::hash_fo4("alpha.nif"));
+    append_u32_le(bytes, libbsa::detail::hash_fo4("alpha"));
     append_ascii(bytes, std::string_view{"NIF\0", 4U});
     append_u32_le(bytes, libbsa::detail::hash_fo4("meshes/endtable"));
     append_u32_le(bytes, 0U);
@@ -468,7 +506,8 @@ TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename t
     REQUIRE(found.has_value());
     REQUIRE(found.value().has_value());
     CHECK(found.value()->path == "meshes/endtable/alpha.nif");
-    CHECK(found.value()->original_path == archive_path);
+    // `archive_path` is the stored spelling; display separators are `\`.
+    CHECK(found.value()->original_path == archive_original_path_from_manifest(archive_path));
     CHECK(found.value()->payload_offset == record_table_end);
     CHECK(found.value()->raw_size == payload.size());
     CHECK(found.value()->stored_size == payload.size());
@@ -479,63 +518,8 @@ TEST_CASE("ba2_gnrl_end_table opens archives with payloads before the filename t
     CHECK(extracted.value() == payload);
 }
 
-TEST_CASE(
-    "ba2_gnrl_detector rejects unrepresentable high filename table "
-    "ranges before materialization",
-    "[unit][malformed][ba2_gnrl_detector]") {
-    const auto temp_path =
-        std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-name-table-overflow.ba2";
-    temp_file_cleanup cleanup{temp_path};
-    std::error_code remove_error;
-    std::filesystem::remove(temp_path, remove_error);
-
-    constexpr std::uint32_t file_count = 1U;
-    constexpr std::uint64_t record_table_end = 60U;
-    constexpr std::uint64_t file_table_offset = std::numeric_limits<std::uint64_t>::max() - 2U;
-    const std::string archive_path = "meshes/overflow.bin";
-
-    std::vector<std::byte> bytes;
-    append_ascii(bytes, "BTDX");
-    append_u32_le(bytes, 1U);
-    append_ascii(bytes, "GNRL");
-    append_u32_le(bytes, file_count);
-    append_u64_le(bytes, file_table_offset);
-
-    append_u32_le(bytes, libbsa::detail::hash_fo4("overflow.bin"));
-    append_ascii(bytes, std::string_view{"BIN\0", 4U});
-    append_u32_le(bytes, libbsa::detail::hash_fo4("meshes"));
-    append_u32_le(bytes, 0U);
-    append_u64_le(bytes, record_table_end);
-    append_u32_le(bytes, 0U);
-    append_u32_le(bytes, 0U);
-    append_u32_le(bytes, 0xBAADF00DU);
-
-    {
-        std::ofstream output{temp_path, std::ios::binary | std::ios::trunc};
-        REQUIRE(output.good());
-        output.write(reinterpret_cast<const char*>(bytes.data()),
-                     static_cast<std::streamsize>(bytes.size()));
-        REQUIRE(output.good());
-    }
-
-    auto detected = libbsa::formats::ba2::detect_ba2_format(bytes);
-    REQUIRE(detected.has_value());
-
-    // A non-empty BA2 name table high enough to overflow UInt64 is above normal
-    // Windows stream seek limits, so this parser-level host-file fixture
-    // documents the malformed layout rejection while parser primitive tests cover
-    // the exact aggregate-end arithmetic contract.
-    auto resolved = libbsa::detail::resolve_host_file_path(temp_path.string());
-    REQUIRE(resolved.has_value());
-    auto parsed = libbsa::formats::ba2::parse_ba2_gnrl_archive_file(
-        resolved.value(), std::numeric_limits<std::uint64_t>::max(), detected.value());
-
-    REQUIRE_FALSE(parsed.has_value());
-    REQUIRE(parsed.error().code == libbsa::error_code::format_error);
-}
-
-TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
-          "[unit][malformed][ba2_gnrl_detector]") {
+TEST_CASE("ba2_archive_opening rejects non-empty payload spans in fixed metadata",
+          "[unit][malformed][ba2_archive_opening]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-payload-in-metadata.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -553,7 +537,7 @@ TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
     append_u32_le(bytes, file_count);
     append_u64_le(bytes, record_table_end);
 
-    append_u32_le(bytes, libbsa::detail::hash_fo4("headerpayload.nif"));
+    append_u32_le(bytes, libbsa::detail::hash_fo4("headerpayload"));
     append_ascii(bytes, std::string_view{"NIF\0", 4U});
     append_u32_le(bytes, libbsa::detail::hash_fo4("meshes/invalid"));
     append_u32_le(bytes, 0U);
@@ -585,8 +569,28 @@ TEST_CASE("ba2_gnrl_detector rejects non-empty payload spans in fixed metadata",
     CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("ba2_gnrl_detector rejects partially overlapping payload spans",
-          "[unit][malformed][ba2_gnrl_detector][ba2_gnrl_overlap]") {
+TEST_CASE("ba2_archive_opening rejects payload spans that intersect the filename table",
+          "[unit][malformed][ba2_archive_opening][ba2_gnrl_overlap]") {
+    const auto temp_path =
+        std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-payload-in-name-table.ba2";
+    temp_file_cleanup cleanup{temp_path};
+    const std::string archive_path = "meshes/table.bin";
+    constexpr std::uint64_t filename_table_offset = 60U;
+    constexpr std::uint64_t payload_offset = filename_table_offset + 2U;
+    const std::array payload{std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
+    const std::array records{synthetic_gnrl_record{archive_path, payload_offset,
+                                                   static_cast<std::uint32_t>(payload.size())}};
+    const auto bytes = make_synthetic_gnrl_archive(records, payload);
+    write_binary_file(temp_path, bytes);
+
+    auto opened = libbsa::archive_reader::open(temp_path.string());
+
+    REQUIRE_FALSE(opened.has_value());
+    CHECK(opened.error().code == libbsa::error_code::format_error);
+}
+
+TEST_CASE("ba2_archive_opening rejects partially overlapping payload spans",
+          "[unit][malformed][ba2_archive_opening][ba2_gnrl_overlap]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-partial-overlap.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -618,8 +622,8 @@ TEST_CASE("ba2_gnrl_detector rejects partially overlapping payload spans",
     CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("ba2_gnrl_detector accepts exact duplicate non-empty payload spans",
-          "[unit][ba2_gnrl_detector][ba2_gnrl_overlap]") {
+TEST_CASE("ba2_archive_opening accepts exact duplicate non-empty payload spans",
+          "[unit][ba2_archive_opening][ba2_gnrl_overlap]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-duplicate-span.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -660,8 +664,194 @@ TEST_CASE("ba2_gnrl_detector accepts exact duplicate non-empty payload spans",
     }
 }
 
-TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
-          "[unit][fixture][malformed][ba2_gnrl_detector][ba2_gnrl_hash_lookup]") {
+TEST_CASE("ba2_archive_opening reports one diagnostic for multi-defect GNRL payload spans",
+          "[unit][malformed][ba2_archive_opening][ba2_gnrl_overlap][span_precedence]") {
+    // Characterisation, not specification (issue #48). GNRL runs every check for
+    // one record before moving on to the next, so which single diagnostic an
+    // archive with several structural defects reports is decided first by record
+    // order and only then by the order of the checks inside the loop. Pinned
+    // before Payload Span Exclusivity enforcement is reformulated so the rework
+    // can be validated against current behavior rather than against expectations
+    // formed afterwards.
+    const auto temp_path =
+        std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-span-precedence.ba2";
+    temp_file_cleanup cleanup{temp_path};
+
+    const std::string first_path = "meshes/precedence/first.bin";
+    const std::string second_path = "meshes/precedence/second.bin";
+    const std::string third_path = "meshes/precedence/third.bin";
+    const std::string fourth_path = "meshes/precedence/fourth.bin";
+    const std::vector<std::byte> payload(16U, std::byte{0x5A});
+
+    SECTION("a span outside the archive precedes a partial overlap in the same record") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U},
+            // Reaches past the archive and over the accepted span at the same time.
+            synthetic_gnrl_record{second_path, base + 4U, 0x0100'0000U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload span is outside the archive") != std::string::npos);
+    }
+
+    SECTION("a header intersection precedes a partial overlap in the same record") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U},
+            // Covers the whole archive, so it reaches the fixed header, the record
+            // table, the filename table and the accepted span at once.
+            synthetic_gnrl_record{second_path, 0U,
+                                  static_cast<std::uint32_t>(base + payload.size())}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("intersects header or record table") != std::string::npos);
+    }
+
+    SECTION("a filename table intersection precedes a partial overlap in the same record") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        constexpr std::uint64_t name_table_offset = 24U + (36U * 2U);
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U},
+            synthetic_gnrl_record{
+                second_path, name_table_offset,
+                static_cast<std::uint32_t>(base + payload.size() - name_table_offset)}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("filename table intersects payload data") != std::string::npos);
+    }
+
+    SECTION("a duplicate canonical path precedes a partial overlap in the same record") {
+        const std::array paths{first_path, first_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{synthetic_gnrl_record{first_path, base, 8U},
+                                 synthetic_gnrl_record{first_path, base + 4U, 8U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("duplicate canonical archive paths") != std::string::npos);
+    }
+
+    SECTION("a partial overlap precedes a defect carried by a later record") {
+        const std::array paths{first_path, second_path, third_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U},
+            synthetic_gnrl_record{second_path, base + 4U, 8U},
+            synthetic_gnrl_record{third_path, 0U, static_cast<std::uint32_t>(base)}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("a record identity mismatch does not preempt a partial overlap") {
+        const std::array paths{first_path, second_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        // Record Identity mismatches are recorded as compatibility warnings, never
+        // errors (issue #43), so they cannot win a precedence contest at all.
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U, std::uint32_t{0xDEAD'BEEFU}},
+            synthetic_gnrl_record{second_path, base + 4U, 8U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("an archive carrying every structural defect reports only the earliest") {
+        const std::array paths{first_path, first_path, third_path, fourth_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{
+            synthetic_gnrl_record{first_path, base, 8U, std::uint32_t{0xDEAD'BEEFU}},
+            synthetic_gnrl_record{first_path, base + 4U, 8U},
+            synthetic_gnrl_record{third_path, 0U, static_cast<std::uint32_t>(base)},
+            synthetic_gnrl_record{fourth_path, base, 0x0100'0000U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("duplicate canonical archive paths") != std::string::npos);
+        CHECK(reported.message.find("partially overlap") == std::string::npos);
+    }
+}
+
+TEST_CASE("ba2_archive_opening rejects three or more mutually conflicting GNRL payload spans",
+          "[unit][malformed][ba2_archive_opening][ba2_gnrl_overlap]") {
+    // The exact-duplicate exemption exists so Payload Placement can share one
+    // location between records (ADR-0001). It must not become a way to smuggle a
+    // partial overlap past the check by burying it among duplicates.
+    const auto temp_path =
+        std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-multi-span-conflict.ba2";
+    temp_file_cleanup cleanup{temp_path};
+
+    const std::string first_path = "meshes/conflict/first.bin";
+    const std::string second_path = "meshes/conflict/second.bin";
+    const std::string third_path = "meshes/conflict/third.bin";
+    const std::string fourth_path = "meshes/conflict/fourth.bin";
+    const std::vector<std::byte> payload(16U, std::byte{0x3C});
+
+    SECTION("a partial overlap after two exact duplicates") {
+        const std::array paths{first_path, second_path, third_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{synthetic_gnrl_record{first_path, base, 8U},
+                                 synthetic_gnrl_record{second_path, base, 8U},
+                                 synthetic_gnrl_record{third_path, base + 4U, 8U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("a partial overlap against a duplicated span that is not the first accepted span") {
+        const std::array paths{first_path, second_path, third_path, fourth_path};
+        const auto base = synthetic_gnrl_payload_base(paths);
+        const std::array records{synthetic_gnrl_record{first_path, base, 4U},
+                                 synthetic_gnrl_record{second_path, base + 8U, 4U},
+                                 synthetic_gnrl_record{third_path, base + 8U, 4U},
+                                 synthetic_gnrl_record{fourth_path, base + 10U, 4U}};
+
+        const auto reported =
+            open_error_for(temp_path, make_synthetic_gnrl_archive(records, payload));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+
+        auto validated = libbsa::validate_archive(temp_path.string());
+        REQUIRE(validated.has_value());
+        CHECK_FALSE(validated.value().is_valid());
+        REQUIRE(validated.value().errors.size() == 1U);
+        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+    }
+}
+
+TEST_CASE("ba2_archive_opening tolerates record hash mismatches as compatibility warnings",
+          "[unit][fixture][compat][ba2_archive_opening][ba2_gnrl_hash_lookup]") {
+    // BSArchPro never compares a stored record's NameHash/DirHash/Ext against
+    // the filename table; it recomputes hashes from a query path and scans. A
+    // disagreeing record is unreachable by hash lookup but does not invalidate
+    // the archive, and retail Fallout4 - Voices.ba2 ships three of them
+    // (issue #43). Each section mutates exactly one field of record 0.
     constexpr std::size_t first_record_name_hash_offset = 24U;
     constexpr std::size_t first_record_extension_offset = 28U;
     constexpr std::size_t first_record_directory_hash_offset = 32U;
@@ -676,15 +866,7 @@ TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
         temp_file_cleanup cleanup{mutated};
         write_binary_file(mutated, bytes);
 
-        auto opened = libbsa::archive_reader::open(mutated.string());
-        REQUIRE_FALSE(opened.has_value());
-        REQUIRE(opened.error().code == libbsa::error_code::format_error);
-
-        auto validated = libbsa::validate_archive(mutated.string());
-        REQUIRE(validated.has_value());
-        CHECK_FALSE(validated.value().is_valid());
-        REQUIRE(validated.value().errors.size() == 1U);
-        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+        libbsa::tests::require_single_record_identity_mismatch(mutated);
     }
 
     SECTION("record extension") {
@@ -699,15 +881,7 @@ TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
         temp_file_cleanup cleanup{mutated};
         write_binary_file(mutated, bytes);
 
-        auto opened = libbsa::archive_reader::open(mutated.string());
-        REQUIRE_FALSE(opened.has_value());
-        REQUIRE(opened.error().code == libbsa::error_code::format_error);
-
-        auto validated = libbsa::validate_archive(mutated.string());
-        REQUIRE(validated.has_value());
-        CHECK_FALSE(validated.value().is_valid());
-        REQUIRE(validated.value().errors.size() == 1U);
-        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+        libbsa::tests::require_single_record_identity_mismatch(mutated);
     }
 
     SECTION("DirectoryHash") {
@@ -720,22 +894,14 @@ TEST_CASE("ba2_gnrl_detector rejects record hash mismatches",
         temp_file_cleanup cleanup{mutated};
         write_binary_file(mutated, bytes);
 
-        auto opened = libbsa::archive_reader::open(mutated.string());
-        REQUIRE_FALSE(opened.has_value());
-        REQUIRE(opened.error().code == libbsa::error_code::format_error);
-
-        auto validated = libbsa::validate_archive(mutated.string());
-        REQUIRE(validated.has_value());
-        CHECK_FALSE(validated.value().is_valid());
-        REQUIRE(validated.value().errors.size() == 1U);
-        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+        libbsa::tests::require_single_record_identity_mismatch(mutated);
     }
 }
 
 TEST_CASE(
-    "ba2_gnrl_detector returns format_error for oversized declared "
+    "ba2_archive_opening returns format_error for oversized declared "
     "record tables",
-    "[unit][malformed][ba2_gnrl_detector][allocation]") {
+    "[unit][malformed][ba2_archive_opening][allocation]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-oversized-records.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -763,8 +929,8 @@ TEST_CASE(
     REQUIRE(opened.error().code == libbsa::error_code::format_error);
 }
 
-TEST_CASE("ba2_gnrl_detector rejects declared file counts above the metadata limit",
-          "[unit][malformed][ba2_gnrl_detector]") {
+TEST_CASE("ba2_archive_opening rejects declared file counts above the metadata limit",
+          "[unit][malformed][ba2_archive_opening]") {
     const auto temp_path =
         std::filesystem::temp_directory_path() / "libbsa-ba2-gnrl-excessive-file-count.ba2";
     temp_file_cleanup cleanup{temp_path};
@@ -779,13 +945,6 @@ TEST_CASE("ba2_gnrl_detector rejects declared file counts above the metadata lim
     append_ascii(bytes, "GNRL");
     append_u32_le(bytes, excessive_file_count);
     append_u64_le(bytes, 60U);
-
-    auto detected = libbsa::formats::ba2::detect_ba2_format(bytes);
-    REQUIRE(detected.has_value());
-
-    auto parsed = libbsa::formats::ba2::parse_ba2_gnrl_archive(bytes, detected.value());
-    REQUIRE_FALSE(parsed.has_value());
-    REQUIRE(parsed.error().code == libbsa::error_code::format_error);
 
     write_binary_file(temp_path, bytes);
     auto opened = libbsa::archive_reader::open(temp_path.string());

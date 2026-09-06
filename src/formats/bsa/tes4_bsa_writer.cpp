@@ -2,6 +2,7 @@
 
 #include "formats/bsa/tes4_bsa_layout.hpp"
 #include "formats/bsa/tes4_bsa_prepare.hpp"
+#include "formats/bsa/tes4_bsa_profile.hpp"
 #include "formats/bsa/tes4_bsa_serialize.hpp"
 
 #include <detail/host_file_path.hpp>
@@ -110,35 +111,28 @@ result<void> write_tes4_bsa_archive(tes4_bsa_target target, const tes4_bsa_write
         return validated.error();
     }
 
-    auto version = tes4_version_for(target);
-    if (!version) {
-        return version.error();
-    }
-
-    const bool archive_default_is_compressed =
-        tes4_archive_default_compressed(target, options.compression_policy);
-    const bool emit_embedded_names = tes4_should_emit_embedded_names(options, version.value());
-
-    std::uint32_t file_flags = 0U;
-    auto folders =
-        tes4_prepare_folders(entries, target, archive_default_is_compressed, emit_embedded_names,
-                             version.value(), worker_count, file_flags);
-    if (!folders) {
-        return folders.error();
-    }
-
-    auto layout =
-        tes4_assign_offsets(folders.value(), version.value(), options.deduplicate_payloads);
-    if (!layout) {
-        return layout.error();
+    auto profile = make_tes4_bsa_profile_for_writer(target);
+    if (!profile) {
+        return profile.error();
     }
 
     return detail::publish_writer_output(
         output_path.value().resolved, options.overwrite_existing, "TES4 BSA writer",
-        [&](const std::filesystem::path& temp_path) -> result<void> {
-            return tes4_write_archive_bytes(folders.value(), version.value(),
-                                            archive_default_is_compressed, emit_embedded_names,
-                                            file_flags, layout.value(), temp_path);
+        [&](const detail::finalization_workspace& workspace) -> result<void> {
+            std::uint32_t file_flags = 0U;
+            auto folders = tes4_prepare_folders(entries, profile.value(), options, worker_count,
+                                                file_flags, workspace);
+            if (!folders) {
+                return folders.error();
+            }
+
+            auto plan = tes4_plan_placements(std::move(folders).value(), profile.value(), options,
+                                             file_flags);
+            if (!plan) {
+                return plan.error();
+            }
+
+            return tes4_write_archive_bytes(plan.value(), workspace.temporary_archive_path());
         });
 }
 

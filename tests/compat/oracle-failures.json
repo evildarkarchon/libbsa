@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "failures": [
+    {
+      "id": "BSARCH-001",
+      "archive_path": "Fallout - Misc.bsa",
+      "archive_sha256": "61a2fdcff07eda5a19ceea6bb9cf661b250d36a231818e33d3d23be94f9299c2",
+      "oracle_sha256": "4c34fe4173a2bd04ba52d5a6357348256ee424573785085fdafaab524cf7b0c2",
+      "phase": "retail-unpack",
+      "exit_code": 1,
+      "allowed_options": [["-mt:yes"], ["-mt:no"]],
+      "diagnostics": ["Error processing \"menus\\s.txt\": LibDeflate error: Bad data"],
+      "entries": [
+        {
+          "path": "menus/s.txt",
+          "decoded_size": 4,
+          "decoded_sha256": "1a483835bb7f2b2c7b82d42798b5c32c568082cddd880f0542ce75fee3bf05ce",
+          "fingerprint_provenance": "Pinned libbsa observation; regression guard only, not independent oracle proof"
+        }
+      ],
+      "review": {
+        "status": "approved",
+        "gate_qualifies": true,
+        "reviewed_by": "Repository maintainer, explicitly approved in this implementation task",
+        "date": "2026-09-05",
+        "reason": "The released oracle cannot extract this known retail entry. Rebuilding BSArch with a different codec is not practical for the maintainer's toolchain. Accept this narrowly scoped evidence gap while retaining all other comparisons and independent repack verification."
+      },
+      "observed_behavior": "BSArch v1.0 fails this entry; libbsa extracts four bytes using its existing reference-backed zlib compatibility handling.",
+      "cause_hypothesis": "The released oracle may use stricter codec handling or lack the reference's fallback. The executable's exact codec implementation has not been verified.",
+      "reference": "TES5Edit/Core/wbBSArchive.pas:1800-1810 documents the reference's deliberate Buffer error tolerance for this retail archive.",
+      "issue": "https://github.com/evildarkarchon/libbsa/issues/76"
+    }
+  ]
+}

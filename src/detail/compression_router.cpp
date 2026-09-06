@@ -1,10 +1,10 @@
 #include <detail/compression_router.hpp>
 
 #include <detail/byte_vector.hpp>
-#include <detail/deflate_codec.hpp>
 #include <detail/lz4_block_codec.hpp>
 #include <detail/lz4_frame_codec.hpp>
 #include <detail/payload_stream.hpp>
+#include <detail/zlib_codec.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -33,8 +33,8 @@ result<std::vector<std::byte>> compress_payload(compression_method method,
     switch (method) {
         case compression_method::none:
             return copy_bytes(input);
-        case compression_method::deflate:
-            return compress_deflate(input);
+        case compression_method::zlib:
+            return compress_zlib(input);
         case compression_method::lz4_frame:
             return compress_lz4_frame(input);
         case compression_method::lz4_block:
@@ -53,8 +53,8 @@ result<std::vector<std::byte>> decompress_payload_exact(compression_method metho
                                      "uncompressed payload size did not match metadata"};
             }
             return copy_bytes(input);
-        case compression_method::deflate:
-            return decompress_deflate_exact(input, expected_size);
+        case compression_method::zlib:
+            return decompress_zlib_exact(input, expected_size);
         case compression_method::lz4_frame:
             return decompress_lz4_frame_exact(input, expected_size);
         case compression_method::lz4_block:
@@ -85,7 +85,7 @@ result<void> decompress_payload_exact_to_sink(compression_method method, std::if
         case compression_method::lz4_frame:
             return decompress_lz4_frame_exact_to_sink(input, compressed_offset, compressed_size,
                                                       expected_size, sink, chunk_size, description);
-        case compression_method::deflate:
+        case compression_method::zlib:
         case compression_method::lz4_block: {
             auto checked_size = checked_materialized_payload_size(
                 expected_size, std::string{description} + " decoded payload");

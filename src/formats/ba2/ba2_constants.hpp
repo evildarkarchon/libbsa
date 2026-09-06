@@ -9,9 +9,16 @@ inline constexpr std::uint32_t ba2_btdx_magic = 0x5844'5442U;
 inline constexpr std::uint32_t ba2_gnrl_magic = 0x4C52'4E47U;
 inline constexpr std::uint32_t ba2_dx10_magic = 0x3031'5844U;
 
+// BA2 header versions are an unordered tag set, not a capability ladder. The
+// Fallout 4 next-gen update shipped versions 7 and 8, which are numerically
+// above Starfield's 2 and 3 but reuse the original 24-byte Fallout 4 header.
+// Every version-dependent decision must therefore be an explicit per-version
+// case; a `>=` comparison silently misclassifies 7 and 8 as Starfield.
 inline constexpr std::uint32_t ba2_fallout4_version = 1U;
 inline constexpr std::uint32_t ba2_starfield_v2_version = 2U;
 inline constexpr std::uint32_t ba2_starfield_v3_version = 3U;
+inline constexpr std::uint32_t ba2_fallout4_ng_v7_version = 7U;
+inline constexpr std::uint32_t ba2_fallout4_ng_v8_version = 8U;
 
 inline constexpr std::size_t ba2_common_header_size = 24U;
 inline constexpr std::size_t ba2_starfield_v2_header_size = 32U;
@@ -22,6 +29,11 @@ inline constexpr std::size_t ba2_dx10_record_size = 24U;
 // TES5Edit's BA2 readers and writers require the BAADF00D sentinel after each
 // GNRL record and DX10 chunk.
 inline constexpr std::uint32_t ba2_record_sentinel = 0xBAAD'F00DU;
+
+// TwbBSArchive writes iFileFO4Unknown = $00100100 for GNRL records. BSArch 1.0
+// interprets the zero default as an invalid zero chunk count before extraction;
+// emit the reference marker so default files remain readable by that oracle.
+inline constexpr std::uint32_t ba2_gnrl_record_flags_default = 0x0010'0100U;
 
 // BA2 GNRL and DX10 records use PackedSize == 0 to mean the payload bytes are
 // stored raw.

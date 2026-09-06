@@ -1,53 +1,38 @@
 #include "formats/bsa/tes3_bsa_layout.hpp"
 
-#include <limits>
-#include <string>
-#include <string_view>
+#include <detail/payload_placement.hpp>
 
 namespace libbsa::formats::bsa {
 
-namespace {
+result<void> tes3_place_payloads(std::span<tes3_prepared_entry> entries) {
+    // The payload area is seeded at zero because TES3 file records store
+    // data-section-relative offsets and readers add the computed data section
+    // start back. That relativity is a TES3 serialization fact rather than a
+    // placement fact, so it stays with this family instead of moving into the
+    // module.
+    //
+    // Sharing is a stated policy rather than absent code. TES3's reader exempts
+    // no duplicate span, so a TES3 writer that ever shared a location could emit
+    // an archive libbsa itself refuses to reopen; ADR-0002 records that as an
+    // open question, and this policy value is what makes the exclusion greppable
+    // instead of something a reader has to infer from code that is not there.
+    detail::payload_placer placer{0U, detail::payload_sharing_policy::disabled, "TES3 BSA"};
 
-bool add_fits_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t& total) noexcept {
-    if (lhs > std::numeric_limits<std::uint64_t>::max() - rhs) {
-        return false;
-    }
-    total = lhs + rhs;
-    return true;
-}
-
-result<std::uint32_t> checked_u32(std::uint64_t value, std::string_view description) {
-    if (value > std::numeric_limits<std::uint32_t>::max()) {
-        return error{error_code::format_error,
-                     std::string{description} + " exceeds uint32_t limits"};
-    }
-    return static_cast<std::uint32_t>(value);
-}
-
-result<std::uint32_t> checked_add_u32(std::uint32_t lhs, std::uint32_t rhs,
-                                      std::string_view description) {
-    return checked_u32(static_cast<std::uint64_t>(lhs) + rhs, description);
-}
-
-result<std::uint32_t> checked_mul_u32(std::uint32_t lhs, std::uint32_t rhs,
-                                      std::string_view description) {
-    return checked_u32(static_cast<std::uint64_t>(lhs) * rhs, description);
-}
-
-}  // namespace
-
-result<void> tes3_assign_raw_offsets(std::span<tes3_prepared_entry> entries) {
-    std::uint32_t cursor = 0;
     for (auto& entry : entries) {
-        // On disk TES3 stores data-section-relative raw offsets; readers add the
-        // computed data section start back.
-        entry.raw_offset = cursor;
-        auto next = checked_add_u32(cursor, entry.payload_size, "TES3 BSA payload span");
-        if (!next) {
-            return next.error();
+        // TES3 deliberately does not adopt Stored Payload, so it offers a size
+        // and takes only the cursor and the overflow arithmetic. A size-only
+        // subject can never share under any policy — exact byte equality is the
+        // sole authority for sharing (ADR-0001) and there are no bytes here to
+        // supply that proof — so the narrowing key is inert and carries no
+        // fingerprint.
+        auto placed = placer.place(detail::payload_narrowing_key{entry.payload_size, 0U},
+                                   detail::payload_placement_subject::of_size(entry.payload_size));
+        if (!placed) {
+            return placed.error();
         }
-        cursor = next.value();
+        entry.raw_offset = placed.value().offset;
     }
+
     return {};
 }
 

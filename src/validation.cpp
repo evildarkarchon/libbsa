@@ -101,6 +101,31 @@ void append_target_family_warning(const archive_metadata& metadata,
                    "archive metadata does not match the requested target family");
 }
 
+/// Appends archive-level compatibility warnings derived from parsed metadata.
+///
+/// The trailing-bytes condition is archive-wide rather than per-entry: the
+/// surplus bytes belong to no entry, so the warning carries no archive path.
+void append_archive_warnings(const archive_metadata& metadata, validation_report& report) {
+    // A file-name table longer than its names is what retail TES4-family BSA
+    // archives ship (issue #45). Every entry stays listed and extractable, so the
+    // archive stays valid and the disagreement is surfaced instead.
+    if (metadata.file_name_table_has_trailing_bytes) {
+        append_warning(report, compatibility_warning_code::bsa_file_name_table_trailing_bytes,
+                       compatibility_warning_severity::advisory,
+                       "archive file-name table declares more bytes than its entries consume");
+    }
+
+    // The declared folder-name length locates nothing -- folder blocks are walked
+    // sequentially, as the reference walks them -- so a disagreement is reported
+    // rather than treated as corruption.
+    if (metadata.folder_name_table_length_mismatch) {
+        append_warning(report, compatibility_warning_code::bsa_folder_name_table_length_mismatch,
+                       compatibility_warning_severity::advisory,
+                       "archive declared folder-name table length disagrees with its stored "
+                       "folder names");
+    }
+}
+
 /// Appends entry-level compatibility warnings that can be derived from public
 /// metadata.
 void append_entry_warnings(const archive_metadata& metadata,
@@ -110,6 +135,16 @@ void append_entry_warnings(const archive_metadata& metadata,
             append_warning(report, compatibility_warning_code::bsa_embedded_name_compatibility_risk,
                            compatibility_warning_severity::risky,
                            "BSA entry uses an embedded file-name payload prefix", entry.path);
+        }
+
+        // BA2 records whose stored lookup fields disagree with their own name are
+        // valid but unreachable by Bethesda-style hash lookup, so the archive
+        // stays valid while the affected entries are surfaced individually.
+        if (entry.record_identity_mismatch) {
+            append_warning(report, compatibility_warning_code::ba2_record_identity_mismatch,
+                           compatibility_warning_severity::risky,
+                           "BA2 record lookup fields disagree with the filename table path",
+                           entry.path);
         }
 
         if (entry.compression != entry_compression::none && is_sound_like_path(entry.path)) {
@@ -202,6 +237,7 @@ result<validation_report> validate_archive(std::string_view host_path, validatio
     report.valid = true;
 
     append_target_family_warning(metadata.value(), options, report);
+    append_archive_warnings(metadata.value(), report);
 
     auto entries = opened.value().entries();
     if (!entries) {

@@ -101,22 +101,21 @@ result<void> write_tes3_bsa_archive(const tes3_bsa_writer_options& options,
         return validated.error();
     }
 
-    auto prepared = tes3_prepare_entries(entries);
-    if (!prepared) {
-        return prepared.error();
-    }
-    auto offsets = tes3_assign_raw_offsets(prepared.value());
-    if (!offsets) {
-        return offsets.error();
-    }
-
-    // D-16 keeps disk-backed source bytes path-backed until this point, but sizes
-    // and source readability are validated before the shared helper reserves a
-    // publish path.
     return detail::publish_writer_output(
         output_path.value().resolved, options.overwrite_existing, "TES3 BSA writer",
-        [&](const std::filesystem::path& temp_path) -> result<void> {
-            return tes3_write_archive_bytes(prepared.value(), temp_path);
+        [&](const detail::finalization_workspace& workspace) -> result<void> {
+            // The workspace must exist before D-16 preparation inspects a
+            // path-backed source, and it must outlive serialization and publish.
+            auto prepared = tes3_prepare_entries(entries);
+            if (!prepared) {
+                return prepared.error();
+            }
+            auto placed = tes3_place_payloads(prepared.value());
+            if (!placed) {
+                return placed.error();
+            }
+
+            return tes3_write_archive_bytes(prepared.value(), workspace.temporary_archive_path());
         });
 }
 

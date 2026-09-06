@@ -124,6 +124,55 @@ TEST_CASE("dds_layout allows repeated mip ranges across different array slices",
     CHECK(segments.value()[1].source_chunk_index == 1U);
 }
 
+TEST_CASE("dds_layout accepts exact BSArch aggregate cubemap tails",
+          "[unit][dds_layout][bsarch_cubemap]") {
+    const libbsa::texture::dds_texture_layout layout{8U, 8U, 2U, 71U, 1U, true};
+    // Each BC1 face contains a 32-byte top mip and an 8-byte tail. BSArch's
+    // final chunk preserves the DDS remainder, including the other five faces.
+    SECTION("one chunk contains all six complete faces") {
+        const std::array chunks{chunk(0, 1, 240)};
+        const auto result = libbsa::texture::validate_and_order_chunks(layout, chunks);
+        REQUIRE(result.has_value());
+        REQUIRE(result.value().size() == 1U);
+        CHECK(result.value()[0].source_chunk_index == 0U);
+    }
+    SECTION("a leading mip is followed by the aggregate face tail") {
+        const std::array chunks{chunk(0, 0, 32), chunk(1, 1, 208)};
+        const auto result = libbsa::texture::validate_and_order_chunks(layout, chunks);
+        REQUIRE(result.has_value());
+        REQUIRE(result.value().size() == 2U);
+        CHECK(result.value()[0].source_chunk_index == 0U);
+        CHECK(result.value()[1].source_chunk_index == 1U);
+    }
+}
+
+TEST_CASE("dds_layout rejects malformed BSArch aggregate cubemap tails",
+          "[unit][malformed][dds_layout][bsarch_cubemap]") {
+    const libbsa::texture::dds_texture_layout layout{8U, 8U, 2U, 71U, 1U, true};
+    for (const auto size : {239U, 241U, 200U, 280U}) {
+        const std::array chunks{chunk(0, 1, size)};
+        const auto result = libbsa::texture::validate_and_order_chunks(layout, chunks);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().code == libbsa::error_code::format_error);
+    }
+    for (const auto& chunks : std::array{
+             std::array{chunk(0, 0, 32), chunk(0, 1, 208)},
+             std::array{chunk(0, 0, 32), chunk(1, 1, 207)},
+             std::array{chunk(0, 1, 240), chunk(0, 1, 40)}}) {
+        const auto result = libbsa::texture::validate_and_order_chunks(layout, chunks);
+        REQUIRE_FALSE(result.has_value());
+    }
+    SECTION("ordinary textures and cube arrays cannot borrow aggregate semantics") {
+        const std::array chunks{chunk(0, 1, 240)};
+        auto incompatible = layout;
+        incompatible.is_cubemap = false;
+        REQUIRE_FALSE(libbsa::texture::validate_and_order_chunks(incompatible, chunks).has_value());
+        incompatible.is_cubemap = true;
+        incompatible.array_size = 2;
+        REQUIRE_FALSE(libbsa::texture::validate_and_order_chunks(incompatible, chunks).has_value());
+    }
+}
+
 TEST_CASE("dds_layout computes locked DX10 mip byte sizes", "[unit][dds_layout]") {
     struct format_case {
         std::uint32_t dxgi_format;
