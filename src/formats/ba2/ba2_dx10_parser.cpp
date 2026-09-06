@@ -86,9 +86,8 @@ result<void> validate_chunk_payload_spans(std::span<const ba2_dx10_record> recor
                 // per-chunk loop, because which diagnostic a multi-defect archive reports
                 // is observable behavior. No zero-size guard is needed: the chunk size
                 // consistency check above has already rejected every empty stored span.
-                auto exclusive =
-                    accepted_payload_spans.insert(chunk.offset, stored_size,
-                                                  "BA2 DX10 chunk payload spans partially overlap");
+                auto exclusive = accepted_payload_spans.insert(
+                    chunk.offset, stored_size, "BA2 DX10 chunk payload spans partially overlap");
                 if (!exclusive) {
                     return exclusive.error();
                 }
@@ -252,10 +251,16 @@ result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10
 
             auto entry = entry_metadata{
                 std::move(identity.value().canonical_path),
-                std::move(display_path), entry_raw_size, stored_payload_size,
-                payload_offset, records[index].name_hash,
+                std::move(display_path),
+                entry_raw_size,
+                stored_payload_size,
+                payload_offset,
+                records[index].name_hash,
                 has_compressed_chunk ? profile.default_compression() : entry_compression::none,
-                records[index].unknown_tex, false, 0U, std::move(texture)};
+                records[index].unknown_tex,
+                false,
+                0U,
+                std::move(texture)};
             // Assigned rather than appended positionally; see the matching note
             // in the GNRL parser.
             entry.record_identity_mismatch = identity_mismatch.any();

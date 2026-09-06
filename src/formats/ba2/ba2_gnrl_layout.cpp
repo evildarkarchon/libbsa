@@ -38,9 +38,8 @@ result<ba2_gnrl_placement_plan> ba2_gnrl_plan_placements(
     // share unaided. Manufacturing facts would claim a constraint exists where
     // none does (ADR-0001).
     detail::payload_placer placer{payload_base_offset,
-                                  deduplicate_payloads
-                                      ? detail::payload_sharing_policy::enabled
-                                      : detail::payload_sharing_policy::disabled,
+                                  deduplicate_payloads ? detail::payload_sharing_policy::enabled
+                                                       : detail::payload_sharing_policy::disabled,
                                   "BA2 GNRL"};
 
     ba2_gnrl_placement_plan plan;
@@ -59,8 +58,7 @@ result<ba2_gnrl_placement_plan> ba2_gnrl_plan_placements(
         // A disabled placer never reads the narrowing key, so keep owned
         // payload fingerprinting lazy on the default dedupe-off path.
         const detail::payload_narrowing_key key{
-            stored_size,
-            deduplicate_payloads ? payload.fingerprint() : std::uint64_t{0}};
+            stored_size, deduplicate_payloads ? payload.fingerprint() : std::uint64_t{0}};
         auto placed =
             placer.place(key, detail::payload_placement_subject::of_payload(std::move(payload)));
         if (!placed) {

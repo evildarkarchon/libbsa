@@ -71,8 +71,7 @@ struct ba2_record_identity_mismatch {
 };
 
 /// Resolves BA2 path spelling without deriving hashes or extension metadata.
-result<ba2_record_path> resolve_ba2_record_path(ba2_subtype subtype,
-                                                std::string_view archive_path,
+result<ba2_record_path> resolve_ba2_record_path(ba2_subtype subtype, std::string_view archive_path,
                                                 ba2_record_identity_source source);
 
 /// Derives subtype-specific BA2 record identity from a raw archive path.

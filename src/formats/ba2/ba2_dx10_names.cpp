@@ -12,8 +12,7 @@ result<std::vector<std::string>> read_ba2_dx10_names(const ba2_archive_source& s
                                                      std::uint32_t file_count,
                                                      std::uint64_t& table_end) {
     if (file_table_offset > archive_size) {
-        return error{error_code::format_error,
-                     "BA2 DX10 FileTableOffset is outside archive bytes"};
+        return error{error_code::format_error, "BA2 DX10 FileTableOffset is outside archive bytes"};
     }
 
     std::vector<std::string> names;

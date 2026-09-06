@@ -20,8 +20,10 @@ namespace libbsa::formats::ba2 {
 ///
 /// The returned `table_end` is the archive-absolute byte after the last encoded
 /// name; trailing padding is deliberately not materialized.
-[[nodiscard]] result<std::vector<std::string>> read_ba2_dx10_names(
-    const ba2_archive_source& source, std::uint64_t file_table_offset, std::uint64_t archive_size,
-    std::uint32_t file_count, std::uint64_t& table_end);
+[[nodiscard]] result<std::vector<std::string>> read_ba2_dx10_names(const ba2_archive_source& source,
+                                                                   std::uint64_t file_table_offset,
+                                                                   std::uint64_t archive_size,
+                                                                   std::uint32_t file_count,
+                                                                   std::uint64_t& table_end);
 
 }  // namespace libbsa::formats::ba2

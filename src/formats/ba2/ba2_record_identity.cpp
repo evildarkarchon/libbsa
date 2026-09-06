@@ -239,8 +239,7 @@ result<ba2_record_identity> make_ba2_record_identity(ba2_subtype subtype, ba2_re
 ba2_record_identity_mismatch compare_ba2_record_identity(
     const ba2_stored_record_identity& stored, const ba2_record_identity& expected) noexcept {
     return ba2_record_identity_mismatch{
-        stored.name_hash != expected.name_hash,
-        stored.directory_hash != expected.directory_hash,
+        stored.name_hash != expected.name_hash, stored.directory_hash != expected.directory_hash,
         !extension_fourcc_matches(stored.extension, expected.extension)};
 }
 

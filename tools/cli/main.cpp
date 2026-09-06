@@ -1431,8 +1431,7 @@ libbsa::result<std::filesystem::path> safe_destination_path(
 /// `archive_reader::extract_entries` coalesces duplicate exact request strings and
 /// passes that same string to `bulk_extract_sink_factory::create`, so keying the
 /// plan the same way makes the factory's lookup exact.
-using extraction_plan =
-    std::map<std::string, libbsa::result<std::filesystem::path>, std::less<>>;
+using extraction_plan = std::map<std::string, libbsa::result<std::filesystem::path>, std::less<>>;
 
 /// Verifies containment for one destination directory and creates it.
 ///
@@ -1573,9 +1572,9 @@ class file_sink_factory final : public libbsa::bulk_extract_sink_factory {
 
         const auto planned = plan_.find(path);
         if (planned == plan_.end()) {
-            return make_error(libbsa::error_code::io_error,
-                              "no planned extraction destination for archive path: " +
-                                  std::string{path});
+            return make_error(
+                libbsa::error_code::io_error,
+                "no planned extraction destination for archive path: " + std::string{path});
         }
         if (!planned->second) {
             return planned->second.error();
@@ -1590,14 +1589,14 @@ class file_sink_factory final : public libbsa::bulk_extract_sink_factory {
         std::error_code fs_error;
         const bool exists = std::filesystem::exists(destination, fs_error);
         if (fs_error) {
-            return make_error(libbsa::error_code::io_error, "cannot inspect destination '" +
-                                                                destination.string() +
-                                                                "': " + fs_error.message());
+            return make_error(
+                libbsa::error_code::io_error,
+                "cannot inspect destination '" + destination.string() + "': " + fs_error.message());
         }
         if (exists && !overwrite_) {
-            return make_error(libbsa::error_code::io_error,
-                              "destination exists and --overwrite was not specified: " +
-                                  destination.string());
+            return make_error(
+                libbsa::error_code::io_error,
+                "destination exists and --overwrite was not specified: " + destination.string());
         }
         if (exists && std::filesystem::is_directory(destination, fs_error)) {
             return make_error(libbsa::error_code::io_error,

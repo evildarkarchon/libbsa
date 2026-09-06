@@ -44,8 +44,7 @@ class payload_span_exclusivity final {
     /// Growing the collection may throw `std::bad_alloc`. Parsers already wrap
     /// entry materialisation in the family-scoped allocation boundary that
     /// translates it, so the failure keeps family-correct wording.
-    result<void> insert(std::uint64_t offset, std::uint64_t size,
-                        std::string_view overlap_message);
+    result<void> insert(std::uint64_t offset, std::uint64_t size, std::string_view overlap_message);
 
     /// Returns how many distinct spans have been accepted so far.
     [[nodiscard]] std::size_t distinct_span_count() const noexcept;

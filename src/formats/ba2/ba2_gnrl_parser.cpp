@@ -213,11 +213,16 @@ result<std::vector<entry_metadata>> materialize_entries(
             auto display_path = std::move(identity.value().stored_path);
             detail::normalize_display_separators(display_path);
 
-            auto entry = entry_metadata{
-                std::move(identity.value().canonical_path),
-                std::move(display_path), records[index].size, stored_size,
-                records[index].offset, records[index].name_hash,
-                compression_for(records[index], profile), records[index].unknown, false, 0U};
+            auto entry = entry_metadata{std::move(identity.value().canonical_path),
+                                        std::move(display_path),
+                                        records[index].size,
+                                        stored_size,
+                                        records[index].offset,
+                                        records[index].name_hash,
+                                        compression_for(records[index], profile),
+                                        records[index].unknown,
+                                        false,
+                                        0U};
             // Assigned rather than appended positionally: the aggregate already
             // carries ten fields, and a future field inserted mid-struct would
             // silently shift a trailing positional initializer onto it.
