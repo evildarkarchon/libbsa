@@ -490,3 +490,4 @@ tmp/
 Architecture review — libbsa*.html
 Architecture review — libbsa*_files
 graphify-out/
+.codegraph/

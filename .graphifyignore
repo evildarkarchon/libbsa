@@ -129,4 +129,5 @@ ruff_output.json
 snapshot_report.html
 TestAppSnapshots*.raw
 Performance CI Test.txt
-*.json
+# Keep project JSON manifests and CMake presets in the graph; generated JSON
+# outputs are excluded by their specific names above.

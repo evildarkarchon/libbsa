@@ -178,13 +178,14 @@ function Resolve-CorpusPath {
 function Assert-OutsideCorpus {
     <#
     .SYNOPSIS
-    Throws if a path that will be deleted or written sits inside the corpus.
+    Throws if a path that will be deleted or written overlaps the corpus.
 
     .DESCRIPTION
     AGENTS.md makes the retail corpus strictly read-only: it must never be
     modified, moved, renamed or deleted. These scripts delete scratch directories
     and write result CSVs, so one mistyped argument could otherwise modify the
-    corpus. Checked before anything is created, removed or overwritten.
+    corpus. A scratch ancestor is unsafe too because its children may be removed.
+    Checked before anything is created, removed or overwritten.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Path,
@@ -195,5 +196,8 @@ function Assert-OutsideCorpus {
     $corpus = [System.IO.Path]::GetFullPath($CorpusPath).TrimEnd('\')
     if ($full -eq $corpus -or $full.StartsWith($corpus + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "Refusing to use '$Path': it is inside the read-only archive corpus '$CorpusPath'."
+    }
+    if ($corpus.StartsWith($full + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to use '$Path': it contains the read-only archive corpus '$CorpusPath'."
     }
 }
