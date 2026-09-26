@@ -284,6 +284,30 @@ exit /b 0
         Write-Host 'PASS: comparison rejects missing archives'
     }
 
+    $addedResult = Invoke-ChildPowerShell -ScriptPath $compareScript -WorkingDirectory $SourceDirectory `
+        -Arguments @('-Before', $missingAfter, '-After', $missingBefore)
+    if ($addedResult.ExitCode -eq 0 -or $addedResult.Output -notmatch 'present only in After') {
+        $failures.Add("comparison accepts an added archive: exit=$($addedResult.ExitCode), output=$($addedResult.Output.Trim())")
+    }
+    else {
+        Write-Host 'PASS: comparison rejects added archives'
+    }
+
+    $duplicateBefore = Join-Path $scratchRoot 'duplicate-before.csv'
+    @'
+"archive","entry_count","elapsed_ms","exit_code","diagnostic"
+"GameA\Shared.ba2","1","10","0",""
+"GameA\Shared.ba2","1","20","0",""
+'@ | Set-Content -LiteralPath $duplicateBefore -Encoding utf8
+    $duplicateResult = Invoke-ChildPowerShell -ScriptPath $compareScript -WorkingDirectory $SourceDirectory `
+        -Arguments @('-Before', $duplicateBefore, '-After', $missingAfter)
+    if ($duplicateResult.ExitCode -eq 0 -or $duplicateResult.Output -notmatch 'Duplicate archive identity') {
+        $failures.Add("comparison overwrites duplicate archive rows: exit=$($duplicateResult.ExitCode), output=$($duplicateResult.Output.Trim())")
+    }
+    else {
+        Write-Host 'PASS: comparison rejects duplicate archive identities'
+    }
+
     $pathBefore = Join-Path $scratchRoot 'path-before.csv'
     $pathAfter = Join-Path $scratchRoot 'path-after.csv'
     @'
@@ -301,6 +325,23 @@ exit /b 0
     }
     else {
         Write-Host 'PASS: comparison ignores parenthesized diagnostic paths'
+    }
+
+    @'
+"archive","entry_count","elapsed_ms","exit_code","diagnostic"
+"GameA\Shared.ba2","","10","1","error (C:\Program Files (x86)\GameA\Shared.ba2): format_error: invalid (version 1): header"
+'@ | Set-Content -LiteralPath $pathBefore -Encoding utf8
+    @'
+"archive","entry_count","elapsed_ms","exit_code","diagnostic"
+"GameA\Shared.ba2","","10","1","error (D:\Games\GameA\Shared.ba2): format_error: invalid (version 2): header"
+'@ | Set-Content -LiteralPath $pathAfter -Encoding utf8
+    $messageResult = Invoke-ChildPowerShell -ScriptPath $compareScript -WorkingDirectory $SourceDirectory `
+        -Arguments @('-Before', $pathBefore, '-After', $pathAfter)
+    if ($messageResult.ExitCode -eq 0 -or $messageResult.Output -notmatch 'COMPATIBILITY MISMATCHES') {
+        $failures.Add("comparison discards a parenthesized diagnostic change: exit=$($messageResult.ExitCode), output=$($messageResult.Output.Trim())")
+    }
+    else {
+        Write-Host 'PASS: comparison retains parenthesized diagnostic messages'
     }
 
     # Copying the real script beside a synthetic TES5Edit tree exercises its

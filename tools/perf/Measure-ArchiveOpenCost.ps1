@@ -126,6 +126,9 @@ $index = 0
 foreach ($archive in $archives) {
     $index++
     $bsaArgs = @($Command, $archive.FullName)
+    # Different games can have archives with the same leaf name; the comparer
+    # needs a stable corpus-relative key to keep both rows.
+    $archiveIdentity = [System.IO.Path]::GetRelativePath($corpusPath, $archive.FullName)
 
     $measureArgs = @{
         BsaPath    = $bsaPath
@@ -154,7 +157,7 @@ foreach ($archive in $archives) {
     $results.Add([pscustomobject]@{
             label       = $Label
             command     = $Command
-            archive     = $archive.Name
+            archive     = $archiveIdentity
             size_bytes  = $archive.Length
             entry_count = $entryCount
             type        = $infoFields['type']
@@ -169,7 +172,7 @@ foreach ($archive in $archives) {
 
     $shown = if ($null -ne $entryCount) { $entryCount } else { 'n/a' }
     Write-Host ("[{0,3}/{1}] {2,-45} entries={3,-8} exit={4} {5,10:N1} ms" -f
-        $index, $archives.Count, $archive.Name, $shown, $best.ExitCode, $best.ElapsedMs)
+        $index, $archives.Count, $archiveIdentity, $shown, $best.ExitCode, $best.ElapsedMs)
 }
 
 $results | Export-Csv -LiteralPath $OutputCsv -NoTypeInformation -Encoding utf8

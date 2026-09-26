@@ -45,19 +45,36 @@ $ErrorActionPreference = 'Stop'
 
 # `error (D:\some\where\Foo.ba2): format_error: ...` can differ between two runs
 # only in the path when the corpus is reached by a different route, so compare the
-# part after the context prefix.
+# part after the context prefix. The path itself can contain parentheses, while
+# the message can contain `): ` too; the context delimiter precedes an error code.
 function Get-ComparableDiagnostic {
+    <#
+    .SYNOPSIS
+    Removes the archive-path context from a rejection diagnostic for comparison.
+    #>
     param([string]$Text)
 
     if (-not $Text) { return '' }
-    return ($Text -replace '^error \([^)]*\): ', 'error: ').Trim()
+    return ($Text -replace '^error \(.*?\): (?=[a-z_]+: )', 'error: ').Trim()
 }
 
 $beforeRows = @{}
-foreach ($row in Import-Csv -LiteralPath $Before) { $beforeRows[$row.archive] = $row }
+# Older sweeps used leaf names and could emit duplicate keys. Refuse those CSVs
+# instead of silently replacing one archive's result with another's.
+foreach ($row in Import-Csv -LiteralPath $Before) {
+    if ($beforeRows.ContainsKey($row.archive)) {
+        throw "Duplicate archive identity '$($row.archive)' in Before CSV '$Before'."
+    }
+    $beforeRows[$row.archive] = $row
+}
 
 $afterRows = @{}
-foreach ($row in Import-Csv -LiteralPath $After) { $afterRows[$row.archive] = $row }
+foreach ($row in Import-Csv -LiteralPath $After) {
+    if ($afterRows.ContainsKey($row.archive)) {
+        throw "Duplicate archive identity '$($row.archive)' in After CSV '$After'."
+    }
+    $afterRows[$row.archive] = $row
+}
 
 $onlyBefore = @($beforeRows.Keys | Where-Object { -not $afterRows.ContainsKey($_) })
 $onlyAfter = @($afterRows.Keys | Where-Object { -not $beforeRows.ContainsKey($_) })
@@ -97,6 +114,7 @@ Write-Host ("archives compared:   {0}" -f $comparisons.Count)
 Write-Host ("opened  before/after: {0} / {1}" -f $openedBefore.Count, $openedAfter.Count)
 Write-Host ("rejected before/after: {0} / {1}" -f ($comparisons.Count - $openedBefore.Count), ($comparisons.Count - $openedAfter.Count))
 Write-Host ("compatibility mismatches: {0}" -f $mismatches.Count)
+Write-Host ("archives only before/after: {0} / {1}" -f $onlyBefore.Count, $onlyAfter.Count)
 Write-Host ''
 
 Write-Host 'slowest 15 archives after, with before/after and speedup:'
@@ -113,11 +131,13 @@ else {
     Write-Host ("whole-corpus total: {0:N1} ms -> {1:N1} ms" -f $totalBefore, $totalAfter)
 }
 
-if ($mismatches.Count -gt 0) {
+if ($mismatches.Count -gt 0 -or $onlyBefore.Count -gt 0 -or $onlyAfter.Count -gt 0) {
     Write-Host ''
-    Write-Host 'COMPATIBILITY MISMATCHES:' -ForegroundColor Red
-    $mismatches | Format-List archive, before_exit, after_exit, outcome_match, diagnostic_match |
-        Out-String -Width 200 | Write-Host
+    if ($mismatches.Count -gt 0) {
+        Write-Host 'COMPATIBILITY MISMATCHES:' -ForegroundColor Red
+        $mismatches | Format-List archive, before_exit, after_exit, outcome_match, diagnostic_match |
+            Out-String -Width 200 | Write-Host
+    }
     exit 1
 }
 

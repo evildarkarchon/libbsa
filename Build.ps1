@@ -168,7 +168,49 @@ function Assert-CommandAvailable {
     }
 }
 
+function Assert-NoReparsePointInCleanPath {
+    <#
+    .SYNOPSIS
+    Rejects cleanup paths that pass through a junction or symbolic link.
+
+    .DESCRIPTION
+    Checks each existing path component because the final directory can appear
+    ordinary even when a parent redirects it into the source tree.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Path,
+
+        [Parameter(Mandatory = $true)]
+        [string] $Description
+    )
+
+    $pathRoot = [System.IO.Path]::GetPathRoot($Path)
+    $trimChars = [char[]] @([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    $currentPath = $pathRoot
+
+    foreach ($component in $Path.Substring($pathRoot.Length).Split($trimChars, [System.StringSplitOptions]::RemoveEmptyEntries)) {
+        $currentPath = Join-Path -Path $currentPath -ChildPath $component
+        if (-not (Test-Path -LiteralPath $currentPath)) {
+            break
+        }
+
+        $item = Get-Item -LiteralPath $currentPath -Force
+        if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            throw "Refusing to clean $Description because its path crosses a junction or symbolic link: $currentPath"
+        }
+    }
+}
+
 function Assert-SafeCleanPath {
+    <#
+    .SYNOPSIS
+    Allows cleanup only outside the checkout or in its designated build tree.
+
+    .DESCRIPTION
+    Rejects checkout ancestors, source-controlled descendants, filesystem roots,
+    and paths redirected through junctions or symbolic links before deletion.
+    #>
     param(
         [Parameter(Mandatory = $true)]
         [string] $Path,
@@ -196,6 +238,17 @@ function Assert-SafeCleanPath {
         throw "Refusing to clean $Description because it contains the source directory: $fullPath"
     }
 
+    # Custom build directories may live outside the checkout. Inside it, only the
+    # checked-in preset build root is designated for recursive cleanup; accepting
+    # arbitrary descendants would let -Clean delete source files or TES5Edit.
+    $buildRoot = [System.IO.Path]::GetFullPath((Join-Path -Path $SourceDirectory -ChildPath 'build')).TrimEnd($trimChars)
+    $buildWithSeparator = $buildRoot + [System.IO.Path]::DirectorySeparatorChar
+    if ($normalizedPath.StartsWith($sourceWithSeparator, [System.StringComparison]::OrdinalIgnoreCase) -and
+        -not [System.String]::Equals($normalizedPath, $buildRoot, [System.StringComparison]::OrdinalIgnoreCase) -and
+        -not $normalizedPath.StartsWith($buildWithSeparator, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to clean $Description because it is inside the source tree but outside the build directory: $fullPath"
+    }
+
     # Volume roots ('D:\') and UNC share roots ('\\server\share') have no parent to fall back on,
     # so a recursive delete there is never a build-tree cleanup.
     $pathRoot = [System.IO.Path]::GetPathRoot($fullPath)
@@ -206,6 +259,8 @@ function Assert-SafeCleanPath {
     if ([string]::IsNullOrWhiteSpace($fullPath) -or $fullPath.Length -lt 4) {
         throw "Refusing to clean suspiciously short $Description path: $fullPath"
     }
+
+    Assert-NoReparsePointInCleanPath -Path $fullPath -Description $Description
 }
 
 function Remove-BuildDirectory {

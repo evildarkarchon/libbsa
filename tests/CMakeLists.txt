@@ -451,4 +451,19 @@ if(WIN32)
   set_tests_properties(readonly_tool_boundaries PROPERTIES
     LABELS "unit;tooling;filesystem_boundary"
   )
+
+  add_test(
+    NAME build_clean_boundaries
+    COMMAND ${LIBBSA_POWERSHELL_EXECUTABLE}
+      -NoLogo
+      -NoProfile
+      -NonInteractive
+      -File ${CMAKE_CURRENT_SOURCE_DIR}/tooling/build-clean-boundaries.ps1
+      -SourceDirectory ${PROJECT_SOURCE_DIR}
+      -BinaryDirectory ${CMAKE_BINARY_DIR}
+  )
+
+  set_tests_properties(build_clean_boundaries PROPERTIES
+    LABELS "unit;tooling;filesystem_boundary"
+  )
 endif()
