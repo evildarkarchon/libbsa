@@ -1,8 +1,8 @@
 # Triage Labels
 
-The engineering skills use five canonical triage roles. This file maps those roles to the values used in local Markdown issue `Status:` lines.
+The engineering skills use five canonical triage roles. This file maps those roles to GitHub issue labels in `evildarkarchon/libbsa`.
 
-| Canonical role | Status value | Meaning |
+| Canonical role | GitHub label | Meaning |
 | --- | --- | --- |
 | `needs-triage` | `needs-triage` | Maintainer needs to evaluate this issue |
 | `needs-info` | `needs-info` | Waiting on the reporter for more information |
@@ -10,4 +10,4 @@ The engineering skills use five canonical triage roles. This file maps those rol
 | `ready-for-human` | `ready-for-human` | Requires human implementation |
 | `wontfix` | `wontfix` | Will not be actioned |
 
-When a skill mentions a role, use the corresponding Status value from this table. Edit the Status-value column if the repository's vocabulary changes.
+When a skill mentions a role, use the corresponding GitHub label from this table. Edit the GitHub label column if the repository's vocabulary changes.

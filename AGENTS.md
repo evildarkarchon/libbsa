@@ -167,11 +167,11 @@ them without asking first. This is standing authorization.
 
 ### Issue tracker
 
-Track work and specs as local Markdown under `.scratch/<feature>/`. Before creating, fetching, or updating tickets, read `docs/agents/issue-tracker.md`.
+Track work and specs as GitHub issues in `evildarkarchon/libbsa`. Before creating, fetching, or updating issues, read `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Use the canonical triage states in local issue `Status:` lines: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+Use the canonical GitHub issue labels `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
