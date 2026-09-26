@@ -65,11 +65,12 @@ Create a `ba2_gnrl_writer` for `ba2_gnrl_target::starfield_v3`, choose an archiv
 ## `example_create_ba2_dx10`
 
 ```cpp
-libbsa::result<void> example_create_ba2_dx10(std::string_view dds_host_path,
+libbsa::result<void> example_create_ba2_dx10(libbsa::ba2_dx10_target target,
+                                             std::string_view dds_host_path,
                                              std::string_view output_host_path);
 ```
 
-Create a `ba2_dx10_writer` for a texture target and add DDS host files with archive virtual texture paths. The writer validates and snapshots DDS input at add time, then `write_to` uses target metadata to select the compressed BA2 DX10 route.
+Create a `ba2_dx10_writer` for a texture target and add DDS host files with archive virtual texture paths. The writer validates and snapshots DDS input at add time, then `write_to` uses target metadata to select the compressed BA2 DX10 route. `ba2_dx10_target::starfield_v2` uses fixed deflate compression and ignores the v3-only compression-method option; `starfield_v3` selects method `3` raw LZ4 block by default and also supports method `0` deflate.
 
 BA2 DX10 has a one-shot writer lifecycle. Do not reuse a BA2 DX10 writer after `write_to`: the write attempt consumes the writer, runs best-effort cleanup for its temporary DDS snapshots, and later `add_file` or `write_to` calls report `invalid_argument`. Ordinary success and `result`-returning failure paths clean writer-owned snapshot data, but a crash, forced termination, OS shutdown, or external temp-directory interference can still leave residual temp artifacts.
 

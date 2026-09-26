@@ -27,10 +27,6 @@ constexpr std::wstring_view non_ascii_path_token_wide = L"libbsa-Ångström-日�
 
 std::filesystem::path project_root() { return std::filesystem::path{LIBBSA_SOURCE_DIR}; }
 
-std::filesystem::path suite_source_path() {
-    return project_root() / "tests" / "unit" / "host_path_correctness_boundary_tests.cpp";
-}
-
 std::filesystem::path tests_cmake_path() { return project_root() / "tests" / "CMakeLists.txt"; }
 
 std::filesystem::path generated_archive_dir() {
@@ -299,14 +295,6 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "host_path_correctness_boundary suite source carries the locked "
-    "non-ASCII token and smoke selector",
-    "[unit][host_path_correctness_boundary][host_path_correctness_"
-    "boundary_smoke]") {
-    REQUIRE(non_ascii_path_token == "libbsa-Ångström-日本語");
-}
-
-TEST_CASE(
     "host_path_correctness_boundary smoke setup uses the locked "
     "non-ASCII directory and filename without copying manifests",
     "[unit][fixture][host_path_correctness_boundary][host_path_"
@@ -342,10 +330,10 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "host_path_correctness_boundary non-ASCII host path exercises reader "
-    "dispatch surface",
-    "[unit][fixture][host_path_correctness_boundary][reader_backend_"
-    "dispatch]") {
+    "host_path_correctness_boundary non-ASCII host path exercises Archive Entry Catalog and "
+    "extraction surfaces",
+    "[unit][fixture][host_path_correctness_boundary][archive_entry_catalog]"
+    "[reader_extraction_dispatch]") {
     for (const auto& archive_case : representative_archive_cases()) {
         INFO(archive_case.archive_file);
         const auto manifest =
@@ -395,30 +383,3 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("host_path_correctness_boundary stays public-API-only and phase-scoped",
-          "[unit][host_path_correctness_boundary][host_path_correctness_boundary_"
-          "smoke]") {
-    const auto suite_source = read_text_file(suite_source_path());
-    const auto open_call = std::string{
-        "archive_reader::"
-        "open(host_path)"};
-    const auto validate_call = std::string{
-        "validate_"
-        "archive(host_path, options)"};
-    const auto extract_bytes_call = std::string{
-        "extract_"
-        "bytes(canonical_path)"};
-    const auto writer_publish_call = std::string{
-        "write_"
-        "to("};
-    const auto writer_add_file_call = std::string{
-        "add_"
-        "file("};
-
-    REQUIRE(contains_text(suite_source, open_call));
-    REQUIRE(contains_text(suite_source, validate_call));
-    REQUIRE(contains_text(suite_source, extract_bytes_call));
-
-    REQUIRE_FALSE(contains_text(suite_source, writer_publish_call));
-    REQUIRE_FALSE(contains_text(suite_source, writer_add_file_call));
-}

@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -164,23 +165,85 @@ TEST_CASE(
         const auto root = output_path(target_name(target) + "-sources").parent_path();
         const auto serial_output = root / (target_name(target) + "-serial.bsa");
         const auto parallel_output = root / (target_name(target) + "-parallel.bsa");
+        const auto memory_path = std::string{"Meshes/Large/MemoryDuplicate.nif"};
+        const auto& memory_payload = entries.front().second;
 
         libbsa::tes4_bsa_writer_options options;
         options.compression_policy = libbsa::archive_compression_policy::all_compressed;
+        options.deduplicate_payloads = true;
         options.overwrite_existing = true;
 
         libbsa::tes4_bsa_writer serial_writer{target, options};
         add_tes4_sources(serial_writer, root, entries);
+        REQUIRE(serial_writer.add_bytes(memory_path, memory_payload).has_value());
         REQUIRE(serial_writer.write_to(serial_output.string()).has_value());
 
         libbsa::tes4_bsa_writer parallel_writer{target, options};
         add_tes4_sources(parallel_writer, root, entries);
+        REQUIRE(parallel_writer.add_bytes(memory_path, memory_payload).has_value());
         libbsa::write_execution_options execution;
         execution.worker_count = 4U;
         REQUIRE(parallel_writer.write_to(parallel_output.string(), execution).has_value());
 
         CHECK(read_binary_file(parallel_output) == read_binary_file(serial_output));
         require_same_reopened_payloads(serial_output, parallel_output, entries);
+        auto reopened = libbsa::archive_reader::open(parallel_output.string());
+        REQUIRE(reopened.has_value());
+        require_extracted_bytes(reopened.value(), memory_path, memory_payload);
+        auto disk_entry = reopened.value().find(entries.front().first);
+        auto memory_entry = reopened.value().find(memory_path);
+        REQUIRE(disk_entry.has_value());
+        REQUIRE(memory_entry.has_value());
+        REQUIRE(disk_entry.value().has_value());
+        REQUIRE(memory_entry.value().has_value());
+        CHECK(disk_entry.value()->payload_offset == memory_entry.value()->payload_offset);
+    }
+}
+
+TEST_CASE(
+    "bsa_writer_execution TES4 raw snapshots keep deduplicated output "
+    "deterministic across worker counts",
+    "[unit][bsa_writer_execution][bounded_memory_policy][tes4_bsa_writer]") {
+    const auto root = output_path("tes4-raw-determinism-root").parent_path();
+    const auto serial_output = root / "tes4-raw-determinism-serial.bsa";
+    const auto parallel_output = root / "tes4-raw-determinism-parallel.bsa";
+    const auto shared = patterned_bytes((2U * 64U * 1024U) + 4097U, 0x57U);
+    const std::array disk_entries{
+        std::pair<std::string_view, std::vector<std::byte>>{"Meshes/Raw/DiskA.nif", shared},
+        std::pair<std::string_view, std::vector<std::byte>>{"Meshes/Raw/DiskB.nif", shared},
+    };
+
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    options.deduplicate_payloads = true;
+    options.overwrite_existing = true;
+
+    libbsa::tes4_bsa_writer serial_writer{libbsa::tes4_bsa_target::fallout3, options};
+    add_tes4_sources(serial_writer, root, disk_entries);
+    REQUIRE(serial_writer.add_bytes("Meshes/Raw/Memory.nif", shared).has_value());
+    REQUIRE(serial_writer.write_to(serial_output.string()).has_value());
+
+    libbsa::tes4_bsa_writer parallel_writer{libbsa::tes4_bsa_target::fallout3, options};
+    add_tes4_sources(parallel_writer, root, disk_entries);
+    REQUIRE(parallel_writer.add_bytes("Meshes/Raw/Memory.nif", shared).has_value());
+    libbsa::write_execution_options execution;
+    execution.worker_count = 4U;
+    REQUIRE(parallel_writer.write_to(parallel_output.string(), execution).has_value());
+
+    CHECK(read_binary_file(parallel_output) == read_binary_file(serial_output));
+    auto serial_reader = libbsa::archive_reader::open(serial_output.string());
+    REQUIRE(serial_reader.has_value());
+    std::optional<std::uint64_t> shared_offset;
+    for (const auto path :
+         {"Meshes/Raw/DiskA.nif", "Meshes/Raw/DiskB.nif", "Meshes/Raw/Memory.nif"}) {
+        auto found = serial_reader.value().find(path);
+        REQUIRE(found.has_value());
+        REQUIRE(found.value().has_value());
+        if (!shared_offset.has_value()) {
+            shared_offset = found.value().value().payload_offset;
+        }
+        CHECK(found.value().value().payload_offset == *shared_offset);
+        require_extracted_bytes(serial_reader.value(), path, shared);
     }
 }
 

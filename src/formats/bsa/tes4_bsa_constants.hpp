@@ -16,6 +16,13 @@ inline constexpr std::size_t tes4_bsa_legacy_folder_record_size = 16U;
 inline constexpr std::size_t tes4_bsa_sse_folder_record_size = 24U;
 inline constexpr std::size_t tes4_bsa_file_record_size = 16U;
 
+// A folder-name block entry is a bzstring behind a one-byte length prefix, so a
+// single folder contributes at most the prefix plus 255 stored name bytes. This
+// bounds the folder-name block without consulting TotalFolderNameLength, which
+// the reference never reads back and which therefore cannot be relied on for
+// sizing.
+inline constexpr std::size_t tes4_bsa_max_folder_name_block_entry_size = 256U;
+
 // Reader and writer paths depend on name tables being present to expose stable
 // public archive paths.
 inline constexpr std::uint32_t tes4_bsa_archive_include_directory_names = 0x0001U;

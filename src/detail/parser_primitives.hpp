@@ -113,8 +113,19 @@ result<std::vector<std::byte>> read_file_bytes_at(std::ifstream& input, std::uin
 result<std::string> archive_string_from_bytes(std::span<const std::byte> bytes,
                                               std::string_view description);
 
-/// Converts archive display path separators to `/` after a parser has accepted
+/// Converts archive display path separators to `\` after a parser has accepted
 /// the stored path spelling.
+///
+/// libbsa is Windows-only, so the display spelling reported to consumers uses
+/// the platform separator. This is deliberately independent of what a format
+/// stores: the BSA families store `\`, while BA2 stores `/` because Bethesda's
+/// own packer does (`wbBSArchive.pas:1539-1540`, "archive2.exe uses /"). Every
+/// parser funnels its stored spelling through here so one rule governs display
+/// regardless of format.
+///
+/// This never affects lookup. `normalize_archive_path` folds `\` to `/` per
+/// character when building the canonical key, so both spellings resolve
+/// identically.
 void normalize_display_separators(std::string& value) noexcept;
 
 }  // namespace libbsa::detail

@@ -3,13 +3,12 @@
 #include <detail/archive_path.hpp>
 #include <detail/bethesda_hash.hpp>
 #include <detail/binary_io.hpp>
-#include <detail/host_file.hpp>
 #include <detail/parser_primitives.hpp>
 
 #include <algorithm>
-#include <fstream>
 #include <limits>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -44,7 +43,6 @@ using detail::add_fits;
 using detail::archive_string_from_bytes;
 using detail::multiply_fits;
 using detail::normalize_display_separators;
-using detail::read_file_bytes_at;
 using detail::span_fits;
 
 result<header_fields> read_header(detail::binary_reader& reader) {
@@ -164,6 +162,28 @@ result<std::vector<std::string>> read_names(std::span<const std::byte> table_byt
     return names;
 }
 
+/// Reads the TES3 hash table and returns each record as a `hash_tes3` value.
+///
+/// A hash record is two consecutive little-endian `u32` values: the first-half
+/// byte sum, then the second-half byte sum. `hash_tes3` packs those the other way
+/// round -- first-half sum in the high 32 bits -- so reading the eight bytes as a
+/// single `u64` transposes the halves. libbsa used to do exactly that and then
+/// compare the result against the recomputed name hash, which is why no record in
+/// any retail TES3 archive ever matched and `Morrowind.bsa` could not be opened
+/// (issue #46).
+///
+/// The reference agrees, but only on its write path, and it contradicts itself.
+/// `TwbBSArchive.SaveToFile` emits the record as `Hash shr 32` then
+/// `Hash and $FFFFFFFF` (`wbBSArchive.pas:1613-1616`) -- exactly the composition
+/// below. Its read path does not match its own writer: `LoadFromFile` takes the
+/// field with `fStream.ReadUInt64` (`wbBSArchive.pas:1127`) and
+/// `FindFileRecordTES3` compares that value directly against `CreateHashTES3`
+/// (`wbBSArchive.pas:907-911`), which transposes the halves and so cannot match
+/// on vanilla data. TES3 lookup by name in BSArchPro therefore appears to be
+/// unexercised, and the writer is the half of the reference to trust here.
+///
+/// Retail bytes settle it either way: all 11090 records of vanilla
+/// `Morrowind.bsa` match the composition below and none match a `u64` read.
 result<std::vector<std::uint64_t>> read_hashes(detail::binary_reader& reader,
                                                std::uint32_t file_count) {
     std::vector<std::uint64_t> hashes;
@@ -172,11 +192,13 @@ result<std::vector<std::uint64_t>> read_hashes(detail::binary_reader& reader,
         return reserved.error();
     }
     for (std::uint32_t index = 0; index < file_count; ++index) {
-        const auto hash = reader.read_u64_le();
-        if (!hash) {
+        const auto first_half_sum = reader.read_u32_le();
+        const auto second_half_sum = reader.read_u32_le();
+        if (!first_half_sum || !second_half_sum) {
             return error{error_code::format_error, "TES3 BSA hash table is truncated"};
         }
-        hashes.push_back(hash.value());
+        hashes.push_back(static_cast<std::uint64_t>(first_half_sum.value()) << 32U |
+                         second_half_sum.value());
     }
     return hashes;
 }
@@ -211,15 +233,18 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
         if (!reserved_spans) {
             return reserved_spans.error();
         }
-        std::optional<std::uint64_t> previous_hash_sort_key;
+        std::optional<std::uint64_t> previous_stored_hash;
 
         for (std::size_t index = 0; index < records.size(); ++index) {
             const auto stored_hash = hashes[index];
-            const auto sort_key = detail::tes3_hash_sort_key(stored_hash);
-            if (previous_hash_sort_key && sort_key < previous_hash_sort_key.value()) {
+            // `read_hashes` already composed the record in `hash_tes3` order, so
+            // the stored value is its own sort key: comparing it compares the two
+            // stored words in the order they appear on disk. All 11090 records of
+            // vanilla `Morrowind.bsa` are sorted this way (issue #46).
+            if (previous_stored_hash && stored_hash < previous_stored_hash.value()) {
                 return error{error_code::format_error, "TES3 BSA hash records are not sorted"};
             }
-            previous_hash_sort_key = sort_key;
+            previous_stored_hash = stored_hash;
             // Duplicate stored hashes are malformed even when one name would also
             // fail recomputation; check them first so collision fixtures exercise the
             // TES3 collision branch rather than being hidden by mismatch validation.
@@ -227,6 +252,19 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                 return error{error_code::format_error,
                              "TES3 BSA contains duplicate stored hash records"};
             }
+            // The hash basis is the name exactly as stored, backslashes and all.
+            // `CreateHashTES3` folds ASCII case but has no separator folding,
+            // unlike `CreateHashFO4`, so normalizing to forward slashes first
+            // changes the hash: only 1 of the 11090 names in vanilla
+            // `Morrowind.bsa` hashes the same either way. Display separator
+            // normalization therefore happens below, on a copy, after hashing.
+            //
+            // This disagreement stays fatal, unlike the BA2 record-identity
+            // cross-check that issue #43 demoted to a warning. That demotion was
+            // driven by retail archives that actually fail; every record of every
+            // retail TES3 archive measured agrees, so there is no evidence a TES3
+            // tolerance is needed, and a mismatch here still means the archive is
+            // genuinely corrupt.
             const auto computed_hash = detail::hash_tes3(names[index]);
             if (stored_hash != computed_hash) {
                 return error{error_code::format_error,
@@ -268,6 +306,20 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
                                              stored_hash, entry_compression::none, 0U, false, 0U});
         }
 
+        // TES3 is deliberately not migrated onto detail::payload_span_exclusivity,
+        // which the other archive families share; ADR-0002 records that decision
+        // and the open question it leaves. Two things here genuinely differ.
+        // Semantics: this sweep rejects *any* overlap, exact duplicates included,
+        // whereas the shared module exempts byte-identical placement because
+        // Payload Placement may deliberately share one location (ADR-0001).
+        // Position: the sweep runs after the entry loop, so every in-loop check
+        // outranks it for an archive carrying several defects -- and precedence
+        // here is pinned behavior, with a test asserting that unsorted hash
+        // records are reported before payload overlap. Moving the check inside the
+        // loop would reorder it against those checks whenever the two defects sit
+        // at different records. Folding TES3 in would therefore mean changing its
+        // accept/reject set or giving the shared module a mode flag, so the
+        // omission is intentional, not an oversight.
         std::sort(payload_spans.begin(), payload_spans.end(),
                   [](const payload_span& lhs, const payload_span& rhs) {
                       if (lhs.start != rhs.start) {
@@ -293,22 +345,18 @@ result<std::vector<entry_metadata>> materialize_entries(std::size_t archive_size
     }
 }
 
-result<tes3_bsa_archive> parse_tes3_bsa_archive_impl(std::span<const std::byte> table_bytes,
-                                                     std::size_t archive_size,
-                                                     detected_bsa_format detected) {
+/// Parses the observed TES3 metadata table with the opening's authoritative size.
+result<opened_bsa_archive> parse_tes3_bsa_archive_impl(std::span<const std::byte> table_bytes,
+                                                       std::size_t archive_size) {
     if (table_bytes.size() < fixed_header_size) {
         return error{error_code::format_error, "TES3 BSA header is truncated"};
     }
-    if (detected.variant != archive_variant::tes3 || detected.version != tes3_magic_version) {
-        return error{error_code::unsupported, "detected BSA format is not TES3"};
-    }
-
     detail::binary_reader reader{table_bytes};
     auto header = read_header(reader);
     if (!header) {
         return header.error();
     }
-    if (header.value().version != detected.version) {
+    if (header.value().version != tes3_magic_version) {
         return error{error_code::format_error,
                      "TES3 BSA detected version does not match parsed header"};
     }
@@ -352,36 +400,21 @@ result<tes3_bsa_archive> parse_tes3_bsa_archive_impl(std::span<const std::byte> 
         return entries.error();
     }
 
-    return tes3_bsa_archive{
+    return opened_bsa_archive{
         archive_metadata{archive_type::bsa, archive_variant::tes3, header.value().version, 0U,
-                         header.value().file_count, detected.default_compression},
+                         header.value().file_count, entry_compression::none},
         std::move(entries.value())};
 }
 
 }  // namespace
 
-result<tes3_bsa_archive> parse_tes3_bsa_archive(std::span<const std::byte> bytes,
-                                                detected_bsa_format detected) {
-    return parse_tes3_bsa_archive_impl(bytes, bytes.size(), detected);
-}
-
-result<tes3_bsa_archive> parse_tes3_bsa_archive_file(const detail::host_file_path& host_path,
-                                                     std::uint64_t archive_size,
-                                                     detected_bsa_format detected) {
+result<opened_bsa_archive> materialize_tes3_bsa_archive(const bsa_archive_source& source) {
+    const auto archive_size = source.size();
     if (archive_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
         return error{error_code::format_error, "TES3 BSA archive exceeds platform limits"};
     }
 
-    const detail::host_file_context host_context{
-        "failed to open archive host path", "failed to determine archive host path size",
-        "failed while reading archive host path", "archive host path changed while reading",
-        "TES3 BSA metadata table"};
-    auto input = detail::open_host_file(host_path, host_context);
-    if (!input) {
-        return input.error();
-    }
-    auto header_bytes =
-        read_file_bytes_at(input.value(), 0U, fixed_header_size, "TES3 BSA fixed header");
+    auto header_bytes = source.read_exact(0U, fixed_header_size, "TES3 BSA fixed header");
     if (!header_bytes) {
         return header_bytes.error();
     }
@@ -399,13 +432,11 @@ result<tes3_bsa_archive> parse_tes3_bsa_archive_file(const detail::host_file_pat
     if (!table_size) {
         return table_size.error();
     }
-    auto table_bytes =
-        read_file_bytes_at(input.value(), 0U, table_size.value(), "TES3 BSA metadata table");
+    auto table_bytes = source.read_exact(0U, table_size.value(), "TES3 BSA metadata table");
     if (!table_bytes) {
         return table_bytes.error();
     }
-    return parse_tes3_bsa_archive_impl(table_bytes.value(), static_cast<std::size_t>(archive_size),
-                                       detected);
+    return parse_tes3_bsa_archive_impl(table_bytes.value(), static_cast<std::size_t>(archive_size));
 }
 
 }  // namespace libbsa::formats::bsa

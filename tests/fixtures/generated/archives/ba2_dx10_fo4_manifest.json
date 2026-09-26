@@ -56,8 +56,8 @@
       "expected_directxtex_metadata": {"width": 2, "height": 2, "mipLevels": 2, "format": 28, "arraySize": 1, "isCubemap": false},
       "expected_dds_payload": {"bytes_hex": "303132333435363738393a3b3c3d3e3f50515253", "sha256_placeholder": "303132333435363738393a3b3c3d3e3f50515253"},
       "chunks": [
-        {"offset": 426, "packed_size": 21, "raw_size": 16, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "deflate", "decoded_bytes_hex": "303132333435363738393a3b3c3d3e3f", "logical_texture_segment": {"array_index": 0, "face_index": 0, "start_mip": 0, "end_mip": 0, "source_chunk_index": 0}},
-        {"offset": 447, "packed_size": 9, "raw_size": 4, "start_mip": 1, "end_mip": 1, "sentinel": "0xBAADF00D", "compression_route": "deflate", "decoded_bytes_hex": "50515253", "logical_texture_segment": {"array_index": 0, "face_index": 0, "start_mip": 1, "end_mip": 1, "source_chunk_index": 1}}
+        {"offset": 426, "packed_size": 27, "raw_size": 16, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "deflate", "decoded_bytes_hex": "303132333435363738393a3b3c3d3e3f", "logical_texture_segment": {"array_index": 0, "face_index": 0, "start_mip": 0, "end_mip": 0, "source_chunk_index": 0}},
+        {"offset": 453, "packed_size": 15, "raw_size": 4, "start_mip": 1, "end_mip": 1, "sentinel": "0xBAADF00D", "compression_route": "deflate", "decoded_bytes_hex": "50515253", "logical_texture_segment": {"array_index": 0, "face_index": 0, "start_mip": 1, "end_mip": 1, "source_chunk_index": 1}}
       ]
     },
     {
@@ -80,12 +80,12 @@
       "expected_directxtex_metadata": {"width": 1, "height": 1, "mipLevels": 1, "format": 28, "arraySize": 6, "isCubemap": true},
       "expected_dds_payload": {"bytes_hex": "60616263707172738081828390919293a0a1a2a3b0b1b2b3", "sha256_placeholder": "60616263707172738081828390919293a0a1a2a3b0b1b2b3"},
       "chunks": [
-        {"offset": 456, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "60616263", "logical_texture_segment": {"array_index": 0, "face_index": 0, "start_mip": 0, "end_mip": 0, "source_chunk_index": 0}},
-        {"offset": 460, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "70717273", "logical_texture_segment": {"array_index": 0, "face_index": 1, "start_mip": 0, "end_mip": 0, "source_chunk_index": 1}},
-        {"offset": 464, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "80818283", "logical_texture_segment": {"array_index": 0, "face_index": 2, "start_mip": 0, "end_mip": 0, "source_chunk_index": 2}},
-        {"offset": 468, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "90919293", "logical_texture_segment": {"array_index": 0, "face_index": 3, "start_mip": 0, "end_mip": 0, "source_chunk_index": 3}},
-        {"offset": 472, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "a0a1a2a3", "logical_texture_segment": {"array_index": 0, "face_index": 4, "start_mip": 0, "end_mip": 0, "source_chunk_index": 4}},
-        {"offset": 476, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "b0b1b2b3", "logical_texture_segment": {"array_index": 0, "face_index": 5, "start_mip": 0, "end_mip": 0, "source_chunk_index": 5}}
+        {"offset": 468, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "60616263", "logical_texture_segment": {"array_index": 0, "face_index": 0, "start_mip": 0, "end_mip": 0, "source_chunk_index": 0}},
+        {"offset": 472, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "70717273", "logical_texture_segment": {"array_index": 0, "face_index": 1, "start_mip": 0, "end_mip": 0, "source_chunk_index": 1}},
+        {"offset": 476, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "80818283", "logical_texture_segment": {"array_index": 0, "face_index": 2, "start_mip": 0, "end_mip": 0, "source_chunk_index": 2}},
+        {"offset": 480, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "90919293", "logical_texture_segment": {"array_index": 0, "face_index": 3, "start_mip": 0, "end_mip": 0, "source_chunk_index": 3}},
+        {"offset": 484, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "a0a1a2a3", "logical_texture_segment": {"array_index": 0, "face_index": 4, "start_mip": 0, "end_mip": 0, "source_chunk_index": 4}},
+        {"offset": 488, "packed_size": 0, "raw_size": 4, "start_mip": 0, "end_mip": 0, "sentinel": "0xBAADF00D", "compression_route": "raw", "decoded_bytes_hex": "b0b1b2b3", "logical_texture_segment": {"array_index": 0, "face_index": 5, "start_mip": 0, "end_mip": 0, "source_chunk_index": 5}}
       ]
     }
   ]

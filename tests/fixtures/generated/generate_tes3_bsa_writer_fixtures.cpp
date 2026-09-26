@@ -99,16 +99,18 @@ std::uint32_t read_u32_le_at(const std::vector<std::byte>& bytes, std::size_t of
            (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset + 3U])) << 24U);
 }
 
-std::uint64_t read_u64_le_at(const std::vector<std::byte>& bytes, std::size_t offset) {
+/// Reads a TES3 hash record and returns the `hash_tes3` value it encodes.
+///
+/// The record is two consecutive little-endian `u32` values: the first-half byte
+/// sum -- the high 32 bits of `hash_tes3` -- then the second-half sum. Reading
+/// the eight bytes as one `u64` transposes the halves, which would put a
+/// transposed `archive_hash` into the manifest this tool emits (issue #46).
+std::uint64_t read_tes3_hash_record_at(const std::vector<std::byte>& bytes, std::size_t offset) {
     if (offset + 8U > bytes.size()) {
-        throw std::runtime_error("TES3 writer fixture parse read_u64 out of range");
+        throw std::runtime_error("TES3 writer fixture parse hash record out of range");
     }
-    std::uint64_t value = 0;
-    for (std::uint32_t index = 0; index < 8U; ++index) {
-        value |= static_cast<std::uint64_t>(std::to_integer<unsigned char>(bytes[offset + index]))
-                 << (index * 8U);
-    }
-    return value;
+    return static_cast<std::uint64_t>(read_u32_le_at(bytes, offset)) << 32U |
+           read_u32_le_at(bytes, offset + 4U);
 }
 
 std::string read_zstring_at(const std::vector<std::byte>& bytes, std::size_t offset,
@@ -191,7 +193,8 @@ std::vector<parsed_entry> parse_tes3_archive(const std::vector<std::byte>& bytes
         }
 
         auto name = read_zstring_at(bytes, name_table_start + name_offset, hash_table_start);
-        auto hash = read_u64_le_at(bytes, hash_table_start + (index * tes3_hash_record_size));
+        auto hash =
+            read_tes3_hash_record_at(bytes, hash_table_start + (index * tes3_hash_record_size));
         entries.push_back(parsed_entry{
             .original_path = name,
             .canonical_path = canonicalize(name),

@@ -6,6 +6,7 @@
 #include <detail/binary_io.hpp>
 #include <detail/parser_primitives.hpp>
 
+#include <algorithm>
 #include <string>
 #include <string_view>
 
@@ -16,6 +17,11 @@ using detail::add_fits;
 using detail::archive_string_from_bytes;
 using detail::multiply_fits;
 using detail::span_fits;
+
+// A folder-name block entry is a bzstring behind a one-byte length prefix, and
+// read_bsa_name rejects a zero length, so the smallest legal entry is the prefix
+// plus a lone terminator.
+inline constexpr std::size_t minimum_folder_name_block_entry_size = 2U;
 
 result<void> skip_checked(detail::binary_reader& reader, std::size_t count) {
     auto skipped = reader.skip(count);
@@ -95,7 +101,8 @@ result<void> validate_folder_file_counts(const tes4_bsa_header_fields& header,
 }
 
 result<std::vector<tes4_bsa_folder_record>> read_folder_records(
-    detail::binary_reader& reader, const tes4_bsa_header_fields& header) {
+    detail::binary_reader& reader, const tes4_bsa_header_fields& header,
+    const tes4_bsa_profile& profile) {
     std::vector<tes4_bsa_folder_record> records;
     auto reserved =
         detail::reserve_metadata_vector(records, header.folder_count, "TES4 BSA folder records");
@@ -115,7 +122,7 @@ result<std::vector<tes4_bsa_folder_record>> read_folder_records(
         }
 
         std::uint64_t offset = 0;
-        if (header.version == tes4_bsa_skyrim_se_version) {
+        if (profile.folder_record_shape() == tes4_folder_record_shape::sse_64_bit_offset) {
             const auto unknown = reader.read_u32_le();
             const auto wide_offset = reader.read_u64_le();
             if (!unknown || !wide_offset) {
@@ -140,15 +147,21 @@ result<void> validate_tables(detail::binary_reader& reader, const tes4_bsa_heade
                              std::span<const tes4_bsa_folder_record> folders,
                              std::size_t archive_size) {
     std::size_t file_records_seen = 0;
-    std::size_t folder_name_bytes_seen = 0;
     for (const auto& folder : folders) {
         if (folder.offset > archive_size) {
             return error{error_code::format_error,
                          "TES4 BSA folder block offset is outside the archive"};
         }
-        // TES4 folder offsets point to the parser's current folder-block position
-        // adjusted by the later file-name table length; stale but in-range offsets
-        // must fail before entry metadata is materialized.
+        // TES4 folder offsets are stored biased by TotalFileNameLength:
+        // wbBSArchive.pas:1483-1498 seeds fDataOffset with the folder-record span,
+        // then does `Inc(fDataOffset, fHeaderTES4.FileNamesLength)` under the
+        // comment "Offsets are stored including this value" before assigning each
+        // folder's Offset. Reading the field as a plain archive offset overshoots
+        // by the whole file-name block. The reference never navigates by it -- it
+        // reads folder names, file records, and file names sequentially from
+        // FoldersOffset (wbBSArchive.pas:1209-1237) -- and neither does this
+        // parser, so the field is only ever a cross-check. Stale but in-range
+        // offsets must still fail before entry metadata is materialized.
         if (folder.offset !=
             static_cast<std::uint64_t>(reader.position()) + header.total_file_name_length) {
             return error{error_code::format_error,
@@ -162,8 +175,6 @@ result<void> validate_tables(detail::binary_reader& reader, const tes4_bsa_heade
         if (!skipped_name) {
             return skipped_name.error();
         }
-        folder_name_bytes_seen += 1U + name_size.value();
-
         std::size_t file_record_bytes = 0;
         if (!multiply_fits(folder.file_count, tes4_bsa_file_record_size, file_record_bytes)) {
             return error{error_code::format_error, "TES4 BSA file record table is too large"};
@@ -173,11 +184,6 @@ result<void> validate_tables(detail::binary_reader& reader, const tes4_bsa_heade
             return skipped_records.error();
         }
         file_records_seen += folder.file_count;
-    }
-
-    if (folder_name_bytes_seen != header.total_folder_name_length) {
-        return error{error_code::format_error,
-                     "TES4 BSA folder name lengths do not match header total"};
     }
 
     if (file_records_seen != header.file_count) {
@@ -198,9 +204,28 @@ result<void> validate_tables(detail::binary_reader& reader, const tes4_bsa_heade
     return {};
 }
 
-result<std::vector<tes4_bsa_folder_block>> read_folder_blocks(
-    detail::binary_reader& reader, const tes4_bsa_header_fields& header,
-    std::span<const tes4_bsa_folder_record> folders) {
+/// Folder blocks plus whether the header's folder-name total agreed with them.
+struct parsed_folder_blocks {
+    std::vector<tes4_bsa_folder_block> blocks;
+
+    /// True when TotalFolderNameLength disagreed with the bzstring bytes walked.
+    bool folder_name_length_mismatch{false};
+};
+
+/// Walks the folder-name and file-record blocks, materializing folder names and
+/// file records in archive order.
+///
+/// `reader` must be positioned at the first folder block, immediately past the
+/// folder record table. Each block is located by walking, exactly as
+/// `TwbBSArchive.LoadFromFile` does (`wbBSArchive.pas:1224-1232`); no header
+/// total is used to find anything. Folder hashes and per-folder file counts are
+/// still enforced against the folder records, because a disagreement there makes
+/// an entry unreachable by game-style lookup. The declared folder-name total is
+/// only compared, and the result is reported on `parsed_folder_blocks` rather
+/// than failing the archive.
+result<parsed_folder_blocks> read_folder_blocks(detail::binary_reader& reader,
+                                                const tes4_bsa_header_fields& header,
+                                                std::span<const tes4_bsa_folder_record> folders) {
     std::vector<tes4_bsa_folder_block> blocks;
     auto reserved_blocks =
         detail::reserve_metadata_vector(blocks, folders.size(), "TES4 BSA folder blocks");
@@ -235,7 +260,13 @@ result<std::vector<tes4_bsa_folder_block>> read_folder_blocks(
             return error{error_code::format_error,
                          "TES4 BSA folder record hash does not match folder name table"};
         }
-        folder_name_bytes_seen += 1U + name_size.value();
+        // TotalFolderNameLength counts the bzstring bytes only -- the name plus
+        // its null terminator -- and excludes the one-byte length prefix.
+        // wbBSArchive.pas:1469 says so outright when writing the header
+        // ("+ terminator only, length prefix is not counted"). Accumulated purely
+        // to cross-check the header afterwards; the walk above is what actually
+        // locates every block.
+        folder_name_bytes_seen += name_size.value();
 
         std::vector<tes4_bsa_file_record> file_records;
         auto reserved_files = detail::reserve_metadata_vector(file_records, folder.file_count,
@@ -258,20 +289,46 @@ result<std::vector<tes4_bsa_folder_block>> read_folder_blocks(
             tes4_bsa_folder_block{std::move(folder_name.value()), std::move(file_records)});
     }
 
-    if (folder_name_bytes_seen != header.total_folder_name_length) {
-        return error{error_code::format_error,
-                     "TES4 BSA folder name lengths do not match header total"};
-    }
     if (file_records_seen != header.file_count) {
         return error{error_code::format_error,
                      "TES4 BSA folder file counts do not match header file count"};
     }
-    return blocks;
+    // A disagreement here is reported, not fatal. Nothing in this parser navigates
+    // by TotalFolderNameLength any more -- folder blocks are located by walking,
+    // exactly as the reference does -- so a wrong value costs the archive nothing.
+    return parsed_folder_blocks{std::move(blocks),
+                                folder_name_bytes_seen != header.total_folder_name_length};
 }
 
-result<std::vector<std::string>> read_file_names(detail::binary_reader& reader,
-                                                 std::uint32_t file_count,
-                                                 std::uint32_t total_file_name_length) {
+/// File-name table parse result plus whether the declared table outran its
+/// names.
+struct parsed_file_name_table {
+    std::vector<std::string> names;
+
+    /// True when bytes remain between the last parsed name and the end of the
+    /// declared table. Retail archives pad with NULs there, but the surplus is
+    /// never inspected -- see `read_file_names`. Only the fact is kept, not the
+    /// surplus byte count: nothing consumes the count, and `validation_report`
+    /// deliberately exposes no parser offsets.
+    bool has_trailing_bytes{false};
+};
+
+/// Reads exactly `file_count` NUL-terminated names from the declared file-name
+/// table and reports any declared bytes the names did not consume.
+///
+/// The reference reads names with `file_count` sequential `ReadStringTerm` calls
+/// and never compares the resulting stream position against
+/// `TotalFileNameLength` (`wbBSArchive.pas:1235-1237`), so surplus table bytes
+/// are invisible to it. Retail `Fallout - Voices1.bsa` declares 105 bytes more
+/// than its 105,517 names consume, all of them NUL. Requiring exact consumption
+/// rejected that archive outright (issue #45); the surplus is now reported as a
+/// compatibility warning instead. The surplus bytes are never inspected -- the
+/// loop stops after `file_count` names, so their value is irrelevant, and the
+/// reference does not look at them either. Names that run past the declared table
+/// stay a hard error, because then the archive genuinely cannot be listed.
+result<parsed_file_name_table> read_file_names(detail::binary_reader& reader,
+                                               std::uint32_t file_count,
+                                               std::uint32_t total_file_name_length) {
     auto table_bytes = reader.read_bytes(total_file_name_length);
     if (!table_bytes) {
         return error{error_code::format_error, "TES4 BSA file name table is truncated"};
@@ -309,37 +366,62 @@ result<std::vector<std::string>> read_file_names(detail::binary_reader& reader,
         }
         names.push_back(std::move(name.value()));
     }
-    if (name_reader.position() != table_bytes.value().size()) {
-        return error{error_code::format_error,
-                     "TES4 BSA file name lengths do not match header total"};
-    }
-    return names;
+    return parsed_file_name_table{std::move(names),
+                                  name_reader.position() != table_bytes.value().size()};
 }
 
 }  // namespace
 
-result<std::size_t> tes4_bsa_metadata_table_size(const tes4_bsa_header_fields& header,
-                                                 std::size_t folder_record_size,
-                                                 std::size_t archive_size) {
+result<std::size_t> tes4_bsa_metadata_table_read_bound(const tes4_bsa_header_fields& header,
+                                                       std::size_t folder_record_size,
+                                                       std::size_t archive_size) {
     std::size_t folder_records_size = 0;
+    std::size_t folder_name_block_bound = 0;
     std::size_t file_records_size = 0;
     if (!multiply_fits(header.folder_count, folder_record_size, folder_records_size) ||
+        !multiply_fits(header.folder_count, tes4_bsa_max_folder_name_block_entry_size,
+                       folder_name_block_bound) ||
         !multiply_fits(header.file_count, tes4_bsa_file_record_size, file_records_size)) {
         return error{error_code::format_error, "TES4 BSA metadata table is too large"};
     }
 
-    std::size_t total = tes4_bsa_header_size;
-    if (!add_fits(total, folder_records_size, total) ||
-        !add_fits(total, static_cast<std::size_t>(header.total_folder_name_length), total) ||
-        !add_fits(total, file_records_size, total) ||
-        !add_fits(total, static_cast<std::size_t>(header.total_file_name_length), total)) {
+    // Reject before reading anything when even the parts whose size is not in
+    // question cannot fit. A folder-name block entry is at least a length prefix
+    // plus a lone terminator, so two bytes per folder is the floor. Both call
+    // sites already cap folder_count well below the point this could overflow,
+    // but the checked helper is used anyway rather than resting on a precondition
+    // this seam does not state.
+    std::size_t folder_name_block_floor = 0;
+    if (!multiply_fits(header.folder_count, minimum_folder_name_block_entry_size,
+                       folder_name_block_floor)) {
         return error{error_code::format_error, "TES4 BSA metadata table is too large"};
     }
-    if (!span_fits(0U, total, archive_size)) {
+    std::size_t minimum = tes4_bsa_header_size;
+    if (!add_fits(minimum, folder_records_size, minimum) ||
+        !add_fits(minimum, folder_name_block_floor, minimum) ||
+        !add_fits(minimum, file_records_size, minimum) ||
+        !add_fits(minimum, static_cast<std::size_t>(header.total_file_name_length), minimum)) {
+        return error{error_code::format_error, "TES4 BSA metadata table is too large"};
+    }
+    if (!span_fits(0U, minimum, archive_size)) {
         return error{error_code::format_error,
                      "TES4 BSA metadata table extends beyond archive bytes"};
     }
-    return total;
+
+    std::size_t bound = tes4_bsa_header_size;
+    if (!add_fits(bound, folder_records_size, bound) ||
+        !add_fits(bound, folder_name_block_bound, bound) ||
+        !add_fits(bound, file_records_size, bound) ||
+        !add_fits(bound, static_cast<std::size_t>(header.total_file_name_length), bound)) {
+        return error{error_code::format_error, "TES4 BSA metadata table is too large"};
+    }
+
+    // The bound over-estimates whenever folder names are shorter than 255 bytes,
+    // which they always are in practice -- retail folder counts are in the low
+    // thousands, so the slack is kilobytes against megabytes of table. Clamping to
+    // the archive keeps the read legal; a table that truly needs more bytes than
+    // the archive holds fails when the sequential walk runs off the end.
+    return std::min(bound, archive_size);
 }
 
 result<tes4_bsa_header_fields> read_tes4_bsa_header(std::span<const std::byte> header_bytes) {
@@ -353,7 +435,7 @@ result<tes4_bsa_header_fields> read_tes4_bsa_header(std::span<const std::byte> h
 
 result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> table_bytes,
                                                    std::size_t archive_size,
-                                                   detected_bsa_format detected) {
+                                                   const tes4_bsa_profile& profile) {
     auto header = read_tes4_bsa_header(table_bytes);
     if (!header) {
         return header.error();
@@ -363,7 +445,7 @@ result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> ta
     if (!skipped_header) {
         return skipped_header.error();
     }
-    if (header.value().version != detected.version) {
+    if (header.value().version != profile.version()) {
         return error{error_code::format_error,
                      "TES4 BSA detected version does not match parsed header"};
     }
@@ -371,9 +453,16 @@ result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> ta
         return error{error_code::format_error,
                      "TES4 BSA folder record offset does not match supported table layout"};
     }
+    // TotalFolderNameLength is deliberately absent from this test. It used to be
+    // rejected when zero, which contradicts the rest of this parser: folder names
+    // are walked, never located from the field, and the reference zeroes it at
+    // wbBSArchive.pas:1393 without ever reading it back. A zero there is just a
+    // wrong value, reported through folder_name_table_length_mismatch. The two
+    // archive flags carry the actual "does this archive have usable names?"
+    // question, and TotalFileNameLength stays load-bearing because read_file_names
+    // consumes exactly that many bytes.
     if ((header.value().archive_flags & tes4_bsa_archive_include_directory_names) == 0U ||
         (header.value().archive_flags & tes4_bsa_archive_include_file_names) == 0U ||
-        header.value().total_folder_name_length == 0U ||
         (header.value().file_count > 0U && header.value().total_file_name_length == 0U)) {
         return error{error_code::unsupported,
                      "TES4 BSA archive does not include usable entry names"};
@@ -390,23 +479,25 @@ result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> ta
         return file_count_limit.error();
     }
 
-    const auto folder_record_size = detected.version == tes4_bsa_skyrim_se_version
-                                        ? tes4_bsa_sse_folder_record_size
-                                        : tes4_bsa_legacy_folder_record_size;
-    auto table_size =
-        tes4_bsa_metadata_table_size(header.value(), folder_record_size, archive_size);
-    if (!table_size) {
-        return table_size.error();
+    const auto folder_record_size = profile.folder_record_size();
+    // The caller must have supplied at least the read bound; anything past the
+    // table's true end is simply never walked. Requiring the bound rather than a
+    // header-derived exact size is what lets an archive with a wrong
+    // TotalFolderNameLength still be read.
+    auto read_bound =
+        tes4_bsa_metadata_table_read_bound(header.value(), folder_record_size, archive_size);
+    if (!read_bound) {
+        return read_bound.error();
     }
     std::size_t folder_records_size = 0;
     if (!multiply_fits(header.value().folder_count, folder_record_size, folder_records_size) ||
         !span_fits(tes4_bsa_header_size, folder_records_size, table_bytes.size()) ||
-        table_bytes.size() < table_size.value()) {
+        table_bytes.size() < read_bound.value()) {
         return error{error_code::format_error,
                      "TES4 BSA folder record span is outside the archive"};
     }
 
-    auto folder_records = read_folder_records(reader, header.value());
+    auto folder_records = read_folder_records(reader, header.value(), profile);
     if (!folder_records) {
         return folder_records.error();
     }
@@ -440,8 +531,22 @@ result<tes4_bsa_raw_table> read_tes4_bsa_raw_table(std::span<const std::byte> ta
         return file_names.error();
     }
 
-    return tes4_bsa_raw_table{header.value(), table_size.value(), std::move(folder_records).value(),
-                              std::move(folder_blocks).value(), std::move(file_names).value()};
+    // The table's true size is where the walk finished, not what the header
+    // totals add up to. Payload/metadata overlap rejection keys off this value, so
+    // deriving it keeps an archive whose TotalFolderNameLength is inflated from
+    // having legal payloads rejected as overlapping a phantom metadata region.
+    const auto metadata_table_size = reader.position();
+
+    // Braced-init-list elements are sequenced left to right, and the flags read
+    // after the moves live on different members than the moved-from vectors, so
+    // reading them here is well defined.
+    return tes4_bsa_raw_table{header.value(),
+                              metadata_table_size,
+                              std::move(folder_records).value(),
+                              std::move(folder_blocks.value().blocks),
+                              std::move(file_names.value().names),
+                              file_names.value().has_trailing_bytes,
+                              folder_blocks.value().folder_name_length_mismatch};
 }
 
 }  // namespace libbsa::formats::bsa

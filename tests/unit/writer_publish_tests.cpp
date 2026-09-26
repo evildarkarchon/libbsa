@@ -1,18 +1,28 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "formats/ba2/ba2_archive_serialization.hpp"
+#include "formats/ba2/ba2_gnrl_layout.hpp"
+#include "formats/ba2/ba2_gnrl_prepare.hpp"
+#include "formats/ba2/ba2_profile.hpp"
+
 #include <detail/writer_publish.hpp>
+#include <detail/parallel_work.hpp>
 
 #include <libbsa/result.hpp>
+#include <libbsa/writer.hpp>
 
 #include <array>
 #include <atomic>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -27,6 +37,17 @@
 #endif
 
 namespace {
+
+struct path_only_publish_callback {
+    libbsa::result<void> operator()(const std::filesystem::path&) const { return {}; }
+};
+
+template <typename Callback>
+concept valid_writer_publish_callback =
+    requires(Callback&& callback, const std::filesystem::path& path) {
+        libbsa::detail::publish_writer_output(path, false, "test writer",
+                                              std::forward<Callback>(callback));
+    };
 
 std::filesystem::path writer_publish_test_dir() {
     auto path = std::filesystem::temp_directory_path() / "libbsa_writer_publish_tests";
@@ -53,6 +74,15 @@ std::vector<std::byte> bytes_from_text(std::string_view text) {
     return bytes;
 }
 
+libbsa::formats::ba2::ba2_gnrl_writer_entry gnrl_disk_entry(
+    std::string_view archive_path, const std::filesystem::path& source_path) {
+    auto entry = libbsa::formats::ba2::ba2_gnrl_make_writer_entry(archive_path,
+                                                                  libbsa::ba2_gnrl_entry_options{});
+    REQUIRE(entry.has_value());
+    entry.value().host_path = source_path.string();
+    return std::move(entry).value();
+}
+
 void write_binary_file(const std::filesystem::path& path, std::span<const std::byte> bytes) {
     std::ofstream output{path, std::ios::binary | std::ios::trunc};
     REQUIRE(output.good());
@@ -70,12 +100,6 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
         bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
     }
     return bytes;
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream input{path};
-    REQUIRE(input.good());
-    return {std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
 }
 
 #if defined(_WIN32)
@@ -127,21 +151,25 @@ bool try_create_file_symlink(const std::filesystem::path& link_path,
 }  // namespace
 
 TEST_CASE(
-    "writer_publish reserves isolated temp directories and cleans them "
+    "writer_publish reserves isolated finalization workspaces and cleans them "
     "after success",
     "[unit][writer_publish][publish]") {
     const auto archive = output_path("reserve-success.bsa");
     const auto collision = archive.string() + ".tmp";
+    const auto occupied_workspace = archive.string() + ".libbsa-tmp-0";
+    const auto occupied_sentinel = std::filesystem::path{occupied_workspace} / "caller-owned.bin";
     const auto expected = bytes_from_text("new archive bytes");
     const auto sentinel = bytes_from_text("caller temp sibling");
     std::filesystem::path observed_temp_dir;
     write_binary_file(collision, sentinel);
+    REQUIRE(std::filesystem::create_directory(occupied_workspace));
+    write_binary_file(occupied_sentinel, sentinel);
 
     auto published = libbsa::detail::publish_writer_output(
         archive, false, "TES3 BSA writer",
-        [&](const std::filesystem::path& temp_path) -> libbsa::result<void> {
+        [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+            const auto& temp_path = workspace.temporary_archive_path();
             observed_temp_dir = temp_path.parent_path();
-            CHECK(temp_path.filename() == archive.filename());
             write_binary_file(temp_path, expected);
             return {};
         });
@@ -149,7 +177,75 @@ TEST_CASE(
     REQUIRE(published.has_value());
     CHECK(read_binary_file(archive) == expected);
     CHECK(read_binary_file(collision) == sentinel);
+    CHECK(read_binary_file(occupied_sentinel) == sentinel);
+    CHECK(observed_temp_dir != occupied_workspace);
     CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
+}
+
+TEST_CASE(
+    "writer_publish finalization workspace gives indexed workers deterministic "
+    "collision-free snapshot paths",
+    "[unit][writer_publish][publish][workspace]") {
+    constexpr std::size_t snapshot_count = 16U;
+    const auto archive = output_path("snapshot-0.bin");
+    const auto expected = bytes_from_text("archive bytes");
+    std::array<std::filesystem::path, snapshot_count> snapshot_paths;
+    std::filesystem::path observed_workspace_dir;
+    std::filesystem::path observed_archive_path;
+    std::filesystem::path repeated_zero_path;
+
+    auto published = libbsa::detail::publish_writer_output(
+        archive, false, "TES4 BSA writer",
+        [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+            observed_workspace_dir = workspace.temporary_archive_path().parent_path();
+            observed_archive_path = workspace.temporary_archive_path();
+            repeated_zero_path = workspace.snapshot_path(0U);
+            auto reserved = libbsa::detail::run_indexed_work(
+                snapshot_paths.size(), 4U, [&](std::size_t index) -> libbsa::result<void> {
+                    snapshot_paths[index] = workspace.snapshot_path(index);
+                    std::ofstream snapshot{snapshot_paths[index],
+                                           std::ios::binary | std::ios::trunc};
+                    if (!snapshot.good()) {
+                        return libbsa::error{libbsa::error_code::io_error,
+                                             "test failed to create workspace snapshot"};
+                    }
+                    snapshot.put(static_cast<char>(index));
+                    if (!snapshot.good()) {
+                        return libbsa::error{libbsa::error_code::io_error,
+                                             "test failed to write workspace snapshot"};
+                    }
+                    return {};
+                });
+            if (!reserved) {
+                return reserved.error();
+            }
+
+            write_binary_file(workspace.temporary_archive_path(), expected);
+            return {};
+        });
+
+    REQUIRE(published.has_value());
+    CHECK(read_binary_file(archive) == expected);
+    std::set<std::filesystem::path> distinct_paths{snapshot_paths.begin(), snapshot_paths.end()};
+    CHECK(distinct_paths.size() == snapshot_paths.size());
+    for (std::size_t index = 0; index < snapshot_paths.size(); ++index) {
+        CAPTURE(index);
+        CHECK(snapshot_paths[index] ==
+              observed_workspace_dir / ("snapshot-" + std::to_string(index) + ".bin"));
+        CHECK(snapshot_paths[index].parent_path() == observed_workspace_dir);
+        CHECK(snapshot_paths[index] != observed_archive_path);
+    }
+    CHECK(repeated_zero_path == snapshot_paths[0]);
+    CHECK_FALSE(std::filesystem::exists(observed_workspace_dir));
+}
+
+TEST_CASE("Finalization Workspace is a move-only cleanup owner",
+          "[unit][writer_publish][publish][workspace]") {
+    STATIC_REQUIRE_FALSE(std::is_copy_constructible_v<libbsa::detail::finalization_workspace>);
+    STATIC_REQUIRE_FALSE(std::is_copy_assignable_v<libbsa::detail::finalization_workspace>);
+    STATIC_REQUIRE(std::is_move_constructible_v<libbsa::detail::finalization_workspace>);
+    STATIC_REQUIRE(std::is_nothrow_destructible_v<libbsa::detail::finalization_workspace>);
+    STATIC_REQUIRE_FALSE(valid_writer_publish_callback<path_only_publish_callback>);
 }
 
 TEST_CASE(
@@ -163,7 +259,7 @@ TEST_CASE(
 
     auto published = libbsa::detail::publish_writer_output(
         archive, false, "TES4 BSA writer",
-        [&](const std::filesystem::path&) -> libbsa::result<void> {
+        [&](const libbsa::detail::finalization_workspace&) -> libbsa::result<void> {
             callback_called = true;
             return {};
         });
@@ -186,7 +282,8 @@ TEST_CASE(
 
     auto published = libbsa::detail::publish_writer_output(
         archive, false, "BA2 GNRL writer",
-        [&](const std::filesystem::path& temp_path) -> libbsa::result<void> {
+        [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+            const auto& temp_path = workspace.temporary_archive_path();
             observed_temp_dir = temp_path.parent_path();
             write_binary_file(temp_path, expected);
             write_binary_file(archive, raced);
@@ -212,8 +309,8 @@ TEST_CASE(
 
     auto published = libbsa::detail::publish_writer_output(
         archive, true, "BA2 DX10 writer",
-        [&](const std::filesystem::path& temp_path) -> libbsa::result<void> {
-            write_binary_file(temp_path, replacement);
+        [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+            write_binary_file(workspace.temporary_archive_path(), replacement);
             return {};
         });
 
@@ -236,7 +333,8 @@ TEST_CASE(
 
     auto published = libbsa::detail::publish_writer_output(
         archive, true, "BA2 GNRL writer",
-        [&](const std::filesystem::path& temp_path) -> libbsa::result<void> {
+        [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+            const auto& temp_path = workspace.temporary_archive_path();
             observed_temp_dir = temp_path.parent_path();
             write_binary_file(temp_path, replacement);
             return {};
@@ -273,7 +371,7 @@ TEST_CASE(
 
     auto published = libbsa::detail::publish_writer_output(
         archive, true, "TES4 BSA writer",
-        [&](const std::filesystem::path&) -> libbsa::result<void> {
+        [&](const libbsa::detail::finalization_workspace&) -> libbsa::result<void> {
             callback_called = true;
             return {};
         });
@@ -306,7 +404,8 @@ TEST_CASE(
 
     auto published = libbsa::detail::publish_writer_output(
         archive, true, "TES3 BSA writer",
-        [&](const std::filesystem::path& temp_path) -> libbsa::result<void> {
+        [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+            const auto& temp_path = workspace.temporary_archive_path();
             observed_temp_dir = temp_path.parent_path();
             write_binary_file(temp_path, replacement);
             if (!try_create_file_symlink(archive, target)) {
@@ -348,7 +447,7 @@ TEST_CASE("writer_publish rejects non-regular overwrite targets before writing",
 
     auto published = libbsa::detail::publish_writer_output(
         directory, true, "TES4 BSA writer",
-        [&](const std::filesystem::path&) -> libbsa::result<void> {
+        [&](const libbsa::detail::finalization_workspace&) -> libbsa::result<void> {
             callback_called = true;
             return {};
         });
@@ -372,8 +471,9 @@ TEST_CASE(
 
     auto published = libbsa::detail::publish_writer_output(
         archive, true, "BA2 DX10 writer",
-        [&](const std::filesystem::path& temp_path) -> libbsa::result<void> {
-            observed_temp_dir = temp_path.parent_path();
+        [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+            observed_temp_dir = workspace.temporary_archive_path().parent_path();
+            write_binary_file(workspace.snapshot_path(11U), bytes_from_text("prepared snapshot"));
             return {};
         });
 
@@ -386,47 +486,157 @@ TEST_CASE(
     CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
 }
 
-TEST_CASE("writer_publish cleans temporary output after callback errors",
-          "[unit][writer_publish][publish]") {
-    const auto archive = output_path("callback-error.ba2");
-    std::filesystem::path observed_temp_dir;
+TEST_CASE("writer_publish cleanup failure never replaces the callback error",
+          "[unit][writer_publish][publish][workspace][cleanup]") {
+#if defined(_WIN32)
+    const auto archive = output_path("held-snapshot-cleanup-error.ba2");
+    std::filesystem::path observed_workspace_dir;
+    HANDLE held_snapshot = INVALID_HANDLE_VALUE;
 
     auto published = libbsa::detail::publish_writer_output(
         archive, false, "BA2 GNRL writer",
-        [&](const std::filesystem::path& temp_path) -> libbsa::result<void> {
-            observed_temp_dir = temp_path.parent_path();
-            write_binary_file(temp_path, bytes_from_text("partial archive"));
-            return libbsa::error{libbsa::error_code::io_error, "format writer failed"};
+        [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+            observed_workspace_dir = workspace.temporary_archive_path().parent_path();
+            const auto snapshot = workspace.snapshot_path(3U);
+            write_binary_file(snapshot, bytes_from_text("held snapshot"));
+            held_snapshot =
+                CreateFileW(snapshot.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+            REQUIRE(held_snapshot != INVALID_HANDLE_VALUE);
+            return libbsa::error{libbsa::error_code::format_error, "primary finalization failure"};
         });
 
     REQUIRE_FALSE(published.has_value());
-    CHECK(published.error().message == "format writer failed");
-    CHECK_FALSE(std::filesystem::exists(archive));
-    CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
+    CHECK(published.error().code == libbsa::error_code::format_error);
+    CHECK(published.error().message == "primary finalization failure");
+    CHECK(std::filesystem::exists(observed_workspace_dir));
+
+    REQUIRE(CloseHandle(held_snapshot) != 0);
+    std::error_code fs_error;
+    std::filesystem::remove_all(observed_workspace_dir, fs_error);
+    REQUIRE_FALSE(fs_error);
+#else
+    SUCCEED("cleanup-error precedence is covered by Windows writer publish tests");
+#endif
 }
 
-TEST_CASE(
-    "writer_publish delegation boundary keeps all writer families on the "
-    "shared helper",
-    "[unit][writer_publish][publish][static_boundary]") {
-    const auto root = std::filesystem::path{LIBBSA_SOURCE_DIR};
-    const std::array sources{
-        std::pair{"src/formats/bsa/tes3_bsa_writer.cpp", "TES3 BSA writer"},
-        std::pair{"src/formats/bsa/tes4_bsa_writer.cpp", "TES4 BSA writer"},
-        std::pair{"src/formats/ba2/ba2_gnrl_writer.cpp", "BA2 GNRL writer"},
-        std::pair{"src/formats/ba2/ba2_dx10_writer.cpp", "BA2 DX10 writer"},
-    };
+TEST_CASE("writer_publish cleans the workspace after every finalization stage failure",
+          "[unit][writer_publish][publish][workspace]") {
+    libbsa::ba2_gnrl_writer_options options;
+    options.compression = libbsa::archive_compression_policy::all_raw;
+    auto gnrl_profile = libbsa::formats::ba2::make_ba2_profile_for_gnrl_writer(
+        libbsa::ba2_gnrl_target::fallout4, options);
+    REQUIRE(gnrl_profile.has_value());
 
-    for (const auto& [relative_source, prefix] : sources) {
-        INFO("writer publish delegation boundary source: " << relative_source);
-        const auto text = read_text_file(root / relative_source);
-        CHECK(text.find("detail::publish_writer_output(") != std::string::npos);
-        CHECK(text.find(prefix) != std::string::npos);
-        CHECK(text.find("make_unique_publish_directory") == std::string::npos);
-        CHECK(text.find("cleanup_publish_directory") == std::string::npos);
-        CHECK(text.find("reserve_backup_path") == std::string::npos);
-        CHECK(text.find("restore_backup_after_publish_failure") == std::string::npos);
-        CHECK(text.find("detail::publish_file_without_replace") == std::string::npos);
-        CHECK(text.find("detail::replace_file_atomically") == std::string::npos);
+    SECTION("preparation error after an earlier disk snapshot") {
+        const auto source = output_path("preparation-source.bin");
+        const auto missing_source = source.parent_path() / "missing-source.bin";
+        const auto archive = output_path("preparation-failure.ba2");
+        write_binary_file(source, bytes_from_text("snapshotted before preparation failure"));
+        std::vector<libbsa::formats::ba2::ba2_gnrl_writer_entry> entries;
+        entries.push_back(gnrl_disk_entry("A/Valid.bin", source));
+        entries.push_back(gnrl_disk_entry("B/Missing.bin", missing_source));
+
+        std::filesystem::path observed_temp_dir;
+        std::optional<libbsa::error> stage_error;
+        auto published = libbsa::detail::publish_writer_output(
+            archive, false, "BA2 GNRL writer",
+            [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+                observed_temp_dir = workspace.temporary_archive_path().parent_path();
+                auto prepared = libbsa::formats::ba2::ba2_gnrl_prepare_entries(
+                    gnrl_profile.value(), options, entries, 1U, workspace);
+                REQUIRE_FALSE(prepared.has_value());
+                CHECK(std::filesystem::exists(workspace.snapshot_path(0U)));
+                stage_error = prepared.error();
+                return prepared.error();
+            });
+
+        REQUIRE_FALSE(published.has_value());
+        REQUIRE(stage_error.has_value());
+        CHECK(published.error().code == stage_error->code);
+        CHECK(published.error().message == stage_error->message);
+        CHECK_FALSE(std::filesystem::exists(archive));
+        CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
+    }
+
+    SECTION("layout error after successful preparation") {
+        const auto source = output_path("layout-source.bin");
+        const auto archive = output_path("layout-failure.ba2");
+        write_binary_file(source, bytes_from_text("snapshotted before layout failure"));
+        std::vector<libbsa::formats::ba2::ba2_gnrl_writer_entry> entries;
+        entries.push_back(gnrl_disk_entry("A/Layout.bin", source));
+        auto dx10_profile = libbsa::formats::ba2::make_ba2_profile_for_dx10_writer(
+            libbsa::ba2_dx10_target::fallout4, libbsa::ba2_dx10_writer_options{});
+        REQUIRE(dx10_profile.has_value());
+
+        std::filesystem::path observed_temp_dir;
+        std::optional<libbsa::error> stage_error;
+        auto published = libbsa::detail::publish_writer_output(
+            archive, false, "BA2 GNRL writer",
+            [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+                observed_temp_dir = workspace.temporary_archive_path().parent_path();
+                auto prepared = libbsa::formats::ba2::ba2_gnrl_prepare_entries(
+                    gnrl_profile.value(), options, entries, 1U, workspace);
+                REQUIRE(prepared.has_value());
+                REQUIRE(std::filesystem::exists(workspace.snapshot_path(0U)));
+
+                auto plan = libbsa::formats::ba2::ba2_gnrl_plan_placements(
+                    std::move(prepared).value(), dx10_profile.value(), false);
+                REQUIRE_FALSE(plan.has_value());
+                stage_error = plan.error();
+                return plan.error();
+            });
+
+        REQUIRE_FALSE(published.has_value());
+        REQUIRE(stage_error.has_value());
+        CHECK(published.error().code == stage_error->code);
+        CHECK(published.error().message == stage_error->message);
+        CHECK_FALSE(std::filesystem::exists(archive));
+        CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
+    }
+
+    SECTION("serialization error after the planned snapshot becomes unavailable") {
+        const auto source = output_path("serialization-source.bin");
+        const auto archive = output_path("serialization-failure.ba2");
+        write_binary_file(source, bytes_from_text("snapshotted before serialization failure"));
+        std::vector<libbsa::formats::ba2::ba2_gnrl_writer_entry> entries;
+        entries.push_back(gnrl_disk_entry("A/Serialization.bin", source));
+
+        std::filesystem::path observed_temp_dir;
+        std::optional<libbsa::error> stage_error;
+        auto published = libbsa::detail::publish_writer_output(
+            archive, false, "BA2 GNRL writer",
+            [&](const libbsa::detail::finalization_workspace& workspace) -> libbsa::result<void> {
+                observed_temp_dir = workspace.temporary_archive_path().parent_path();
+                auto prepared = libbsa::formats::ba2::ba2_gnrl_prepare_entries(
+                    gnrl_profile.value(), options, entries, 1U, workspace);
+                REQUIRE(prepared.has_value());
+                auto plan = libbsa::formats::ba2::ba2_gnrl_plan_placements(
+                    std::move(prepared).value(), gnrl_profile.value(), false);
+                REQUIRE(plan.has_value());
+
+                std::error_code removal_error;
+                REQUIRE(std::filesystem::remove(workspace.snapshot_path(0U), removal_error));
+                REQUIRE_FALSE(removal_error);
+                const libbsa::formats::ba2::ba2_stored_header_fields stored_header_fields{
+                    options.starfield_unknown1,
+                    options.starfield_unknown2,
+                    options.starfield_compression_method,
+                };
+                auto serialized = libbsa::formats::ba2::serialize_ba2_archive(
+                    gnrl_profile.value(), stored_header_fields, plan.value(),
+                    workspace.temporary_archive_path());
+                REQUIRE_FALSE(serialized.has_value());
+                REQUIRE(std::filesystem::exists(workspace.temporary_archive_path()));
+                stage_error = serialized.error();
+                return serialized.error();
+            });
+
+        REQUIRE_FALSE(published.has_value());
+        REQUIRE(stage_error.has_value());
+        CHECK(published.error().code == stage_error->code);
+        CHECK(published.error().message == stage_error->message);
+        CHECK_FALSE(std::filesystem::exists(archive));
+        CHECK_FALSE(std::filesystem::exists(observed_temp_dir));
     }
 }

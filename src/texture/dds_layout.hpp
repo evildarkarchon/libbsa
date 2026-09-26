@@ -30,6 +30,8 @@ struct dds_texture_layout {
 /// `source_chunk_index` maps the logical array/face/mip segment back to the
 /// parsed archive chunk so extraction can write chunks in validated DDS order
 /// instead of blindly streaming archive order.
+/// A validated BSArch cubemap tail starts at the recorded first-face mip and
+/// also contains all five later faces. Its source chunk is returned once.
 struct logical_texture_segment {
     std::uint32_t array_index;
     std::uint32_t face_index;
@@ -91,6 +93,9 @@ struct planned_texture_chunk {
 /// -Y, +Z, -Z`, then ascending mip ranges within each face/slice. Gaps,
 /// overlaps, duplicates, unsupported formats, and impossible raw byte totals
 /// return `format_error` before extraction reads payload bytes.
+/// Also accepts BSArch's single-cubemap layout: individual leading mips from
+/// face zero followed by one exact-size tail containing the remaining DDS
+/// bytes of all six faces. That aggregate tail remains one extraction segment.
 [[nodiscard]] result<std::vector<logical_texture_segment>> validate_and_order_chunks(
     const dds_texture_layout& layout, std::span<const texture_chunk_metadata> chunks);
 

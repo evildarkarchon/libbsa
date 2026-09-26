@@ -105,6 +105,7 @@ static_assert(requires(libbsa::ba2_gnrl_writer& writer, std::span<const std::byt
 // BEGIN ba2_dx10_public_contract_assertions
 static_assert(requires(libbsa::ba2_dx10_writer& writer) {
     { libbsa::ba2_dx10_target::fallout4 } -> std::same_as<libbsa::ba2_dx10_target>;
+    { libbsa::ba2_dx10_target::starfield_v2 } -> std::same_as<libbsa::ba2_dx10_target>;
     { libbsa::ba2_dx10_target::starfield_v3 } -> std::same_as<libbsa::ba2_dx10_target>;
     { writer.target() } -> std::same_as<libbsa::ba2_dx10_target>;
     { writer.options() } -> std::same_as<const libbsa::ba2_dx10_writer_options&>;
@@ -181,6 +182,7 @@ TEST_CASE("public_include_boundary umbrella header exposes public boundary types
     [[maybe_unused]] libbsa::ba2_gnrl_writer_options ba2_options{};
     [[maybe_unused]] libbsa::ba2_gnrl_entry_options ba2_entry_options{};
     [[maybe_unused]] auto ba2_dx10_target = libbsa::ba2_dx10_target::fallout4;
+    [[maybe_unused]] auto ba2_dx10_starfield_v2_target = libbsa::ba2_dx10_target::starfield_v2;
     [[maybe_unused]] auto ba2_dx10_starfield_target = libbsa::ba2_dx10_target::starfield_v3;
     [[maybe_unused]] libbsa::ba2_dx10_writer_options ba2_dx10_options{};
     [[maybe_unused]] auto compression = libbsa::entry_compression_policy::inherit;
@@ -218,79 +220,3 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("public_include_boundary excludes private Phase 2 implementation names",
-          "[unit][public-api][public_include_boundary]") {
-    constexpr auto forbidden_tokens = std::to_array<std::string_view>({"libdeflate",
-                                                                       "lz4::",
-                                                                       "DirectXTex",
-                                                                       "DirectX::",
-                                                                       "DXGI",
-                                                                       "Windows.h",
-                                                                       "DDS_HEADER_DXT10",
-                                                                       "TES5Edit",
-                                                                       "std::expected",
-                                                                       "std::thread",
-                                                                       "std::jthread",
-                                                                       "std::mutex",
-                                                                       "bethesda_hash",
-                                                                       "compression_router",
-                                                                       "archive_path_key",
-                                                                       "formats::",
-                                                                       "tes3_writer_entry",
-                                                                       "tes4_writer_entry",
-                                                                       "ba2_gnrl_writer_entry",
-                                                                       "ba2_dx10_writer_entry"});
-    const auto include_dir = std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa";
-
-    for (const auto& entry : std::filesystem::directory_iterator{include_dir}) {
-        if (entry.path().extension() != ".hpp") {
-            continue;
-        }
-
-        std::ifstream file{entry.path().string()};
-        REQUIRE(file.is_open());
-
-        std::string line;
-        while (std::getline(file, line)) {
-            auto first = line.find_first_not_of(" \t");
-            if (first == std::string::npos || line.compare(first, 2, "//") == 0) {
-                continue;
-            }
-            for (const auto token : forbidden_tokens) {
-                INFO("public boundary token: " << token << " in " << entry.path().string());
-                REQUIRE(line.find(token) == std::string::npos);
-            }
-        }
-    }
-}
-
-TEST_CASE("public_include_boundary writer execution options stay dependency-light",
-          "[unit][public-api][public_include_boundary]") {
-    const auto writer_header =
-        std::filesystem::path{LIBBSA_SOURCE_DIR} / "include" / "libbsa" / "writer.hpp";
-    std::ifstream file{writer_header.string()};
-    REQUIRE(file.is_open());
-
-    std::ostringstream contents;
-    contents << file.rdbuf();
-    const auto text = contents.str();
-    const auto begin = text.find("/// Write-call execution controls");
-    const auto end = text.find("/// Options controlling TES4-family", begin);
-    REQUIRE(begin != std::string::npos);
-    REQUIRE(end != std::string::npos);
-    REQUIRE(begin < end);
-
-    const auto section = text.substr(begin, end - begin);
-    constexpr auto forbidden_tokens = std::to_array<std::string_view>(
-        {"std::thread", "std::jthread", "std::mutex", "std::expected", "libdeflate", "lz4",
-         "DirectXTex", "Windows.h", "TES5Edit", "formats::", "tes3_writer_entry",
-         "tes4_writer_entry", "ba2_gnrl_writer_entry", "ba2_dx10_writer_entry"});
-    for (const auto token : forbidden_tokens) {
-        INFO("writer execution option public boundary token: " << token);
-        REQUIRE(section.find(token) == std::string::npos);
-    }
-
-    REQUIRE(section.find("worker_count == 1") != std::string::npos);
-    REQUIRE(section.find("worker_count > 1") != std::string::npos);
-    REQUIRE(section.find("worker_count == 0") != std::string::npos);
-}

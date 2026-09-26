@@ -134,16 +134,23 @@ set(libbsa_library_sources
   src/detail/bethesda_hash.cpp
   src/detail/binary_io.cpp
   src/detail/compression_router.cpp
-  src/detail/deflate_codec.cpp
   src/detail/lz4_block_codec.cpp
   src/detail/lz4_frame_codec.cpp
   src/detail/parallel_work.cpp
   src/detail/parser_primitives.cpp
+  src/detail/payload_placement.cpp
+  src/detail/payload_span_exclusivity.cpp
   src/detail/payload_stream.cpp
+  src/detail/stored_payload.cpp
   src/detail/writer_publish.cpp
   src/detail/host_file.cpp
   src/detail/host_file_path.cpp
-  src/formats/ba2/ba2_format_detector.cpp
+  src/detail/zlib_codec.cpp
+  src/formats/ba2/ba2_archive_header.cpp
+  src/formats/ba2/ba2_archive_opening.cpp
+  src/formats/ba2/ba2_archive_serialization.cpp
+  src/formats/ba2/ba2_profile.cpp
+  src/formats/ba2/ba2_record_identity.cpp
   src/formats/ba2/ba2_dx10_records.cpp
   src/formats/ba2/ba2_dx10_names.cpp
   src/formats/ba2/ba2_dx10_parser.cpp
@@ -152,21 +159,20 @@ set(libbsa_library_sources
   src/formats/ba2/ba2_dx10_prepare.cpp
   src/formats/ba2/ba2_dx10_snapshot_builder.cpp
   src/formats/ba2/ba2_dx10_layout.cpp
-  src/formats/ba2/ba2_dx10_serialize.cpp
   src/formats/ba2/ba2_dx10_writer.cpp
   src/formats/ba2/ba2_gnrl_parser.cpp
   src/formats/ba2/ba2_gnrl_reader.cpp
   src/formats/ba2/ba2_gnrl_prepare.cpp
   src/formats/ba2/ba2_gnrl_layout.cpp
-  src/formats/ba2/ba2_gnrl_serialize.cpp
   src/formats/ba2/ba2_gnrl_writer.cpp
-  src/formats/bsa/bsa_format_detector.cpp
+  src/formats/bsa/bsa_archive_opening.cpp
   src/formats/bsa/tes3_bsa_parser.cpp
   src/formats/bsa/tes3_bsa_reader.cpp
   src/formats/bsa/tes3_bsa_prepare.cpp
   src/formats/bsa/tes3_bsa_layout.cpp
   src/formats/bsa/tes3_bsa_serialize.cpp
   src/formats/bsa/tes3_bsa_writer.cpp
+  src/formats/bsa/tes4_bsa_profile.cpp
   src/formats/bsa/tes4_bsa_payload_descriptor.cpp
   src/formats/bsa/tes4_bsa_parser.cpp
   src/formats/bsa/tes4_bsa_reader.cpp
@@ -201,6 +207,8 @@ if(LIBBSA_BUILD_CLI)
 
   add_executable(bsa
     tools/cli/main.cpp
+    tools/cli/extraction.cpp
+    tools/cli/path_support.cpp
   )
 
   target_link_libraries(bsa

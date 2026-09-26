@@ -145,7 +145,7 @@ std::string compression_name(libbsa::detail::compression_method method) {
     switch (method) {
         case libbsa::detail::compression_method::none:
             return "raw";
-        case libbsa::detail::compression_method::deflate:
+        case libbsa::detail::compression_method::zlib:
             return "deflate";
         case libbsa::detail::compression_method::lz4_frame:
             return "lz4_frame";
@@ -172,10 +172,18 @@ std::uint32_t hash_folder(std::string_view canonical_path) {
                : libbsa::detail::hash_fo4(canonical_path.substr(0U, slash));
 }
 
+/// Hashes the extension-stripped file stem, which is what BA2 GNRL NameHash stores.
+///
+/// Deliberately written out here rather than reusing the library helper: a
+/// generator that shares the code under test can only prove libbsa agrees with
+/// itself. The stem basis is the behavior retail archives exhibit.
 std::uint32_t hash_file_name(std::string_view canonical_path) {
     const auto slash = canonical_path.find_last_of('/');
-    return libbsa::detail::hash_fo4(
-        slash == std::string_view::npos ? canonical_path : canonical_path.substr(slash + 1U));
+    const auto file_name =
+        slash == std::string_view::npos ? canonical_path : canonical_path.substr(slash + 1U);
+    const auto dot = file_name.find_last_of('.');
+    return libbsa::detail::hash_fo4(dot == std::string_view::npos ? file_name
+                                                                  : file_name.substr(0U, dot));
 }
 
 void prepare_payload(entry_spec& entry) {
@@ -283,7 +291,7 @@ archive_spec make_fo4() {
                          .expected_bytes = bytes_from_string("fo4 raw mesh bytes\n")},
                         {.original_path = "textures\\nested\\packed.dds",
                          .expected_bytes = bytes_from_string("fo4 deflate texture bytes\n"),
-                         .compression = libbsa::detail::compression_method::deflate},
+                         .compression = libbsa::detail::compression_method::zlib},
                         {.original_path = "Interface/EmptyMarker.txt", .expected_bytes = {}}}};
 }
 
@@ -297,7 +305,7 @@ archive_spec make_sfv2() {
                          .expected_bytes = bytes_from_string("sfv2 raw script bytes\n")},
                         {.original_path = "Data\\Meshes\\PackedModel.nif",
                          .expected_bytes = bytes_from_string("sfv2 deflate model bytes\n"),
-                         .compression = libbsa::detail::compression_method::deflate}}};
+                         .compression = libbsa::detail::compression_method::zlib}}};
 }
 
 archive_spec make_sfv3() {

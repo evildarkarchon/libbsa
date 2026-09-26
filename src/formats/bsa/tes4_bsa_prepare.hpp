@@ -1,40 +1,45 @@
 #pragma once
 
+#include "formats/bsa/tes4_bsa_profile.hpp"
 #include "formats/bsa/tes4_bsa_writer.hpp"
 
-#include <detail/host_file_path.hpp>
+#include <detail/stored_payload.hpp>
+#include <detail/writer_publish.hpp>
 
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace libbsa::formats::bsa {
 
 struct tes4_prepared_entry {
+    /// Creates one fully finalized entry whose Stored Payload is ready for placement.
+    tes4_prepared_entry(std::string folder_value, std::string canonical_folder_value,
+                        std::string file_name_value, std::uint64_t file_hash_value,
+                        std::uint32_t record_flags_value,
+                        detail::stored_payload stored_payload_value) noexcept
+        : folder{std::move(folder_value)},
+          canonical_folder{std::move(canonical_folder_value)},
+          file_name{std::move(file_name_value)},
+          file_hash{file_hash_value},
+          record_flags{record_flags_value},
+          payload{std::move(stored_payload_value)} {}
+
     std::string folder;
     std::string canonical_folder;
     std::string file_name;
     std::uint64_t file_hash{0};
-    std::uint32_t stored_size{0};
     std::uint32_t record_flags{0};
-    std::uint32_t payload_offset{0};
-    bool owns_payload_bytes{true};
-    bool stream_raw_disk{false};
-    std::uint32_t raw_disk_size{0};
-    std::vector<std::byte> stored_payload;
-    std::string raw_disk_host_path;
-    // Raw finalization must reuse the prepare-time resolved path so Windows UTF-8
-    // host text is not reinterpreted later.
-    detail::host_file_path resolved_raw_disk_host_path;
+    detail::stored_payload payload;
 };
 
 struct tes4_prepared_folder {
     std::string name;
     std::uint64_t hash{0};
-    std::uint64_t folder_block_offset{0};
     std::vector<tes4_prepared_entry> entries;
 };
 
@@ -43,27 +48,28 @@ struct tes4_prepared_folder {
 result<tes4_writer_entry> tes4_make_writer_entry(std::string_view archive_path,
                                                  entry_compression_policy compression);
 
-/// Returns the TES4-family BSA archive version for a target profile.
-result<std::uint32_t> tes4_version_for(tes4_bsa_target target);
-
-/// Returns whether the target and policy make new entries compressed by
-/// default.
-bool tes4_archive_default_compressed(tes4_bsa_target target,
-                                     archive_compression_policy policy) noexcept;
-
-/// Returns whether file-name prefixes should be embedded in stored payloads for
-/// this target version.
-bool tes4_should_emit_embedded_names(const tes4_bsa_writer_options& options,
-                                     std::uint32_t version) noexcept;
-
-/// Validates TES4 BSA writer entries before source preparation.
+/// Validates TES4 BSA writer entry structure without opening disk sources.
+///
+/// Source paths are authoritatively resolved and opened only after the
+/// Finalization Workspace has been reserved.
 result<void> tes4_validate_entries(std::span<const tes4_writer_entry> entries);
 
 /// Prepares TES4 BSA folders by validating sources, routing compression,
 /// grouping, hashing, and sorting records.
+///
+/// \param entries Read-only staged entries whose sources are prepared independently.
+/// \param profile Profile resolved once at writer finalization; it owns
+/// compression, embedded-name, file-classification, and analyzed-texture
+/// compatibility policy.
+/// \param options Per-archive compression and embedded-name requests.
+/// \param worker_count Positive number of parallel preparation workers. Results
+/// are joined by entry index before deterministic grouping and sorting.
+/// \param file_flags Receives the aggregate serialized file-classification mask.
+/// \param workspace Owns deterministic raw-source snapshots through publication.
+/// \return Prepared folders or the first source, format, or compression error.
 result<std::vector<tes4_prepared_folder>> tes4_prepare_folders(
-    std::span<const tes4_writer_entry> entries, tes4_bsa_target target,
-    bool archive_default_is_compressed, bool emit_embedded_names, std::uint32_t version,
-    std::uint32_t worker_count, std::uint32_t& file_flags);
+    std::span<const tes4_writer_entry> entries, const tes4_bsa_profile& profile,
+    const tes4_bsa_writer_options& options, std::uint32_t worker_count, std::uint32_t& file_flags,
+    const detail::finalization_workspace& workspace);
 
 }  // namespace libbsa::formats::bsa

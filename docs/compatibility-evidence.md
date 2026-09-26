@@ -2,7 +2,7 @@
 
 This catalog maps public `libbsa::compatibility_warning_code` values to the rule they represent, the evidence that proves the rule, and the default gate that keeps the evidence reproducible.
 
-Generated legal fixtures and writer-output archives are the mandatory evidence path for public compatibility warnings. Optional local game or BSArchPro-derived checks may add smoke/compare confidence, but they are never required for the default suite and never replace committed legal fixtures, writer-output archives, package-consumer checks, or documentation policy tests.
+Generated legal fixtures and writer-output archives are the mandatory ordinary-CI evidence path for public compatibility warnings. Legacy local game or BSArchPro-derived manifest checks remain supplemental. [ADR-0005](adr/0005-releases-require-independent-archive-interoperability-evidence.md) separately requires full independent Archive Interoperability evidence for releases through [tests/compat](../tests/compat/README.md). That additional gate does not replace committed legal fixtures, writer-output archives, or package-consumer checks.
 
 Use this catalog together with `docs/coverage-audit-matrix.md` and `docs/public-api-reality-check.md`:
 
@@ -10,11 +10,11 @@ Use this catalog together with `docs/coverage-audit-matrix.md` and `docs/public-
 - `docs/public-api-reality-check.md` maps the current public API core to that proof and routes known public-story gaps without introducing a broader facade.
 - This file is narrower: it explains the compatibility-warning taxonomy that validation reports expose today.
 
-Default acceptance must continue to pass from repository-reproducible generated fixtures, writer-output archives, and policy tests alone. Optional local corpus checks are advisory evidence only; they may improve confidence in a developer workspace, but absent local or copyrighted inputs do not block default green status.
+Default acceptance must continue to pass from repository-reproducible generated fixtures, writer-output archives, and policy tests alone. Absent local or copyrighted inputs do not block default green status. They do block the separate strict release gate when required oracle or retail coverage is missing; ordinary CI success alone does not satisfy ADR-0005.
 
 ## Default fixture and round-trip proof sweep
 
-The default proof sweep uses committed legal generated fixtures, writer-output archives produced by the public writer APIs, the installed package-consumer runtime smoke, Catch2/CTest cases, and manifest validation only. It does not require local game archives, copied game payload bytes, or BSArchPro-derived comparison output. `LIBBSA_GAME_FIXTURES` and `LIBBSA_BSARCHPRO_EXPECTED` are optional advisory inputs for local smoke/compare confidence; unset variables must not block the default suite.
+The default proof sweep uses committed legal generated fixtures, writer-output archives produced by the public writer APIs, the installed package-consumer runtime smoke, Catch2/CTest cases, and manifest validation only. It does not require local game archives, copied game payload bytes, or BSArchPro-derived comparison output. `LIBBSA_GAME_FIXTURES` and `LIBBSA_BSARCHPRO_EXPECTED` enable the legacy focused checks; absent local inputs must not block the default suite. The thorough release command instead requires its enrolled retail baseline and pinned BSArch executable.
 
 The current default sweep covers four archive families:
 
@@ -64,7 +64,7 @@ ctest --preset windows-msvc-debug-static -L ba2_dx10_writer
 
 These commands intentionally avoid optional local corpus inputs. They prove the public default fixture, round-trip, and direct validation success story from committed synthetic assets; `docs/coverage-audit-matrix.md` remains the source of truth for per-family granularity.
 
-The executable opt-in comparison harness is `tests/unit/local_game_fixture_tests.cpp`; it consumes `LIBBSA_BSARCHPRO_EXPECTED` or a local `bsarchpro_expected.json` manifest under `LIBBSA_GAME_FIXTURES` and compares libbsa metadata plus optional extracted bytes or FNV-1a payload hashes against BSArchPro-derived expectations.
+The legacy opt-in comparison harness is `tests/unit/local_game_fixture_tests.cpp`; it consumes `LIBBSA_BSARCHPRO_EXPECTED` or a local `bsarchpro_expected.json` manifest under `LIBBSA_GAME_FIXTURES` and compares libbsa metadata plus optional extracted bytes or FNV-1a payload hashes against BSArchPro-derived expectations. The independent release harness in `tests/compat` requires complete catalogs and SHA-256/content evidence, controlled cross-tool writer cases, and independently checked retail repacks. Its successful static/shared reports must pass the documented `verify-release` procedure.
 
 ### `compressed_sound_payload`
 
@@ -84,13 +84,40 @@ The executable opt-in comparison harness is `tests/unit/local_game_fixture_tests
 - Evidence: `tests/unit/compatibility_warning_tests.cpp` test `compatibility_warning reports BA2 target family mismatch` creates a synthetic writer-output BA2 GNRL archive, validates it with `validation_options::expected_type = archive_type::bsa`, and asserts the risky target-family mismatch warning. Validation tests also run `validate_archive` over generated BA2 fixtures and writer-output archives as the same parsed-metadata source of truth.
 - Default gate: generated/writer-output; covered by default CTest through the `compatibility_warning` and `validation_api` test labels.
 
-## Optional Local Corpus Checks
+### `ba2_record_identity_mismatch`
 
-Local game archives or BSArchPro-derived comparison output may supplement this catalog only as smoke/compare checks. The local comparison manifest is exercised by the `BSArchPro-derived expected fixture comparisons are opt-in` CTest case. Such checks must:
+- Rule: A BA2 record whose stored `NameHash`, `DirHash`, or `Ext` disagrees with its own filename-table path is valid but unreachable by Bethesda-style hash lookup, so it warns instead of invalidating the archive. The reference never cross-checks these fields: `TwbBSArchive.LoadFromFile` reads them verbatim into the record array, and `FindFileRecordFO4` recomputes hashes from the *query* path before scanning for a match (`TES5Edit/Core/wbBSArchive.pas`). A disagreeing record is simply unaddressable by name and does not affect any sibling record.
+- Evidence: `tests/unit/compatibility_warning_tests.cpp` test `compatibility_warning reports BA2 record identity mismatch` writes a BA2 GNRL archive through the public writer, byte-patches record 0's `NameHash`, validates it through `validate_archive`, and asserts the risky warning with an archive path plus continued extraction by path. `tests/unit/ba2_gnrl_reader_tests.cpp` and `tests/unit/ba2_dx10_reader_tests.cpp` cover all three stored fields against generated fixtures and assert exactly one warned entry per mutation.
+- Default gate: generated/writer-output; covered by default CTest through the `compatibility_warning`, `ba2_gnrl_hash_lookup`, and `ba2_dx10_hash_lookup` test labels.
+- Open question (advisory, local corpus only): the three warned records in retail `Fallout4 - Voices.ba2` all carry non-ASCII file names. `hash_fo4` skips bytes above 127 exactly as reference `CreateHashFO4` does, so the reconstructed hash cannot depend on those bytes. Why Bethesda's packer stored a different value for them is unresolved; the warning states the disagreement, not a cause.
 
-- Use the `[requires-game-fixture]` tag and remain skipped when `LIBBSA_GAME_FIXTURES` is unset.
+### `bsa_file_name_table_trailing_bytes`
+
+- Rule: A TES4-family BSA whose `TotalFileNameLength` declares more bytes than its file names consume is valid, so it warns instead of being rejected. The reference reads names with exactly `FileCount` sequential `ReadStringTerm` calls and never compares the resulting stream position against the header total (`TES5Edit/Core/wbBSArchive.pas`, `TwbBSArchive.LoadFromFile`), so surplus table bytes are invisible to it. The surplus belongs to no entry and hides none: every entry stays listed, findable by hash, and extractable. The warning is archive-level and therefore carries no `archive_path`. Names that run *past* the declared table remain a hard error, because the archive then genuinely cannot be listed.
+- Evidence: `tests/unit/compatibility_warning_tests.cpp` test `compatibility_warning reports a file-name table with trailing bytes` writes a TES4-family BSA through the public writer, byte-patches 105 NUL bytes into the file-name table while rewriting `TotalFileNameLength` and every folder-record and file-record offset the growth shifts, validates it through `validate_archive`, and asserts the advisory warning plus continued listing and extraction. `tests/unit/tes4_bsa_reader_tests.cpp` covers the parse seam directly and pins the flag clear across every committed generated fixture.
+- Default gate: generated/writer-output; covered by default CTest through the `compatibility_warning` and `tes4_bsa_metadata` test labels.
+- The sibling `TotalFolderNameLength` total is demoted too; see the next entry.
+
+### `bsa_folder_name_table_length_mismatch`
+
+- Rule: A TES4-family BSA whose declared `TotalFolderNameLength` disagrees with the folder names it stores is valid, so it warns instead of being rejected. The field appears only on the reference's write path -- `wbBSArchive.pas:1393` zeroes it and `:1469` accumulates it -- and `TwbBSArchive.LoadFromFile` never reads it back, walking folder names sequentially from `FoldersOffset` instead. The warning is archive-level and carries no `archive_path`.
+- Why libbsa can now match that: the parser used to size its whole metadata table from the field, which made a wrong value fatal twice over. The total cross-check rejected the archive outright, and because the derived table size also fixes the payload/metadata boundary, an inflated value would have rejected legal payloads as overlapping a phantom metadata region. `tes4_bsa_metadata_table_read_bound` now bounds the read by folder count (`tes4_bsa_max_folder_name_block_entry_size` per folder, clamped to the archive) and `read_tes4_bsa_raw_table` reports the table's true size measured by walking. With nothing sized from the field, the check is a pure cross-check and demoting it is free.
+- Evidence: `tests/unit/compatibility_warning_tests.cpp` test `compatibility_warning reports a declared folder-name length that disagrees` writes a TES4-family BSA through the public writer, overwrites `TotalFolderNameLength` with an inflated value -- a one-field patch that moves no byte and shifts no offset, which is itself the claim -- validates it through `validate_archive`, and asserts the advisory warning plus continued extraction of a payload sitting immediately after the true metadata table. `tests/unit/tes4_bsa_reader_tests.cpp` covers the inflated direction and the zero case at the parse seam, pins the flag clear across every committed generated fixture, and proves a committed fixture with `TotalFolderNameLength` set to `0xFFFFFFFF` still lists and extracts every entry. Zero is pinned specifically because it is the value the reference initializes the field to (`wbBSArchive.pas:1393`) before never reading it back, so it is a value BSArchPro loads without complaint; libbsa previously rejected it as "does not include usable entry names", which the two archive-flag checks on that line already answer properly. All three cases carry the `malformed` label so they run in the ASan lane.
+- Default gate: generated/writer-output; covered by default CTest through the `compatibility_warning` and `tes4_bsa_metadata` test labels.
+- Corpus note (local corpus only): every archive in the retail corpus satisfies the total once the bzstring length prefix is excluded from the count (commit `e97a0e2f`), so no retail archive currently raises this warning. It is kept because the parser no longer needs the field to be right, not because retail archives get it wrong.
+- Corpus corroboration (issue #45, local corpus only): retail `Fallout - Voices1.bsa` declares a file-name table 105 bytes longer than its 105,517 names consume, and every surplus byte is NUL. Requiring exact consumption rejected that archive outright. libbsa does not verify that the surplus is NUL, and neither does the reference; the padding value is an observation about the corpus, not a parsed invariant. `tests/unit/local_game_fixture_tests.cpp` test `retail TES4-family BSA file-name table slack is a warning, not a rejection` asserts the implication over whatever archives a machine holds, and `every retail TES4-family BSA opens and lists its full entry count` proves the whole family opens.
+
+## Local Corpus Checks and Required Release Evidence
+
+The legacy local comparison manifest is exercised by the `BSArchPro-derived expected fixture comparisons are opt-in` CTest case. These focused supplemental checks must:
+
+- Use the `[requires-game-fixture]` tag and remain skipped when neither an environment override nor the default local corpus provides the required input.
 - Read from ignored local data locations, not committed fixture directories.
 - Avoid committing copyrighted archive bytes, extracted game payloads, or BSArchPro-generated corpus output.
 - Treat `TES5Edit/` as read-only reference material, not a fixture workspace or output directory.
 
 Default acceptance must continue to pass from committed generated fixtures, writer-output archives, and policy tests alone.
+
+Release preparation additionally requires [ADR-0005](adr/0005-releases-require-independent-archive-interoperability-evidence.md): run `libbsa_compatibility_check` in both MSVC Release static and shared lanes and verify the paired reports with `tests/compat/runner.py verify-release`. The [suite instructions](../tests/compat/README.md) document the pinned local oracle, the 101-archive baseline, 71 controlled cases, comparison rules, resource controls, and report identities. Every supplied retail entry participates; missing required coverage and unexplained differences fail the gate. This document records that procedure, not a successful full-corpus result.
+
+BSA/GNRL decoded files require exact content equality. DX10 comparisons allow only independently validated equivalent DDS representations while requiring matching texture meaning and all surface bytes. Structural checks remain separate, and BSArch acceptance is not Game Acceptance. Detailed retail reports and oracle output stay local; publish only the content-free companion summary.

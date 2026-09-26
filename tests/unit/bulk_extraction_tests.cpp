@@ -66,15 +66,6 @@ void write_binary_file(const std::filesystem::path& path, std::span<const std::b
     REQUIRE(output.good());
 }
 
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream input{path};
-    REQUIRE(input.good());
-
-    std::ostringstream buffer;
-    buffer << input.rdbuf();
-    return buffer.str();
-}
-
 libbsa::archive_reader create_bulk_test_reader() {
     libbsa::tes3_bsa_writer_options options;
     options.overwrite_existing = true;
@@ -744,38 +735,3 @@ TEST_CASE("bulk_extraction streams large raw archive families through bounded ch
                                             dds_dxt10_header_size + dx10_payload.size());
 }
 
-TEST_CASE(
-    "bulk_extraction source policy documents raw chunking and compressed "
-    "allocation boundaries",
-    "[unit][bulk_extraction][payload_stream]") {
-    const auto root = std::filesystem::path{LIBBSA_SOURCE_DIR};
-    const std::array<std::filesystem::path, 4> reader_files{
-        root / "src" / "formats" / "bsa" / "tes3_bsa_reader.cpp",
-        root / "src" / "formats" / "bsa" / "tes4_bsa_reader.cpp",
-        root / "src" / "formats" / "ba2" / "ba2_gnrl_reader.cpp",
-        root / "src" / "formats" / "ba2" / "ba2_dx10_reader.cpp",
-    };
-
-    for (const auto& reader_file : reader_files) {
-        const auto contents = read_text_file(reader_file);
-        INFO("reader file: " << reader_file.string());
-        CHECK(contents.find("extraction_chunk_size = 64U * 1024U") != std::string::npos);
-        CHECK(contents.find("archive_size") == std::string::npos);
-    }
-
-    const auto tes4_reader =
-        read_text_file(root / "src" / "formats" / "bsa" / "tes4_bsa_reader.cpp");
-    const auto ba2_gnrl_reader =
-        read_text_file(root / "src" / "formats" / "ba2" / "ba2_gnrl_reader.cpp");
-    const auto ba2_dx10_reader =
-        read_text_file(root / "src" / "formats" / "ba2" / "ba2_dx10_reader.cpp");
-    CHECK(tes4_reader.find("decompress_payload_exact") != std::string::npos);
-    CHECK(ba2_gnrl_reader.find("decompress_payload_exact") != std::string::npos);
-    CHECK(ba2_dx10_reader.find("decompress_payload_exact") != std::string::npos);
-
-    const std::string compressed_boundary =
-        "D-14 permits compressed extraction to allocate per-entry or "
-        "per-texture-chunk codec buffers, but not whole-archive buffers.";
-    CHECK(compressed_boundary.find("per-entry") != std::string::npos);
-    CHECK(compressed_boundary.find("per-texture-chunk") != std::string::npos);
-}

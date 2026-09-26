@@ -1,4 +1,5 @@
 #include "formats/bsa/tes4_bsa_payload_descriptor.hpp"
+#include "formats/bsa/tes4_bsa_profile.hpp"
 #include "formats/bsa/tes4_bsa_table.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -36,14 +37,6 @@ std::uint32_t read_u32_le(std::span<const std::byte> bytes, std::size_t offset) 
     return value;
 }
 
-libbsa::formats::bsa::detected_bsa_format tes4_detected(std::uint32_t version) {
-    return libbsa::formats::bsa::detected_bsa_format{
-        .variant = libbsa::archive_variant::tes4,
-        .version = version,
-        .default_compression = version == 105U ? libbsa::entry_compression::lz4_frame
-                                               : libbsa::entry_compression::deflate};
-}
-
 }  // namespace
 
 TEST_CASE(
@@ -51,9 +44,11 @@ TEST_CASE(
     "offset handling",
     "[unit][fixture][tes4_bsa][parser_preparer_seam]") {
     const auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+    auto profile = libbsa::formats::bsa::make_tes4_bsa_profile_from_header(103U);
+    REQUIRE(profile.has_value());
 
     auto table =
-        libbsa::formats::bsa::read_tes4_bsa_raw_table(bytes, bytes.size(), tes4_detected(103U));
+        libbsa::formats::bsa::read_tes4_bsa_raw_table(bytes, bytes.size(), profile.value());
 
     REQUIRE(table.has_value());
     CHECK(table.value().metadata_table_size == 124U);
@@ -67,13 +62,29 @@ TEST_CASE(
     CHECK(table.value().file_names[1] == "PackedMesh.nif");
 }
 
+TEST_CASE("tes4 raw table seam preserves TES4 BSA Profile and header mismatch diagnostics",
+          "[unit][fixture][tes4_bsa][parser_preparer_seam]") {
+    const auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+    auto mismatched_profile = libbsa::formats::bsa::make_tes4_bsa_profile_from_header(104U);
+    REQUIRE(mismatched_profile.has_value());
+
+    auto table = libbsa::formats::bsa::read_tes4_bsa_raw_table(bytes, bytes.size(),
+                                                               mismatched_profile.value());
+
+    REQUIRE_FALSE(table.has_value());
+    CHECK(table.error().code == libbsa::error_code::format_error);
+    CHECK(table.error().message == "TES4 BSA detected version does not match parsed header");
+}
+
 TEST_CASE(
     "tes4 payload descriptor seam derives embedded-name prefix raw size "
     "compression and rejects metadata overlap",
     "[unit][fixture][tes4_bsa][parser_preparer_seam]") {
     const auto v103_bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
+    auto v103_profile = libbsa::formats::bsa::make_tes4_bsa_profile_from_header(103U);
+    REQUIRE(v103_profile.has_value());
     auto v103_table = libbsa::formats::bsa::read_tes4_bsa_raw_table(v103_bytes, v103_bytes.size(),
-                                                                    tes4_detected(103U));
+                                                                    v103_profile.value());
     REQUIRE(v103_table.has_value());
 
     auto read_v103_payload = [&v103_bytes](
@@ -86,7 +97,7 @@ TEST_CASE(
     };
     const auto& raw_record = v103_table.value().folder_blocks.front().files.front();
     auto raw_descriptor = libbsa::formats::bsa::make_tes4_bsa_payload_descriptor(
-        v103_table.value().header, raw_record, v103_bytes.size(),
+        v103_profile.value(), v103_table.value().header, raw_record, v103_bytes.size(),
         v103_table.value().metadata_table_size, read_v103_payload);
     REQUIRE(raw_descriptor.has_value());
     CHECK(raw_descriptor.value().embedded_prefix_size == 0U);
@@ -94,8 +105,10 @@ TEST_CASE(
     CHECK(raw_descriptor.value().compression == libbsa::entry_compression::none);
 
     const auto v104_bytes = read_binary_file(generated_archive_path("tes4_v104.bsa"));
+    auto v104_profile = libbsa::formats::bsa::make_tes4_bsa_profile_from_header(104U);
+    REQUIRE(v104_profile.has_value());
     auto v104_table = libbsa::formats::bsa::read_tes4_bsa_raw_table(v104_bytes, v104_bytes.size(),
-                                                                    tes4_detected(104U));
+                                                                    v104_profile.value());
     REQUIRE(v104_table.has_value());
     auto read_v104_payload = [&v104_bytes](
                                  std::uint64_t offset,
@@ -107,7 +120,7 @@ TEST_CASE(
     };
     const auto& deflate_record = v104_table.value().folder_blocks.front().files.back();
     auto deflate_descriptor = libbsa::formats::bsa::make_tes4_bsa_payload_descriptor(
-        v104_table.value().header, deflate_record, v104_bytes.size(),
+        v104_profile.value(), v104_table.value().header, deflate_record, v104_bytes.size(),
         v104_table.value().metadata_table_size, read_v104_payload);
     REQUIRE(deflate_descriptor.has_value());
     CHECK(deflate_descriptor.value().embedded_prefix_size > 0U);
@@ -115,8 +128,10 @@ TEST_CASE(
     CHECK(deflate_descriptor.value().compression == libbsa::entry_compression::deflate);
 
     const auto v105_bytes = read_binary_file(generated_archive_path("tes4_v105.bsa"));
+    auto v105_profile = libbsa::formats::bsa::make_tes4_bsa_profile_from_header(105U);
+    REQUIRE(v105_profile.has_value());
     auto v105_table = libbsa::formats::bsa::read_tes4_bsa_raw_table(v105_bytes, v105_bytes.size(),
-                                                                    tes4_detected(105U));
+                                                                    v105_profile.value());
     REQUIRE(v105_table.has_value());
     auto read_v105_payload = [&v105_bytes](
                                  std::uint64_t offset,
@@ -128,7 +143,7 @@ TEST_CASE(
     };
     const auto& lz4_record = v105_table.value().folder_blocks.front().files.back();
     auto lz4_descriptor = libbsa::formats::bsa::make_tes4_bsa_payload_descriptor(
-        v105_table.value().header, lz4_record, v105_bytes.size(),
+        v105_profile.value(), v105_table.value().header, lz4_record, v105_bytes.size(),
         v105_table.value().metadata_table_size, read_v105_payload);
     REQUIRE(lz4_descriptor.has_value());
     CHECK(lz4_descriptor.value().compression == libbsa::entry_compression::lz4_frame);
@@ -136,7 +151,7 @@ TEST_CASE(
     auto overlapping = raw_record;
     overlapping.offset = 0U;
     auto rejected = libbsa::formats::bsa::make_tes4_bsa_payload_descriptor(
-        v103_table.value().header, overlapping, v103_bytes.size(),
+        v103_profile.value(), v103_table.value().header, overlapping, v103_bytes.size(),
         v103_table.value().metadata_table_size, read_v103_payload);
     REQUIRE_FALSE(rejected.has_value());
     CHECK(rejected.error().code == libbsa::error_code::format_error);

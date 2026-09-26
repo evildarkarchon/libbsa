@@ -9,15 +9,20 @@ namespace libbsa::detail {
 /// rules.
 std::uint64_t hash_tes3(std::string_view archive_path);
 
-/// Returns the low 32 bits used as the primary TES3 BSA hash sort key.
+/// Returns the low 32 bits of a TES3 BSA hash: the second-half byte sum.
+///
+/// This is the *second* of the two `u32` values a TES3 hash record stores on
+/// disk. See `tes3_hash_high32` for the word order the format uses.
 std::uint32_t tes3_hash_low32(std::uint64_t hash) noexcept;
 
-/// Returns the high 32 bits used as the secondary TES3 BSA hash sort key.
+/// Returns the high 32 bits of a TES3 BSA hash: the first-half byte sum.
+///
+/// This is the *first* of the two `u32` values a TES3 hash record stores on
+/// disk, so a record serializes `high32` then `low32`. Reading the eight bytes
+/// as one little-endian `u64` therefore yields the halves transposed relative to
+/// `hash_tes3`, which is why the format's word order is spelled out explicitly at
+/// every serialization site rather than implied by a `u64` read (issue #46).
 std::uint32_t tes3_hash_high32(std::uint64_t hash) noexcept;
-
-/// Returns a lexicographically comparable TES3 BSA hash sort key: low32 then
-/// high32.
-std::uint64_t tes3_hash_sort_key(std::uint64_t hash) noexcept;
 
 /// Returns the TES4-family BSA hash after splitting `name_or_path` at its final
 /// dot.

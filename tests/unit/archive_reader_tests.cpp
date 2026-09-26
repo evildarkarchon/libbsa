@@ -3,14 +3,23 @@
 #include <libbsa/libbsa.hpp>
 
 #include <cstddef>
+#include <filesystem>
+#include <memory>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
 
 namespace {
+
+std::filesystem::path generated_archive_path(std::string_view filename) {
+    return std::filesystem::path{LIBBSA_SOURCE_DIR} / "tests" / "fixtures" / "generated" /
+           "archives" / filename;
+}
 
 class collecting_sink final : public libbsa::payload_sink {
    public:
@@ -24,6 +33,21 @@ class collecting_sink final : public libbsa::payload_sink {
    private:
     std::vector<std::byte> bytes_;
 };
+
+class unused_sink_factory final : public libbsa::bulk_extract_sink_factory {
+   public:
+    libbsa::result<std::unique_ptr<libbsa::payload_sink>> create(
+        std::string_view, const libbsa::entry_metadata&) override {
+        return libbsa::error{libbsa::error_code::unsupported,
+                             "moved-from reader must not create sinks"};
+    }
+};
+
+template <typename T>
+void require_unopened_reader_error(const libbsa::result<T>& operation) {
+    REQUIRE_FALSE(operation.has_value());
+    REQUIRE(operation.error().code == libbsa::error_code::unsupported);
+}
 
 }  // namespace
 
@@ -66,4 +90,26 @@ TEST_CASE("archive_reader exposes compile-only Phase 3 reader contracts", "[unit
     REQUIRE(sink.bytes().empty());
     REQUIRE(manifest.at("path").get<std::string>() == "meshes/example.nif");
     REQUIRE(libbsa::error_code::not_found == libbsa::error_code::not_found);
+}
+
+TEST_CASE("archive_reader moved-from state preserves unopened reader errors",
+          "[unit][public-api][archive_entry_catalog][reader_extraction_dispatch]") {
+    auto opened = libbsa::archive_reader::open(generated_archive_path("tes3_success.bsa").string());
+    REQUIRE(opened.has_value());
+
+    auto source = std::move(opened).value();
+    auto destination = std::move(source);
+    REQUIRE(destination.entries().has_value());
+
+    collecting_sink sink;
+    unused_sink_factory sink_factory;
+    require_unopened_reader_error(source.metadata());
+    require_unopened_reader_error(source.entries());
+    require_unopened_reader_error(source.find("meshes/tiny/probe.nif"));
+    require_unopened_reader_error(source.contains("meshes/tiny/probe.nif"));
+    require_unopened_reader_error(source.extract("meshes/tiny/probe.nif", sink));
+    require_unopened_reader_error(source.extract_bytes("meshes/tiny/probe.nif"));
+    require_unopened_reader_error(
+        source.extract_entries(std::span<const libbsa::bulk_extract_request>{}, sink_factory,
+                               libbsa::bulk_extract_options{.worker_count = 0U}));
 }

@@ -1,40 +1,15 @@
 #pragma once
 
-#include "formats/bsa/bsa_format_detector.hpp"
-
-#include <detail/host_file_path.hpp>
-
-#include <libbsa/archive.hpp>
-#include <libbsa/result.hpp>
-
-#include <cstddef>
-#include <cstdint>
-#include <span>
-#include <string_view>
-#include <vector>
+#include "formats/bsa/bsa_archive_opening.hpp"
+#include "formats/bsa/bsa_archive_source.hpp"
+#include "formats/bsa/tes4_bsa_profile.hpp"
 
 namespace libbsa::formats::bsa {
 
-/// Parsed TES4-family archive metadata and deterministic public entry values.
-struct tes4_bsa_archive {
-    archive_metadata metadata;
-    std::vector<entry_metadata> entries;
-};
-
-/// Parses checked TES4-family BSA header, table, name, and entry metadata
-/// state.
-result<tes4_bsa_archive> parse_tes4_bsa_archive(std::span<const std::byte> bytes,
-                                                detected_bsa_format detected);
-
-/// Parses checked TES4-family BSA state from a resolved host-file contract and
-/// never reopens from raw caller UTF-8 text.
-result<tes4_bsa_archive> parse_tes4_bsa_archive_file(const detail::host_file_path& host_path,
-                                                     std::uint64_t archive_size,
-                                                     detected_bsa_format detected);
-
-/// Parses enough checked TES4-family BSA header state to expose public
-/// metadata.
-result<archive_metadata> parse_tes4_bsa_metadata(std::span<const std::byte> bytes,
-                                                 detected_bsa_format detected);
+/// Materializes TES4 tables, payload prefixes, and entries from one borrowed source.
+/// The profile must come from that observation; validation precedence is preserved
+/// and no source ownership escapes with the resulting Archive Entry Catalog.
+result<opened_bsa_archive> materialize_tes4_bsa_archive(const bsa_archive_source& source,
+                                                        const tes4_bsa_profile& profile);
 
 }  // namespace libbsa::formats::bsa

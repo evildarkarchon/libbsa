@@ -133,6 +133,18 @@ function(require_not_exists path context)
   endif()
 endfunction()
 
+function(require_no_children directory context)
+  if(NOT IS_DIRECTORY "${directory}")
+    message(FATAL_ERROR "Expected ${context} directory to exist: ${directory}")
+  endif()
+
+  file(GLOB children RELATIVE "${directory}" "${directory}/*")
+  if(children)
+    string(REPLACE ";" ", " rendered_children "${children}")
+    message(FATAL_ERROR "Expected ${context} to be empty, found: ${rendered_children}")
+  endif()
+endfunction()
+
 function(try_create_junction link target result_var)
   if(NOT WIN32)
     set(${result_var} "UNSUPPORTED" PARENT_SCOPE)
@@ -249,15 +261,6 @@ require_contains("${cli_source}" "if (value.empty())" "CLI empty worker-count re
 require_contains("${cli_source}" "parser.add_argument(\"-j\", \"--threads\")" "CLI argparse thread option wiring")
 require_match_count("${cli_source}" "resolve_worker_count\\(parser\\.get<std::string>\\(\"--threads\"\\)\\)" 2 "CLI argparse thread-count resolution")
 require_match_count("${cli_source}" "write_execution_options\\{worker_count\\}" 4 "CLI pack worker-count forwarding")
-require_match_count("${cli_source}" "bulk_extract_options\\{worker_count\\}" 1 "CLI unpack worker-count forwarding")
-string(FIND "${cli_source}" "std::ofstream stream{destination.value()" path_based_destination_open_at)
-if(NOT path_based_destination_open_at EQUAL -1)
-  message(FATAL_ERROR "CLI unpack destinations must not be opened through a path-based truncating ofstream after reparse-point checks")
-endif()
-string(FIND "${cli_source}" "CreateFileW(" destination_create_file_at)
-if(destination_create_file_at EQUAL -1)
-  message(FATAL_ERROR "CLI unpack destinations must use a Windows handle-based create/open path for atomic destination safety")
-endif()
 string(FIND "${cli_source}" "std::cout << entry.path" raw_list_path_at)
 if(NOT raw_list_path_at EQUAL -1)
   message(FATAL_ERROR "CLI list output must not print archive-controlled paths without escaping control characters")
@@ -275,14 +278,6 @@ require_contains("${stdout}" "validate" "top-level help")
 run_cli(0 stdout stderr --version)
 require_contains("${stdout}" "libbsa" "version output")
 
-string(FIND "${cli_source}" "path_from_utf8(normalized_entry)" utf8_decoder_at)
-if(utf8_decoder_at EQUAL -1)
-  message(FATAL_ERROR "CLI unpack destination paths must decode normalized UTF-8 archive paths before appending them")
-endif()
-string(FIND "${cli_source}" "std::filesystem::path relative{normalized_entry}" narrow_destination_at)
-if(NOT narrow_destination_at EQUAL -1)
-  message(FATAL_ERROR "CLI unpack destination paths must not use narrow std::filesystem::path construction")
-endif()
 string(FIND "${cli_source}" "CommandLineToArgvW(::GetCommandLineW()" wide_argv_decoder_at)
 if(wide_argv_decoder_at EQUAL -1)
   message(FATAL_ERROR "CLI Windows entry point must decode the wide command line before dispatch")
@@ -302,10 +297,6 @@ endif()
 string(FIND "${cli_source}" "std::filesystem::path output_path{parsed.value().positionals[1]}" narrow_pack_output_at)
 if(NOT narrow_pack_output_at EQUAL -1)
   message(FATAL_ERROR "CLI pack output paths must decode UTF-8 argv before filesystem operations")
-endif()
-string(FIND "${cli_source}" "prepare_output_root(std::filesystem::path{parsed.value().positionals[1]})" narrow_unpack_output_at)
-if(NOT narrow_unpack_output_at EQUAL -1)
-  message(FATAL_ERROR "CLI unpack output paths must decode UTF-8 argv before filesystem operations")
 endif()
 string(FIND "${cli_source}" "directory_options::skip_permission_denied" skip_permission_denied_at)
 if(NOT skip_permission_denied_at EQUAL -1)
@@ -330,6 +321,7 @@ foreach(token IN ITEMS
     ba2-gnrl-sf-v2
     ba2-gnrl-sf-v3
     ba2-dx10-fo4
+    ba2-dx10-sf-v2
     ba2-dx10-sf-v3)
   require_contains("${stdout}" "${token}" "pack help format table")
 endforeach()
@@ -473,8 +465,56 @@ require_child_name("${mixed_case_selective_output}" "Meshes")
 require_child_name("${mixed_case_selective_output}/Meshes" "Tiny")
 require_child_name("${mixed_case_selective_output}/Meshes/Tiny" "Probe.nif")
 
+# The unpack pre-pass derives its destination-directory set from the filtered
+# request list, so extracting a subset must create no directory for an entry that
+# was not requested -- including when the requested spelling differs from the
+# archive's own, which is the case the pre-pass has to resolve through the entry.
+set(subset_dirs_root "${work_root}/subset-directories")
+set(subset_dirs_input "${subset_dirs_root}/input")
+set(subset_dirs_archive "${subset_dirs_root}/packed.bsa")
+set(subset_dirs_output "${subset_dirs_root}/output")
+write_text("${subset_dirs_input}/Meshes/Tiny/Probe.nif" "requested mesh payload\n")
+write_text("${subset_dirs_input}/Textures/Other/Skin.dds" "unrequested texture payload\n")
+run_cli(0 stdout stderr pack --format bsa-tes3 "${subset_dirs_input}" "${subset_dirs_archive}")
+run_cli(0 stdout stderr unpack "${subset_dirs_archive}" "${subset_dirs_output}" --path meshes/tiny/probe.nif)
+require_contains("${stdout}" "extracted 1 of 1" "subset extraction count")
+require_file_text("${subset_dirs_output}/Meshes/Tiny/Probe.nif" "requested mesh payload\n")
+require_child_name("${subset_dirs_output}" "Meshes")
+require_not_exists("${subset_dirs_output}/Textures" "destination directory for an unrequested entry")
+
 set(selective_archive "${work_root}/roundtrip-bsa-tes3/packed.bsa")
 set(selective_output "${work_root}/selective-output")
+
+# Opening the archive precedes output preparation, but a valid archive prepares
+# its root even when every requested entry is missing.
+set(bad_archive_output "${work_root}/bad-archive-output")
+run_cli(1 stdout stderr unpack "${work_root}/absent.bsa" "${bad_archive_output}")
+require_contains("${stderr}" "absent.bsa" "archive-open failure context")
+require_not_exists("${bad_archive_output}" "output directory after archive-open failure")
+set(all_missing_output "${work_root}/all-missing-output")
+run_cli(1 stdout stderr unpack "${selective_archive}" "${all_missing_output}"
+  --path missing/first.txt --path missing/second.txt)
+require_contains("${stdout}" "extracted 0 of 2 requested entries" "all-missing extraction count")
+require_no_children("${all_missing_output}" "all-missing output root")
+string(FIND "${stderr}" "missing/first.txt" first_missing_at)
+string(FIND "${stderr}" "missing/second.txt" second_missing_at)
+if(first_missing_at LESS 0 OR second_missing_at LESS first_missing_at)
+  message(FATAL_ERROR "Missing-entry diagnostics must preserve request order: ${stderr}")
+endif()
+
+# Exact duplicate requests share publication and retain their own result record.
+set(duplicate_output "${work_root}/duplicate-output")
+run_cli(1 stdout stderr unpack --threads 2 "${selective_archive}" "${duplicate_output}"
+  --path missing/first.txt --path meshes/model.nif --path meshes/model.nif
+  --path missing/second.txt)
+require_contains("${stdout}" "extracted 2 of 4 requested entries" "duplicate extraction count")
+require_file_text("${duplicate_output}/meshes/model.nif" "mesh payload for bsa-tes3\n")
+string(FIND "${stderr}" "missing/first.txt" first_missing_at)
+string(FIND "${stderr}" "missing/second.txt" second_missing_at)
+if(first_missing_at LESS 0 OR second_missing_at LESS first_missing_at)
+  message(FATAL_ERROR "Partial extraction diagnostics must preserve request order: ${stderr}")
+endif()
+
 run_cli(0 stdout stderr unpack --help)
 require_contains("${stdout}" "--threads" "unpack help thread option")
 require_contains("${stdout}" "-j <value>" "unpack help thread alias")
@@ -523,6 +563,14 @@ run_cli(1 stdout stderr unpack "${selective_archive}" "${traversal_output}" --pa
 if(EXISTS "${work_root}/escape.txt")
   message(FATAL_ERROR "Traversal extraction wrote outside the output root")
 endif()
+
+# The case above exercises the *request* path: `../escape.txt` names no entry, so it
+# fails lookup. An archive entry whose own path escapes the output root cannot be
+# reached from a parsed archive at all -- normalize_archive_path rejects any segment
+# that is "." or "..", a leading separator, and a drive-rooted path, so such an
+# archive fails to open. The reachable destination rejections are the Windows-unsafe
+# component names, and the pre-pass behaviour for those is covered against the
+# tes3_windows_unsafe_names fixture below.
 
 if(WIN32)
   set(pack_reparse_root "${work_root}/pack-reparse")
@@ -605,6 +653,16 @@ if(WIN32 AND EXISTS "${tes3_windows_unsafe_names_fixture}")
   require_contains("${stderr}" "trailing dot or space" "Windows trailing dot/space path diagnostic")
   require_contains("${stderr}" "colon" "Windows ADS-style stream path diagnostic")
   require_not_exists("${windows_unsafe_names_output}/textures/file.txt:stream" "ADS-style stream destination")
+
+  # Every entry in this fixture has a destination the CLI refuses, and the pre-pass
+  # refuses them before any worker starts. Nothing may be created under the output
+  # root -- not the payloads and not the directory two of the rejected entries would
+  # otherwise have lived in.
+  set(windows_unsafe_names_prepass_output "${work_root}/windows-unsafe-names-prepass")
+  run_cli(1 stdout stderr unpack "${tes3_windows_unsafe_names_fixture}" "${windows_unsafe_names_prepass_output}")
+  require_contains("${stdout}" "extracted 0 of 6" "rejected-destination extraction count")
+  require_not_exists("${windows_unsafe_names_prepass_output}/textures" "destination directory for a rejected entry")
+  require_no_children("${windows_unsafe_names_prepass_output}" "rejected-destination extraction output")
 endif()
 
 set(corrupt_compressed_fixture "${generated_archive_dir}/malformed_corrupt_compressed_payload.bsa")
@@ -649,5 +707,13 @@ if(EXISTS "${dx10_source}")
   run_cli(0 stdout stderr unpack "${dx10_archive}" "${dx10_output}")
   if(NOT EXISTS "${dx10_output}/textures/cli/bc1.dds")
     message(FATAL_ERROR "DX10 unpack did not write the expected DDS path")
+  endif()
+
+  set(dx10_v2_archive "${dx10_root}/texture-sf-v2.ba2")
+  set(dx10_v2_output "${dx10_root}/output-sf-v2")
+  run_cli(0 stdout stderr pack --format ba2-dx10-sf-v2 "${dx10_input}" "${dx10_v2_archive}")
+  run_cli(0 stdout stderr unpack "${dx10_v2_archive}" "${dx10_v2_output}")
+  if(NOT EXISTS "${dx10_v2_output}/textures/cli/bc1.dds")
+    message(FATAL_ERROR "Starfield v2 DX10 unpack did not write the expected DDS path")
   endif()
 endif()

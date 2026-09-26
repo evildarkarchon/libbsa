@@ -19,7 +19,11 @@ struct tes3_prepared_entry {
     std::string host_path;
     detail::host_file_path resolved_host_path;
     std::uint64_t hash{0};
-    std::uint32_t raw_offset{0};
+    /// Data-section-relative payload offset as assigned by Payload Placement.
+    ///
+    /// Held at the module's cursor width. The UInt32 the file record carries is
+    /// narrowed by serialization, when the record is written.
+    std::uint64_t raw_offset{0};
     std::uint32_t payload_size{0};
     bool from_memory{false};
 };

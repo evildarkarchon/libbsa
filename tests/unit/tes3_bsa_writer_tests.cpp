@@ -89,14 +89,15 @@ std::uint32_t read_u32_le_at(const std::vector<std::byte>& bytes, std::size_t of
            (static_cast<std::uint32_t>(std::to_integer<unsigned char>(bytes[offset + 3U])) << 24U);
 }
 
-std::uint64_t read_u64_le_at(const std::vector<std::byte>& bytes, std::size_t offset) {
-    REQUIRE(offset + 8U <= bytes.size());
-    std::uint64_t value = 0;
-    for (std::uint32_t index = 0; index < 8U; ++index) {
-        value |= static_cast<std::uint64_t>(std::to_integer<unsigned char>(bytes[offset + index]))
-                 << (index * 8U);
-    }
-    return value;
+/// Reads a TES3 hash record and returns the `hash_tes3` value it encodes.
+///
+/// The record is two consecutive `u32` values: the first-half sum -- the high 32
+/// bits of `hash_tes3` -- then the second-half sum. Reading the eight bytes as
+/// one little-endian `u64` transposes the halves, which is the defect issue #46
+/// fixed on both the reader and writer paths.
+std::uint64_t read_tes3_hash_record_at(const std::vector<std::byte>& bytes, std::size_t offset) {
+    return static_cast<std::uint64_t>(read_u32_le_at(bytes, offset)) << 32U |
+           read_u32_le_at(bytes, offset + 4U);
 }
 
 std::string read_null_terminated_name_at(const std::vector<std::byte>& bytes, std::size_t offset,
@@ -216,18 +217,24 @@ struct direct_tes3_layout_entry {
 };
 
 std::vector<expected_tes3_layout_entry> expected_hash_sorted_layout() {
+    // The writer serializes Bethesda's separator whatever spelling the caller
+    // used: the matching `add_bytes` calls pass "Meshes/Mixed/Probe.NIF" with
+    // forward slashes and "textures\\Memory\\Probe.dds" with backslashes, and
+    // both reach the name table as backslash paths. `hash_tes3` folds ASCII case
+    // but not separators, so the stored spelling is also the hash basis, and a
+    // forward-slash name is one Morrowind cannot resolve (issue #54).
     std::vector<expected_tes3_layout_entry> entries{
-        {.serialized_name = "Meshes/Mixed/Probe.NIF", .payload = bytes_from_text("nif-data")},
-        {.serialized_name = "textures/Memory/Probe.dds", .payload = bytes_from_text("dds-data")},
+        {.serialized_name = "Meshes\\Mixed\\Probe.NIF", .payload = bytes_from_text("nif-data")},
+        {.serialized_name = "textures\\Memory\\Probe.dds", .payload = bytes_from_text("dds-data")},
         {.serialized_name = "Readme.txt", .payload = {}},
     };
     for (auto& entry : entries) {
         entry.archive_hash = libbsa::detail::hash_tes3(entry.serialized_name);
     }
-    std::sort(entries.begin(), entries.end(), [](const auto& lhs, const auto& rhs) {
-        return libbsa::detail::tes3_hash_sort_key(lhs.archive_hash) <
-               libbsa::detail::tes3_hash_sort_key(rhs.archive_hash);
-    });
+    // Retail TES3 record order is ascending `hash_tes3` value, which is the two
+    // stored words compared in the order they appear on disk (issue #46).
+    std::sort(entries.begin(), entries.end(),
+              [](const auto& lhs, const auto& rhs) { return lhs.archive_hash < rhs.archive_hash; });
     std::uint32_t raw_offset = 0;
     for (auto& entry : entries) {
         entry.raw_tes3_data_offset = raw_offset;
@@ -268,7 +275,7 @@ std::vector<direct_tes3_layout_entry> direct_tes3_entries_from_bytes(
         entries.push_back(direct_tes3_layout_entry{
             .original_path = read_null_terminated_name_at(bytes, name_table_start + name_offset,
                                                           hash_table_start),
-            .archive_hash = read_u64_le_at(bytes, hash_table_start + (index * 8U)),
+            .archive_hash = read_tes3_hash_record_at(bytes, hash_table_start + (index * 8U)),
             .raw_tes3_data_offset = raw_offset,
             .payload_offset = payload_offset,
             .raw_size = raw_size,
@@ -413,8 +420,16 @@ TEST_CASE("tes3_bsa_writer emits byte-accurate raw TES3 tables in hash order",
                                            hash_table_start) == entry.serialized_name);
         expected_name_offset += static_cast<std::uint32_t>(entry.serialized_name.size() + 1U);
 
-        CHECK(read_u64_le_at(bytes, hash_table_start + (index * hash_record_size)) ==
-              entry.archive_hash);
+        // Assert the two stored words separately rather than the composed value.
+        // Composing and comparing would pass under either word order as long as
+        // the writer and this test agreed, which is exactly how issue #46 stayed
+        // invisible to a writer-fixture-only suite.
+        const auto hash_record_offset = hash_table_start + (index * hash_record_size);
+        CHECK(read_u32_le_at(bytes, hash_record_offset) ==
+              libbsa::detail::tes3_hash_high32(entry.archive_hash));
+        CHECK(read_u32_le_at(bytes, hash_record_offset + 4U) ==
+              libbsa::detail::tes3_hash_low32(entry.archive_hash));
+        CHECK(read_tes3_hash_record_at(bytes, hash_record_offset) == entry.archive_hash);
         const auto payload_start = data_section_start + entry.raw_tes3_data_offset;
         REQUIRE(payload_start + entry.payload.size() <= bytes.size());
         CHECK(std::vector<std::byte>{bytes.begin() + payload_start,
@@ -494,8 +509,11 @@ TEST_CASE("tes3_bsa_writer output reopens through reader lookup and extraction A
     const auto disk_entry = require_finds_entry(opened.value(), "Meshes/Disk/Probe.NIF");
     const auto memory_entry = require_finds_entry(opened.value(), "textures/Memory/Probe.dds");
     const auto root_entry = require_finds_entry(opened.value(), "Readme.txt");
-    CHECK(disk_entry.original_path == "Meshes/Disk/Probe.NIF");
-    CHECK(memory_entry.original_path == "textures/Memory/Probe.dds");
+    // The lookups above use the caller's `/` spelling and still resolve, because
+    // canonical normalization folds separators. What comes back is the archive's
+    // stored spelling, which for TES3 is Bethesda's `\` (issues #54).
+    CHECK(disk_entry.original_path == "Meshes\\Disk\\Probe.NIF");
+    CHECK(memory_entry.original_path == "textures\\Memory\\Probe.dds");
     CHECK(root_entry.original_path == "Readme.txt");
 
     const auto file_count = read_u32_le_at(archive_bytes, 8U);
@@ -546,6 +564,26 @@ TEST_CASE("tes3_bsa_writer reports missing disk sources from write_to", "[unit][
     auto written = writer.write_to(output_path("missing-source-output.bsa").string());
     REQUIRE_FALSE(written.has_value());
     REQUIRE(written.error().code == libbsa::error_code::io_error);
+}
+
+TEST_CASE("tes3_bsa_writer validates the destination before opening disk sources",
+          "[unit][tes3_bsa_writer][publish][workspace]") {
+    const auto missing_source = output_path("destination-first-missing-source.nif");
+    const auto archive = output_path("destination-first-existing.bsa");
+    const auto sentinel = bytes_from_text("existing archive");
+    std::error_code fs_error;
+    std::filesystem::remove(missing_source, fs_error);
+    write_binary_file(archive, sentinel);
+
+    libbsa::tes3_bsa_writer writer;
+    REQUIRE(writer.add_file("Meshes/DestinationFirst.NIF", missing_source.string()).has_value());
+
+    auto written = writer.write_to(archive.string());
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::io_error);
+    CHECK(written.error().message.find("output host path already exists") != std::string::npos);
+    CHECK(read_binary_file(archive) == sentinel);
 }
 
 TEST_CASE("tes3_bsa_writer rejects invalid archive paths", "[unit][tes3_bsa_writer]") {

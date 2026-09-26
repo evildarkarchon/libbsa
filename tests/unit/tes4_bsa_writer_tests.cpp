@@ -4,6 +4,14 @@
 
 #include <detail/bethesda_hash.hpp>
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -19,6 +27,27 @@
 namespace {
 
 constexpr auto non_ascii_path_token_wide = L"libbsa-Angstrom-日本語";
+
+class native_handle_guard final {
+   public:
+    explicit native_handle_guard(HANDLE handle) noexcept : handle_{handle} {}
+    ~native_handle_guard() noexcept { reset(); }
+
+    native_handle_guard(const native_handle_guard&) = delete;
+    native_handle_guard& operator=(const native_handle_guard&) = delete;
+
+    [[nodiscard]] bool valid() const noexcept { return handle_ != INVALID_HANDLE_VALUE; }
+
+    void reset() noexcept {
+        if (handle_ != INVALID_HANDLE_VALUE) {
+            ::CloseHandle(handle_);
+            handle_ = INVALID_HANDLE_VALUE;
+        }
+    }
+
+   private:
+    HANDLE handle_{INVALID_HANDLE_VALUE};
+};
 
 std::filesystem::path writer_test_dir() {
     auto path = std::filesystem::temp_directory_path() / "libbsa_tes4_bsa_writer_tests";
@@ -74,6 +103,20 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
 
 std::vector<std::byte> read_generated_dds(std::string_view file_name) {
     return read_binary_file(generated_source_dir() / std::string{file_name});
+}
+
+/// Reuses a same-layout DXT10 fixture to cover BSA-compatible formats that the
+/// BA2 source fixture generator intentionally does not emit.
+std::vector<std::byte> read_generated_dds_as_format(std::string_view file_name,
+                                                    std::uint32_t dxgi_format) {
+    auto bytes = read_generated_dds(file_name);
+    constexpr std::size_t dxt10_format_offset = 128U;
+    REQUIRE(dxt10_format_offset + sizeof(dxgi_format) <= bytes.size());
+    for (std::size_t byte_index = 0U; byte_index < sizeof(dxgi_format); ++byte_index) {
+        bytes[dxt10_format_offset + byte_index] =
+            static_cast<std::byte>((dxgi_format >> (byte_index * 8U)) & 0xFFU);
+    }
+    return bytes;
 }
 
 std::uint32_t read_u32_le_at(const std::vector<std::byte>& bytes, std::size_t offset) {
@@ -271,7 +314,12 @@ TEST_CASE("TES4 BSA writer raw output reopens for every target profile",
             auto found = opened.value().find(path);
             REQUIRE(found.has_value());
             REQUIRE(found.value().has_value());
-            CHECK(found.value()->original_path == path);
+            // TES4 stores the folder and file names separately and natively with
+            // `\`; display joins them the same way (issue #54). The lookup above
+            // still uses the caller's `/` spelling, which canonicalizes the same.
+            auto expected_display = path;
+            std::replace(expected_display.begin(), expected_display.end(), '/', '\\');
+            CHECK(found.value()->original_path == expected_display);
             CHECK(found.value()->compression == libbsa::entry_compression::none);
 
             auto upper_lookup = opened.value().find("MESHES/UPPER/MODEL.NIF");
@@ -385,6 +433,51 @@ TEST_CASE("TES4 BSA writer serializes derived file flags and hash-sorted tables"
     }
 }
 
+TEST_CASE("TES4 BSA writer preserves each TES4 BSA Profile's aggregate file flags and payloads",
+          "[unit][tes4_bsa_writer][file-flags]") {
+    struct target_expectation {
+        libbsa::tes4_bsa_target target;
+        std::uint32_t file_flags;
+    };
+    constexpr std::array targets{
+        target_expectation{libbsa::tes4_bsa_target::oblivion, 0x011FU},
+        target_expectation{libbsa::tes4_bsa_target::fallout3, 0x010FU},
+        target_expectation{libbsa::tes4_bsa_target::skyrim_se, 0x000FU},
+    };
+    const std::array entries{
+        std::pair{std::string_view{"Meshes/Flags/Model.NIF"}, bytes_from_text("mesh")},
+        std::pair{std::string_view{"Textures/Flags/Diffuse.DDS"}, bytes_from_text("texture")},
+        std::pair{std::string_view{"Sound/Flags/Voice.WAV"}, bytes_from_text("sound")},
+        std::pair{std::string_view{"Scripts/Flags/Quest.PEX"}, bytes_from_text("script")},
+        std::pair{std::string_view{"Interface/Flags/Menu.XML"}, bytes_from_text("menu")},
+        std::pair{std::string_view{"Docs/Flags/Readme.TXT"}, bytes_from_text("misc")},
+        std::pair{std::string_view{"Unknown/Flags/Payload.BIN"}, bytes_from_text("unclassified")},
+    };
+
+    for (const auto& expected : targets) {
+        INFO("target: " << target_name(expected.target));
+        libbsa::tes4_bsa_writer_options options;
+        options.compression_policy = libbsa::archive_compression_policy::all_raw;
+        options.overwrite_existing = true;
+        libbsa::tes4_bsa_writer writer{expected.target, options};
+        for (const auto& [path, payload] : entries) {
+            REQUIRE(writer.add_bytes(path, payload).has_value());
+        }
+
+        const auto archive = output_path(target_name(expected.target) + "-aggregate-flags.bsa");
+        REQUIRE(writer.write_to(archive.string()).has_value());
+
+        const auto bytes = read_binary_file(archive);
+        CHECK(read_u32_le_at(bytes, 32U) == expected.file_flags);
+
+        auto opened = libbsa::archive_reader::open(archive.string());
+        REQUIRE(opened.has_value());
+        for (const auto& [path, payload] : entries) {
+            require_extracted_bytes(opened.value(), path, payload);
+        }
+    }
+}
+
 TEST_CASE("TES4 BSA writer copies memory entries into writer-owned state",
           "[unit][tes4_bsa_writer]") {
     libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::oblivion};
@@ -458,6 +551,42 @@ TEST_CASE("TES4 BSA writer reports invalid archive paths as invalid arguments",
     }
 }
 
+TEST_CASE("TES4 BSA writer resolves invalid targets at the finalization policy seam",
+          "[unit][tes4_bsa_writer]") {
+    const auto invalid_target = static_cast<libbsa::tes4_bsa_target>(0xFFFFU);
+
+    SECTION("output path validation precedes target resolution") {
+        libbsa::tes4_bsa_writer writer{invalid_target};
+
+        auto written = writer.write_to("");
+
+        REQUIRE_FALSE(written.has_value());
+        CHECK(written.error().code == libbsa::error_code::invalid_argument);
+        CHECK(written.error().message == "TES4 BSA output host path must not be empty");
+    }
+
+    SECTION("entry validation precedes target resolution") {
+        libbsa::tes4_bsa_writer writer{invalid_target};
+
+        auto written = writer.write_to(output_path("invalid-target-empty-writer.bsa").string());
+
+        REQUIRE_FALSE(written.has_value());
+        CHECK(written.error().code == libbsa::error_code::invalid_argument);
+        CHECK(written.error().message == "TES4 BSA writer requires at least one file entry");
+    }
+
+    SECTION("validated finalization reports the established target diagnostic") {
+        libbsa::tes4_bsa_writer writer{invalid_target};
+        REQUIRE(writer.add_bytes("Meshes/InvalidTarget.nif", sample_bytes()).has_value());
+
+        auto written = writer.write_to(output_path("invalid-target-profile.bsa").string());
+
+        REQUIRE_FALSE(written.has_value());
+        CHECK(written.error().code == libbsa::error_code::invalid_argument);
+        CHECK(written.error().message == "TES4 BSA writer target profile is not supported");
+    }
+}
+
 TEST_CASE(
     "TES4 BSA writer refuses to overwrite existing output when "
     "overwrite_existing is false",
@@ -489,6 +618,89 @@ TEST_CASE("TES4 BSA writer reports missing disk sources as I/O errors", "[unit][
 
     REQUIRE_FALSE(written.has_value());
     REQUIRE(written.error().code == libbsa::error_code::io_error);
+}
+
+TEST_CASE(
+    "TES4 BSA writer rejects disk sources already open for writing through "
+    "stable preparation",
+    "[unit][tes4_bsa_writer][writer-source-io][stable-session]") {
+    const auto source = output_path("stable-session-write-sharing-source.nif");
+    const auto archive = output_path("stable-session-write-sharing-output.bsa");
+    const auto payload = bytes_from_text("stable session source bytes");
+    write_binary_file(source, payload);
+    std::error_code fs_error;
+    std::filesystem::remove(archive, fs_error);
+
+    // This permissive writer proves the TES4 worker denies write-sharing for
+    // its complete size/probe/snapshot observation rather than using CRT reads.
+    native_handle_guard existing_writer{::CreateFileW(
+        source.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
+    REQUIRE(existing_writer.valid());
+
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    options.overwrite_existing = true;
+    libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+    REQUIRE(writer.add_file("Meshes/Stable/Source.nif", source.string()).has_value());
+
+    auto denied = writer.write_to(archive.string());
+
+    REQUIRE_FALSE(denied.has_value());
+    CHECK(denied.error().code == libbsa::error_code::io_error);
+    CHECK_FALSE(std::filesystem::exists(archive));
+
+    existing_writer.reset();
+    REQUIRE(writer.write_to(archive.string()).has_value());
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+    require_extracted_bytes(opened.value(), "Meshes/Stable/Source.nif", payload);
+}
+
+TEST_CASE("TES4 BSA writer validates the destination before opening disk sources",
+          "[unit][tes4_bsa_writer][publish][workspace]") {
+    const auto missing_source = output_path("destination-first-missing-source.dds");
+    const auto archive = output_path("destination-first-existing.bsa");
+    const auto sentinel = bytes_from_text("existing archive");
+    std::error_code fs_error;
+    std::filesystem::remove(missing_source, fs_error);
+    write_binary_file(archive, sentinel);
+
+    libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::skyrim_se};
+    REQUIRE(writer.add_file("Textures/DestinationFirst.dds", missing_source.string()).has_value());
+
+    auto written = writer.write_to(archive.string());
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::io_error);
+    CHECK(written.error().message.find("output host path already exists") != std::string::npos);
+    CHECK(read_binary_file(archive) == sentinel);
+}
+
+TEST_CASE("TES4 BSA writer validates the destination before an unusable disk source",
+          "[unit][tes4_bsa_writer][publish][workspace][stable-session]") {
+    const auto source = output_path("destination-first-locked-source.nif");
+    const auto archive = output_path("destination-first-locked-existing.bsa");
+    const auto sentinel = bytes_from_text("existing archive");
+    write_binary_file(source, sample_bytes());
+    write_binary_file(archive, sentinel);
+
+    // This handle makes the source unusable if preparation starts, so the
+    // destination diagnostic proves finalization never attempted source I/O.
+    native_handle_guard existing_writer{
+        ::CreateFileW(source.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+                      OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
+    REQUIRE(existing_writer.valid());
+
+    libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3};
+    REQUIRE(writer.add_file("Meshes/DestinationFirst.nif", source.string()).has_value());
+
+    auto written = writer.write_to(archive.string());
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::io_error);
+    CHECK(written.error().message.find("output host path already exists") != std::string::npos);
+    CHECK(read_binary_file(archive) == sentinel);
 }
 
 TEST_CASE("TES4 BSA writer requires explicit archive paths for disk entries",
@@ -526,26 +738,65 @@ TEST_CASE("TES4 BSA writer gates parseable DDS texture formats by target profile
             auto written = writer.write_to(archive.string());
 
             REQUIRE(written.has_value());
+            auto opened = libbsa::archive_reader::open(archive.string());
+            REQUIRE(opened.has_value());
+            require_extracted_bytes(opened.value(), "Textures/Formats/BC3.dds", bc3_dds);
         }
+
+        const auto disk_source = output_path("bc3-texture-disk-source.dds");
+        write_binary_file(disk_source, bc3_dds);
+        libbsa::tes4_bsa_writer disk_writer{libbsa::tes4_bsa_target::fallout3, options};
+        REQUIRE(
+            disk_writer.add_file("Textures/Formats/DiskBC3.dds", disk_source.string()).has_value());
+        const auto disk_archive = output_path("fallout3-bc3-texture-disk.bsa");
+        REQUIRE(disk_writer.write_to(disk_archive.string()).has_value());
+        auto disk_opened = libbsa::archive_reader::open(disk_archive.string());
+        REQUIRE(disk_opened.has_value());
+        require_extracted_bytes(disk_opened.value(), "Textures/Formats/DiskBC3.dds", bc3_dds);
     }
 
-    SECTION("DX10 BC7 DDS payloads require the Skyrim SE BSA target") {
-        const auto bc7_dds = read_generated_dds("ba2_dx10_bc7_unorm.dds");
-        const auto bc7_source = generated_source_dir() / "ba2_dx10_bc7_unorm.dds";
+    SECTION("DX10 BC4 BC5 and BC7 DDS payloads require the Skyrim SE BSA target") {
+        const std::array extended_formats{
+            std::pair{std::string_view{"ba2_dx10_bc4_unorm.dds"},
+                      std::string_view{"Textures/Formats/BC4.dds"}},
+            std::pair{std::string_view{"ba2_dx10_bc5_unorm.dds"},
+                      std::string_view{"Textures/Formats/BC5.dds"}},
+            std::pair{std::string_view{"ba2_dx10_bc7_unorm.dds"},
+                      std::string_view{"Textures/Formats/BC7.dds"}},
+        };
+        constexpr std::string_view legacy_diagnostic =
+            "TES4-family BSA target supports only DX9 DDS texture formats before Skyrim SE";
 
-        for (const auto target :
-             {libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3}) {
-            INFO("target: " << target_name(target));
-            libbsa::tes4_bsa_writer writer{target, options};
-            REQUIRE(writer.add_bytes("Textures/Formats/BC7.dds", bc7_dds).has_value());
+        for (const auto& [fixture_name, archive_path] : extended_formats) {
+            const auto dds = read_generated_dds(fixture_name);
+            for (const auto target :
+                 {libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3}) {
+                INFO("target: " << target_name(target));
+                INFO("source DDS: " << fixture_name);
+                libbsa::tes4_bsa_writer writer{target, options};
+                REQUIRE(writer.add_bytes(archive_path, dds).has_value());
 
-            const auto archive = output_path(target_name(target) + "-bc7-texture.bsa");
-            auto written = writer.write_to(archive.string());
+                const auto archive =
+                    output_path(target_name(target) + "-" + std::string{fixture_name} + ".bsa");
+                auto written = writer.write_to(archive.string());
 
-            REQUIRE_FALSE(written.has_value());
-            CHECK(written.error().code == libbsa::error_code::format_error);
+                REQUIRE_FALSE(written.has_value());
+                CHECK(written.error().code == libbsa::error_code::format_error);
+                CHECK(written.error().message == legacy_diagnostic);
+            }
+
+            libbsa::tes4_bsa_writer skyrim_se_writer{libbsa::tes4_bsa_target::skyrim_se, options};
+            REQUIRE(skyrim_se_writer.add_bytes(archive_path, dds).has_value());
+
+            const auto archive = output_path("skyrim-se-" + std::string{fixture_name} + ".bsa");
+            REQUIRE(skyrim_se_writer.write_to(archive.string()).has_value());
+
+            auto opened = libbsa::archive_reader::open(archive.string());
+            REQUIRE(opened.has_value());
+            require_extracted_bytes(opened.value(), archive_path, dds);
         }
 
+        const auto bc7_source = generated_source_dir() / "ba2_dx10_bc7_unorm.dds";
         libbsa::tes4_bsa_writer disk_writer{libbsa::tes4_bsa_target::fallout3, options};
         REQUIRE(
             disk_writer.add_file("Textures/Formats/DiskBC7.dds", bc7_source.string()).has_value());
@@ -555,17 +806,12 @@ TEST_CASE("TES4 BSA writer gates parseable DDS texture formats by target profile
 
         REQUIRE_FALSE(disk_written.has_value());
         CHECK(disk_written.error().code == libbsa::error_code::format_error);
-
-        libbsa::tes4_bsa_writer skyrim_se_writer{libbsa::tes4_bsa_target::skyrim_se, options};
-        REQUIRE(skyrim_se_writer.add_bytes("Textures/Formats/BC7.dds", bc7_dds).has_value());
-
-        const auto archive = output_path("skyrim-se-bc7-texture.bsa");
-        auto written = skyrim_se_writer.write_to(archive.string());
-
-        REQUIRE(written.has_value());
+        CHECK(disk_written.error().message == legacy_diagnostic);
     }
 
     SECTION("Skyrim SE rejects DDS formats outside the Fallout 4-compatible set") {
+        constexpr std::string_view skyrim_se_diagnostic =
+            "Skyrim SE BSA target supports the same DDS texture format set as Fallout 4";
         for (const auto& source : {std::pair{"ba2_dx10_bc6h_uf16.dds", "Textures/Formats/BC6.dds"},
                                    std::pair{"ba2_dx10_unsupported_r32g32b32a32_float.dds",
                                              "Textures/Formats/R32G32B32A32.dds"}}) {
@@ -578,6 +824,64 @@ TEST_CASE("TES4 BSA writer gates parseable DDS texture formats by target profile
 
             REQUIRE_FALSE(written.has_value());
             CHECK(written.error().code == libbsa::error_code::format_error);
+            CHECK(written.error().message == skyrim_se_diagnostic);
+        }
+    }
+
+    SECTION("uncompressed DX9 DDS payloads remain valid for every target profile") {
+        struct uncompressed_format_case {
+            std::string_view fixture_name;
+            std::string_view archive_path;
+            std::uint32_t dxgi_format;
+        };
+        constexpr std::array uncompressed_formats{
+            uncompressed_format_case{"ba2_dx10_r8g8b8a8_unorm.dds", "Textures/Formats/R8G8B8A8.dds",
+                                     28U},
+            uncompressed_format_case{"ba2_dx10_r8_unorm.dds", "Textures/Formats/R8.dds", 61U},
+            uncompressed_format_case{"ba2_dx10_r8_unorm.dds", "Textures/Formats/A8.dds", 65U},
+            uncompressed_format_case{"ba2_dx10_b8g8r8a8_unorm.dds", "Textures/Formats/B8G8R8A8.dds",
+                                     87U},
+            uncompressed_format_case{"ba2_dx10_b8g8r8a8_unorm.dds", "Textures/Formats/B8G8R8X8.dds",
+                                     88U},
+        };
+        for (const auto& format : uncompressed_formats) {
+            const auto uncompressed_dds =
+                read_generated_dds_as_format(format.fixture_name, format.dxgi_format);
+            for (const auto target :
+                 {libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3,
+                  libbsa::tes4_bsa_target::skyrim_se}) {
+                INFO("target: " << target_name(target));
+                INFO("DXGI format: " << format.dxgi_format);
+                libbsa::tes4_bsa_writer writer{target, options};
+                REQUIRE(writer.add_bytes(format.archive_path, uncompressed_dds).has_value());
+
+                const auto archive = output_path(target_name(target) + "-dxgi-" +
+                                                 std::to_string(format.dxgi_format) + ".bsa");
+                REQUIRE(writer.write_to(archive.string()).has_value());
+
+                auto opened = libbsa::archive_reader::open(archive.string());
+                REQUIRE(opened.has_value());
+                require_extracted_bytes(opened.value(), format.archive_path, uncompressed_dds);
+            }
+        }
+    }
+
+    SECTION("malformed DDS bytes remain arbitrary payloads for every target") {
+        const auto malformed_dds = read_generated_dds("ba2_dx10_malformed_truncated.dds");
+        for (const auto target :
+             {libbsa::tes4_bsa_target::oblivion, libbsa::tes4_bsa_target::fallout3,
+              libbsa::tes4_bsa_target::skyrim_se}) {
+            INFO("target: " << target_name(target));
+            libbsa::tes4_bsa_writer writer{target, options};
+            REQUIRE(writer.add_bytes("Textures/Formats/Malformed.dds", malformed_dds).has_value());
+
+            const auto archive = output_path(target_name(target) + "-malformed-texture.bsa");
+            REQUIRE(writer.write_to(archive.string()).has_value());
+
+            auto opened = libbsa::archive_reader::open(archive.string());
+            REQUIRE(opened.has_value());
+            require_extracted_bytes(opened.value(), "Textures/Formats/Malformed.dds",
+                                    malformed_dds);
         }
     }
 }
@@ -988,6 +1292,70 @@ TEST_CASE("TES4 BSA writer dedupes matching disk-backed raw payloads",
     require_extracted_bytes(opened.value(), "Meshes/Dedupe/DiskSecond.nif", source_bytes);
 }
 
+TEST_CASE("TES4 BSA writer dedupes equal owned and snapshot-backed Stored Payloads",
+          "[unit][tes4_bsa_writer][writer-source-io]") {
+    const auto source_bytes =
+        bytes_from_text("equal memory and disk bytes become one physical placement");
+    const auto disk_source = output_path("dedupe-owned-snapshot-source.nif");
+    write_binary_file(disk_source, source_bytes);
+
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    options.deduplicate_payloads = true;
+    options.overwrite_existing = true;
+    libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+
+    REQUIRE(writer.add_file("Meshes/Dedupe/Disk.nif", disk_source.string()).has_value());
+    REQUIRE(writer.add_bytes("Meshes/Dedupe/Memory.nif", source_bytes).has_value());
+
+    const auto archive = output_path("dedupe-owned-snapshot-shared-offset.bsa");
+    REQUIRE(writer.write_to(archive.string()).has_value());
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+    const auto& disk = require_entry(opened.value(), "Meshes/Dedupe/Disk.nif");
+    const auto& memory = require_entry(opened.value(), "Meshes/Dedupe/Memory.nif");
+    CHECK(disk.payload_offset == memory.payload_offset);
+    CHECK(disk.stored_size == memory.stored_size);
+    require_extracted_bytes(opened.value(), "Meshes/Dedupe/Disk.nif", source_bytes);
+    require_extracted_bytes(opened.value(), "Meshes/Dedupe/Memory.nif", source_bytes);
+}
+
+TEST_CASE("TES4 BSA writer dedupes matching compressed disk and memory entries",
+          "[unit][tes4_bsa_writer][writer-source-io]") {
+    const std::vector<std::byte> source_bytes(32U * 1024U, std::byte{0x41});
+    const auto disk_source = output_path("dedupe-compressed-owned-source.nif");
+    write_binary_file(disk_source, source_bytes);
+
+    libbsa::tes4_bsa_writer_options options;
+    options.compression_policy = libbsa::archive_compression_policy::all_raw;
+    options.deduplicate_payloads = true;
+    options.overwrite_existing = true;
+    libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
+
+    REQUIRE(writer
+                .add_file("Meshes/Dedupe/CompressedDisk.nif", disk_source.string(),
+                          libbsa::entry_compression_policy::compressed)
+                .has_value());
+    REQUIRE(writer
+                .add_bytes("Meshes/Dedupe/CompressedMemory.nif", source_bytes,
+                           libbsa::entry_compression_policy::compressed)
+                .has_value());
+
+    const auto archive = output_path("dedupe-compressed-disk-memory.bsa");
+    REQUIRE(writer.write_to(archive.string()).has_value());
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+    const auto& disk = require_entry(opened.value(), "Meshes/Dedupe/CompressedDisk.nif");
+    const auto& memory = require_entry(opened.value(), "Meshes/Dedupe/CompressedMemory.nif");
+    CHECK(disk.compression == libbsa::entry_compression::deflate);
+    CHECK(memory.compression == libbsa::entry_compression::deflate);
+    CHECK(disk.payload_offset == memory.payload_offset);
+    require_extracted_bytes(opened.value(), "Meshes/Dedupe/CompressedDisk.nif", source_bytes);
+    require_extracted_bytes(opened.value(), "Meshes/Dedupe/CompressedMemory.nif", source_bytes);
+}
+
 TEST_CASE(
     "TES4 BSA writer does not dedupe matching source bytes with "
     "different compression encodings",
@@ -1038,7 +1406,9 @@ TEST_CASE(
     options.overwrite_existing = true;
     libbsa::tes4_bsa_writer writer{libbsa::tes4_bsa_target::fallout3, options};
 
-    REQUIRE(writer.add_bytes("Meshes/Dedupe/First.nif", source_bytes).has_value());
+    const auto first_source = output_path("dedupe-embedded-prefix-disk-source.nif");
+    write_binary_file(first_source, source_bytes);
+    REQUIRE(writer.add_file("Meshes/Dedupe/First.nif", first_source.string()).has_value());
     REQUIRE(writer.add_bytes("Meshes/Dedupe/Second.nif", source_bytes).has_value());
 
     const auto archive = output_path("dedupe-embedded-name-mismatch.bsa");

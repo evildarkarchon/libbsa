@@ -445,7 +445,7 @@ std::string compression_route_name(libbsa::detail::compression_method method) {
     switch (method) {
         case libbsa::detail::compression_method::none:
             return "raw";
-        case libbsa::detail::compression_method::deflate:
+        case libbsa::detail::compression_method::zlib:
             return "deflate";
         case libbsa::detail::compression_method::lz4_frame:
             return "lz4_frame";
@@ -640,12 +640,12 @@ archive_spec make_fo4() {
                  .chunks = {{.start_mip = 0,
                              .end_mip = 0,
                              .decoded_payload = repeated_bytes(0x30, 16),
-                             .compression = libbsa::detail::compression_method::deflate,
+                             .compression = libbsa::detail::compression_method::zlib,
                              .segment = {.source_chunk_index = 0}},
                             {.start_mip = 1,
                              .end_mip = 1,
                              .decoded_payload = repeated_bytes(0x50, 4),
-                             .compression = libbsa::detail::compression_method::deflate,
+                             .compression = libbsa::detail::compression_method::zlib,
                              .segment = {.start_mip = 1, .end_mip = 1, .source_chunk_index = 1}}}},
                 {.original_path = "Textures/Generated/Fo4Cube.dds",
                  .height = 1,

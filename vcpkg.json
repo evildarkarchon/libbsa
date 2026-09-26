@@ -6,7 +6,8 @@
       "name": "libdeflate",
       "features": [
         "compression",
-        "decompression"
+        "decompression",
+        "zlib"
       ]
     },
     "lz4",

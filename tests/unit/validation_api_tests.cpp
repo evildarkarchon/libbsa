@@ -304,6 +304,19 @@ std::filesystem::path write_ba2_dx10_archive() {
     return output;
 }
 
+std::filesystem::path write_ba2_dx10_starfield_v2_archive() {
+    const auto output = unique_output_path("validation-api-ba2-dx10-sfv2", ".ba2");
+    libbsa::ba2_dx10_writer_options options;
+    options.overwrite_existing = true;
+    options.starfield_compression_method = 99U;
+    libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::starfield_v2, options};
+    const auto dds_source = generated_source_dir() / "ba2_dx10_bc1_unorm.dds";
+    REQUIRE(
+        writer.add_file("textures/validation/starfield_v2.dds", dds_source.string()).has_value());
+    REQUIRE(writer.write_to(output.string()).has_value());
+    return output;
+}
+
 std::filesystem::path write_ba2_gnrl_starfield_v3_archive(std::uint32_t compression_method) {
     const auto stem =
         std::string{"validation-api-ba2-gnrl-sfv3-method"} + std::to_string(compression_method);
@@ -383,7 +396,8 @@ TEST_CASE("validation_api caps extractability before reading sparse payload byte
     append_u32_le(bytes, 1U);
     append_u64_le(bytes, 60U);
 
-    append_u32_le(bytes, libbsa::detail::hash_fo4("sparse_payload.bin"));
+    // GNRL NameHash covers the extension-stripped stem.
+    append_u32_le(bytes, libbsa::detail::hash_fo4("sparse_payload"));
     append_ascii(bytes, std::string_view{"BIN\0", 4U});
     append_u32_le(bytes, libbsa::detail::hash_fo4("meshes/validation"));
     append_u32_le(bytes, 0x0000002AU);
@@ -482,6 +496,22 @@ TEST_CASE("validation_api accepts writer-produced archives", "[unit][roundtrip][
                           libbsa::archive_variant::fallout4, options);
     require_valid_archive(write_ba2_dx10_archive().string(), libbsa::archive_type::ba2,
                           libbsa::archive_variant::fallout4, options);
+}
+
+TEST_CASE("validation_api accepts writer-produced Starfield BA2 v2 DX10 archives",
+          "[unit][roundtrip][validation_api][starfield]") {
+    libbsa::validation_options options;
+    options.validate_entry_extractability = true;
+
+    const auto report = require_valid_archive(write_ba2_dx10_starfield_v2_archive().string(),
+                                              libbsa::archive_type::ba2,
+                                              libbsa::archive_variant::starfield, options);
+
+    REQUIRE(report.metadata.has_value());
+    CHECK(report.metadata->version == 2U);
+    CHECK(report.metadata->default_compression == libbsa::entry_compression::deflate);
+    REQUIRE(report.metadata->ba2.has_value());
+    CHECK_FALSE(report.metadata->ba2->compression_method.has_value());
 }
 
 TEST_CASE(

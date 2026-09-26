@@ -2,15 +2,21 @@
 
 #include <libbsa/libbsa.hpp>
 
+#include <detail/bethesda_hash.hpp>
 #include <detail/parser_primitives.hpp>
 
+#include "formats/bsa/tes4_bsa_constants.hpp"
+
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <regex>
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -32,11 +38,6 @@ std::filesystem::path generated_archive_path(std::string_view filename) {
 libbsa::entry_compression expected_default_compression(std::uint32_t version) {
     return version == 105U ? libbsa::entry_compression::lz4_frame
                            : libbsa::entry_compression::deflate;
-}
-
-libbsa::archive_variant expected_variant(std::uint32_t version) {
-    (void)version;
-    return libbsa::archive_variant::tes4;
 }
 
 struct success_fixture {
@@ -87,8 +88,14 @@ nlohmann::json read_json_file(const std::filesystem::path& path) {
     return nlohmann::json::parse(stream);
 }
 
+/// Converts a manifest's stored path spelling into the display spelling
+/// `entry_metadata::original_path` reports.
+///
+/// Manifests record the archive's stored spelling, which differs by format: the
+/// BSA families store `\`, BA2 stores `/`. Display is `\` for all of them,
+/// since libbsa is Windows-only (issue #54).
 std::string archive_original_path_from_manifest(std::string value) {
-    std::replace(value.begin(), value.end(), '\\', '/');
+    std::replace(value.begin(), value.end(), '/', '\\');
     return value;
 }
 
@@ -99,14 +106,6 @@ std::vector<std::byte> read_binary_file(const std::filesystem::path& path) {
         bytes.push_back(static_cast<std::byte>(static_cast<unsigned char>(ch)));
     }
     return bytes;
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream input{path};
-    REQUIRE(input.is_open());
-    std::ostringstream buffer;
-    buffer << input.rdbuf();
-    return buffer.str();
 }
 
 std::vector<std::byte> bytes_from_hex(std::string_view hex) {
@@ -182,6 +181,149 @@ std::uint32_t read_u32_le(const std::vector<std::byte>& bytes, std::size_t offse
     return value;
 }
 
+void append_u8(std::vector<std::byte>& bytes, std::uint8_t value) {
+    bytes.push_back(static_cast<std::byte>(value));
+}
+
+void append_u32_le(std::vector<std::byte>& bytes, std::uint32_t value) {
+    for (std::uint32_t index = 0; index < 4U; ++index) {
+        append_u8(bytes, static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+    }
+}
+
+void append_u64_le(std::vector<std::byte>& bytes, std::uint64_t value) {
+    for (std::uint32_t index = 0; index < 8U; ++index) {
+        append_u8(bytes, static_cast<std::uint8_t>((value >> (index * 8U)) & 0xFFU));
+    }
+}
+
+void append_ascii(std::vector<std::byte>& bytes, std::string_view value) {
+    for (const char ch : value) {
+        append_u8(bytes, static_cast<std::uint8_t>(ch));
+    }
+}
+
+/// Single-folder synthetic archive constant: every builder below packs its files
+/// into this one folder so record order and payload spans stay the only
+/// variables under test.
+const std::string synthetic_tes4_folder = "meshes\\precedence";
+
+struct synthetic_tes4_record {
+    std::string file_name;
+    std::uint32_t offset;
+    std::uint32_t size;
+    /// Replaces the stored file-record hash the builder would otherwise derive
+    /// from the file name, so a record can carry a hash mismatch alongside
+    /// another structural defect.
+    std::optional<std::uint64_t> hash_override{};
+};
+
+/// Returns the offset of the first payload byte make_synthetic_tes4_archive
+/// writes for `records`, which is also the metadata size a legal stored span has
+/// to start at or after.
+///
+/// `trailing_file_name_bytes` matches the argument of the same name on
+/// `make_synthetic_tes4_archive`: slack the header declares inside the file-name
+/// table but that no name consumes, which still pushes the payload base out.
+std::uint32_t synthetic_tes4_payload_base(std::span<const synthetic_tes4_record> records,
+                                          std::uint32_t trailing_file_name_bytes = 0U) {
+    using namespace libbsa::formats::bsa;
+
+    std::size_t file_names_length = trailing_file_name_bytes;
+    for (const auto& record : records) {
+        file_names_length += record.file_name.size() + 1U;
+    }
+    // The folder-name block carries the one-byte bzstring length prefix that
+    // TotalFolderNameLength deliberately excludes, hence + 2 rather than + 1.
+    const auto folder_block_size =
+        synthetic_tes4_folder.size() + 2U + (records.size() * tes4_bsa_file_record_size);
+    return static_cast<std::uint32_t>(tes4_bsa_header_size + tes4_bsa_legacy_folder_record_size +
+                                      folder_block_size + file_names_length);
+}
+
+/// Builds a minimal single-folder TES4 v103 BSA with caller-controlled payload
+/// spans.
+///
+/// Payloads are raw and uncompressed and embedded names are off, so a record's
+/// stored size is exactly the span the parser checks for Payload Span
+/// Exclusivity, with no size prefix or name prefix in the way.
+///
+/// `trailing_file_name_bytes` appends that many NUL bytes to the file-name table
+/// and folds them into TotalFileNameLength, reproducing the retail condition in
+/// issue #45 where the declared table is longer than the names consume.
+///
+/// `folder_name_length_override` writes an arbitrary TotalFolderNameLength into
+/// the header without changing a single byte of the folder-name block, so the
+/// declared total disagrees with what is stored. Nothing in the layout depends on
+/// that field, so the archive stays readable; the parser must agree.
+std::vector<std::byte> make_synthetic_tes4_archive(
+    std::span<const synthetic_tes4_record> records, std::size_t payload_size,
+    std::uint32_t trailing_file_name_bytes = 0U,
+    std::optional<std::uint32_t> folder_name_length_override = std::nullopt) {
+    using namespace libbsa::formats::bsa;
+
+    std::uint32_t file_names_length = trailing_file_name_bytes;
+    for (const auto& record : records) {
+        file_names_length += static_cast<std::uint32_t>(record.file_name.size() + 1U);
+    }
+    // TES5Edit stores each folder record offset with the file-name block
+    // contribution folded in; see wbBSArchive.pas and the fixture generator.
+    const auto folder_offset = static_cast<std::uint32_t>(
+        tes4_bsa_header_size + tes4_bsa_legacy_folder_record_size + file_names_length);
+
+    std::vector<std::byte> bytes;
+    append_u32_le(bytes, tes4_bsa_magic);
+    append_u32_le(bytes, tes4_bsa_oblivion_version);
+    append_u32_le(bytes, static_cast<std::uint32_t>(tes4_bsa_header_size));
+    append_u32_le(bytes,
+                  tes4_bsa_archive_include_directory_names | tes4_bsa_archive_include_file_names);
+    append_u32_le(bytes, 1U);
+    append_u32_le(bytes, static_cast<std::uint32_t>(records.size()));
+    // TotalFolderNameLength counts the bzstring bytes only: name plus terminator,
+    // never the length prefix.
+    append_u32_le(bytes, folder_name_length_override.value_or(
+                             static_cast<std::uint32_t>(synthetic_tes4_folder.size() + 1U)));
+    append_u32_le(bytes, file_names_length);
+    append_u32_le(bytes, tes4_bsa_file_flag_meshes);
+
+    append_u64_le(bytes, libbsa::detail::hash_tes4(synthetic_tes4_folder, {}));
+    append_u32_le(bytes, static_cast<std::uint32_t>(records.size()));
+    append_u32_le(bytes, folder_offset);
+
+    append_u8(bytes, static_cast<std::uint8_t>(synthetic_tes4_folder.size() + 1U));
+    append_ascii(bytes, synthetic_tes4_folder);
+    append_u8(bytes, 0U);
+    for (const auto& record : records) {
+        append_u64_le(bytes,
+                      record.hash_override.value_or(libbsa::detail::hash_tes4(record.file_name)));
+        append_u32_le(bytes, record.size);
+        append_u32_le(bytes, record.offset);
+    }
+
+    for (const auto& record : records) {
+        append_ascii(bytes, record.file_name);
+        append_u8(bytes, 0U);
+    }
+    // Declared-but-unconsumed file-name table bytes. Retail archives carry these
+    // as NUL padding, so the slack cannot be mistaken for a further name.
+    for (std::uint32_t index = 0; index < trailing_file_name_bytes; ++index) {
+        append_u8(bytes, 0U);
+    }
+
+    bytes.resize(bytes.size() + payload_size, std::byte{0x5A});
+    return bytes;
+}
+
+/// Writes a synthetic archive and returns the diagnostic archive opening
+/// produced, which is the only outcome the precedence cases below observe.
+libbsa::error open_error_for(const std::filesystem::path& path,
+                             const std::vector<std::byte>& bytes) {
+    write_binary_file(path, bytes);
+    auto opened = libbsa::archive_reader::open(path.string());
+    REQUIRE_FALSE(opened.has_value());
+    return opened.error();
+}
+
 }  // namespace
 
 TEST_CASE("tes4_bsa_detection opens byte-driven TES4-family BSA variants",
@@ -213,7 +355,7 @@ TEST_CASE("tes4_bsa_metadata exposes archive-level open state",
         auto metadata = opened.value().metadata();
         REQUIRE(metadata.has_value());
         REQUIRE(metadata.value().type == libbsa::archive_type::bsa);
-        REQUIRE(metadata.value().variant == expected_variant(fixture.version));
+        REQUIRE(metadata.value().variant == libbsa::archive_variant::tes4);
         REQUIRE(metadata.value().version == fixture.version);
         REQUIRE(metadata.value().archive_flags == fixture.flags);
         REQUIRE(metadata.value().file_count == fixture.file_count);
@@ -223,14 +365,153 @@ TEST_CASE("tes4_bsa_metadata exposes archive-level open state",
 }
 
 TEST_CASE(
-    "unsupported_future_bsa reports unsupported for recognized future "
+    "tes4_bsa_metadata opens archives whose file-name table declares unconsumed "
+    "trailing bytes",
+    "[unit][malformed][tes4_bsa_metadata][compat]") {
+    // Retail `Fallout - Voices1.bsa` declares TotalFileNameLength 105 bytes
+    // longer than its 105,517 names consume, and every one of those bytes is
+    // NUL. The reference calls ReadStringTerm exactly FileCount times
+    // (wbBSArchive.pas:1235-1237) and never compares the cursor against the
+    // header total, so the slack is invisible to it. libbsa used to require
+    // exact consumption and rejected the whole archive (issue #45).
+    constexpr std::uint32_t trailing_file_name_bytes = 105U;
+    constexpr std::uint32_t payload_size = 16U;
+
+    std::array records{synthetic_tes4_record{"probe.nif", 0U, payload_size}};
+    records[0].offset = synthetic_tes4_payload_base(records, trailing_file_name_bytes);
+    const auto bytes = make_synthetic_tes4_archive(records, payload_size,
+                                                   trailing_file_name_bytes);
+
+    const auto archive =
+        std::filesystem::temp_directory_path() / "libbsa_trailing_file_name_bytes.bsa";
+    write_binary_file(archive, bytes);
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().file_count == 1U);
+    CHECK(metadata.value().file_name_table_has_trailing_bytes);
+
+    // The slack must not become a phantom entry, and the entry it precedes must
+    // still resolve and extract by path.
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == 1U);
+    CHECK(entries.value().front().path == "meshes/precedence/probe.nif");
+
+    auto extracted = opened.value().extract_bytes(entries.value().front().path);
+    REQUIRE(extracted.has_value());
+    CHECK(extracted.value().size() == payload_size);
+}
+
+TEST_CASE(
+    "tes4_bsa_metadata opens archives whose declared folder-name length disagrees "
+    "with the folder names stored",
+    "[unit][malformed][tes4_bsa_metadata][compat]") {
+    // TotalFolderNameLength appears only on the reference's write path
+    // (wbBSArchive.pas:1393 and :1469); TwbBSArchive.LoadFromFile never reads it
+    // back, walking folder names sequentially instead. libbsa used to size the
+    // whole metadata table from it, which made a wrong value fatal twice over: the
+    // total cross-check rejected the archive, and an inflated value would also
+    // have pushed the payload/metadata boundary past legal payloads.
+    //
+    // The payload here starts at the first byte after the true metadata table, so
+    // it is exactly the payload an inflated boundary would wrongly reject.
+    constexpr std::uint32_t payload_size = 16U;
+    constexpr std::uint32_t inflated_folder_name_length = 4096U;
+
+    std::array records{synthetic_tes4_record{"probe.nif", 0U, payload_size}};
+    records[0].offset = synthetic_tes4_payload_base(records);
+    const auto bytes =
+        make_synthetic_tes4_archive(records, payload_size, 0U, inflated_folder_name_length);
+
+    const auto archive =
+        std::filesystem::temp_directory_path() / "libbsa_folder_name_length_mismatch.bsa";
+    write_binary_file(archive, bytes);
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().folder_name_table_length_mismatch);
+    CHECK_FALSE(metadata.value().file_name_table_has_trailing_bytes);
+
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == 1U);
+    CHECK(entries.value().front().path == "meshes/precedence/probe.nif");
+
+    auto extracted = opened.value().extract_bytes(entries.value().front().path);
+    REQUIRE(extracted.has_value());
+    CHECK(extracted.value().size() == payload_size);
+}
+
+TEST_CASE("tes4_bsa_metadata reads archives that declare a zero folder-name length",
+          "[unit][malformed][tes4_bsa_metadata][compat]") {
+    // Zero is the specific understated value worth pinning: it is what the
+    // reference initializes the field to (wbBSArchive.pas:1393) and it never
+    // reads the field back, so zero is a value BSArchPro would happily load.
+    // libbsa used to reject it outright as "does not include usable entry names",
+    // which contradicted the archive flags that actually answer that question.
+    // Understating the total also used to shorten the metadata read span and fail
+    // downstream with a confusing file-name-table diagnostic; the span is now
+    // bounded independently of the field.
+    constexpr std::uint32_t payload_size = 16U;
+
+    std::array records{synthetic_tes4_record{"probe.nif", 0U, payload_size}};
+    records[0].offset = synthetic_tes4_payload_base(records);
+    const auto bytes = make_synthetic_tes4_archive(records, payload_size, 0U, 0U);
+
+    const auto archive =
+        std::filesystem::temp_directory_path() / "libbsa_folder_name_length_zero.bsa";
+    write_binary_file(archive, bytes);
+
+    auto opened = libbsa::archive_reader::open(archive.string());
+    REQUIRE(opened.has_value());
+
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().folder_name_table_length_mismatch);
+
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == 1U);
+    auto extracted = opened.value().extract_bytes(entries.value().front().path);
+    REQUIRE(extracted.has_value());
+    CHECK(extracted.value().size() == payload_size);
+}
+
+TEST_CASE("tes4_bsa_metadata leaves both name-table compatibility flags clear by default",
+          "[unit][fixture][tes4_bsa_metadata][compat]") {
+    // The flags are only meaningful if they stay false for a well-formed archive,
+    // so pin them against every committed generated fixture rather than only
+    // against the mutated cases above.
+    for (const auto& fixture : success_fixtures()) {
+        auto opened =
+            libbsa::archive_reader::open(generated_archive_path(fixture.archive_filename).string());
+        REQUIRE(opened.has_value());
+
+        auto metadata = opened.value().metadata();
+        REQUIRE(metadata.has_value());
+        INFO("fixture=" << fixture.archive_filename);
+        CHECK_FALSE(metadata.value().file_name_table_has_trailing_bytes);
+        CHECK_FALSE(metadata.value().folder_name_table_length_mismatch);
+    }
+}
+
+TEST_CASE(
+    "unsupported_future_bsa reports the established parser error for recognized future "
     "BSA versions",
     "[unit][fixture][unsupported_future_bsa]") {
     auto opened = libbsa::archive_reader::open(
         generated_archive_path("malformed_unsupported_version.bsa").string());
 
     REQUIRE_FALSE(opened.has_value());
-    REQUIRE(opened.error().code == libbsa::error_code::unsupported);
+    CHECK(opened.error().code == libbsa::error_code::unsupported);
+    CHECK(opened.error().message == "BSA header version is not supported");
 }
 
 TEST_CASE(
@@ -258,9 +539,17 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "tes4_bsa_malformed_open rejects count-derived table spans before "
-    "allocation",
-    "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
+    "tes4_bsa_metadata tolerates an absurd declared folder-name length because "
+    "nothing is sized from it",
+    "[unit][fixture][malformed][tes4_bsa_metadata][compat]") {
+    // This case used to assert rejection, back when TotalFolderNameLength sized
+    // the metadata table and an oversized value produced an oversized span. The
+    // parser now bounds that read by folder count instead and measures the table
+    // by walking it, so the field allocates nothing and even 0xFFFFFFFF is inert.
+    // The reference never reads the field back at all (wbBSArchive.pas:1393,
+    // :1469 are its only uses, both on the write path), so tolerating it is what
+    // matches BSArchPro. Field-driven allocation is still proven, by the
+    // TotalFileNameLength and folder-record-count cases below.
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     overwrite_u32_le(bytes, 24U, 0xFFFF'FFFFU);
 
@@ -270,8 +559,19 @@ TEST_CASE(
 
     auto opened = libbsa::archive_reader::open(mutated.string());
 
-    REQUIRE_FALSE(opened.has_value());
-    REQUIRE(opened.error().code == libbsa::error_code::format_error);
+    REQUIRE(opened.has_value());
+    auto metadata = opened.value().metadata();
+    REQUIRE(metadata.has_value());
+    CHECK(metadata.value().folder_name_table_length_mismatch);
+
+    // Every entry the untouched fixture lists must still list and extract.
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    CHECK(entries.value().size() == metadata.value().file_count);
+    for (const auto& entry : entries.value()) {
+        INFO("entry=" << entry.path);
+        REQUIRE(opened.value().extract_bytes(entry.path).has_value());
+    }
 }
 
 TEST_CASE(
@@ -414,7 +714,9 @@ TEST_CASE("tes4_bsa_malformed_open rejects payload spans inside metadata",
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     const auto folder_count = read_u32_le(bytes, 16U);
     const auto folder_name_bytes = read_u32_le(bytes, 24U);
-    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes;
+    // TotalFolderNameLength counts bzstring bytes only, so the folder-name block
+    // on disk is one length-prefix byte per folder wider than the header field.
+    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes + folder_count;
     overwrite_u32_le(bytes, first_file_record + 12U, 0U);
 
     const auto mutated =
@@ -428,11 +730,13 @@ TEST_CASE("tes4_bsa_malformed_open rejects payload spans inside metadata",
 }
 
 TEST_CASE("tes4_bsa_malformed_open rejects partially overlapping payload spans",
-          "[unit][fixture][malformed][tes4_bsa_malformed_open]") {
+          "[unit][fixture][malformed][tes4_bsa_malformed_open][tes4_bsa_overlap]") {
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     const auto folder_count = read_u32_le(bytes, 16U);
     const auto folder_name_bytes = read_u32_le(bytes, 24U);
-    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes;
+    // TotalFolderNameLength counts bzstring bytes only, so the folder-name block
+    // on disk is one length-prefix byte per folder wider than the header field.
+    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes + folder_count;
     const auto second_file_record = first_file_record + 16U;
     const auto first_payload_offset = read_u32_le(bytes, first_file_record + 12U);
     overwrite_u32_le(bytes, second_file_record + 12U, first_payload_offset + 10U);
@@ -452,6 +756,201 @@ TEST_CASE("tes4_bsa_malformed_open rejects partially overlapping payload spans",
     CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
 }
 
+TEST_CASE("tes4_bsa_entry_metadata opens defect-free synthetic TES4 archives",
+          "[unit][tes4_bsa_entry_metadata]") {
+    // Positive control for the builder the precedence cases below drive. Without
+    // it, one of those cases could pass because the builder emits an archive that
+    // never opens at all rather than because the injected defect was reported.
+    const auto archive_path =
+        std::filesystem::temp_directory_path() / "libbsa_tes4_synthetic_baseline.bsa";
+    constexpr std::size_t payload_size = 16U;
+
+    std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                       synthetic_tes4_record{"second.bin", 0U, 8U}};
+    const auto base = synthetic_tes4_payload_base(records);
+    records[0].offset = base;
+    records[1].offset = base + 8U;
+    write_binary_file(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+    auto opened = libbsa::archive_reader::open(archive_path.string());
+
+    REQUIRE(opened.has_value());
+    auto entries = opened.value().entries();
+    REQUIRE(entries.has_value());
+    REQUIRE(entries.value().size() == 2U);
+
+    for (const auto& record : records) {
+        const auto canonical = "meshes/precedence/" + record.file_name;
+        auto found = opened.value().find(canonical);
+        REQUIRE(found.has_value());
+        REQUIRE(found.value().has_value());
+        CHECK(found.value()->payload_offset == record.offset);
+        CHECK(found.value()->stored_size == record.size);
+
+        auto extracted = opened.value().extract_bytes(canonical);
+        REQUIRE(extracted.has_value());
+        CHECK(extracted.value() == std::vector<std::byte>(record.size, std::byte{0x5A}));
+    }
+}
+
+TEST_CASE("tes4_bsa_malformed_open reports one diagnostic for multi-defect payload spans",
+          "[unit][malformed][tes4_bsa_malformed_open][tes4_bsa_overlap][span_precedence]") {
+    // Characterisation, not specification (issue #48). The TES4 parser runs every
+    // check for one file record before moving on to the next, so which single
+    // diagnostic an archive with several structural defects reports is decided
+    // first by record order and only then by the order of the checks inside the
+    // loop. Pinned before Payload Span Exclusivity enforcement is reformulated so
+    // the rework can be validated against current behavior.
+    const auto archive_path =
+        std::filesystem::temp_directory_path() / "libbsa_tes4_span_precedence.bsa";
+    constexpr std::size_t payload_size = 16U;
+
+    SECTION("a payload span outside the archive precedes a partial overlap in the same record") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                           // Reaches past the archive and over the accepted span at
+                           // the same time.
+                           synthetic_tes4_record{"second.bin", 0U, 0x0100'0000U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 4U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload span is outside the archive") != std::string::npos);
+    }
+
+    SECTION("a metadata overlap precedes a partial overlap in the same record") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                           // Covers the whole archive, so it reaches the metadata
+                           // tables and the accepted span at once.
+                           synthetic_tes4_record{"second.bin", 0U, 0U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].size = base + static_cast<std::uint32_t>(payload_size);
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload span overlaps metadata") != std::string::npos);
+    }
+
+    SECTION("a file record hash mismatch precedes a partial overlap in the same record") {
+        std::array records{
+            synthetic_tes4_record{"first.bin", 0U, 8U},
+            synthetic_tes4_record{"second.bin", 0U, 8U, std::uint64_t{0xDEAD'BEEF'FEED'FACEULL}}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 4U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("file record hash does not match filename table") !=
+              std::string::npos);
+    }
+
+    SECTION("a duplicate canonical path precedes a partial overlap in the same record") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                           synthetic_tes4_record{"first.bin", 0U, 8U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 4U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("duplicate canonical archive paths") != std::string::npos);
+    }
+
+    SECTION("a partial overlap precedes a defect carried by a later record") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                           synthetic_tes4_record{"second.bin", 0U, 8U},
+                           synthetic_tes4_record{"third.bin", 0U, 8U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 4U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("an archive carrying every structural defect reports only the earliest") {
+        std::array records{
+            synthetic_tes4_record{"first.bin", 0U, 8U}, synthetic_tes4_record{"first.bin", 0U, 8U},
+            synthetic_tes4_record{"third.bin", 0U, 8U, std::uint64_t{0xDEAD'BEEF'FEED'FACEULL}},
+            synthetic_tes4_record{"fourth.bin", 0U, 0x0100'0000U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 4U;
+        records[3].offset = base;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("duplicate canonical archive paths") != std::string::npos);
+        CHECK(reported.message.find("partially overlap") == std::string::npos);
+    }
+}
+
+TEST_CASE("tes4_bsa_malformed_open rejects three or more mutually conflicting payload spans",
+          "[unit][malformed][tes4_bsa_malformed_open][tes4_bsa_overlap]") {
+    // The exact-duplicate exemption exists so Payload Placement can share one
+    // location between records (ADR-0001). It must not become a way to smuggle a
+    // partial overlap past the check by burying it among duplicates.
+    const auto archive_path =
+        std::filesystem::temp_directory_path() / "libbsa_tes4_multi_span_conflict.bsa";
+    constexpr std::size_t payload_size = 16U;
+
+    SECTION("a partial overlap after two exact duplicates") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 8U},
+                           synthetic_tes4_record{"second.bin", 0U, 8U},
+                           synthetic_tes4_record{"third.bin", 0U, 8U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base;
+        records[2].offset = base + 4U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+    }
+
+    SECTION("a partial overlap against a duplicated span that is not the first accepted span") {
+        std::array records{synthetic_tes4_record{"first.bin", 0U, 4U},
+                           synthetic_tes4_record{"second.bin", 0U, 4U},
+                           synthetic_tes4_record{"third.bin", 0U, 4U},
+                           synthetic_tes4_record{"fourth.bin", 0U, 4U}};
+        const auto base = synthetic_tes4_payload_base(records);
+        records[0].offset = base;
+        records[1].offset = base + 8U;
+        records[2].offset = base + 8U;
+        records[3].offset = base + 10U;
+
+        const auto reported =
+            open_error_for(archive_path, make_synthetic_tes4_archive(records, payload_size));
+
+        CHECK(reported.code == libbsa::error_code::format_error);
+        CHECK(reported.message.find("payload spans partially overlap") != std::string::npos);
+
+        auto validated = libbsa::validate_archive(archive_path.string());
+        REQUIRE(validated.has_value());
+        CHECK_FALSE(validated.value().is_valid());
+        REQUIRE(validated.value().errors.size() == 1U);
+        CHECK(validated.value().errors.front().code == libbsa::error_code::format_error);
+    }
+}
+
 TEST_CASE(
     "tes4_bsa_entry_metadata accepts exact duplicate payload spans for "
     "writer dedupe",
@@ -459,7 +958,9 @@ TEST_CASE(
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     const auto folder_count = read_u32_le(bytes, 16U);
     const auto folder_name_bytes = read_u32_le(bytes, 24U);
-    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes;
+    // TotalFolderNameLength counts bzstring bytes only, so the folder-name block
+    // on disk is one length-prefix byte per folder wider than the header field.
+    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes + folder_count;
     const auto second_file_record = first_file_record + 16U;
     const auto first_size_flags = read_u32_le(bytes, first_file_record + 8U);
     const auto second_size_flags = read_u32_le(bytes, second_file_record + 8U);
@@ -497,7 +998,9 @@ TEST_CASE("tes4_bsa_malformed_open rejects file record hash mismatches",
     auto bytes = read_binary_file(generated_archive_path("tes4_v103.bsa"));
     const auto folder_count = read_u32_le(bytes, 16U);
     const auto folder_name_bytes = read_u32_le(bytes, 24U);
-    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes;
+    // TotalFolderNameLength counts bzstring bytes only, so the folder-name block
+    // on disk is one length-prefix byte per folder wider than the header field.
+    const auto first_file_record = 36U + folder_count * 16U + folder_name_bytes + folder_count;
     overwrite_u32_le(bytes, first_file_record, read_u32_le(bytes, first_file_record) ^ 0x1000U);
 
     const auto mutated = std::filesystem::temp_directory_path() / "libbsa_file_hash_mismatch.bsa";
@@ -836,22 +1339,4 @@ TEST_CASE(
     auto missing = opened.value().extract_bytes("valid/missing/path.txt");
     REQUIRE_FALSE(missing.has_value());
     REQUIRE(missing.error().code == libbsa::error_code::not_found);
-}
-
-TEST_CASE(
-    "archive_reader_extract_bytes preflights materialization before "
-    "payload extraction",
-    "[unit][bounded_memory_policy][allocation]") {
-    const auto text =
-        read_text_file(std::filesystem::path{LIBBSA_SOURCE_DIR} / "src" / "archive.cpp");
-    const auto function_pos =
-        text.find("result<std::vector<std::byte>> archive_reader::extract_bytes");
-    REQUIRE(function_pos != std::string::npos);
-
-    const auto preflight_pos = text.find("checked_materialized_payload_size", function_pos);
-    const auto extraction_pos = text.find("extract_entry_payload", function_pos);
-
-    REQUIRE(preflight_pos != std::string::npos);
-    REQUIRE(extraction_pos != std::string::npos);
-    REQUIRE(preflight_pos < extraction_pos);
 }

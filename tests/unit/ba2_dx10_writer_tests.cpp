@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "support/private_temp_root.hpp"
+
 #include <detail/bethesda_hash.hpp>
 
 #include <libbsa/libbsa.hpp>
@@ -118,23 +120,103 @@ std::filesystem::path unique_non_ascii_output_path(std::string_view stem) {
     return path;
 }
 
-/// Lists BA2 DX10 snapshot temp directories without querying metadata for
-/// unrelated temp entries.
+/// Lists BA2 DX10 snapshot temp directories owned by this process, without
+/// querying metadata for unrelated temp entries.
+///
+/// Scoped to the process's private temp root rather than to the system temp
+/// root. The writer resolves `std::filesystem::temp_directory_path()`, which
+/// under issue #62 is the private root, so nothing writer-owned is missed. What
+/// the narrower scan drops is precisely what this process does *not* own: a
+/// second test binary's snapshots, and a real libbsa tool's in-flight snapshot
+/// directory belonging to the user. Scanning the shared root made the
+/// before/after diff below a guess about ownership; scanning the private root
+/// makes it a fact.
 std::set<std::filesystem::path> snapshot_directories() {
     std::set<std::filesystem::path> paths;
+    std::error_code fs_error;
     for (const auto& entry :
-         std::filesystem::directory_iterator{std::filesystem::temp_directory_path()}) {
+         std::filesystem::directory_iterator{libbsa::tests::private_temp_root(), fs_error}) {
         const auto name = entry.path().filename().string();
         if (name.rfind(snapshot_directory_prefix, 0U) != 0U) {
             continue;
         }
 
-        std::error_code fs_error;
-        if (entry.is_directory(fs_error)) {
+        std::error_code entry_error;
+        if (entry.is_directory(entry_error)) {
             paths.insert(entry.path());
         }
     }
+    REQUIRE_FALSE(fs_error);
     return paths;
+}
+
+/// This process's private temp root in canonical form, resolved once.
+///
+/// Resolved on first use and cached for the life of the process, which is safe
+/// only because every caller runs inside a test body -- by which point the
+/// listener has installed the root. A caller that ran earlier would cache an
+/// empty path and leave the guard below refusing everything for the whole run.
+const std::filesystem::path& canonical_private_temp_root() {
+    static const std::filesystem::path root = [] {
+        std::error_code fs_error;
+        auto canonical = std::filesystem::canonical(libbsa::tests::private_temp_root(), fs_error);
+        // The listener already canonicalises the system root it builds under, so
+        // this normally changes nothing; falling back to the raw path keeps a
+        // canonicalisation failure from silently widening the guard below.
+        return fs_error ? libbsa::tests::private_temp_root() : canonical;
+    }();
+    return root;
+}
+
+/// Reports whether `path` names something strictly inside this process's private
+/// temp root.
+///
+/// `weakly_canonical` rather than `canonical` because every caller asks this
+/// about a directory that is *expected to be gone* -- the recovery removal below
+/// only matters when the writer failed to delete -- and canonicalising a missing
+/// path fails. `weakly_canonical` resolves the longest existing prefix, which is
+/// always at least the private root itself, and normalises the rest lexically.
+///
+/// The private root is rejected along with everything outside it: deleting the
+/// root would take the rest of the process's test state with it.
+bool is_inside_private_temp_root(const std::filesystem::path& path) {
+    const auto& root = canonical_private_temp_root();
+    if (root.empty()) {
+        return false;
+    }
+
+    std::error_code fs_error;
+    const auto resolved = std::filesystem::weakly_canonical(path, fs_error);
+    if (fs_error) {
+        return false;
+    }
+
+    const auto relative = resolved.lexically_relative(root);
+    return !relative.empty() && relative != "." && *relative.begin() != "..";
+}
+
+/// Deletes `path` and everything under it, but only if `path` lies inside this
+/// process's private temp root.
+///
+/// Keep the guard even though issue #62 already makes it unreachable. Every
+/// directory `snapshot_directories()` can now hand a caller is inside the private
+/// root by construction, so the refusal branch never fires today -- that is the
+/// point, not a reason to delete it as dead code. What this buys is the property
+/// that the helper *cannot* damage state it does not own, and that property has
+/// to survive someone later widening the scan back to the system temp root, where
+/// a real libbsa tool's in-flight snapshot directory is sitting (issue #64). A
+/// guard that only exists while the caller happens to be careful is not a guard.
+///
+/// @param path Directory to remove. A path outside the private root is left
+///        untouched; a removal that fails is ignored, since this is a recovery
+///        step and not the behaviour under test.
+void remove_snapshot_directory_if_owned(const std::filesystem::path& path) {
+    if (!is_inside_private_temp_root(path)) {
+        return;
+    }
+
+    std::error_code fs_error;
+    std::filesystem::remove_all(path, fs_error);
 }
 
 /// Returns only the writer-owned snapshot directories created after a baseline
@@ -156,10 +238,9 @@ void require_snapshot_directories_removed(const std::set<std::filesystem::path>&
     for (const auto& path : paths) {
         INFO("writer-owned BA2 DX10 snapshot directory: " << path.string());
         CHECK_FALSE(std::filesystem::exists(path));
-        std::error_code fs_error;
         // If the behavior under test regresses, keep later test runs isolated by
         // removing our own directory.
-        std::filesystem::remove_all(path, fs_error);
+        remove_snapshot_directory_if_owned(path);
     }
 }
 
@@ -268,7 +349,7 @@ std::vector<ba2_dx10_record_metadata> read_ba2_dx10_record_metadata(
 
     std::vector<ba2_dx10_record_metadata> records;
     records.reserve(file_count);
-    std::size_t record_cursor = version >= 3U ? 36U : 24U;
+    std::size_t record_cursor = version >= 3U ? 36U : (version >= 2U ? 32U : 24U);
     for (std::uint32_t index = 0; index < file_count; ++index) {
         const auto chunk_count = static_cast<unsigned char>(bytes[record_cursor + 13U]);
         records.push_back({{},
@@ -365,7 +446,10 @@ void add_matrix_cases(libbsa::ba2_dx10_writer& writer, const nlohmann::json& man
                       libbsa::ba2_dx10_target target,
                       std::vector<const nlohmann::json*>& added_cases) {
     for (const auto& matrix_case : writer_proof_matrix) {
-        if (matrix_case.target != target) {
+        const bool reuse_starfield_v3_case_for_v2 =
+            target == libbsa::ba2_dx10_target::starfield_v2 &&
+            matrix_case.target == libbsa::ba2_dx10_target::starfield_v3;
+        if (matrix_case.target != target && !reuse_starfield_v3_case_for_v2) {
             continue;
         }
         const auto& source_case = valid_source_case(manifest, matrix_case.id);
@@ -456,22 +540,34 @@ void require_writer_round_trip(libbsa::ba2_dx10_target target,
     CHECK(metadata.value().file_count == added_cases.size());
     CHECK(metadata.value().default_compression == expected_compression);
 
-    if (target == libbsa::ba2_dx10_target::fallout4) {
-        CHECK(metadata.value().variant == libbsa::archive_variant::fallout4);
-        CHECK(metadata.value().version == 1U);
-        REQUIRE(metadata.value().ba2.has_value());
-        CHECK_FALSE(metadata.value().ba2->starfield_unknown1.has_value());
-        CHECK_FALSE(metadata.value().ba2->compression_method.has_value());
-    } else {
-        CHECK(metadata.value().variant == libbsa::archive_variant::starfield);
-        CHECK(metadata.value().version == 3U);
-        REQUIRE(metadata.value().ba2.has_value());
-        REQUIRE(metadata.value().ba2->starfield_unknown1.has_value());
-        CHECK(metadata.value().ba2->starfield_unknown1.value() == 1U);
-        REQUIRE(metadata.value().ba2->starfield_unknown2.has_value());
-        CHECK(metadata.value().ba2->starfield_unknown2.value() == 0U);
-        REQUIRE(metadata.value().ba2->compression_method.has_value());
-        CHECK(metadata.value().ba2->compression_method.value() == starfield_compression_method);
+    REQUIRE(metadata.value().ba2.has_value());
+    switch (target) {
+        case libbsa::ba2_dx10_target::fallout4:
+            CHECK(metadata.value().variant == libbsa::archive_variant::fallout4);
+            CHECK(metadata.value().version == 1U);
+            CHECK_FALSE(metadata.value().ba2->starfield_unknown1.has_value());
+            CHECK_FALSE(metadata.value().ba2->starfield_unknown2.has_value());
+            CHECK_FALSE(metadata.value().ba2->compression_method.has_value());
+            break;
+        case libbsa::ba2_dx10_target::starfield_v2:
+            CHECK(metadata.value().variant == libbsa::archive_variant::starfield);
+            CHECK(metadata.value().version == 2U);
+            REQUIRE(metadata.value().ba2->starfield_unknown1.has_value());
+            CHECK(metadata.value().ba2->starfield_unknown1.value() == 1U);
+            REQUIRE(metadata.value().ba2->starfield_unknown2.has_value());
+            CHECK(metadata.value().ba2->starfield_unknown2.value() == 0U);
+            CHECK_FALSE(metadata.value().ba2->compression_method.has_value());
+            break;
+        case libbsa::ba2_dx10_target::starfield_v3:
+            CHECK(metadata.value().variant == libbsa::archive_variant::starfield);
+            CHECK(metadata.value().version == 3U);
+            REQUIRE(metadata.value().ba2->starfield_unknown1.has_value());
+            CHECK(metadata.value().ba2->starfield_unknown1.value() == 1U);
+            REQUIRE(metadata.value().ba2->starfield_unknown2.has_value());
+            CHECK(metadata.value().ba2->starfield_unknown2.value() == 0U);
+            REQUIRE(metadata.value().ba2->compression_method.has_value());
+            CHECK(metadata.value().ba2->compression_method.value() == starfield_compression_method);
+            break;
     }
 
     auto entries = opened.value().entries();
@@ -893,10 +989,9 @@ TEST_CASE("BA2 DX10 writer state removes snapshot temp directory on teardown",
     for (const auto& path : staged_snapshot_dirs) {
         INFO("teardown-owned BA2 DX10 snapshot directory: " << path.string());
         CHECK_FALSE(std::filesystem::exists(path));
-        std::error_code fs_error;
         // If this check fails, still remove the test-created snapshot so later runs
         // start cleanly.
-        std::filesystem::remove_all(path, fs_error);
+        remove_snapshot_directory_if_owned(path);
     }
 }
 
@@ -921,6 +1016,56 @@ TEST_CASE(
     auto opened = libbsa::archive_reader::open(output_path.string());
     REQUIRE(opened.has_value());
     require_reader_backed_entry(opened.value(), source_case, libbsa::entry_compression::deflate);
+    require_snapshot_directories_removed(created);
+}
+
+TEST_CASE("BA2 DX10 writer snapshot directory names are unpredictable",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][security]") {
+    // Snapshot directories live in the shared temp directory, so a predictable
+    // name would let another process pre-create or squat the path a writer is
+    // about to use. Previously this was guarded by grepping the implementation
+    // for BCryptGenRandom and against a sequential counter, which proved only
+    // that certain tokens appeared in the source. Observe the actual names
+    // instead: two concurrent writers must not produce adjacent suffixes.
+    const auto before = snapshot_directories();
+    const auto manifest =
+        read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+    const auto& source_case = manifest.at("valid_cases").at(0);
+    const auto source_path =
+        (generated_source_dir() / source_case.at("file").get<std::string>()).string();
+
+    libbsa::ba2_dx10_writer first{libbsa::ba2_dx10_target::fallout4};
+    libbsa::ba2_dx10_writer second{libbsa::ba2_dx10_target::fallout4};
+    REQUIRE(first.add_file("textures/first.dds", source_path).has_value());
+    REQUIRE(second.add_file("textures/second.dds", source_path).has_value());
+
+    const auto created = new_snapshot_directories_since(before);
+    REQUIRE(created.size() == 2U);
+
+    std::vector<std::string> suffixes;
+    for (const auto& path : created) {
+        const auto name = path.filename().string();
+        REQUIRE(name.rfind(snapshot_directory_prefix, 0U) == 0U);
+        auto suffix = name.substr(snapshot_directory_prefix.size());
+        REQUIRE_FALSE(suffix.empty());
+        suffixes.push_back(std::move(suffix));
+    }
+
+    CHECK(suffixes.front() != suffixes.back());
+    // A counter-derived name differs only in its final digits. Require the two
+    // suffixes to diverge somewhere other than the very end.
+    const auto shared_prefix =
+        static_cast<std::size_t>(std::distance(suffixes.front().begin(),
+                                               std::mismatch(suffixes.front().begin(),
+                                                             suffixes.front().end(),
+                                                             suffixes.back().begin(),
+                                                             suffixes.back().end())
+                                                   .first));
+    INFO("snapshot suffixes: " << suffixes.front() << " and " << suffixes.back());
+    CHECK(shared_prefix < suffixes.front().size() / 2U);
+
+    REQUIRE(first.write_to(unique_output_path("dx10-unpredictable-first").string()).has_value());
+    REQUIRE(second.write_to(unique_output_path("dx10-unpredictable-second").string()).has_value());
     require_snapshot_directories_removed(created);
 }
 
@@ -974,6 +1119,33 @@ TEST_CASE("BA2 DX10 writer cleans snapshot directories on missing snapshot failu
 
     REQUIRE_FALSE(written.has_value());
     CHECK(written.error().code == libbsa::error_code::io_error);
+    require_snapshot_directories_removed(created);
+}
+
+TEST_CASE("BA2 DX10 writer validates the destination before reading add-time snapshots",
+          "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup][publish][workspace]") {
+    const auto before = snapshot_directories();
+    const auto manifest =
+        read_json_file(generated_source_dir() / "ba2_dx10_writer_sources_manifest.json");
+    const auto& source_case = valid_source_case(manifest, "bc1_unorm");
+    const auto source_path =
+        (generated_source_dir() / source_case.at("file").get<std::string>()).string();
+    const auto output = unique_output_path("dx10-destination-before-snapshot");
+    const std::vector<std::byte> sentinel{std::byte{0x4F}, std::byte{0x4C}, std::byte{0x44}};
+    write_binary_file(output, sentinel);
+    libbsa::ba2_dx10_writer writer{libbsa::ba2_dx10_target::fallout4};
+
+    REQUIRE(writer.add_file(source_case.at("archive_path").get<std::string>(), source_path)
+                .has_value());
+    const auto created = new_snapshot_directories_since(before);
+    std::filesystem::remove(first_snapshot_file(created));
+
+    auto written = writer.write_to(output.string());
+
+    REQUIRE_FALSE(written.has_value());
+    CHECK(written.error().code == libbsa::error_code::io_error);
+    CHECK(written.error().message.find("output host path already exists") != std::string::npos);
+    CHECK(read_binary_file(output) == sentinel);
     require_snapshot_directories_removed(created);
 }
 
@@ -1056,6 +1228,61 @@ TEST_CASE(
     CHECK(new_snapshot_directories_since(before).empty());
 }
 
+TEST_CASE(
+    "BA2 DX10 snapshot cleanup refuses to remove a directory outside the "
+    "private temp root",
+    "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup][security]") {
+    // Stands in for a real libbsa tool packing a DX10 archive on this machine
+    // while the suite runs: a directory carrying the production snapshot name
+    // prefix, mid-write, owned by somebody else. It sits in the *system* temp
+    // root because that is where such a directory really would be, and because
+    // that is exactly the place the cleanup helpers must not reach into.
+    //
+    // Both accessors return an empty path when the listener has not run, and an
+    // empty system root would silently turn the composition below into a
+    // *relative* path -- so this test would create and delete a directory in the
+    // process working directory, which is the build tree. Assert rather than
+    // discover that the way this test's own tearing-down is scoped depends on
+    // the listener having installed.
+    REQUIRE_FALSE(libbsa::tests::system_temp_root().empty());
+    REQUIRE_FALSE(libbsa::tests::private_temp_root().empty());
+    const auto outside = libbsa::tests::system_temp_root() /
+                         (std::string{snapshot_directory_prefix} + "guard-" +
+                          libbsa::tests::private_temp_root().filename().string());
+
+    // The directory lives in a root shared with the rest of the machine, so it
+    // is removed on every exit path, including an aborted assertion.
+    struct removing_scope {
+        std::filesystem::path path;
+        ~removing_scope() {
+            std::error_code fs_error;
+            std::filesystem::remove_all(path, fs_error);
+        }
+    } const scope{outside};
+
+    // Clears a leftover from a previous run that died before its scope ran, so
+    // the create below is the one that reports. The error is dropped on purpose:
+    // nothing is normally here, and if the removal genuinely failed then
+    // create_directories reports it.
+    std::error_code fs_error;
+    std::filesystem::remove_all(outside, fs_error);
+    REQUIRE(std::filesystem::create_directories(outside));
+    const auto occupant = outside / "entry-0-mip0.bin";
+    const std::vector<std::byte> occupant_bytes{std::byte{0x44}, std::byte{0x44}, std::byte{0x53}};
+    write_binary_file(occupant, occupant_bytes);
+
+    remove_snapshot_directory_if_owned(outside);
+
+    INFO("snapshot directory outside the private temp root: " << outside.string());
+    CHECK(std::filesystem::is_directory(outside));
+    CHECK(read_binary_file(occupant) == occupant_bytes);
+
+    // The scan must not offer it up either. A helper that refuses to delete only
+    // what it was handed, while still enumerating other people's directories, is
+    // one careless caller away from deleting them.
+    CHECK_FALSE(snapshot_directories().contains(outside));
+}
+
 TEST_CASE("BA2 DX10 writer is consumed after successful write attempts",
           "[unit][ba2_dx10_writer][bounded_memory_policy][cleanup]") {
     const auto manifest =
@@ -1103,6 +1330,14 @@ TEST_CASE(
     // avoid raw per-entry overrides.
     require_writer_round_trip(libbsa::ba2_dx10_target::fallout4, 3U, "fo4-dx10-writer",
                               libbsa::entry_compression::deflate);
+}
+
+TEST_CASE(
+    "ba2_dx10_writer reopens starfield v2 deflate compression archives "
+    "through archive_reader",
+    "[unit][ba2_dx10_writer][starfield][compression]") {
+    require_writer_round_trip(libbsa::ba2_dx10_target::starfield_v2, 99U,
+                              "starfield-v2-dx10-writer", libbsa::entry_compression::deflate);
 }
 
 TEST_CASE(
@@ -1165,9 +1400,12 @@ TEST_CASE(
     REQUIRE(extracted_first.has_value());
     auto extracted_duplicate = opened.value().extract_bytes("textures/dedupe/b.dds");
     REQUIRE(extracted_duplicate.has_value());
-    const auto source = libbsa::texture::analyze_dds_source(
-        read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>()));
+    const auto source_bytes =
+        read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>());
+    const auto source = libbsa::texture::analyze_dds_source(source_bytes);
     REQUIRE(source.has_value());
+    CHECK(extracted_first.value() == source_bytes);
+    CHECK(extracted_duplicate.value() == source_bytes);
     require_extracted_matches_source(extracted_first.value(), source.value());
     require_extracted_matches_source(extracted_duplicate.value(), source.value());
 }
@@ -1202,9 +1440,12 @@ TEST_CASE(
     REQUIRE(extracted_first.has_value());
     auto extracted_duplicate = opened.value().extract_bytes("textures/dedupe/b.dds");
     REQUIRE(extracted_duplicate.has_value());
-    const auto source = libbsa::texture::analyze_dds_source(
-        read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>()));
+    const auto source_bytes =
+        read_binary_file(generated_source_dir() / source_case.at("file").get<std::string>());
+    const auto source = libbsa::texture::analyze_dds_source(source_bytes);
     REQUIRE(source.has_value());
+    CHECK(extracted_first.value() == source_bytes);
+    CHECK(extracted_duplicate.value() == source_bytes);
     require_extracted_matches_source(extracted_first.value(), source.value());
     require_extracted_matches_source(extracted_duplicate.value(), source.value());
 }
