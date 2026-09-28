@@ -15,10 +15,6 @@
 #include <string_view>
 #include <vector>
 
-namespace libbsa::texture {
-struct planned_texture_chunk;
-}
-
 namespace libbsa::formats::ba2 {
 
 /// Retains one prepared DX10 chunk's decode facts and move-only Stored Payload.
@@ -70,11 +66,6 @@ result<ba2_dx10_writer_entry> ba2_dx10_make_writer_entry(std::string_view archiv
 /// Validates BA2 DX10 writer entries before chunk preparation.
 result<void> ba2_dx10_validate_entries(ba2_dx10_target target,
                                        std::span<const ba2_dx10_writer_entry> entries);
-
-/// Prepares a single BA2 DX10 texture chunk from planned DDS subresources.
-result<ba2_dx10_prepared_chunk> ba2_dx10_prepare_chunk(
-    const ba2_profile& profile, const ba2_dx10_writer_options& options,
-    const ba2_dx10_writer_entry& source, const texture::planned_texture_chunk& planned);
 
 /// Prepares BA2 DX10 entries by planning chunks, compressing payloads, hashing
 /// names, and sorting records.
