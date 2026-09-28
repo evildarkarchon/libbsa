@@ -58,12 +58,6 @@ result<void> ba2_dx10_validate_entries(ba2_dx10_target target,
     return {};
 }
 
-result<ba2_dx10_prepared_chunk> ba2_dx10_prepare_chunk(
-    const ba2_profile& profile, const ba2_dx10_writer_options& options,
-    const ba2_dx10_writer_entry& source, const texture::planned_texture_chunk& planned) {
-    return ba2_dx10_assemble_chunk(profile, options, source, planned);
-}
-
 result<std::vector<ba2_dx10_prepared_entry>> ba2_dx10_prepare_entries(
     const ba2_profile& profile, const ba2_dx10_writer_options& options,
     std::span<const ba2_dx10_writer_entry> entries, std::uint32_t worker_count) {

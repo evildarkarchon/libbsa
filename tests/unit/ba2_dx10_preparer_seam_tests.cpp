@@ -148,16 +148,23 @@ std::vector<std::byte> expected_chunk_bytes(const libbsa::texture::dds_texture_l
     return expected;
 }
 
+/// Checks that an assembled chunk retains the planned geometry and emits the
+/// exact compressed byte count before decoding snapshot bytes in mip order.
 void require_decoded_chunk_matches(const libbsa::formats::ba2::ba2_dx10_prepared_chunk& chunk,
                                    const libbsa::texture::dds_texture_layout& layout,
                                    const libbsa::texture::planned_texture_chunk& planned) {
+    REQUIRE(chunk.raw_size == planned.raw_size);
+    REQUIRE(chunk.packed_size > 0U);
     REQUIRE(chunk.payload.size() == chunk.packed_size);
+    CHECK(chunk.start_mip == planned.start_mip);
+    CHECK(chunk.end_mip == planned.end_mip);
     std::ostringstream stored_bytes{std::ios::binary};
     auto emitted = chunk.payload.emit(stored_bytes);
     REQUIRE(emitted.has_value());
     const auto stored_text = stored_bytes.str();
     const auto stored_payload =
         std::as_bytes(std::span<const char>{stored_text.data(), stored_text.size()});
+    REQUIRE(stored_payload.size() == chunk.packed_size);
     auto decoded = libbsa::detail::decompress_payload_exact(
         chunk.compression, stored_payload, static_cast<std::size_t>(planned.raw_size));
     REQUIRE(decoded.has_value());
@@ -222,6 +229,24 @@ TEST_CASE(
     "BA2 DX10 chunk assembler streams snapshot-backed chunk assembly in "
     "texture order",
     "[unit][writer-stage][ba2_dx10_writer][parser_preparer_seam]") {
+    SECTION("single-mip ordering") {
+        const libbsa::texture::dds_texture_layout layout{4U, 4U, 1U, 28U, 1U, false};
+        auto source = snapshot_entry("textures/seam/single.dds", layout, "seam-single");
+        auto planned = libbsa::texture::plan_dx10_chunks(layout, 0U);
+        REQUIRE(planned.has_value());
+        REQUIRE(planned.value().size() == 1U);
+
+        const auto profile = require_dx10_profile();
+        auto chunk = libbsa::formats::ba2::ba2_dx10_assemble_chunk(
+            profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
+
+        REQUIRE(chunk.has_value());
+        CHECK(chunk.value().raw_size == 64U);
+        CHECK(chunk.value().start_mip == 0U);
+        CHECK(chunk.value().end_mip == 0U);
+        require_decoded_chunk_matches(chunk.value(), layout, planned.value()[0]);
+    }
+
     SECTION("multi-mip ordering") {
         const libbsa::texture::dds_texture_layout layout{4U, 4U, 3U, 28U, 1U, false};
         auto source = snapshot_entry("textures/seam/multi.dds", layout, "seam-multi");
@@ -234,6 +259,9 @@ TEST_CASE(
             profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
 
         REQUIRE(chunk.has_value());
+        CHECK(chunk.value().raw_size == 84U);
+        CHECK(chunk.value().start_mip == 0U);
+        CHECK(chunk.value().end_mip == 2U);
         CHECK(chunk.value().compression == libbsa::detail::compression_method::zlib);
         require_decoded_chunk_matches(chunk.value(), layout, planned.value()[0]);
     }

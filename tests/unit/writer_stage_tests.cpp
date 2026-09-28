@@ -26,7 +26,6 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
-#include <sstream>
 #include <span>
 #include <string>
 #include <string_view>
@@ -75,15 +74,6 @@ std::vector<std::byte> read_stage_binary_file(const std::filesystem::path& path)
     }
     REQUIRE_FALSE(input.bad());
     return bytes;
-}
-
-std::vector<std::byte> materialize_stored_payload(const libbsa::detail::stored_payload& payload) {
-    std::ostringstream output{std::ios::binary};
-    auto emitted = payload.emit(output);
-    REQUIRE(emitted.has_value());
-    const auto text = output.str();
-    const auto bytes = std::as_bytes(std::span<const char>{text.data(), text.size()});
-    return {bytes.begin(), bytes.end()};
 }
 
 std::uint32_t read_stage_u32_le_at(std::span<const std::byte> bytes, std::size_t offset) {
@@ -923,63 +913,6 @@ TEST_CASE("tes4 writer serialization uses snapshots after original sources chang
         REQUIRE(extracted.has_value());
         CHECK(extracted.value() == payload);
     }
-}
-
-TEST_CASE("ba2 dx10 writer preparation stage prepares a single-mip chunk",
-          "[unit][writer-stage][ba2_dx10_writer]") {
-    const libbsa::texture::dds_texture_layout layout{4U, 4U, 1U, 28U, 1U, false};
-    auto source = ba2_dx10_stage_entry("Textures/Stage/Single.dds", layout, "dx10-single");
-    auto planned = libbsa::texture::plan_dx10_chunks(layout, 0U);
-    REQUIRE(planned.has_value());
-    REQUIRE(planned.value().size() == 1U);
-
-    const auto profile = require_dx10_profile();
-    auto chunk = libbsa::formats::ba2::ba2_dx10_prepare_chunk(
-        profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
-
-    REQUIRE(chunk.has_value());
-    CHECK(chunk.value().raw_size == planned.value()[0].raw_size);
-    CHECK(chunk.value().packed_size > 0U);
-    CHECK(chunk.value().start_mip == 0U);
-    CHECK(chunk.value().end_mip == 0U);
-}
-
-TEST_CASE(
-    "ba2 dx10 writer preparation stage preserves multi-mip snapshot "
-    "chunk order",
-    "[unit][writer-stage][ba2_dx10_writer]") {
-    const libbsa::texture::dds_texture_layout layout{4U, 4U, 3U, 28U, 1U, false};
-    auto source = ba2_dx10_stage_entry("Textures/Stage/MultiChunk.dds", layout, "dx10-multi-chunk");
-    auto planned = libbsa::texture::plan_dx10_chunks(layout, 0U);
-    REQUIRE(planned.has_value());
-    REQUIRE(planned.value().size() == 1U);
-    REQUIRE(planned.value()[0].start_mip < planned.value()[0].end_mip);
-
-    const auto profile = require_dx10_profile();
-    auto chunk = libbsa::formats::ba2::ba2_dx10_prepare_chunk(
-        profile, libbsa::ba2_dx10_writer_options{}, source, planned.value()[0]);
-
-    REQUIRE(chunk.has_value());
-    CHECK(chunk.value().raw_size == planned.value()[0].raw_size);
-    CHECK(chunk.value().packed_size > 0U);
-    CHECK(chunk.value().start_mip == planned.value()[0].start_mip);
-    CHECK(chunk.value().end_mip == planned.value()[0].end_mip);
-
-    auto decoded = libbsa::detail::decompress_payload_exact(
-        chunk.value().compression, materialize_stored_payload(chunk.value().payload),
-        static_cast<std::size_t>(planned.value()[0].raw_size));
-    REQUIRE(decoded.has_value());
-    std::vector<std::byte> expected;
-    expected.reserve(static_cast<std::size_t>(planned.value()[0].raw_size));
-    for (std::uint32_t mip = planned.value()[0].start_mip; mip <= planned.value()[0].end_mip;
-         ++mip) {
-        auto mip_size = libbsa::texture::mip_size_for_format(layout, mip);
-        REQUIRE(mip_size.has_value());
-        auto bytes = repeated_bytes(static_cast<std::size_t>(mip_size.value()),
-                                    static_cast<std::uint8_t>(mip + 1U));
-        expected.insert(expected.end(), bytes.begin(), bytes.end());
-    }
-    CHECK(decoded.value() == expected);
 }
 
 TEST_CASE(
