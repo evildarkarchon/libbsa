@@ -22,7 +22,7 @@ namespace {
 /// different decode facts must never share a location, or the loser's record
 /// would describe content it cannot produce. Expressing them as Sharing
 /// Eligibility keeps DX10's candidate key the same stored-size-and-fingerprint
-/// shape as every other sharing family's (ADR-0001, CONTEXT.md).
+/// shape as every other sharing family's (ADR-0001, GLOSSARY.md).
 struct chunk_decode_facts {
     std::uint32_t raw_size{};
     std::uint32_t packed_size{};
@@ -155,7 +155,7 @@ result<ba2_dx10_placement_plan> ba2_dx10_plan_placements(
             // Eligibility only narrows candidates. Exact Stored Payload equality
             // remains the authority for sharing, and offered facts are retained
             // only when this payload becomes a unique accepted candidate
-            // (ADR-0001, CONTEXT.md).
+            // (ADR-0001, GLOSSARY.md).
 
             // The fingerprint is requested only under an enabled sharing policy,
             // because that is the only policy under which the placer reads the

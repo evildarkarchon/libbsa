@@ -48,7 +48,7 @@ All implementation work belongs outside `TES5Edit/`.
 - Do not use `std::filesystem::path` for archive-internal paths. Bethesda virtual paths are normalized archive keys, and host separator, case, and encoding rules can corrupt lookups and hashes. Use filesystem paths only at host I/O boundaries.
 - Favor the open/read/write-new archive flow. In-place archive mutation is deliberately deferred because shifting tables, compression, DDS chunks, and deduplication make it hard to make safe.
 
-Domain vocabulary for archive concepts lives in `CONTEXT.md`; architectural decisions live under `docs/adr/`.
+Domain vocabulary for archive concepts lives in `GLOSSARY.md`; architectural decisions live under `docs/adr/`.
 
 ## Dependencies
 
@@ -175,4 +175,4 @@ Use the canonical GitHub issue labels `needs-triage`, `needs-info`, `ready-for-a
 
 ### Domain docs
 
-Use the single-context layout rooted at `CONTEXT.md`, with architectural decisions under `docs/adr/`. See `docs/agents/domain.md`.
+Use the single-context layout rooted at `GLOSSARY.md`, with architectural decisions under `docs/adr/`. See `docs/agents/domain.md`.

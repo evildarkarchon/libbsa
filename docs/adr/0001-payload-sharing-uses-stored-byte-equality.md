@@ -25,7 +25,7 @@ The candidate key also carries no compression state, and `FindPackedData` is cal
 `PackData` before compression runs.
 
 libbsa instead keys on Stored Payload facts and treats byte equality as the sharing authority. The
-key narrows candidates; `stored_payload::exactly_equals` decides. `CONTEXT.md` already states this as
+key narrows candidates; `stored_payload::exactly_equals` decides. `GLOSSARY.md` already states this as
 a Behavior: *"Stored Payload equality is exact byte equality. A fingerprint may narrow equality
 candidates but never establishes equality on its own."*
 
@@ -104,7 +104,7 @@ decode sizes, leaving one record describing content it cannot produce. For that 
 sharing precondition. The original claim did hold for TES4-family BSA and BA2 GNRL, where differing
 compression yields differing stored bytes and `exactly_equals` refuses the share unaided.
 
-`CONTEXT.md` names the missing concept as Sharing Eligibility, kept distinct from the narrowing key.
+`GLOSSARY.md` names the missing concept as Sharing Eligibility, kept distinct from the narrowing key.
 The Payload Placement module (`src/detail/payload_placement.hpp`) carries the eligibility predicate
 that DX10's decode facts belong in. All three sharing families now place through that module.
 TES4-family BSA and BA2 GNRL deliberately supply no predicate, because they have no eligibility

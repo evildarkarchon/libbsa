@@ -4,7 +4,7 @@ This repository uses a single-context domain-document layout.
 
 ## Before exploring, read these
 
-- `CONTEXT.md` at the repository root.
+- `GLOSSARY.md` at the repository root.
 - Relevant architectural decision records under `docs/adr/`.
 
 If either location does not exist, proceed silently. Do not flag its absence or suggest creating it upfront. The domain-modeling workflows create domain documents lazily when terminology or decisions are resolved.
@@ -13,14 +13,14 @@ If either location does not exist, proceed silently. Do not flag its absence or 
 
 ```text
 /
-├── CONTEXT.md
+├── GLOSSARY.md
 ├── docs/adr/
 └── src/
 ```
 
 ## Use the glossary's vocabulary
 
-When output names a domain concept—in an issue title, refactor proposal, hypothesis, or test name—use the term defined in `CONTEXT.md`. Do not drift to synonyms that the glossary explicitly avoids.
+When output names a domain concept—in an issue title, refactor proposal, hypothesis, or test name—use the term defined in `GLOSSARY.md`. Do not drift to synonyms that the glossary explicitly avoids.
 
 If a needed concept is absent, reconsider whether the term belongs to the project. If it represents a real domain gap, record it for the domain-modeling workflow.
 
