@@ -64,6 +64,10 @@ _Avoid_: Detected BA2 format, BA2 header info
 A coherent observation that resolves one BA2 archive's header and materializes its metadata while the observed host archive remains stable.
 _Avoid_: BA2 detection pass, BA2 parser dispatch
 
+**BA2 Metadata Materialization**:
+The subtype-independent part of BA2 Archive Opening: reading the filename table, binding each record to its name through BA2 Record Identity, and admitting a payload span only when it lies inside the archive, clear of the header, record table and filename table, and satisfies Payload Span Exclusivity. Record decoding and texture interpretation are not part of it.
+_Avoid_: shared parser helpers, BA2 parser common code
+
 **BA2 Archive Serialization**:
 The ordered byte representation of one complete BA2 archive: its fixed header, subtype record table, unique Stored Payloads in physical order, and filename table. It preserves the order and placement already established by format-specific planning; it does not create, compress, or place payloads.
 _Avoid_: BA2 envelope serialization, BA2 writer serialization, BA2 save pipeline
