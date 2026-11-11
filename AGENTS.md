@@ -39,7 +39,7 @@ All implementation work belongs outside `TES5Edit/`.
 - The implementation language is C++20. Do not expose C++23-only library types in public headers; in particular, use `libbsa::result<T>` rather than `std::expected`.
 - Error model: prefer `libbsa::result<T>` or an explicit error-code style for I/O and format failures. Reserve exceptions for programmer precondition violations.
 - Keep the library reusable and independent of application-specific UI or tooling.
-- Keep public headers minimal. They must not leak platform, compression, or DirectXTex/DXGI implementation details.
+- Keep implementation details and business logic out of public headers as much as possible.
 - Prefer clear, idiomatic Windows-oriented C++ interfaces over direct transliteration of Delphi/Pascal structure.
 - Preserve archive-format behavior discovered from BSArchPro unless there is a documented reason to diverge.
 - When porting behavior, trace the reference code first and record non-obvious compatibility constraints near the new implementation.
