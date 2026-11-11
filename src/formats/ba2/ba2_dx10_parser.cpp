@@ -26,17 +26,6 @@ using detail::add_fits_u64;
 using detail::span_fits_u64;
 using detail::spans_overlap_u64;
 
-entry_compression compression_for(const ba2_dx10_chunk_record& chunk,
-                                  const ba2_profile& profile) noexcept {
-    if (chunk.packed_size == 0U) {
-        return entry_compression::none;
-    }
-    // The authoritative profile normalizes Starfield v3 CompressionMethod 3
-    // into raw-LZ4 block metadata; DX10 chunks still decide raw-vs-compressed
-    // from PackedSize, never filename or extension spelling.
-    return profile.default_compression();
-}
-
 /// Validates every stored chunk span against the archive and its metadata areas.
 ///
 /// DX10 physical order is not fixed by the format: BSArchPro writes the filename
@@ -130,7 +119,7 @@ result<std::vector<texture_chunk_metadata>> public_chunks_for(const ba2_dx10_rec
             return reserved_archive_chunks.error();
         }
         for (const auto& chunk : record.chunks) {
-            const auto compression = compression_for(chunk, profile);
+            const auto compression = profile.stored_compression(chunk.packed_size);
             archive_chunks.push_back(texture_chunk_metadata{
                 chunk.offset, chunk.packed_size == 0U ? chunk.raw_size : chunk.packed_size,
                 chunk.raw_size, chunk.start_mip, chunk.end_mip, compression});

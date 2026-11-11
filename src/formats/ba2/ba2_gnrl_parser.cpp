@@ -122,14 +122,6 @@ result<std::vector<std::string>> read_names(const ba2_archive_source& source,
     return names;
 }
 
-/// Interprets a stored GNRL record through the authoritative BA2 Profile.
-entry_compression compression_for(const gnrl_record& record, const ba2_profile& profile) noexcept {
-    if (record.packed_size == 0U) {
-        return entry_compression::none;
-    }
-    return profile.default_compression();
-}
-
 /// Validates record/name relationships and builds deterministic public entries.
 result<std::vector<entry_metadata>> materialize_entries(
     std::uint64_t archive_size, std::uint64_t records_end, std::uint64_t name_table_offset,
@@ -219,7 +211,7 @@ result<std::vector<entry_metadata>> materialize_entries(
                                         stored_size,
                                         records[index].offset,
                                         records[index].name_hash,
-                                        compression_for(records[index], profile),
+                                        profile.stored_compression(records[index].packed_size),
                                         records[index].unknown,
                                         false,
                                         0U};

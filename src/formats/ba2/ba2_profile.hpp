@@ -74,6 +74,20 @@ class ba2_profile {
     /// Returns the public default compression metadata for compressed entries.
     [[nodiscard]] entry_compression default_compression() const noexcept;
 
+    /// Answers how a stored BA2 payload is compressed, from its packed size alone.
+    ///
+    /// A payload whose stored PackedSize is zero is uncompressed and reports
+    /// `entry_compression::none`; any other payload reports `default_compression()`.
+    /// Both GNRL records and DX10 chunks ask this, one stored payload at a time.
+    ///
+    /// The profile has already normalized Starfield v3 CompressionMethod 3 into
+    /// raw-LZ4 block metadata, so a compressed payload never needs further
+    /// interpretation; raw-vs-compressed is decided from PackedSize, never from
+    /// filename or extension spelling.
+    ///
+    /// @param packed_size The PackedSize field stored in the GNRL record or DX10 chunk.
+    [[nodiscard]] entry_compression stored_compression(std::uint32_t packed_size) const noexcept;
+
     /// Returns the internal codec used when an entry or chunk is compressed.
     [[nodiscard]] detail::compression_method compressed_payload_method() const noexcept;
 
