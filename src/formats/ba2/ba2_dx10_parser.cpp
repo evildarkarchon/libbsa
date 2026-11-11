@@ -1,8 +1,8 @@
 #include "formats/ba2/ba2_dx10_parser.hpp"
 
 #include "formats/ba2/ba2_constants.hpp"
-#include "formats/ba2/ba2_dx10_names.hpp"
 #include "formats/ba2/ba2_dx10_records.hpp"
+#include "formats/ba2/ba2_metadata_materialization.hpp"
 #include "formats/ba2/ba2_record_identity.hpp"
 #include "texture/dds_layout.hpp"
 
@@ -21,6 +21,16 @@ namespace libbsa::formats::ba2 {
 namespace {
 
 constexpr std::uint64_t reconstructed_dds_header_size = 148U;
+
+/// DX10 wording for BA2 Metadata Materialization; every string is verbatim.
+constexpr ba2_metadata_wording dx10_metadata_wording{
+    "BA2 DX10 filename table entries",
+    "BA2 DX10 filename table is truncated before UInt16 length",
+    "BA2 DX10 filename table is truncated before name bytes",
+    "BA2 DX10 filename table contains an empty name",
+    "BA2 DX10 filename length",
+    "BA2 DX10 filename bytes",
+};
 
 using detail::add_fits_u64;
 using detail::span_fits_u64;
@@ -292,24 +302,24 @@ result<opened_ba2_archive> materialize_ba2_dx10_archive(const ba2_archive_source
                      "BA2 DX10 FileTableOffset is inside the texture record table"};
     }
 
-    std::uint64_t name_table_end = 0U;
     // BSArchPro writes the DX10 filename table after every payload, so the table
     // is bounded by the archive rather than by the first payload offset. It is
     // count-delimited, so padding after the last encoded name is never read.
-    auto names = read_ba2_dx10_names(source, header.filename_table_offset(), source.size(),
-                                     header.file_count(), name_table_end);
-    if (!names) {
-        return names.error();
+    auto materialization =
+        ba2_metadata_materialization::create(source, header, records_end, dx10_metadata_wording);
+    if (!materialization) {
+        return materialization.error();
     }
 
-    auto validated_spans =
-        validate_chunk_payload_spans(records.value(), source.size(), records_end,
-                                     header.filename_table_offset(), name_table_end);
+    const auto name_table = materialization.value().filename_table_extent();
+    auto validated_spans = validate_chunk_payload_spans(records.value(), source.size(), records_end,
+                                                        name_table.offset, name_table.end);
     if (!validated_spans) {
         return validated_spans.error();
     }
 
-    auto entries = materialize_entries(records.value(), names.value(), header.profile());
+    auto entries =
+        materialize_entries(records.value(), materialization.value().names(), header.profile());
     if (!entries) {
         return entries.error();
     }

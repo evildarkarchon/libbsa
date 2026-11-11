@@ -1,6 +1,7 @@
 #include "formats/ba2/ba2_gnrl_parser.hpp"
 
 #include "formats/ba2/ba2_constants.hpp"
+#include "formats/ba2/ba2_metadata_materialization.hpp"
 #include "formats/ba2/ba2_record_identity.hpp"
 
 #include <detail/binary_io.hpp>
@@ -29,7 +30,6 @@ struct gnrl_record {
 };
 
 using detail::add_fits_u64;
-using detail::archive_string_from_bytes;
 using detail::multiply_fits;
 using detail::span_fits_u64;
 using detail::spans_overlap_u64;
@@ -68,59 +68,15 @@ result<std::vector<gnrl_record>> read_records(detail::binary_reader& reader,
     return records;
 }
 
-/// Reads exactly `file_count` length-prefixed names through the stable source.
-result<std::vector<std::string>> read_names(const ba2_archive_source& source,
-                                            std::uint64_t file_table_offset,
-                                            std::uint32_t file_count, std::uint64_t& table_end) {
-    if (file_table_offset > source.size()) {
-        return error{error_code::format_error, "BA2 GNRL FileTableOffset is outside archive bytes"};
-    }
-
-    std::vector<std::string> names;
-    auto reserved =
-        detail::reserve_metadata_vector(names, file_count, "BA2 GNRL filename table entries");
-    if (!reserved) {
-        return reserved.error();
-    }
-    std::uint64_t cursor = file_table_offset;
-    for (std::uint32_t index = 0; index < file_count; ++index) {
-        if (!span_fits_u64(cursor, 2U, source.size())) {
-            return error{error_code::format_error,
-                         "BA2 GNRL filename table is truncated before UInt16 length"};
-        }
-        auto length_bytes = source.read_exact(cursor, 2U, "BA2 GNRL filename length");
-        if (!length_bytes) {
-            return length_bytes.error();
-        }
-        detail::binary_reader length_reader{length_bytes.value()};
-        const auto length = length_reader.read_u16_le();
-        if (!length) {
-            return error{error_code::format_error,
-                         "BA2 GNRL filename table is truncated before UInt16 length"};
-        }
-        cursor += 2U;
-        if (!span_fits_u64(cursor, length.value(), source.size())) {
-            return error{error_code::format_error,
-                         "BA2 GNRL filename table is truncated before name bytes"};
-        }
-        auto name_bytes = source.read_exact(cursor, length.value(), "BA2 GNRL filename bytes");
-        if (!name_bytes) {
-            return name_bytes.error();
-        }
-        if (name_bytes.value().empty()) {
-            return error{error_code::format_error,
-                         "BA2 GNRL filename table contains an empty name"};
-        }
-        auto name = archive_string_from_bytes(name_bytes.value(), "BA2 GNRL filename bytes");
-        if (!name) {
-            return name.error();
-        }
-        names.push_back(std::move(name.value()));
-        cursor += length.value();
-    }
-    table_end = cursor;
-    return names;
-}
+/// GNRL wording for BA2 Metadata Materialization; every string is verbatim.
+constexpr ba2_metadata_wording gnrl_metadata_wording{
+    "BA2 GNRL filename table entries",
+    "BA2 GNRL filename table is truncated before UInt16 length",
+    "BA2 GNRL filename table is truncated before name bytes",
+    "BA2 GNRL filename table contains an empty name",
+    "BA2 GNRL filename length",
+    "BA2 GNRL filename bytes",
+};
 
 /// Validates record/name relationships and builds deterministic public entries.
 result<std::vector<entry_metadata>> materialize_entries(
@@ -249,8 +205,7 @@ result<opened_ba2_archive> materialize_ba2_gnrl_archive(const ba2_archive_source
     std::uint64_t records_end = 0U;
     if (!add_fits_u64(static_cast<std::uint64_t>(header.profile().header_size()),
                       static_cast<std::uint64_t>(records_size), records_end) ||
-        header.filename_table_offset() < records_end ||
-        header.filename_table_offset() > source.size()) {
+        header.filename_table_offset() < records_end) {
         return error{error_code::format_error,
                      "BA2 GNRL FileTableOffset is outside the metadata span"};
     }
@@ -266,21 +221,21 @@ result<opened_ba2_archive> materialize_ba2_gnrl_archive(const ba2_archive_source
         return records.error();
     }
 
-    std::uint64_t name_table_end = 0U;
     // The writer-required BA2 layout can place payload bytes before the final
     // filename table, so the stable source reads exactly file_count
     // length-prefixed names from FileTableOffset instead of deriving a table
     // size from the first payload offset. This preserves bounded open behavior
     // for both sparse payloads and end tables.
-    auto names =
-        read_names(source, header.filename_table_offset(), header.file_count(), name_table_end);
-    if (!names) {
-        return names.error();
+    auto materialization =
+        ba2_metadata_materialization::create(source, header, records_end, gnrl_metadata_wording);
+    if (!materialization) {
+        return materialization.error();
     }
 
+    const auto name_table = materialization.value().filename_table_extent();
     auto entries =
-        materialize_entries(source.size(), records_end, header.filename_table_offset(),
-                            name_table_end, records.value(), names.value(), header.profile());
+        materialize_entries(source.size(), records_end, name_table.offset, name_table.end,
+                            records.value(), materialization.value().names(), header.profile());
     if (!entries) {
         return entries.error();
     }

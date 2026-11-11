@@ -149,10 +149,10 @@ set(libbsa_library_sources
   src/formats/ba2/ba2_archive_header.cpp
   src/formats/ba2/ba2_archive_opening.cpp
   src/formats/ba2/ba2_archive_serialization.cpp
+  src/formats/ba2/ba2_metadata_materialization.cpp
   src/formats/ba2/ba2_profile.cpp
   src/formats/ba2/ba2_record_identity.cpp
   src/formats/ba2/ba2_dx10_records.cpp
-  src/formats/ba2/ba2_dx10_names.cpp
   src/formats/ba2/ba2_dx10_parser.cpp
   src/formats/ba2/ba2_dx10_reader.cpp
   src/formats/ba2/ba2_dx10_chunk_assembler.cpp
