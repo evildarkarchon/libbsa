@@ -2,15 +2,18 @@
 
 #include "formats/ba2/ba2_archive_header.hpp"
 #include "formats/ba2/ba2_archive_source.hpp"
+#include "formats/ba2/ba2_record_identity.hpp"
+#include "formats/ba2/ba2_subtype.hpp"
 
 #include <detail/payload_span_exclusivity.hpp>
 #include <libbsa/result.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <span>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 
 namespace libbsa::formats::ba2 {
@@ -56,6 +59,27 @@ struct ba2_metadata_wording {
 
     /// Format error reported when a payload span violates Payload Span Exclusivity.
     std::string_view payload_spans_partially_overlap;
+
+    /// Format error reported when two records resolve to the same canonical
+    /// archive path, for example "BA2 GNRL contains duplicate canonical archive paths".
+    std::string_view duplicate_canonical_paths;
+
+    /// Allocation description used when the seen-canonical-path set cannot be
+    /// reserved, for example "BA2 GNRL canonical path set".
+    std::string_view canonical_path_set;
+};
+
+/// One record bound to its filename-table name by BA2 Metadata Materialization.
+struct ba2_named_record {
+    /// Lookup key the archive is indexed by.
+    std::string canonical_path;
+
+    /// Stored spelling with separators converted for display.
+    std::string display_path;
+
+    /// True when any stored lookup field disagrees with the filename-table name
+    /// (the issue #43 tolerance: recorded, never enforced).
+    bool record_identity_mismatch{false};
 };
 
 /// BA2 Metadata Materialization for one BA2 Archive Opening.
@@ -66,8 +90,14 @@ struct ba2_metadata_wording {
 /// decoding and texture interpretation.
 ///
 /// Creation reads the filename table. The object then holds the archive size,
-/// the end of the record table, the filename-table extent, the names and the
-/// set of payload spans accepted so far.
+/// the end of the record table, the filename-table extent, the names, the set
+/// of payload spans accepted so far and the set of canonical paths named so far.
+///
+/// Its two per-record operations are admitting a payload span and naming a
+/// record. Each subtype owns its own loop and the order it calls them in: GNRL
+/// names a record and then admits its span, record by record, while DX10 admits
+/// every chunk span before naming any record. That difference is observable
+/// diagnostic precedence (ADR-0002), so the module never runs a loop itself.
 ///
 /// The per-record operations may throw `std::bad_alloc`; the module owns no
 /// allocation boundary. Each subtype calls them inside its own allocation guard
@@ -107,12 +137,6 @@ class ba2_metadata_materialization final {
         const ba2_archive_source& source, const ba2_archive_header& header,
         std::uint64_t records_end, const ba2_metadata_wording& wording);
 
-    /// Returns the filename-table names in record order.
-    ///
-    /// Transitional: exposed only until record naming moves into this module,
-    /// at which point the accessor is removed.
-    [[nodiscard]] std::span<const std::string> names() const noexcept;
-
     /// Admits one stored payload span, `[offset, offset + stored_size)`.
     ///
     /// Runs four checks in this fixed order and reports the first failure with
@@ -133,6 +157,33 @@ class ba2_metadata_materialization final {
     ///         grown. Callers translate it inside their allocation guard.
     [[nodiscard]] result<void> admit_payload_span(std::uint64_t offset, std::uint64_t stored_size);
 
+    /// Binds record `index` to its filename-table name.
+    ///
+    /// Runs four steps in this fixed order: builds the BA2 Record Identity from
+    /// the name for the subtype the BA2 Archive Header resolved; rejects a
+    /// canonical path already named; compares `stored` against the identity to
+    /// produce the mismatch flag, which is recorded and never enforced; and
+    /// converts the stored path's separators for display.
+    ///
+    /// The first call reserves the seen-canonical-path set for every record of
+    /// the opening, so callers must make it after reserving their own entry
+    /// vector to keep the reservation diagnostics in their established order.
+    ///
+    /// @param index Zero-based record index; it selects the filename-table name
+    ///        written at the same position. Must be below the header's file count.
+    /// @param stored Lookup fields the record table stores for this record.
+    /// @return The named record; a `format_error` carrying any BA2 Record
+    ///         Identity path error or `wording.duplicate_canonical_paths`; or an
+    ///         allocation `format_error` worded with `wording.canonical_path_set`
+    ///         when the set cannot be reserved.
+    /// @throws std::bad_alloc When the set cannot be created or grown, or a
+    ///         path cannot be copied. Callers translate it inside their
+    ///         allocation guard.
+    /// @throws std::out_of_range When `index` is not below the file count, a
+    ///         programmer precondition violation.
+    [[nodiscard]] result<ba2_named_record> name_record(std::size_t index,
+                                                       const ba2_stored_record_identity& stored);
+
    private:
     /// Archive-absolute extent of the encoded filename table: `[offset, end)`.
     ///
@@ -144,11 +195,12 @@ class ba2_metadata_materialization final {
     };
 
     /// Takes ownership of the already-read filename table.
-    ba2_metadata_materialization(std::uint64_t archive_size, std::uint64_t records_end,
-                                 filename_table_extent filename_table,
+    ba2_metadata_materialization(ba2_subtype subtype, std::uint64_t archive_size,
+                                 std::uint64_t records_end, filename_table_extent filename_table,
                                  std::vector<std::string> names,
                                  const ba2_metadata_wording& wording) noexcept;
 
+    ba2_subtype subtype_;
     std::uint64_t archive_size_;
     std::uint64_t records_end_;
     filename_table_extent filename_table_;
@@ -163,6 +215,12 @@ class ba2_metadata_materialization final {
     // allocation guard. Behind a pointer, moves stay noexcept and the only
     // allocations happen inside `admit_payload_span`, which callers guard.
     std::unique_ptr<detail::payload_span_exclusivity> accepted_payload_spans_;
+    // Created and reserved on the first `name_record` call, for the same reason:
+    // MSVC's `std::unordered_set` also allocates when default-constructed and
+    // when moved from. Deferring it to the first naming call also keeps the
+    // reservation after each subtype's entry-vector reservation, which is the
+    // order the two allocation diagnostics have always been reported in.
+    std::unique_ptr<std::unordered_set<std::string>> seen_canonical_paths_;
 };
 
 }  // namespace libbsa::formats::ba2

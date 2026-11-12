@@ -11,7 +11,6 @@
 #include <array>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -77,17 +76,18 @@ constexpr ba2_metadata_wording gnrl_metadata_wording{
     "BA2 GNRL entry payload span intersects header or record table",
     "BA2 GNRL filename table intersects payload data",
     "BA2 GNRL entry payload spans partially overlap",
+    "BA2 GNRL contains duplicate canonical archive paths",
+    "BA2 GNRL canonical path set",
 };
 
 /// Validates record/name relationships and builds deterministic public entries.
 ///
-/// Payload span admission runs through `materialization`, which may throw
-/// `std::bad_alloc`; the guard below translates it into GNRL entry-metadata
-/// wording.
+/// Record naming and payload span admission run through `materialization`,
+/// which may throw `std::bad_alloc`; the guard below translates it into GNRL
+/// entry-metadata wording.
 result<std::vector<entry_metadata>> materialize_entries(
     ba2_metadata_materialization& materialization, std::span<const gnrl_record> records,
     const ba2_profile& profile) {
-    const auto names = materialization.names();
     try {
         std::vector<entry_metadata> entries;
         auto reserved_entries =
@@ -95,36 +95,16 @@ result<std::vector<entry_metadata>> materialize_entries(
         if (!reserved_entries) {
             return reserved_entries.error();
         }
-        std::unordered_set<std::string> canonical_paths;
-        auto reserved_paths = detail::reserve_metadata_set(canonical_paths, records.size(),
-                                                           "BA2 GNRL canonical path set");
-        if (!reserved_paths) {
-            return reserved_paths.error();
-        }
 
         for (std::size_t index = 0; index < records.size(); ++index) {
-            auto identity = make_ba2_record_identity(ba2_subtype::gnrl, names[index],
-                                                     ba2_record_identity_source::filename_table);
-            if (!identity) {
-                return identity.error();
-            }
-            if (!canonical_paths.insert(identity.value().canonical_path).second) {
-                return error{error_code::format_error,
-                             "BA2 GNRL contains duplicate canonical archive paths"};
-            }
-
-            // Stored lookup fields are recorded, not enforced: BSArchPro never
-            // compares them against the filename table, and retail archives ship
-            // records whose stored NameHash no reconstruction reproduces.
-            // Fallout4 - Voices.ba2 has three in 116,101, and failing the archive
-            // over them rejected every good entry with them (issue #43). All
-            // three carry non-ASCII names, which hash_fo4 skips byte-for-byte as
-            // the reference does, so the cause is an unresolved encoding
-            // question in Bethesda's packer rather than proven corruption.
+            // The first call also reserves the seen-canonical-path set, so it
+            // must come after the entry-vector reservation above.
             const ba2_stored_record_identity stored_identity{
                 records[index].name_hash, records[index].directory_hash, records[index].extension};
-            const auto identity_mismatch =
-                compare_ba2_record_identity(stored_identity, identity.value());
+            auto named = materialization.name_record(index, stored_identity);
+            if (!named) {
+                return named.error();
+            }
 
             const auto stored_size =
                 records[index].packed_size != 0U ? records[index].packed_size : records[index].size;
@@ -137,15 +117,8 @@ result<std::vector<entry_metadata>> materialize_entries(
                 return admitted.error();
             }
 
-            // BA2 stores `/` in its filename table; the display spelling libbsa
-            // reports is `\` on every format. Convert here rather than in
-            // `resolve_ba2_record_path`, which the BA2 writers share for the
-            // bytes they serialize.
-            auto display_path = std::move(identity.value().stored_path);
-            detail::normalize_display_separators(display_path);
-
-            auto entry = entry_metadata{std::move(identity.value().canonical_path),
-                                        std::move(display_path),
+            auto entry = entry_metadata{std::move(named.value().canonical_path),
+                                        std::move(named.value().display_path),
                                         records[index].size,
                                         stored_size,
                                         records[index].offset,
@@ -157,7 +130,7 @@ result<std::vector<entry_metadata>> materialize_entries(
             // Assigned rather than appended positionally: the aggregate already
             // carries ten fields, and a future field inserted mid-struct would
             // silently shift a trailing positional initializer onto it.
-            entry.record_identity_mismatch = identity_mismatch.any();
+            entry.record_identity_mismatch = named.value().record_identity_mismatch;
             entries.push_back(std::move(entry));
         }
 

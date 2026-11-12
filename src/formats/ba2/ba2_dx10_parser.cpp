@@ -12,7 +12,6 @@
 #include <limits>
 #include <span>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -33,6 +32,8 @@ constexpr ba2_metadata_wording dx10_metadata_wording{
     "BA2 DX10 chunk payload span intersects header or record table",
     "BA2 DX10 filename table intersects payload data",
     "BA2 DX10 chunk payload spans partially overlap",
+    "BA2 DX10 contains duplicate canonical archive paths",
+    "BA2 DX10 canonical path set",
 };
 
 using detail::add_fits_u64;
@@ -148,9 +149,16 @@ result<std::vector<texture_chunk_metadata>> public_chunks_for(const ba2_dx10_rec
     }
 }
 
-result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10_record> records,
-                                                        std::span<const std::string> names,
-                                                        const ba2_profile& profile) {
+/// Names every record and builds deterministic public texture entries.
+///
+/// Runs only after `validate_chunk_payload_spans` has admitted every chunk
+/// span, so a partial overlap is reported ahead of a duplicate canonical path.
+/// Record naming runs through `materialization`, which may throw
+/// `std::bad_alloc`; the guard below translates it into DX10 entry-metadata
+/// wording.
+result<std::vector<entry_metadata>> materialize_entries(
+    std::span<const ba2_dx10_record> records, ba2_metadata_materialization& materialization,
+    const ba2_profile& profile) {
     try {
         std::vector<entry_metadata> entries;
         auto reserved_entries =
@@ -158,31 +166,16 @@ result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10
         if (!reserved_entries) {
             return reserved_entries.error();
         }
-        std::unordered_set<std::string> canonical_paths;
-        auto reserved_paths = detail::reserve_metadata_set(canonical_paths, records.size(),
-                                                           "BA2 DX10 canonical path set");
-        if (!reserved_paths) {
-            return reserved_paths.error();
-        }
 
         for (std::size_t index = 0; index < records.size(); ++index) {
-            auto identity = make_ba2_record_identity(ba2_subtype::dx10, names[index],
-                                                     ba2_record_identity_source::filename_table);
-            if (!identity) {
-                return identity.error();
-            }
-            if (!canonical_paths.insert(identity.value().canonical_path).second) {
-                return error{error_code::format_error,
-                             "BA2 DX10 contains duplicate canonical archive paths"};
-            }
-
-            // Stored lookup fields are recorded, not enforced; see the matching
-            // note in the GNRL parser and issue #43. BSArchPro reads these fields
-            // verbatim and only ever recomputes hashes from a query path.
+            // The first call also reserves the seen-canonical-path set, so it
+            // must come after the entry-vector reservation above.
             const ba2_stored_record_identity stored_identity{
                 records[index].name_hash, records[index].directory_hash, records[index].extension};
-            const auto identity_mismatch =
-                compare_ba2_record_identity(stored_identity, identity.value());
+            auto named = materialization.name_record(index, stored_identity);
+            if (!named) {
+                return named.error();
+            }
 
             auto chunks = public_chunks_for(records[index], profile);
             if (!chunks) {
@@ -227,15 +220,9 @@ result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10
                                      records[index].cube_maps_raw,
                                      std::move(chunks.value())};
 
-            // BA2 stores `/`; libbsa reports `\` for display on every format.
-            // See the matching note in the GNRL parser for why the conversion is
-            // here and not in the writer-shared identity helper.
-            auto display_path = std::move(identity.value().stored_path);
-            detail::normalize_display_separators(display_path);
-
             auto entry = entry_metadata{
-                std::move(identity.value().canonical_path),
-                std::move(display_path),
+                std::move(named.value().canonical_path),
+                std::move(named.value().display_path),
                 entry_raw_size,
                 stored_payload_size,
                 payload_offset,
@@ -247,7 +234,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10
                 std::move(texture)};
             // Assigned rather than appended positionally; see the matching note
             // in the GNRL parser.
-            entry.record_identity_mismatch = identity_mismatch.any();
+            entry.record_identity_mismatch = named.value().record_identity_mismatch;
             entries.push_back(std::move(entry));
         }
 
@@ -301,8 +288,7 @@ result<opened_ba2_archive> materialize_ba2_dx10_archive(const ba2_archive_source
         return validated_spans.error();
     }
 
-    auto entries =
-        materialize_entries(records.value(), materialization.value().names(), header.profile());
+    auto entries = materialize_entries(records.value(), materialization.value(), header.profile());
     if (!entries) {
         return entries.error();
     }

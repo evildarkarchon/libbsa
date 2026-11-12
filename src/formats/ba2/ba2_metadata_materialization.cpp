@@ -80,12 +80,13 @@ result<ba2_metadata_materialization> ba2_metadata_materialization::create(
         return names.error();
     }
     return ba2_metadata_materialization{
-        source.size(), records_end,
-        filename_table_extent{header.filename_table_offset(), table_end}, std::move(names).value(),
+        header.profile().subtype(),
+        source.size(),
+        records_end,
+        filename_table_extent{header.filename_table_offset(), table_end},
+        std::move(names).value(),
         wording};
 }
-
-std::span<const std::string> ba2_metadata_materialization::names() const noexcept { return names_; }
 
 result<void> ba2_metadata_materialization::admit_payload_span(std::uint64_t offset,
                                                               std::uint64_t stored_size) {
@@ -125,10 +126,58 @@ result<void> ba2_metadata_materialization::admit_payload_span(std::uint64_t offs
                                            wording_.payload_spans_partially_overlap);
 }
 
+result<ba2_named_record> ba2_metadata_materialization::name_record(
+    std::size_t index, const ba2_stored_record_identity& stored) {
+    if (!seen_canonical_paths_) {
+        // Construction may throw into the caller's guard, exactly as the
+        // subtype-local set did; only the reservation reports its own wording.
+        auto seen = std::make_unique<std::unordered_set<std::string>>();
+        auto reserved =
+            detail::reserve_metadata_set(*seen, names_.size(), wording_.canonical_path_set);
+        if (!reserved) {
+            return reserved.error();
+        }
+        seen_canonical_paths_ = std::move(seen);
+    }
+
+    auto identity = make_ba2_record_identity(subtype_, names_.at(index),
+                                             ba2_record_identity_source::filename_table);
+    if (!identity) {
+        return identity.error();
+    }
+    if (!seen_canonical_paths_->insert(identity.value().canonical_path).second) {
+        return error{error_code::format_error, std::string{wording_.duplicate_canonical_paths}};
+    }
+
+    // Stored lookup fields are recorded, not enforced: BSArchPro never
+    // compares them against the filename table, and retail archives ship
+    // records whose stored NameHash no reconstruction reproduces.
+    // Fallout4 - Voices.ba2 has three in 116,101, and failing the archive
+    // over them rejected every good entry with them (issue #43). All
+    // three carry non-ASCII names, which hash_fo4 skips byte-for-byte as
+    // the reference does, so the cause is an unresolved encoding
+    // question in Bethesda's packer rather than proven corruption.
+    // BSArchPro reads these fields verbatim and only ever recomputes hashes
+    // from a query path.
+    const auto identity_mismatch = compare_ba2_record_identity(stored, identity.value());
+
+    // BA2 stores `/` in its filename table; the display spelling libbsa
+    // reports is `\` on every format. Convert here rather than in
+    // `resolve_ba2_record_path`, which the BA2 writers share for the
+    // bytes they serialize.
+    auto display_path = std::move(identity.value().stored_path);
+    detail::normalize_display_separators(display_path);
+
+    return ba2_named_record{std::move(identity.value().canonical_path), std::move(display_path),
+                            identity_mismatch.any()};
+}
+
 ba2_metadata_materialization::ba2_metadata_materialization(
-    std::uint64_t archive_size, std::uint64_t records_end, filename_table_extent filename_table,
-    std::vector<std::string> names, const ba2_metadata_wording& wording) noexcept
-    : archive_size_{archive_size},
+    ba2_subtype subtype, std::uint64_t archive_size, std::uint64_t records_end,
+    filename_table_extent filename_table, std::vector<std::string> names,
+    const ba2_metadata_wording& wording) noexcept
+    : subtype_{subtype},
+      archive_size_{archive_size},
       records_end_{records_end},
       filename_table_{filename_table},
       names_{std::move(names)},
