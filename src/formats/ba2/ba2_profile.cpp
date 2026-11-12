@@ -132,6 +132,13 @@ bool ba2_profile::has_compression_method_field() const noexcept {
 
 entry_compression ba2_profile::default_compression() const noexcept { return default_compression_; }
 
+entry_compression ba2_profile::stored_compression(std::uint32_t packed_size) const noexcept {
+    if (packed_size == 0U) {
+        return entry_compression::none;
+    }
+    return default_compression_;
+}
+
 detail::compression_method ba2_profile::compressed_payload_method() const noexcept {
     return compressed_method_;
 }

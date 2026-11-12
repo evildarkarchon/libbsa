@@ -1,19 +1,17 @@
 #include "formats/ba2/ba2_dx10_parser.hpp"
 
 #include "formats/ba2/ba2_constants.hpp"
-#include "formats/ba2/ba2_dx10_names.hpp"
 #include "formats/ba2/ba2_dx10_records.hpp"
+#include "formats/ba2/ba2_metadata_materialization.hpp"
 #include "formats/ba2/ba2_record_identity.hpp"
 #include "texture/dds_layout.hpp"
 
 #include <detail/parser_primitives.hpp>
-#include <detail/payload_span_exclusivity.hpp>
 
 #include <algorithm>
 #include <limits>
 #include <span>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -22,20 +20,24 @@ namespace {
 
 constexpr std::uint64_t reconstructed_dds_header_size = 148U;
 
-using detail::add_fits_u64;
-using detail::span_fits_u64;
-using detail::spans_overlap_u64;
+/// DX10 wording for BA2 Metadata Materialization; every string is verbatim.
+constexpr ba2_metadata_wording dx10_metadata_wording{
+    .filename_table_entries = "BA2 DX10 filename table entries",
+    .filename_length_truncated = "BA2 DX10 filename table is truncated before UInt16 length",
+    .filename_bytes_truncated = "BA2 DX10 filename table is truncated before name bytes",
+    .empty_filename = "BA2 DX10 filename table contains an empty name",
+    .filename_length_read = "BA2 DX10 filename length",
+    .filename_bytes_read = "BA2 DX10 filename bytes",
+    .payload_span_outside_archive = "BA2 DX10 chunk payload span is outside the archive",
+    .payload_span_intersects_records =
+        "BA2 DX10 chunk payload span intersects header or record table",
+    .filename_table_intersects_payload = "BA2 DX10 filename table intersects payload data",
+    .payload_spans_partially_overlap = "BA2 DX10 chunk payload spans partially overlap",
+    .duplicate_canonical_paths = "BA2 DX10 contains duplicate canonical archive paths",
+    .canonical_path_set = "BA2 DX10 canonical path set",
+};
 
-entry_compression compression_for(const ba2_dx10_chunk_record& chunk,
-                                  const ba2_profile& profile) noexcept {
-    if (chunk.packed_size == 0U) {
-        return entry_compression::none;
-    }
-    // The authoritative profile normalizes Starfield v3 CompressionMethod 3
-    // into raw-LZ4 block metadata; DX10 chunks still decide raw-vs-compressed
-    // from PackedSize, never filename or extension spelling.
-    return profile.default_compression();
-}
+using detail::add_fits_u64;
 
 /// Validates every stored chunk span against the archive and its metadata areas.
 ///
@@ -51,14 +53,13 @@ entry_compression compression_for(const ba2_dx10_chunk_record& chunk,
 /// the sibling families, this seam has no enclosing allocation boundary, so it
 /// owns one: growing the node-based collection can throw where the removed
 /// vector reservation returned a result, and the boundary keeps that failure
-/// reporting the same "BA2 DX10 stored chunk spans" wording.
+/// reporting the same "BA2 DX10 stored chunk spans" wording. Admission now runs
+/// through BA2 Metadata Materialization, which may throw `std::bad_alloc` both
+/// when it first creates that collection and when it grows it; both land in this
+/// boundary.
 result<void> validate_chunk_payload_spans(std::span<const ba2_dx10_record> records,
-                                          std::uint64_t archive_size, std::uint64_t records_end,
-                                          std::uint64_t name_table_offset,
-                                          std::uint64_t name_table_end) {
+                                          ba2_metadata_materialization& materialization) {
     try {
-        detail::payload_span_exclusivity accepted_payload_spans;
-
         for (const auto& record : records) {
             for (const auto& chunk : record.chunks) {
                 const auto stored_size = static_cast<std::uint64_t>(
@@ -66,30 +67,15 @@ result<void> validate_chunk_payload_spans(std::span<const ba2_dx10_record> recor
                 if (stored_size == 0U || chunk.raw_size == 0U) {
                     return error{error_code::format_error, "BA2 DX10 chunk sizes are inconsistent"};
                 }
-                if (!span_fits_u64(chunk.offset, stored_size, archive_size)) {
-                    return error{error_code::format_error,
-                                 "BA2 DX10 chunk payload span is outside the archive"};
-                }
-                if (spans_overlap_u64(chunk.offset, stored_size, 0U, records_end)) {
-                    return error{error_code::format_error,
-                                 "BA2 DX10 chunk payload span intersects header or record table"};
-                }
-                if (spans_overlap_u64(chunk.offset, stored_size, name_table_offset,
-                                      name_table_end - name_table_offset)) {
-                    return error{error_code::format_error,
-                                 "BA2 DX10 filename table intersects payload data"};
-                }
-                // Writer dedupe can intentionally publish exact duplicate chunks; partial
-                // sharing would make texture chunk extraction ambiguous because logical
-                // DDS segments would read bytes from each other's ranges. The call stays
-                // here, after the bounds and metadata-intersect checks and inside the same
-                // per-chunk loop, because which diagnostic a multi-defect archive reports
-                // is observable behavior. No zero-size guard is needed: the chunk size
-                // consistency check above has already rejected every empty stored span.
-                auto exclusive = accepted_payload_spans.insert(
-                    chunk.offset, stored_size, "BA2 DX10 chunk payload spans partially overlap");
-                if (!exclusive) {
-                    return exclusive.error();
+                // The call stays here, after the chunk size consistency check and
+                // inside the same per-chunk loop, ahead of any record naming,
+                // because which diagnostic a multi-defect archive reports is
+                // observable behavior. Admission's empty-span path never runs for
+                // DX10: the consistency check above has already rejected every
+                // empty stored span.
+                auto admitted = materialization.admit_payload_span(chunk.offset, stored_size);
+                if (!admitted) {
+                    return admitted.error();
                 }
             }
         }
@@ -130,7 +116,7 @@ result<std::vector<texture_chunk_metadata>> public_chunks_for(const ba2_dx10_rec
             return reserved_archive_chunks.error();
         }
         for (const auto& chunk : record.chunks) {
-            const auto compression = compression_for(chunk, profile);
+            const auto compression = profile.stored_compression(chunk.packed_size);
             archive_chunks.push_back(texture_chunk_metadata{
                 chunk.offset, chunk.packed_size == 0U ? chunk.raw_size : chunk.packed_size,
                 chunk.raw_size, chunk.start_mip, chunk.end_mip, compression});
@@ -164,9 +150,16 @@ result<std::vector<texture_chunk_metadata>> public_chunks_for(const ba2_dx10_rec
     }
 }
 
-result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10_record> records,
-                                                        std::span<const std::string> names,
-                                                        const ba2_profile& profile) {
+/// Names every record and builds deterministic public texture entries.
+///
+/// Runs only after `validate_chunk_payload_spans` has admitted every chunk
+/// span, so a partial overlap is reported ahead of a duplicate canonical path.
+/// Record naming runs through `materialization`, which may throw
+/// `std::bad_alloc`; the guard below translates it into DX10 entry-metadata
+/// wording.
+result<std::vector<entry_metadata>> materialize_entries(
+    std::span<const ba2_dx10_record> records, ba2_metadata_materialization& materialization,
+    const ba2_profile& profile) {
     try {
         std::vector<entry_metadata> entries;
         auto reserved_entries =
@@ -174,31 +167,16 @@ result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10
         if (!reserved_entries) {
             return reserved_entries.error();
         }
-        std::unordered_set<std::string> canonical_paths;
-        auto reserved_paths = detail::reserve_metadata_set(canonical_paths, records.size(),
-                                                           "BA2 DX10 canonical path set");
-        if (!reserved_paths) {
-            return reserved_paths.error();
-        }
 
         for (std::size_t index = 0; index < records.size(); ++index) {
-            auto identity = make_ba2_record_identity(ba2_subtype::dx10, names[index],
-                                                     ba2_record_identity_source::filename_table);
-            if (!identity) {
-                return identity.error();
-            }
-            if (!canonical_paths.insert(identity.value().canonical_path).second) {
-                return error{error_code::format_error,
-                             "BA2 DX10 contains duplicate canonical archive paths"};
-            }
-
-            // Stored lookup fields are recorded, not enforced; see the matching
-            // note in the GNRL parser and issue #43. BSArchPro reads these fields
-            // verbatim and only ever recomputes hashes from a query path.
+            // The first call also reserves the seen-canonical-path set, so it
+            // must come after the entry-vector reservation above.
             const ba2_stored_record_identity stored_identity{
                 records[index].name_hash, records[index].directory_hash, records[index].extension};
-            const auto identity_mismatch =
-                compare_ba2_record_identity(stored_identity, identity.value());
+            auto named = materialization.name_record(index, stored_identity);
+            if (!named) {
+                return named.error();
+            }
 
             auto chunks = public_chunks_for(records[index], profile);
             if (!chunks) {
@@ -243,15 +221,9 @@ result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10
                                      records[index].cube_maps_raw,
                                      std::move(chunks.value())};
 
-            // BA2 stores `/`; libbsa reports `\` for display on every format.
-            // See the matching note in the GNRL parser for why the conversion is
-            // here and not in the writer-shared identity helper.
-            auto display_path = std::move(identity.value().stored_path);
-            detail::normalize_display_separators(display_path);
-
             auto entry = entry_metadata{
-                std::move(identity.value().canonical_path),
-                std::move(display_path),
+                std::move(named.value().canonical_path),
+                std::move(named.value().display_path),
                 entry_raw_size,
                 stored_payload_size,
                 payload_offset,
@@ -263,7 +235,7 @@ result<std::vector<entry_metadata>> materialize_entries(std::span<const ba2_dx10
                 std::move(texture)};
             // Assigned rather than appended positionally; see the matching note
             // in the GNRL parser.
-            entry.record_identity_mismatch = identity_mismatch.any();
+            entry.record_identity_mismatch = named.value().record_identity_mismatch;
             entries.push_back(std::move(entry));
         }
 
@@ -303,24 +275,21 @@ result<opened_ba2_archive> materialize_ba2_dx10_archive(const ba2_archive_source
                      "BA2 DX10 FileTableOffset is inside the texture record table"};
     }
 
-    std::uint64_t name_table_end = 0U;
     // BSArchPro writes the DX10 filename table after every payload, so the table
     // is bounded by the archive rather than by the first payload offset. It is
     // count-delimited, so padding after the last encoded name is never read.
-    auto names = read_ba2_dx10_names(source, header.filename_table_offset(), source.size(),
-                                     header.file_count(), name_table_end);
-    if (!names) {
-        return names.error();
+    auto materialization =
+        ba2_metadata_materialization::create(source, header, records_end, dx10_metadata_wording);
+    if (!materialization) {
+        return materialization.error();
     }
 
-    auto validated_spans =
-        validate_chunk_payload_spans(records.value(), source.size(), records_end,
-                                     header.filename_table_offset(), name_table_end);
+    auto validated_spans = validate_chunk_payload_spans(records.value(), materialization.value());
     if (!validated_spans) {
         return validated_spans.error();
     }
 
-    auto entries = materialize_entries(records.value(), names.value(), header.profile());
+    auto entries = materialize_entries(records.value(), materialization.value(), header.profile());
     if (!entries) {
         return entries.error();
     }

@@ -1,17 +1,16 @@
 #include "formats/ba2/ba2_gnrl_parser.hpp"
 
 #include "formats/ba2/ba2_constants.hpp"
+#include "formats/ba2/ba2_metadata_materialization.hpp"
 #include "formats/ba2/ba2_record_identity.hpp"
 
 #include <detail/binary_io.hpp>
 #include <detail/parser_primitives.hpp>
-#include <detail/payload_span_exclusivity.hpp>
 
 #include <algorithm>
 #include <array>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -29,10 +28,7 @@ struct gnrl_record {
 };
 
 using detail::add_fits_u64;
-using detail::archive_string_from_bytes;
 using detail::multiply_fits;
-using detail::span_fits_u64;
-using detail::spans_overlap_u64;
 
 /// Decodes the fixed-width GNRL records from the already-bounded record table.
 result<std::vector<gnrl_record>> read_records(detail::binary_reader& reader,
@@ -68,73 +64,31 @@ result<std::vector<gnrl_record>> read_records(detail::binary_reader& reader,
     return records;
 }
 
-/// Reads exactly `file_count` length-prefixed names through the stable source.
-result<std::vector<std::string>> read_names(const ba2_archive_source& source,
-                                            std::uint64_t file_table_offset,
-                                            std::uint32_t file_count, std::uint64_t& table_end) {
-    if (file_table_offset > source.size()) {
-        return error{error_code::format_error, "BA2 GNRL FileTableOffset is outside archive bytes"};
-    }
-
-    std::vector<std::string> names;
-    auto reserved =
-        detail::reserve_metadata_vector(names, file_count, "BA2 GNRL filename table entries");
-    if (!reserved) {
-        return reserved.error();
-    }
-    std::uint64_t cursor = file_table_offset;
-    for (std::uint32_t index = 0; index < file_count; ++index) {
-        if (!span_fits_u64(cursor, 2U, source.size())) {
-            return error{error_code::format_error,
-                         "BA2 GNRL filename table is truncated before UInt16 length"};
-        }
-        auto length_bytes = source.read_exact(cursor, 2U, "BA2 GNRL filename length");
-        if (!length_bytes) {
-            return length_bytes.error();
-        }
-        detail::binary_reader length_reader{length_bytes.value()};
-        const auto length = length_reader.read_u16_le();
-        if (!length) {
-            return error{error_code::format_error,
-                         "BA2 GNRL filename table is truncated before UInt16 length"};
-        }
-        cursor += 2U;
-        if (!span_fits_u64(cursor, length.value(), source.size())) {
-            return error{error_code::format_error,
-                         "BA2 GNRL filename table is truncated before name bytes"};
-        }
-        auto name_bytes = source.read_exact(cursor, length.value(), "BA2 GNRL filename bytes");
-        if (!name_bytes) {
-            return name_bytes.error();
-        }
-        if (name_bytes.value().empty()) {
-            return error{error_code::format_error,
-                         "BA2 GNRL filename table contains an empty name"};
-        }
-        auto name = archive_string_from_bytes(name_bytes.value(), "BA2 GNRL filename bytes");
-        if (!name) {
-            return name.error();
-        }
-        names.push_back(std::move(name.value()));
-        cursor += length.value();
-    }
-    table_end = cursor;
-    return names;
-}
-
-/// Interprets a stored GNRL record through the authoritative BA2 Profile.
-entry_compression compression_for(const gnrl_record& record, const ba2_profile& profile) noexcept {
-    if (record.packed_size == 0U) {
-        return entry_compression::none;
-    }
-    return profile.default_compression();
-}
+/// GNRL wording for BA2 Metadata Materialization; every string is verbatim.
+constexpr ba2_metadata_wording gnrl_metadata_wording{
+    .filename_table_entries = "BA2 GNRL filename table entries",
+    .filename_length_truncated = "BA2 GNRL filename table is truncated before UInt16 length",
+    .filename_bytes_truncated = "BA2 GNRL filename table is truncated before name bytes",
+    .empty_filename = "BA2 GNRL filename table contains an empty name",
+    .filename_length_read = "BA2 GNRL filename length",
+    .filename_bytes_read = "BA2 GNRL filename bytes",
+    .payload_span_outside_archive = "BA2 GNRL entry payload span is outside the archive",
+    .payload_span_intersects_records =
+        "BA2 GNRL entry payload span intersects header or record table",
+    .filename_table_intersects_payload = "BA2 GNRL filename table intersects payload data",
+    .payload_spans_partially_overlap = "BA2 GNRL entry payload spans partially overlap",
+    .duplicate_canonical_paths = "BA2 GNRL contains duplicate canonical archive paths",
+    .canonical_path_set = "BA2 GNRL canonical path set",
+};
 
 /// Validates record/name relationships and builds deterministic public entries.
+///
+/// Record naming and payload span admission run through `materialization`,
+/// which may throw `std::bad_alloc`; the guard below translates it into GNRL
+/// entry-metadata wording.
 result<std::vector<entry_metadata>> materialize_entries(
-    std::uint64_t archive_size, std::uint64_t records_end, std::uint64_t name_table_offset,
-    std::uint64_t name_table_end, std::span<const gnrl_record> records,
-    std::span<const std::string> names, const ba2_profile& profile) {
+    ba2_metadata_materialization& materialization, std::span<const gnrl_record> records,
+    const ba2_profile& profile) {
     try {
         std::vector<entry_metadata> entries;
         auto reserved_entries =
@@ -142,91 +96,42 @@ result<std::vector<entry_metadata>> materialize_entries(
         if (!reserved_entries) {
             return reserved_entries.error();
         }
-        std::unordered_set<std::string> canonical_paths;
-        auto reserved_paths = detail::reserve_metadata_set(canonical_paths, records.size(),
-                                                           "BA2 GNRL canonical path set");
-        if (!reserved_paths) {
-            return reserved_paths.error();
-        }
-        detail::payload_span_exclusivity accepted_payload_spans;
 
         for (std::size_t index = 0; index < records.size(); ++index) {
-            auto identity = make_ba2_record_identity(ba2_subtype::gnrl, names[index],
-                                                     ba2_record_identity_source::filename_table);
-            if (!identity) {
-                return identity.error();
-            }
-            if (!canonical_paths.insert(identity.value().canonical_path).second) {
-                return error{error_code::format_error,
-                             "BA2 GNRL contains duplicate canonical archive paths"};
-            }
-
-            // Stored lookup fields are recorded, not enforced: BSArchPro never
-            // compares them against the filename table, and retail archives ship
-            // records whose stored NameHash no reconstruction reproduces.
-            // Fallout4 - Voices.ba2 has three in 116,101, and failing the archive
-            // over them rejected every good entry with them (issue #43). All
-            // three carry non-ASCII names, which hash_fo4 skips byte-for-byte as
-            // the reference does, so the cause is an unresolved encoding
-            // question in Bethesda's packer rather than proven corruption.
+            // The first call also reserves the seen-canonical-path set, so it
+            // must come after the entry-vector reservation above.
             const ba2_stored_record_identity stored_identity{
                 records[index].name_hash, records[index].directory_hash, records[index].extension};
-            const auto identity_mismatch =
-                compare_ba2_record_identity(stored_identity, identity.value());
+            auto named = materialization.name_record(index, stored_identity);
+            if (!named) {
+                return named.error();
+            }
 
             const auto stored_size =
                 records[index].packed_size != 0U ? records[index].packed_size : records[index].size;
-            if (!span_fits_u64(records[index].offset, stored_size, archive_size)) {
-                return error{error_code::format_error,
-                             "BA2 GNRL entry payload span is outside the archive"};
-            }
-            // BSArchPro writes GNRL payloads after the fixed header and records;
-            // spans into this prefix would later extract archive metadata bytes as if
-            // they were file payload.
-            if (spans_overlap_u64(records[index].offset, stored_size, 0U, records_end)) {
-                return error{error_code::format_error,
-                             "BA2 GNRL entry payload span intersects header or record table"};
-            }
-            if (spans_overlap_u64(records[index].offset, stored_size, name_table_offset,
-                                  name_table_end - name_table_offset)) {
-                return error{error_code::format_error,
-                             "BA2 GNRL filename table intersects payload data"};
-            }
-            if (stored_size != 0U) {
-                // Writer dedupe can intentionally publish exact duplicate stored spans;
-                // partial sharing would make two entries read ambiguous bytes from each
-                // other's payload ranges. The call stays here, interleaved with the
-                // checks above, because which diagnostic an archive with several defects
-                // reports is observable behavior.
-                auto exclusive =
-                    accepted_payload_spans.insert(records[index].offset, stored_size,
-                                                  "BA2 GNRL entry payload spans partially overlap");
-                if (!exclusive) {
-                    return exclusive.error();
-                }
+            // The call stays here, interleaved with the record's other checks
+            // (after its duplicate-path check, before the next record), because
+            // which diagnostic an archive with several defects reports is
+            // observable behavior.
+            auto admitted = materialization.admit_payload_span(records[index].offset, stored_size);
+            if (!admitted) {
+                return admitted.error();
             }
 
-            // BA2 stores `/` in its filename table; the display spelling libbsa
-            // reports is `\` on every format. Convert here rather than in
-            // `resolve_ba2_record_path`, which the BA2 writers share for the
-            // bytes they serialize.
-            auto display_path = std::move(identity.value().stored_path);
-            detail::normalize_display_separators(display_path);
-
-            auto entry = entry_metadata{std::move(identity.value().canonical_path),
-                                        std::move(display_path),
+            auto entry = entry_metadata{std::move(named.value().canonical_path),
+                                        std::move(named.value().display_path),
                                         records[index].size,
                                         stored_size,
                                         records[index].offset,
                                         records[index].name_hash,
-                                        compression_for(records[index], profile),
+                                        profile.stored_compression(records[index].packed_size),
                                         records[index].unknown,
                                         false,
                                         0U};
             // Assigned rather than appended positionally: the aggregate already
             // carries ten fields, and a future field inserted mid-struct would
             // silently shift a trailing positional initializer onto it.
-            entry.record_identity_mismatch = identity_mismatch.any();
+            entry.record_identity_mismatch = named.value().record_identity_mismatch;
             entries.push_back(std::move(entry));
         }
 
@@ -257,8 +162,7 @@ result<opened_ba2_archive> materialize_ba2_gnrl_archive(const ba2_archive_source
     std::uint64_t records_end = 0U;
     if (!add_fits_u64(static_cast<std::uint64_t>(header.profile().header_size()),
                       static_cast<std::uint64_t>(records_size), records_end) ||
-        header.filename_table_offset() < records_end ||
-        header.filename_table_offset() > source.size()) {
+        header.filename_table_offset() < records_end) {
         return error{error_code::format_error,
                      "BA2 GNRL FileTableOffset is outside the metadata span"};
     }
@@ -274,21 +178,18 @@ result<opened_ba2_archive> materialize_ba2_gnrl_archive(const ba2_archive_source
         return records.error();
     }
 
-    std::uint64_t name_table_end = 0U;
     // The writer-required BA2 layout can place payload bytes before the final
     // filename table, so the stable source reads exactly file_count
     // length-prefixed names from FileTableOffset instead of deriving a table
     // size from the first payload offset. This preserves bounded open behavior
     // for both sparse payloads and end tables.
-    auto names =
-        read_names(source, header.filename_table_offset(), header.file_count(), name_table_end);
-    if (!names) {
-        return names.error();
+    auto materialization =
+        ba2_metadata_materialization::create(source, header, records_end, gnrl_metadata_wording);
+    if (!materialization) {
+        return materialization.error();
     }
 
-    auto entries =
-        materialize_entries(source.size(), records_end, header.filename_table_offset(),
-                            name_table_end, records.value(), names.value(), header.profile());
+    auto entries = materialize_entries(materialization.value(), records.value(), header.profile());
     if (!entries) {
         return entries.error();
     }
