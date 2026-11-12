@@ -130,9 +130,10 @@ class ba2_metadata_materialization final {
     ///         truncation or empty-name wording, an allocation `format_error`
     ///         worded with `wording.filename_table_entries` when the name vector
     ///         cannot be reserved, or any error `source.read_exact` and string
-    ///         conversion report under the subtype's read contexts. Failed
-    ///         reservations are returned as results, not thrown, so callers need
-    ///         no allocation guard around creation.
+    ///         conversion report under the subtype's read contexts. A failed
+    ///         name-vector reservation is returned as a result rather than
+    ///         thrown; building an error message can still throw
+    ///         `std::bad_alloc`.
     [[nodiscard]] static result<ba2_metadata_materialization> create(
         const ba2_archive_source& source, const ba2_archive_header& header,
         std::uint64_t records_end, const ba2_metadata_wording& wording);

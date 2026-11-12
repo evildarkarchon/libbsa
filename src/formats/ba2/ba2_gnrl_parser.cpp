@@ -66,18 +66,19 @@ result<std::vector<gnrl_record>> read_records(detail::binary_reader& reader,
 
 /// GNRL wording for BA2 Metadata Materialization; every string is verbatim.
 constexpr ba2_metadata_wording gnrl_metadata_wording{
-    "BA2 GNRL filename table entries",
-    "BA2 GNRL filename table is truncated before UInt16 length",
-    "BA2 GNRL filename table is truncated before name bytes",
-    "BA2 GNRL filename table contains an empty name",
-    "BA2 GNRL filename length",
-    "BA2 GNRL filename bytes",
-    "BA2 GNRL entry payload span is outside the archive",
-    "BA2 GNRL entry payload span intersects header or record table",
-    "BA2 GNRL filename table intersects payload data",
-    "BA2 GNRL entry payload spans partially overlap",
-    "BA2 GNRL contains duplicate canonical archive paths",
-    "BA2 GNRL canonical path set",
+    .filename_table_entries = "BA2 GNRL filename table entries",
+    .filename_length_truncated = "BA2 GNRL filename table is truncated before UInt16 length",
+    .filename_bytes_truncated = "BA2 GNRL filename table is truncated before name bytes",
+    .empty_filename = "BA2 GNRL filename table contains an empty name",
+    .filename_length_read = "BA2 GNRL filename length",
+    .filename_bytes_read = "BA2 GNRL filename bytes",
+    .payload_span_outside_archive = "BA2 GNRL entry payload span is outside the archive",
+    .payload_span_intersects_records =
+        "BA2 GNRL entry payload span intersects header or record table",
+    .filename_table_intersects_payload = "BA2 GNRL filename table intersects payload data",
+    .payload_spans_partially_overlap = "BA2 GNRL entry payload spans partially overlap",
+    .duplicate_canonical_paths = "BA2 GNRL contains duplicate canonical archive paths",
+    .canonical_path_set = "BA2 GNRL canonical path set",
 };
 
 /// Validates record/name relationships and builds deterministic public entries.

@@ -22,18 +22,19 @@ constexpr std::uint64_t reconstructed_dds_header_size = 148U;
 
 /// DX10 wording for BA2 Metadata Materialization; every string is verbatim.
 constexpr ba2_metadata_wording dx10_metadata_wording{
-    "BA2 DX10 filename table entries",
-    "BA2 DX10 filename table is truncated before UInt16 length",
-    "BA2 DX10 filename table is truncated before name bytes",
-    "BA2 DX10 filename table contains an empty name",
-    "BA2 DX10 filename length",
-    "BA2 DX10 filename bytes",
-    "BA2 DX10 chunk payload span is outside the archive",
-    "BA2 DX10 chunk payload span intersects header or record table",
-    "BA2 DX10 filename table intersects payload data",
-    "BA2 DX10 chunk payload spans partially overlap",
-    "BA2 DX10 contains duplicate canonical archive paths",
-    "BA2 DX10 canonical path set",
+    .filename_table_entries = "BA2 DX10 filename table entries",
+    .filename_length_truncated = "BA2 DX10 filename table is truncated before UInt16 length",
+    .filename_bytes_truncated = "BA2 DX10 filename table is truncated before name bytes",
+    .empty_filename = "BA2 DX10 filename table contains an empty name",
+    .filename_length_read = "BA2 DX10 filename length",
+    .filename_bytes_read = "BA2 DX10 filename bytes",
+    .payload_span_outside_archive = "BA2 DX10 chunk payload span is outside the archive",
+    .payload_span_intersects_records =
+        "BA2 DX10 chunk payload span intersects header or record table",
+    .filename_table_intersects_payload = "BA2 DX10 filename table intersects payload data",
+    .payload_spans_partially_overlap = "BA2 DX10 chunk payload spans partially overlap",
+    .duplicate_canonical_paths = "BA2 DX10 contains duplicate canonical archive paths",
+    .canonical_path_set = "BA2 DX10 canonical path set",
 };
 
 using detail::add_fits_u64;
