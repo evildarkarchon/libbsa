@@ -487,8 +487,6 @@ tmp/
 # ── GSD baseline (auto-generated) ──
 .gsd
 .mcp.json
-Architecture review — libbsa*.html
-Architecture review — libbsa*_files
 graphify-out/
 .codegraph/
 .claude/settings.local.json
