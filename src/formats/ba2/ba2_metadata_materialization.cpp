@@ -81,23 +81,56 @@ result<ba2_metadata_materialization> ba2_metadata_materialization::create(
     }
     return ba2_metadata_materialization{
         source.size(), records_end,
-        ba2_filename_table_extent{header.filename_table_offset(), table_end},
-        std::move(names).value(), wording};
+        filename_table_extent{header.filename_table_offset(), table_end}, std::move(names).value(),
+        wording};
 }
 
 std::span<const std::string> ba2_metadata_materialization::names() const noexcept { return names_; }
 
-ba2_filename_table_extent ba2_metadata_materialization::filename_table_extent() const noexcept {
-    return filename_table_extent_;
+result<void> ba2_metadata_materialization::admit_payload_span(std::uint64_t offset,
+                                                              std::uint64_t stored_size) {
+    if (!detail::span_fits_u64(offset, stored_size, archive_size_)) {
+        return error{error_code::format_error, std::string{wording_.payload_span_outside_archive}};
+    }
+    // BSArchPro writes BA2 payloads after the fixed header and records; spans
+    // into this prefix would later extract archive metadata bytes as if they
+    // were file payload.
+    if (detail::spans_overlap_u64(offset, stored_size, 0U, records_end_)) {
+        return error{error_code::format_error,
+                     std::string{wording_.payload_span_intersects_records}};
+    }
+    if (detail::spans_overlap_u64(offset, stored_size, filename_table_.offset,
+                                  filename_table_.end - filename_table_.offset)) {
+        return error{error_code::format_error,
+                     std::string{wording_.filename_table_intersects_payload}};
+    }
+    if (stored_size == 0U) {
+        // An empty span overlaps nothing, so it is accepted without joining the
+        // exclusivity set. GNRL can reach this with a zero-size entry; DX10
+        // rejects every empty chunk before admission.
+        return {};
+    }
+
+    // Writer dedupe can intentionally publish exact duplicate stored spans;
+    // partial sharing would make two entries read ambiguous bytes from each
+    // other's payload ranges, and for DX10 would make texture chunk extraction
+    // ambiguous because logical DDS segments would read bytes from each other's
+    // ranges. Exclusivity runs last, after the bounds and metadata-intersect
+    // checks, because which diagnostic a multi-defect archive reports is
+    // observable behavior.
+    if (!accepted_payload_spans_) {
+        accepted_payload_spans_ = std::make_unique<detail::payload_span_exclusivity>();
+    }
+    return accepted_payload_spans_->insert(offset, stored_size,
+                                           wording_.payload_spans_partially_overlap);
 }
 
 ba2_metadata_materialization::ba2_metadata_materialization(
-    std::uint64_t archive_size, std::uint64_t records_end,
-    ba2_filename_table_extent filename_table_extent, std::vector<std::string> names,
-    const ba2_metadata_wording& wording) noexcept
+    std::uint64_t archive_size, std::uint64_t records_end, filename_table_extent filename_table,
+    std::vector<std::string> names, const ba2_metadata_wording& wording) noexcept
     : archive_size_{archive_size},
       records_end_{records_end},
-      filename_table_extent_{filename_table_extent},
+      filename_table_{filename_table},
       names_{std::move(names)},
       wording_{wording} {}
 

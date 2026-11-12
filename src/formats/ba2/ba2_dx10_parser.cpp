@@ -7,7 +7,6 @@
 #include "texture/dds_layout.hpp"
 
 #include <detail/parser_primitives.hpp>
-#include <detail/payload_span_exclusivity.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -30,11 +29,13 @@ constexpr ba2_metadata_wording dx10_metadata_wording{
     "BA2 DX10 filename table contains an empty name",
     "BA2 DX10 filename length",
     "BA2 DX10 filename bytes",
+    "BA2 DX10 chunk payload span is outside the archive",
+    "BA2 DX10 chunk payload span intersects header or record table",
+    "BA2 DX10 filename table intersects payload data",
+    "BA2 DX10 chunk payload spans partially overlap",
 };
 
 using detail::add_fits_u64;
-using detail::span_fits_u64;
-using detail::spans_overlap_u64;
 
 /// Validates every stored chunk span against the archive and its metadata areas.
 ///
@@ -50,14 +51,13 @@ using detail::spans_overlap_u64;
 /// the sibling families, this seam has no enclosing allocation boundary, so it
 /// owns one: growing the node-based collection can throw where the removed
 /// vector reservation returned a result, and the boundary keeps that failure
-/// reporting the same "BA2 DX10 stored chunk spans" wording.
+/// reporting the same "BA2 DX10 stored chunk spans" wording. Admission now runs
+/// through BA2 Metadata Materialization, which may throw `std::bad_alloc` both
+/// when it first creates that collection and when it grows it; both land in this
+/// boundary.
 result<void> validate_chunk_payload_spans(std::span<const ba2_dx10_record> records,
-                                          std::uint64_t archive_size, std::uint64_t records_end,
-                                          std::uint64_t name_table_offset,
-                                          std::uint64_t name_table_end) {
+                                          ba2_metadata_materialization& materialization) {
     try {
-        detail::payload_span_exclusivity accepted_payload_spans;
-
         for (const auto& record : records) {
             for (const auto& chunk : record.chunks) {
                 const auto stored_size = static_cast<std::uint64_t>(
@@ -65,30 +65,15 @@ result<void> validate_chunk_payload_spans(std::span<const ba2_dx10_record> recor
                 if (stored_size == 0U || chunk.raw_size == 0U) {
                     return error{error_code::format_error, "BA2 DX10 chunk sizes are inconsistent"};
                 }
-                if (!span_fits_u64(chunk.offset, stored_size, archive_size)) {
-                    return error{error_code::format_error,
-                                 "BA2 DX10 chunk payload span is outside the archive"};
-                }
-                if (spans_overlap_u64(chunk.offset, stored_size, 0U, records_end)) {
-                    return error{error_code::format_error,
-                                 "BA2 DX10 chunk payload span intersects header or record table"};
-                }
-                if (spans_overlap_u64(chunk.offset, stored_size, name_table_offset,
-                                      name_table_end - name_table_offset)) {
-                    return error{error_code::format_error,
-                                 "BA2 DX10 filename table intersects payload data"};
-                }
-                // Writer dedupe can intentionally publish exact duplicate chunks; partial
-                // sharing would make texture chunk extraction ambiguous because logical
-                // DDS segments would read bytes from each other's ranges. The call stays
-                // here, after the bounds and metadata-intersect checks and inside the same
-                // per-chunk loop, because which diagnostic a multi-defect archive reports
-                // is observable behavior. No zero-size guard is needed: the chunk size
-                // consistency check above has already rejected every empty stored span.
-                auto exclusive = accepted_payload_spans.insert(
-                    chunk.offset, stored_size, "BA2 DX10 chunk payload spans partially overlap");
-                if (!exclusive) {
-                    return exclusive.error();
+                // The call stays here, after the chunk size consistency check and
+                // inside the same per-chunk loop, ahead of any record naming,
+                // because which diagnostic a multi-defect archive reports is
+                // observable behavior. Admission's empty-span path never runs for
+                // DX10: the consistency check above has already rejected every
+                // empty stored span.
+                auto admitted = materialization.admit_payload_span(chunk.offset, stored_size);
+                if (!admitted) {
+                    return admitted.error();
                 }
             }
         }
@@ -311,9 +296,7 @@ result<opened_ba2_archive> materialize_ba2_dx10_archive(const ba2_archive_source
         return materialization.error();
     }
 
-    const auto name_table = materialization.value().filename_table_extent();
-    auto validated_spans = validate_chunk_payload_spans(records.value(), source.size(), records_end,
-                                                        name_table.offset, name_table.end);
+    auto validated_spans = validate_chunk_payload_spans(records.value(), materialization.value());
     if (!validated_spans) {
         return validated_spans.error();
     }

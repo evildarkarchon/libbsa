@@ -3,9 +3,11 @@
 #include "formats/ba2/ba2_archive_header.hpp"
 #include "formats/ba2/ba2_archive_source.hpp"
 
+#include <detail/payload_span_exclusivity.hpp>
 #include <libbsa/result.hpp>
 
 #include <cstdint>
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
@@ -40,15 +42,20 @@ struct ba2_metadata_wording {
 
     /// Read context passed to the archive source, and to string conversion, for name bytes.
     std::string_view filename_bytes_read;
-};
 
-/// Archive-absolute extent of the encoded filename table: `[offset, end)`.
-///
-/// `end` is the byte after the last encoded name; trailing padding after the
-/// final count-delimited name is deliberately not part of the extent.
-struct ba2_filename_table_extent {
-    std::uint64_t offset;
-    std::uint64_t end;
+    /// Format error reported when a payload span runs past the archive, for
+    /// example "BA2 GNRL entry payload span is outside the archive".
+    std::string_view payload_span_outside_archive;
+
+    /// Format error reported when a payload span reaches into the header or the
+    /// record table.
+    std::string_view payload_span_intersects_records;
+
+    /// Format error reported when a payload span reaches into the filename table.
+    std::string_view filename_table_intersects_payload;
+
+    /// Format error reported when a payload span violates Payload Span Exclusivity.
+    std::string_view payload_spans_partially_overlap;
 };
 
 /// BA2 Metadata Materialization for one BA2 Archive Opening.
@@ -59,7 +66,12 @@ struct ba2_filename_table_extent {
 /// decoding and texture interpretation.
 ///
 /// Creation reads the filename table. The object then holds the archive size,
-/// the end of the record table, the filename-table extent and the names.
+/// the end of the record table, the filename-table extent, the names and the
+/// set of payload spans accepted so far.
+///
+/// The per-record operations may throw `std::bad_alloc`; the module owns no
+/// allocation boundary. Each subtype calls them inside its own allocation guard
+/// so the failure keeps that subtype's wording.
 class ba2_metadata_materialization final {
    public:
     /// Reads the filename table and creates the materialization for one opening.
@@ -101,28 +113,56 @@ class ba2_metadata_materialization final {
     /// at which point the accessor is removed.
     [[nodiscard]] std::span<const std::string> names() const noexcept;
 
-    /// Returns the measured archive-absolute extent of the filename table.
+    /// Admits one stored payload span, `[offset, offset + stored_size)`.
     ///
-    /// Transitional: exposed only until payload span admission moves into this
-    /// module, at which point the accessor is removed.
-    [[nodiscard]] ba2_filename_table_extent filename_table_extent() const noexcept;
+    /// Runs four checks in this fixed order and reports the first failure with
+    /// the subtype's wording: the span lies inside the archive; it is clear of
+    /// the header and record table; it is clear of the filename table; it
+    /// satisfies Payload Span Exclusivity against every span admitted before it.
+    /// The order is observable diagnostic precedence (ADR-0002). An empty span
+    /// still runs the first three checks but is not added to the accepted set.
+    ///
+    /// Callers own the order in which spans are admitted relative to their other
+    /// checks; this only fixes the order within one span.
+    ///
+    /// @param offset Archive-absolute offset of the stored payload.
+    /// @param stored_size Stored (packed when compressed) byte length.
+    /// @return Success, or a `format_error` carrying one of the four span strings
+    ///         from the wording table.
+    /// @throws std::bad_alloc When the accepted-span set cannot be created or
+    ///         grown. Callers translate it inside their allocation guard.
+    [[nodiscard]] result<void> admit_payload_span(std::uint64_t offset, std::uint64_t stored_size);
 
    private:
+    /// Archive-absolute extent of the encoded filename table: `[offset, end)`.
+    ///
+    /// `end` is the byte after the last encoded name; trailing padding after the
+    /// final count-delimited name is deliberately not part of the extent.
+    struct filename_table_extent {
+        std::uint64_t offset;
+        std::uint64_t end;
+    };
+
     /// Takes ownership of the already-read filename table.
     ba2_metadata_materialization(std::uint64_t archive_size, std::uint64_t records_end,
-                                 ba2_filename_table_extent filename_table_extent,
+                                 filename_table_extent filename_table,
                                  std::vector<std::string> names,
                                  const ba2_metadata_wording& wording) noexcept;
 
-    // The archive size, the record-table end and the wording are held for the
-    // per-record operations (payload span admission and record naming) that join
-    // this module after the filename-table reader; nothing reads them yet.
     std::uint64_t archive_size_;
     std::uint64_t records_end_;
-    ba2_filename_table_extent filename_table_extent_;
+    filename_table_extent filename_table_;
     std::vector<std::string> names_;
     // Copied by value; the views themselves refer to the subtype's static strings.
     ba2_metadata_wording wording_;
+    // Created on the first non-empty admission, never in `create()` or the
+    // constructor. MSVC's `std::set` allocates its sentinel node when it is
+    // default-constructed and again when it is moved from, so holding the
+    // collection by value would put a possible `std::bad_alloc` in the noexcept
+    // constructor and in every move of this object, outside any subtype
+    // allocation guard. Behind a pointer, moves stay noexcept and the only
+    // allocations happen inside `admit_payload_span`, which callers guard.
+    std::unique_ptr<detail::payload_span_exclusivity> accepted_payload_spans_;
 };
 
 }  // namespace libbsa::formats::ba2
